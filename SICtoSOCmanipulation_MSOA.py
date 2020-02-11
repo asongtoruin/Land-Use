@@ -22,7 +22,7 @@ def SetWd(homeDir = defaultHomeDir, iteration=output):
     
 # File paths
 # MSOA divisions HSL data
-msoa_sic = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/sic_div_msoa_2018.csv')
+msoa_sic = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/sic_div_msoa_2018.csv')
 
 # region splits. Source: HSL. Categories for SIC here are different to HSL data
 ee_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_East of England.csv')
@@ -38,7 +38,7 @@ scot_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data 
 wm_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_West Midlands.csv')
 
 
-Sictrans = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/CE categories.csv')
+Sictrans = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/CE industry categories.csv')
 
 SetWd(homeDir = 'C:/NorMITs_Export', iteration=output)
 
@@ -70,9 +70,6 @@ SetWd(homeDir = 'C:/NorMITs_Export', iteration=output)
     splits['higher'] = splits.iloc[:,1:12].sum(axis=1)
     splits['medium'] = splits.iloc[:,12:22].sum(axis=1)
     splits['skilled'] = splits.iloc[:,22:26].sum(axis=1)
-    splits['higher'] = splits['higher'].round(1)
-    splits['medium'] = splits['medium'].round(1)
-    splits['skilled'] = splits['skilled'].round(1)
     
     # the splits don't add up to 100% so need an uplift so no numbers are missing
     splits['diff'] = 1-(splits['higher']+splits['medium']+splits['skilled'])
@@ -105,7 +102,7 @@ SetWd(homeDir = 'C:/NorMITs_Export', iteration=output)
     socs['check']= socs['higher']+socs['medium']+socs['skilled']
     print(socs['check'].sum())
 
-    socs.to_csv('Y:/NorMITs Land Use/import/NPR Segmentation/UK_SICtoSOCv3.csv')
+    socs.to_csv('C:/NorMITs_Export/UK_SICtoSOC_HSL.csv')
     splits.to_csv('Y:/NorMITs Land Use/import/NPR Segmentation/splits.csv')
     
 # Use TfN Industry sectors weights
