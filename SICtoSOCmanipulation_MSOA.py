@@ -59,7 +59,7 @@ tfnindsectors = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw dat
 # read in data for the uplift
 ons_employees = pd.ExcelFile('Employees by LAD - table52017p.xlsx') # ONS data in thousands of employees to scale to - use 2017 as 2018 data is provisional
 ons_people_in_work = pd.ExcelFile('lfs_people_in_employment_2018.xlsx')
-employees_socPath = (defaultHomeDir +"/"+output+'UK_SICtoSOC_HSL.csv') # SICtoSOC output split into 12 TfN sectors
+employees_socPath = (defaultHomeDir +output+'/UK_SICtoSOC_HSL.csv') # SICtoSOC output split into 12 TfN sectors
 area_code_lookup = pd.read_csv('MSOA_LAD_APR19.csv') # lookup msoa, LA, county and NELUM zone, _APR19 changes E06000028 and E06000029 to E06000058
 
 
@@ -69,165 +69,165 @@ SetWd(homeDir = 'C:/NorMITs_Export', iteration=output)
     
   #  nw_splits = nw_splits.rename(columns={'Unnamed: 0': 'Siccat'})
 
-    ee_splits['RGN11nm'] = 'East of England'
-    ne_splits['RGN11nm'] = 'North East'
-    se_splits['RGN11nm'] = 'South East'
-    yor_splits['RGN11nm'] = 'Yorkshire and The Humber'
-    wal_splits['RGN11nm'] = 'Wales'
-    sw_splits['RGN11nm'] = 'South West'
-    lon_splits['RGN11nm'] = 'London'
-    em_splits['RGN11nm'] = 'East Midlands'
-    nw_splits['RGN11nm'] = 'North West'
-    scot_splits['RGN11nm'] = 'Scotland'
-    wm_splits['RGN11nm'] = 'West Midlands'
+ee_splits['RGN11nm'] = 'East of England'
+ne_splits['RGN11nm'] = 'North East'
+se_splits['RGN11nm'] = 'South East'
+yor_splits['RGN11nm'] = 'Yorkshire and The Humber'
+wal_splits['RGN11nm'] = 'Wales'
+sw_splits['RGN11nm'] = 'South West'
+lon_splits['RGN11nm'] = 'London'
+em_splits['RGN11nm'] = 'East Midlands'
+nw_splits['RGN11nm'] = 'North West'
+scot_splits['RGN11nm'] = 'Scotland'
+wm_splits['RGN11nm'] = 'West Midlands'
 
-    frames = [ee_splits, ne_splits, se_splits, yor_splits, wal_splits, sw_splits, 
-          em_splits, lon_splits, nw_splits,scot_splits, wm_splits]
+frames = [ee_splits, ne_splits, se_splits, yor_splits, wal_splits, sw_splits, 
+      em_splits, lon_splits, nw_splits,scot_splits, wm_splits]
 
-    splits = pd.concat(frames, sort=True)
-    del(wm_splits, scot_splits, nw_splits, em_splits, lon_splits, sw_splits, 
-        wal_splits, yor_splits, se_splits, ne_splits, ee_splits)
-    
-    # get an estimation for high/medium/skilled and apply to the totals
-    splits['higher'] = splits.iloc[:,1:12].sum(axis=1)
-    splits['medium'] = splits.iloc[:,12:22].sum(axis=1)
-    splits['skilled'] = splits.iloc[:,22:26].sum(axis=1)
-    
-    # the splits don't add up to 100% so need an uplift so no numbers are missing
-    splits['diff'] = 1-(splits['higher']+splits['medium']+splits['skilled'])
-    splits['higher'] = splits['higher']+(splits['diff']/3)
-    splits['medium'] = splits['medium']+(splits['diff']/3)
-    splits['skilled'] = splits['skilled']+(splits['diff']/3)
-    splits['total'] = splits['higher']+splits['medium']+splits['skilled']
-    splits = splits[['RGN11nm', 'Siccat', 'higher', 'medium', 'skilled']]
-    splits = splits.rename(columns={'Siccat':'CE_SIC'})
-    # splits['total'].sum() # check all add up to 1
-    # now they should add up to 100%
+splits = pd.concat(frames, sort=True)
+del(wm_splits, scot_splits, nw_splits, em_splits, lon_splits, sw_splits, 
+    wal_splits, yor_splits, se_splits, ne_splits, ee_splits)
+
+# get an estimation for high/medium/skilled and apply to the totals
+splits['higher'] = splits.iloc[:,1:12].sum(axis=1)
+splits['medium'] = splits.iloc[:,12:22].sum(axis=1)
+splits['skilled'] = splits.iloc[:,22:26].sum(axis=1)
+
+# the splits don't add up to 100% so need an uplift so no numbers are missing
+splits['diff'] = 1-(splits['higher']+splits['medium']+splits['skilled'])
+splits['higher'] = splits['higher']+(splits['diff']/3)
+splits['medium'] = splits['medium']+(splits['diff']/3)
+splits['skilled'] = splits['skilled']+(splits['diff']/3)
+splits['total'] = splits['higher']+splits['medium']+splits['skilled']
+splits = splits[['RGN11nm', 'Siccat', 'higher', 'medium', 'skilled']]
+splits = splits.rename(columns={'Siccat':'CE_SIC'})
+# splits['total'].sum() # check all add up to 1
+# now they should add up to 100%
 
 
-    # Melt the HSL MSOA division table
-    msoa_sic = msoa_sic.drop(columns = {'RGN11cd'})
-    sic_columns = msoa_sic.columns[2:]   
+# Melt the HSL MSOA division table
+msoa_sic = msoa_sic.drop(columns = {'RGN11cd'})
+sic_columns = msoa_sic.columns[2:]   
 
-    msoatrans = pd.melt(msoa_sic, id_vars = ['MSOA', 'RGN11nm'], value_vars = sic_columns)
-    msoatrans = msoatrans.rename(columns = {'variable':'HSL_SIC', 'value':'total'})
-    msoatrans['total'].sum()
-    #msoatrans = msoatrans.rename(columns={'Siccat': 'HSL_SIC'})
-    Sictrans = Sictrans.drop(columns = {'CE_SIC_categories'})
-    msoatrans2 = msoatrans.merge(Sictrans, on = 'HSL_SIC', how = 'outer')
+msoatrans = pd.melt(msoa_sic, id_vars = ['MSOA', 'RGN11nm'], value_vars = sic_columns)
+msoatrans = msoatrans.rename(columns = {'variable':'HSL_SIC', 'value':'total'})
+msoatrans['total'].sum()
+#msoatrans = msoatrans.rename(columns={'Siccat': 'HSL_SIC'})
+Sictrans = Sictrans.drop(columns = {'CE_SIC_categories'})
+msoatrans2 = msoatrans.merge(Sictrans, on = 'HSL_SIC', how = 'outer')
 
-    # need to join the CE codes
-    # msoa_sic = msoa_sic.drop(columns = {'RGN11cd'})
+# need to join the CE codes
+# msoa_sic = msoa_sic.drop(columns = {'RGN11cd'})
 
-    #Sictrans = Sictrans.drop(columns = {'CE_cat.1'})
-    msoatrans2 = msoatrans.merge(Sictrans, on = 'HSL_SIC', how = 'left')
-    msoatrans2 = msoatrans2.rename(columns={'CE_cat':'CE_SIC'}).drop(columns={'CE_cat.1'})
-    socs = msoatrans2.merge(splits, on = ['RGN11nm', 'CE_SIC'], how = 'left')
-    socs['total'].sum()
-    
-    socs.update(socs.iloc[:, 5:8].mul(socs.total, 0))
-    socs['check']= socs['higher']+socs['medium']+socs['skilled']
-    socs= socs.drop(columns={'RGN11nm', 'CE_SIC'})
-    print(socs['check'].sum())
+#Sictrans = Sictrans.drop(columns = {'CE_cat.1'})
+msoatrans2 = msoatrans.merge(Sictrans, on = 'HSL_SIC', how = 'left')
+msoatrans2 = msoatrans2.rename(columns={'CE_cat':'CE_SIC'}).drop(columns={'CE_cat.1'})
+socs = msoatrans2.merge(splits, on = ['RGN11nm', 'CE_SIC'], how = 'left')
+socs['total'].sum()
 
-    socs.to_csv('UK_SICtoSOC_HSL.csv')
-    
+socs.update(socs.iloc[:, 5:8].mul(socs.total, 0))
+socs['check']= socs['higher']+socs['medium']+socs['skilled']
+socs= socs.drop(columns={'RGN11nm', 'CE_SIC'})
+print(socs['check'].sum())
+
+socs.to_csv('UK_SICtoSOC_HSL.csv')
+
 # Use TfN Industry sectors weights
-    """
-    tfnindsectors = tfnindsectors.rename(columns = {'HsL_sIC':'HSL_SIC'})
-    tfnindsectors = tfnindsectors.drop(columns = {'SIC_division', 'Description', 'North sector weights'})
-    indcols = tfnindsectors.columns[1:]
-    print(indcols)
-    tfnindsectors = pd.melt(tfnindsectors, id_vars = 'HSL_SIC', value_vars = indcols)
-    tfnindsectors = tfnindsectors.rename(columns={'variable':'TfN industry', 'value':'splits'})
-    tfnsocs = socs.merge(tfnindsectors, on = 'HSL_SIC', how = 'outer')
-    tfnsocs['splits'] = tfnsocs['splits'].fillna(0)
-    tfnsocs2 = tfnsocs.copy()
-    tfnsocs2.update(tfnsocs2.iloc[:, 5:8].mul(tfnsocs2.splits,0))
+"""
+tfnindsectors = tfnindsectors.rename(columns = {'HsL_sIC':'HSL_SIC'})
+tfnindsectors = tfnindsectors.drop(columns = {'SIC_division', 'Description', 'North sector weights'})
+indcols = tfnindsectors.columns[1:]
+print(indcols)
+tfnindsectors = pd.melt(tfnindsectors, id_vars = 'HSL_SIC', value_vars = indcols)
+tfnindsectors = tfnindsectors.rename(columns={'variable':'TfN industry', 'value':'splits'})
+tfnsocs = socs.merge(tfnindsectors, on = 'HSL_SIC', how = 'outer')
+tfnsocs['splits'] = tfnsocs['splits'].fillna(0)
+tfnsocs2 = tfnsocs.copy()
+tfnsocs2.update(tfnsocs2.iloc[:, 5:8].mul(tfnsocs2.splits,0))
    
-    tfnsocs2['check'] = tfnsocs2['higher']+tfnsocs2['medium']+tfnsocs2['skilled']
-    tfnsocs2['check'].sum()
-    tfnsocs2 = tfnsocs2.drop(columns = {'HSL_SIC', 'check'})
-    tfnind = tfnsocs2[['MSOA', 'TfN industry', 'higher', 'medium', 'skilled']]
-    tfnsocs2 = tfnsocs2.drop(columns = {'RGN11nm', 'total', 'CE_SIC','HSL_SIC', 'splits'})
+tfnsocs2['check'] = tfnsocs2['higher']+tfnsocs2['medium']+tfnsocs2['skilled']
+tfnsocs2['check'].sum()
+tfnsocs2 = tfnsocs2.drop(columns = {'HSL_SIC', 'check'})
+tfnind = tfnsocs2[['MSOA', 'TfN industry', 'higher', 'medium', 'skilled']]
+tfnsocs2 = tfnsocs2.drop(columns = {'RGN11nm', 'total', 'CE_SIC','HSL_SIC', 'splits'})
 
-    tfnind = tfnsocs2.groupby(
-            by = ['MSOA', 'TfN industry'], 
-            as_index = False, 
-            ).sum(axis = 0)
+tfnind = tfnsocs2.groupby(
+        by = ['MSOA', 'TfN industry'], 
+        as_index = False, 
+        ).sum(axis = 0)
 #.drop(columns = {'splits', 'total'})
-    socs_check =socs[['MSOA', 'check']]
-    socs_check = socs_check.groupby(
-        by = ['MSOA'],
-        as_index = False,
-        ).sum(axis= 0)
-    tfnsocs2.to_csv('C:/NorMITs_Export/SOCbyTfNindsutrysectors.csv')
-    """
-    
+socs_check =socs[['MSOA', 'check']]
+socs_check = socs_check.groupby(
+    by = ['MSOA'],
+    as_index = False,
+    ).sum(axis= 0)
+tfnsocs2.to_csv('C:/NorMITs_Export/SOCbyTfNindsutrysectors.csv')
+"""
+
 ############################# GENERATE LAD LEVEL CONTROL ################################
-    
+
 # rename LAD columns
-    employees_lad = pd.read_excel(ons_employees, sheet_name=2, header=1, usecols=[0, 2, 13])
-    employees_lad.columns = ['LA Code', 'County Code', 'Total Employees']
+employees_lad = pd.read_excel(ons_employees, sheet_name=2, header=1, usecols=[0, 2, 13])
+employees_lad.columns = ['LA Code', 'County Code', 'Total Employees']
 
 # factor Employees by LAD 2017 up to 2018 (provisional) total
-    people_in_work_18 = pd.read_excel(ons_people_in_work, sheet_name=0, header=7, usecols=[0, 3])
-    people_in_work_18.columns = ['Region', 'Total in employment - aged 16 and over']
-    people_in_work_18[['Total in employment - aged 16 and over']] =people_in_work_18[['Total in employment - aged 16 and over']].div(1000)
+people_in_work_18 = pd.read_excel(ons_people_in_work, sheet_name=0, header=7, usecols=[0, 3])
+people_in_work_18.columns = ['Region', 'Total in employment - aged 16 and over']
+people_in_work_18[['Total in employment - aged 16 and over']] =people_in_work_18[['Total in employment - aged 16 and over']].div(1000)
 
 # calculate factor to scale up employees per LAD (2017) to people in work (2018)
-    ons_factor = people_in_work_18[['Total in employment - aged 16 and over']].sum().div(employees_lad['Total Employees'].sum(), axis='index')
-    employees_lad['Total Employees Factored'] = employees_lad['Total Employees'] * ons_factor[0]
-    employees_lad = employees_lad.drop(['Total Employees'], axis=1)
-    employees_lad['Total Employees Factored'] = employees_lad['Total Employees Factored']*1000
+ons_factor = people_in_work_18[['Total in employment - aged 16 and over']].sum().div(employees_lad['Total Employees'].sum(), axis='index')
+employees_lad['Total Employees Factored'] = employees_lad['Total Employees'] * ons_factor[0]
+employees_lad = employees_lad.drop(['Total Employees'], axis=1)
+employees_lad['Total Employees Factored'] = employees_lad['Total Employees Factored']*1000
 
 ############################# GENERATE LAD/COUNTY/SCOT-WALES LEVEL SCALING FACTORS ################################
-    employees_soc = pd.read_csv(employees_socPath).drop(columns={'Unnamed: 0'})
-    employees_soc_code_join = area_code_lookup.join(employees_soc.set_index('MSOA'), on='MSOA_code')
+employees_soc = pd.read_csv(employees_socPath).drop(columns={'Unnamed: 0'})
+employees_soc_code_join = area_code_lookup.join(employees_soc.set_index('MSOA'), on='MSOA_code')
 
 # group soc data by LA Code and sum total
-    employees_soc_la_gr = employees_soc_code_join.groupby(['LAD18CD'], as_index=False).sum().rename(
-        columns={'check': 'SOC total'}).drop(['NELUM_zone', 'higher', 'medium', 'skilled'], axis=1)
+employees_soc_la_gr = employees_soc_code_join.groupby(['LAD18CD'], as_index=False).sum().rename(
+    columns={'check': 'SOC total'}).drop(['NELUM_zone', 'higher', 'medium', 'skilled'], axis=1)
 # group soc data by County Code and sum total
-    employees_soc_county_gr = employees_soc_code_join.groupby(['CTY18CD'], as_index=False).sum().rename(
-        columns={'check': 'SOC total'}).drop(['NELUM_zone', 'higher', 'medium', 'skilled'], axis=1)
+employees_soc_county_gr = employees_soc_code_join.groupby(['CTY18CD'], as_index=False).sum().rename(
+    columns={'check': 'SOC total'}).drop(['NELUM_zone', 'higher', 'medium', 'skilled'], axis=1)
 # group LAD data by LA code to group Scotland and Wales rows
-    employees_lad_la_gr = employees_lad.groupby(['LA Code'], as_index=False).sum()
+employees_lad_la_gr = employees_lad.groupby(['LA Code'], as_index=False).sum()
 
 # Two domains - LA and County, due to way ONS data is presented
 # join LA grouped soc data to LAD table for comparison (LA)
-    employees_la_comp = employees_soc_la_gr.join(employees_lad_la_gr.set_index('LA Code'), on='LAD18CD').rename(
-        columns={'Total Employees Factored': 'LAD total LA'})
+employees_la_comp = employees_soc_la_gr.join(employees_lad_la_gr.set_index('LA Code'), on='LAD18CD').rename(
+    columns={'Total Employees Factored': 'LAD total LA'})
 # join County grouped soc data to LAD table for comparison (County)
-    employees_county_comp = employees_soc_county_gr.join(employees_lad.set_index('County Code'), on='CTY18CD').rename(
-        columns={'Total Employees Factored': 'LAD total County'}).drop(['LA Code'], axis=1)
+employees_county_comp = employees_soc_county_gr.join(employees_lad.set_index('County Code'), on='CTY18CD').rename(
+    columns={'Total Employees Factored': 'LAD total County'}).drop(['LA Code'], axis=1)
 
 # now calculate % difference between SOC and LAD for both LA and County df's
-    employees_la_comp['soc_to_lad_factor_la'] = employees_la_comp['SOC total'] / employees_la_comp['LAD total LA']
-    employees_county_comp['soc_to_lad_factor_county'] = employees_county_comp['SOC total'] / employees_county_comp['LAD total County']
-    employees_county_comp = employees_county_comp.drop(columns={'total'})
+employees_la_comp['soc_to_lad_factor_la'] = employees_la_comp['SOC total'] / employees_la_comp['LAD total LA']
+employees_county_comp['soc_to_lad_factor_county'] = employees_county_comp['SOC total'] / employees_county_comp['LAD total County']
+employees_county_comp = employees_county_comp.drop(columns={'total'})
 ############################# JOIN BACK TO MSOA ################################
 
 # multiple joins required since some areas are in the LA domain but others in County domain
 # join on LAD18CD and drop totals
-    msoa_factors = area_code_lookup.join(employees_la_comp.set_index('LAD18CD'), on='LAD18CD').drop(
-        ['SOC total', 'LAD total LA', 'NELUM_zone'], axis=1)
+msoa_factors = area_code_lookup.join(employees_la_comp.set_index('LAD18CD'), on='LAD18CD').drop(
+    ['SOC total', 'LAD total LA', 'NELUM_zone'], axis=1)
 # join on CTY18CD and drop totals
-    msoa_factors = msoa_factors.join(employees_county_comp.set_index('CTY18CD'), on='CTY18CD').drop(columns=
-        {'SOC total', 'LAD total County'}).rename(columns={'MSOA_code':'MSOA'})
+msoa_factors = msoa_factors.join(employees_county_comp.set_index('CTY18CD'), on='CTY18CD').drop(columns=
+    {'SOC total', 'LAD total County'}).rename(columns={'MSOA_code':'MSOA'})
 # create new column of 'LA or County factor' - fillna 
-    msoa_factors['factor'] = msoa_factors['soc_to_lad_factor_la'].fillna(msoa_factors['soc_to_lad_factor_county'])
-    msoa_factors = msoa_factors.drop(columns = {'total'})
+msoa_factors['factor'] = msoa_factors['soc_to_lad_factor_la'].fillna(msoa_factors['soc_to_lad_factor_county'])
+msoa_factors = msoa_factors.drop(columns = {'total'})
 # join factors to employees by msoa
-    employees_soc_factors = employees_soc.join(msoa_factors.set_index('MSOA'), on='MSOA', how='left').drop(
-        ['LAD18CD', 'CTY18CD', 'soc_to_lad_factor_la', 'soc_to_lad_factor_county'], axis=1).set_index(
-                ['MSOA', 'HSL_SIC'])
+employees_soc_factors = employees_soc.join(msoa_factors.set_index('MSOA'), on='MSOA', how='left').drop(
+    ['LAD18CD', 'CTY18CD', 'soc_to_lad_factor_la', 'soc_to_lad_factor_county'], axis=1).set_index(
+            ['MSOA', 'HSL_SIC'])
 
 ############################# APPLY CONTROL AND WRITE OUT FILE ################################
 
-    factored_employees = employees_soc_factors[['higher', 'medium', 'skilled']].div(employees_soc_factors['factor'], axis='index')
-    factored_employees['check']=factored_employees['higher']+factored_employees['medium']+factored_employees['skilled']
-    factored_employees.reset_index().to_csv('C:/NorMITs_Export/'+'jobs_by_industry_skill_2018.csv', index=False)
+factored_employees = employees_soc_factors[['higher', 'medium', 'skilled']].div(employees_soc_factors['factor'], axis='index')
+factored_employees['check']=factored_employees['higher']+factored_employees['medium']+factored_employees['skilled']
+factored_employees.reset_index().to_csv('C:/NorMITs_Export/'+'jobs_by_industry_skill_2018.csv', index=False)
     
 
 """
