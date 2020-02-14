@@ -18,152 +18,157 @@ Uplift steps:
 """
 
 import os
-import pandas as pd
 import sys
-sys.path.append('C:/Users/' + os.getlogin() + '/S/NorMITs Utilities/Python')
-import nu_project as nup
 
-output = 'emp'
-defaultHomeDir = 'C:/NorMITs_export/'
+import pandas as pd
 
-def SetWd(homeDir = defaultHomeDir, iteration=output):
-    os.chdir(homeDir)
-    nup.CreateProjectFolder(iteration)
-    return()
-    
-# File paths
-# MSOA divisions HSL data
-msoa_sic = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/sic_div_msoa_2018.csv')
-path = 'Y:\\NorMITs Land Use\\import\\NPR Segmentation\\processed data\\LAD controls 2018\\'
-os.chdir(path) # changes directory up one folder
+_UTILS_GIT = ('C:/Users/' +
+              os.getlogin() +
+              '/Documents/GitHub/Normits-Utils')
+sys.path.append(_UTILS_GIT)
+import normits_utils as nup # Folder build utils
 
-
-# region splits. Source: HSL. Categories for SIC here are different to HSL data
-ee_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_East of England.csv')
-ne_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_NorthEast.csv')
-se_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_SouthEast.csv')
-yor_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_Yorkshire.csv')
-wal_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_Wales.csv')
-sw_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_SouthWest.csv')
-lon_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_London.csv')
-em_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_East Midlands.csv')
-nw_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_NorthWest.csv')
-scot_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_Scotland.csv')
-wm_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_West Midlands.csv')
-
-Sictrans = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/CE industry categories.csv')
-
-# tfn industry sectors
-tfnindsectors = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/TfN industrial sector splits.csv')
+# Default regional splits path. Soure: HSL. SIC categories are differnt for HSL and CE.
+_regional_splits_path = 'Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/'
+_default_sic_2digit_path = 'Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/sic_div_msoa_2018.csv'
 
 # read in data for the uplift
 ons_employees = pd.ExcelFile('Employees by LAD - table52017p.xlsx') # ONS data in thousands of employees to scale to - use 2017 as 2018 data is provisional
 ons_people_in_work = pd.ExcelFile('lfs_people_in_employment_2018.xlsx')
 employees_socPath = (defaultHomeDir +output+'/UK_SICtoSOC_HSL.csv') # SICtoSOC output split into 12 TfN sectors
-area_code_lookup = pd.read_csv('MSOA_LAD_APR19.csv') # lookup msoa, LA, county and NELUM zone, _APR19 changes E06000028 and E06000029 to E06000058
+area_code_lookup = pd.read_csv('MSOA_LAD_APR19.csv') # lookup msoa, LA, county, _APR19 changes E06000028 and E06000029 to E06000058
+
+# TODO: Standard col format names for input
+
+def combine_regional_splits(target_folder = _regional_splits_path):
 
 
-SetWd(homeDir = 'C:/NorMITs_Export', iteration=output)
+    target_dir = os.listdir(target_folder)
+    import_list = [x for x in target_dir if 'SIC_' in x]
 
-# Regionsplits combine
+    ph = []
+    for mat in import_list:
+        print('Importing ' + mat + ' w cols')
+
+        # Import
+        dat = pd.read_csv(target_folder + '/' + mat)
+        print(list(dat))
+
+        # Get area and clean
+        area = mat.replace('SIC_','')
+        area = area.replace('.csv','')
+        area = area.replace('_',' ')
+        area = area.replace('NorthEast','North East')
+        area = area.replace('SouthEast','South East')
+        area = area.replace('NorthWest','North West')
+        area = area.replace('SouthWest','South West')
+        if area == 'Yorkshire':
+            area = 'Yorkshire and The Humber'
+
+        # Rename first col
+        dat = dat.rename(columns={list(dat)[0]:'CE_SIC'})
+
+        dat = pd.wide_to_long(dat, stubnames='SOC',
+                              i ='CE_SIC',
+                              j='soc_cat').reset_index()
+
+        # Simplify var names
+        dat = dat.rename(columns={'SOC':'jobs'})
+
+        # Add area
+        dat['RGN11nm'] = area
+
+        # Append to ph
+        ph.append(dat)
     
-  #  nw_splits = nw_splits.rename(columns={'Unnamed: 0': 'Siccat'})
+    # Concat
+    out = pd.concat(ph, sort=True)
 
-ee_splits['RGN11nm'] = 'East of England'
-ne_splits['RGN11nm'] = 'North East'
-se_splits['RGN11nm'] = 'South East'
-yor_splits['RGN11nm'] = 'Yorkshire and The Humber'
-wal_splits['RGN11nm'] = 'Wales'
-sw_splits['RGN11nm'] = 'South West'
-lon_splits['RGN11nm'] = 'London'
-em_splits['RGN11nm'] = 'East Midlands'
-nw_splits['RGN11nm'] = 'North West'
-scot_splits['RGN11nm'] = 'Scotland'
-wm_splits['RGN11nm'] = 'West Midlands'
+    return(out)
 
-frames = [ee_splits, ne_splits, se_splits, yor_splits, wal_splits, sw_splits, 
-      em_splits, lon_splits, nw_splits,scot_splits, wm_splits]
+def classify_soc(soc_value):
 
-splits = pd.concat(frames, sort=True)
-del(wm_splits, scot_splits, nw_splits, em_splits, lon_splits, sw_splits, 
-    wal_splits, yor_splits, se_splits, ne_splits, ee_splits)
+    # TODO: All placeholders! Replace with accurate lookup!!
+  
+    if soc_value <= 30:
+        soc_class = 'high'
+    elif soc_value > 30 and soc_value <=50:
+        soc_class = 'medium'
+    elif soc_value > 50 and soc_value <100:
+        soc_class = 'skilled'
+    else:
+        soc_class = None
+    return(soc_class)
 
-# get an estimation for high/medium/skilled and apply to the totals
-splits['higher'] = splits.iloc[:,1:12].sum(axis=1)
-splits['medium'] = splits.iloc[:,12:22].sum(axis=1)
-splits['skilled'] = splits.iloc[:,22:26].sum(axis=1)
-
-# the splits don't add up to 100% so need an uplift so no numbers are missing
-splits['diff'] = 1-(splits['higher']+splits['medium']+splits['skilled'])
-splits['higher'] = splits['higher']+(splits['diff']/3)
-splits['medium'] = splits['medium']+(splits['diff']/3)
-splits['skilled'] = splits['skilled']+(splits['diff']/3)
-splits['total'] = splits['higher']+splits['medium']+splits['skilled']
-splits = splits[['RGN11nm', 'Siccat', 'higher', 'medium', 'skilled']]
-splits = splits.rename(columns={'Siccat':'CE_SIC'})
-# splits['total'].sum() # check all add up to 1
-# now they should add up to 100%
+def build_sic_to_soc(balance_soc_factors = True,
+                     output = 'emp',
+                     sic_2digit_path = _default_sic_2digit_path,
+                     defaultHomeDir = 'C:/output',
+                     write = False):
 
 
-# Melt the HSL MSOA division table
-msoa_sic = msoa_sic.drop(columns = {'RGN11cd'})
-sic_columns = msoa_sic.columns[2:]   
+    nup.set_wd('C:/NorMITs_Export', iteration=output)
 
-msoatrans = pd.melt(msoa_sic, id_vars = ['MSOA', 'RGN11nm'], value_vars = sic_columns)
-msoatrans = msoatrans.rename(columns = {'variable':'HSL_SIC', 'value':'total'})
-msoatrans['total'].sum()
-#msoatrans = msoatrans.rename(columns={'Siccat': 'HSL_SIC'})
-Sictrans = Sictrans.drop(columns = {'CE_SIC_categories'})
-msoatrans2 = msoatrans.merge(Sictrans, on = 'HSL_SIC', how = 'outer')
+    # File paths
+    # MSOA divisions HSL data
+    # TODO: Already contains a regional split - should be done 'live' with a path to a replaceable data source
+    msoa_sic = pd.read_csv(sic_2digit_path)
 
-# need to join the CE codes
-# msoa_sic = msoa_sic.drop(columns = {'RGN11cd'})
+    # Get region splits    
+    regional_splits = combine_regional_splits()
 
-#Sictrans = Sictrans.drop(columns = {'CE_cat.1'})
-msoatrans2 = msoatrans.merge(Sictrans, on = 'HSL_SIC', how = 'left')
-msoatrans2 = msoatrans2.rename(columns={'CE_cat':'CE_SIC'}).drop(columns={'CE_cat.1'})
-socs = msoatrans2.merge(splits, on = ['RGN11nm', 'CE_SIC'], how = 'left')
-socs['total'].sum()
+    # Classify SOCs
+    # TODO: Again - replace placeholders in function
+    regional_splits['soc_class'] = regional_splits['soc_cat'].apply(classify_soc)
 
-socs.update(socs.iloc[:, 5:8].mul(socs.total, 0))
-socs['check']= socs['higher']+socs['medium']+socs['skilled']
-socs= socs.drop(columns={'RGN11nm', 'CE_SIC'})
-print(socs['check'].sum())
+    # Reindex and group above SOC - (drop SOC)
+    regional_splits = regional_splits.reindex(['RGN11nm', 'jobs', 'CE_SIC', 'soc_class'], axis=1)
 
-socs.to_csv('UK_SICtoSOC_HSL.csv')
+    regional_splits = regional_splits.groupby(['RGN11nm', 'CE_SIC', 'soc_class']).sum().reset_index()
 
-# Use TfN Industry sectors weights
-"""
-tfnindsectors = tfnindsectors.rename(columns = {'HsL_sIC':'HSL_SIC'})
-tfnindsectors = tfnindsectors.drop(columns = {'SIC_division', 'Description', 'North sector weights'})
-indcols = tfnindsectors.columns[1:]
-print(indcols)
-tfnindsectors = pd.melt(tfnindsectors, id_vars = 'HSL_SIC', value_vars = indcols)
-tfnindsectors = tfnindsectors.rename(columns={'variable':'TfN industry', 'value':'splits'})
-tfnsocs = socs.merge(tfnindsectors, on = 'HSL_SIC', how = 'outer')
-tfnsocs['splits'] = tfnsocs['splits'].fillna(0)
-tfnsocs2 = tfnsocs.copy()
-tfnsocs2.update(tfnsocs2.iloc[:, 5:8].mul(tfnsocs2.splits,0))
-   
-tfnsocs2['check'] = tfnsocs2['higher']+tfnsocs2['medium']+tfnsocs2['skilled']
-tfnsocs2['check'].sum()
-tfnsocs2 = tfnsocs2.drop(columns = {'HSL_SIC', 'check'})
-tfnind = tfnsocs2[['MSOA', 'TfN industry', 'higher', 'medium', 'skilled']]
-tfnsocs2 = tfnsocs2.drop(columns = {'RGN11nm', 'total', 'CE_SIC','HSL_SIC', 'splits'})
+    if balance_soc_factors:
+        tot = regional_splits.reindex(
+                ['RGN11nm', 'CE_SIC', 'jobs'], axis=1).groupby(
+                        ['RGN11nm', 'CE_SIC']).sum().reset_index()
 
-tfnind = tfnsocs2.groupby(
-        by = ['MSOA', 'TfN industry'], 
-        as_index = False, 
-        ).sum(axis = 0)
-#.drop(columns = {'splits', 'total'})
-socs_check =socs[['MSOA', 'check']]
-socs_check = socs_check.groupby(
-    by = ['MSOA'],
-    as_index = False,
-    ).sum(axis= 0)
-tfnsocs2.to_csv('C:/NorMITs_Export/SOCbyTfNindsutrysectors.csv')
-"""
+        tot['adj'] = 1+(1-tot['jobs'])
+        del(tot['jobs'])
+        regional_splits = regional_splits.merge(tot, how = 'left',
+                                                on = ['RGN11nm', 'CE_SIC'])
+        regional_splits['jobs'] = regional_splits['jobs'] * regional_splits['adj']
+        del(regional_splits['adj'])
 
+    # Some Nan segments here - might be normal
+    sic_trans = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/CE Industry categories.csv')
+
+    # Melt the HSL MSOA division table
+    sic_columns = list(msoa_sic)
+    sic_columns = [x for x in sic_columns if 'Wrkrs' in x]
+    del(msoa_sic['RGN11cd'])
+    msoatrans = pd.melt(msoa_sic, id_vars = ['MSOA', 'RGN11nm'],
+                        value_vars = sic_columns,
+                        var_name = 'HSL_SIC',
+                        value_name = 'total')
+    print('Total jobs: ' + str(msoatrans['total'].sum()))
+
+    # TODO: Is this a function?
+
+    # Get sic categories ready to join
+    sic_trans = sic_trans.drop(columns = {'CE_SIC_categories'})
+    # Seriously though, what problem does it have with 97 & 98?
+
+    msoatrans2 = msoatrans.merge(sic_trans, on = 'HSL_SIC', how = 'outer')
+    msoatrans2 = msoatrans2.rename(columns={'CE_cat':'CE_SIC'})
+
+    socs = msoatrans2.merge(regional_splits, on = ['RGN11nm', 'CE_SIC'], how = 'outer')
+
+    socs['seg_jobs'] = socs['total'] * socs['jobs']
+
+    if write:
+        socs.to_csv('Y:/NorMITs Land Use/import/NPR Segmentation/UK_SICtoSOCv3.csv')
+        splits.to_csv('Y:/NorMITs Land Use/import/NPR Segmentation/splits.csv')
+        
+# TODO: functionalise this and might need toreplace the employees_socPath
 ############################# GENERATE LAD LEVEL CONTROL ################################
 
 # rename LAD columns
@@ -224,70 +229,27 @@ employees_soc_factors = employees_soc.join(msoa_factors.set_index('MSOA'), on='M
             ['MSOA', 'HSL_SIC'])
 
 ############################# APPLY CONTROL AND WRITE OUT FILE ################################
-
 factored_employees = employees_soc_factors[['higher', 'medium', 'skilled']].div(employees_soc_factors['factor'], axis='index')
 factored_employees['check']=factored_employees['higher']+factored_employees['medium']+factored_employees['skilled']
 factored_employees.reset_index().to_csv('C:/NorMITs_Export/'+'jobs_by_industry_skill_2018.csv', index=False)
     
 
-"""
-# This is now redundant as it calculates the SIC definitions proposed by CE  (Cambridge Econometrics) which are different.
 
-msoa_sic['SIC1'] = msoa_sic['SIC_1']+msoa_sic['SIC_1.1']+msoa_sic['SIC_1.2']
-msoa_sic['SIC2'] = msoa_sic['SIC_2']+msoa_sic['SIC_2.1']+msoa_sic['SIC_2.2']+msoa_sic['SIC_2.3']+msoa_sic['SIC_2.4']
-msoa_sic['SIC3'] = msoa_sic['SIC_3']+msoa_sic['SIC_3.1']+msoa_sic['SIC_3.2']
-msoa_sic['SIC4'] = msoa_sic['SIC_4']+msoa_sic['SIC_4.1']+msoa_sic['SIC_4.2']
-msoa_sic['SIC5'] = msoa_sic['SIC_5']+msoa_sic['SIC_5.1']
-msoa_sic['SIC10'] = msoa_sic['SIC_10']+msoa_sic['SIC_10.1']
-msoa_sic['SIC11']= msoa_sic['SIC_11']+msoa_sic['SIC_11.1']
-msoa_sic['SIC17']= msoa_sic['SIC_17']+msoa_sic['SIC_17.1']+msoa_sic['SIC_17.2']
-msoa_sic['SIC19']= msoa_sic['SIC_19']+msoa_sic['SIC_19.1']+msoa_sic['SIC_19.2']+msoa_sic['SIC_19.3']
-msoa_sic['SIC20'] = msoa_sic['SIC_20']+msoa_sic['SIC_20.1']+msoa_sic['SIC_20.2']
-msoa_sic['SIC27'] = msoa_sic['SIC_27']+msoa_sic['SIC_27.1']
-msoa_sic['SIC30'] = msoa_sic['SIC_30']+msoa_sic['SIC_30.1']+msoa_sic['SIC_30.2']
-msoa_sic['SIC31'] = msoa_sic['SIC_31']+msoa_sic['SIC_31.1']+msoa_sic['SIC_31.2']
-msoa_sic['SIC32'] = msoa_sic['SIC_32']+msoa_sic['SIC_32.1']+msoa_sic['SIC_32.2']
-msoa_sic['SIC37'] = msoa_sic['SIC_37']+msoa_sic['SIC_37.1']+msoa_sic['SIC_37.2']+msoa_sic['SIC_37.3']
-msoa_sic['SIC38'] = msoa_sic['SIC_38']+msoa_sic['SIC_38.1']+msoa_sic['SIC_38.2']+msoa_sic['SIC_38.3']+msoa_sic['SIC_38.4']+msoa_sic['SIC_38.5']
-msoa_sic['SIC42'] = msoa_sic['SIC_42']+msoa_sic['SIC_42.1']
-msoa_sic['SIC43'] = msoa_sic['SIC_43']+msoa_sic['SIC_43.1']
-msoa_sic['SIC44'] = msoa_sic['SIC_44']+msoa_sic['SIC_44.1']
-msoa_sic['SIC45'] = msoa_sic['SIC_45']+msoa_sic['SIC_45.1']+msoa_sic['SIC_45.2']+msoa_sic['SIC_45.3']
-
-
-msoa_sic = msoa_sic.rename(columns={'SIC_6':'SIC6', 'SIC_7':'SIC7', 
-                           'SIC_8':'SIC8', 'SIC_9':'SIC9', 'SIC_12':'SIC12',
-                           'SIC_13':'SIC13', 'SIC_14':'SIC14', 'SIC_15':'SIC15',
-                           'SIC_16':'SIC16', 'SIC_18':'SIC18', 'SIC_21':'SIC21',
-                           'SIC_22':'SIC22', 'SIC_23':'SIC23', 'SIC_24':'SIC24',
-                           'SIC_25':'SIC25', 'SIC_26':'SIC26', 'SIC_28':'SIC28',
-                           'SIC_29':'SIC29', 'SIC_33':'SIC33', 'SIC_34':'SIC34',
-                           'SIC_35':'SIC35', 'SIC_36':'SIC36', 'SIC_39':'SIC39',
-                           'SIC_40':'SIC40', 'SIC_41':'SIC41'
-                           })
+def build_attraction_employments():
     
-msoa_sic = msoa_sic.drop(columns={'SIC_45', 'SIC_45.1', 'SIC_45.2', 'SIC_45.3',
-                                    'SIC_44.1', 'SIC_44', 'SIC_43', 'SIC_43.1',
-                                    'SIC_42', 'SIC_42.1','SIC_38', 'SIC_38.1',
-                                    'SIC_38.2','SIC_38.3','SIC_38.5','SIC_38.5',
-                                    'SIC_37', 'SIC_37.1', 'SIC_37.2', 'SIC_37.3',
-                                    'SIC_32', 'SIC_32.1', 'SIC_32.2', 'SIC_31', 
-                                    'SIC_31.1', 'SIC_31.2', 'SIC_30', 'SIC_30.1', 
-                                    'SIC_30.2', 'SIC_27', 'SIC_27.1', 'SIC_20.2', 
-                                    'SIC_20.1', 'SIC_20', 'SIC_19.3', 'SIC_19.2', 
-                                    'SIC_19.1', 'SIC_19', 'SIC_17', 'SIC_17.1',
-                                    'SIC_17.2', 'SIC_17', 'SIC_11', 'SIC_11.1', 
-                                    'SIC_10', 'SIC_10.1', 'SIC_5', 'SIC_5.1', 
-                                    'SIC_4', 'SIC_4.1', 'SIC_4.2', 'SIC_3.2', 
-                                    'SIC_3.1', 'SIC_3', 'SIC_2', 'SIC_2.1', 
-                                    'SIC_2.2', 'SIC_2.3', 'SIC_2.4', 'SIC_1', 
-                                    'SIC_1.2', 'SIC_1.1', 'SIC_38.4', '#N/A', 
-                                    '#N/A.1'})
-msoa_sic = msoa_sic[['MSOA','RGN11nm', 'SIC1', 'SIC2', 'SIC3', 'SIC4', 'SIC5', 'SIC6', 'SIC7', 'SIC8', 
-                    'SIC9', 'SIC10', 'SIC11', 'SIC12', 'SIC13', 'SIC14', 'SIC15', 'SIC16', 
-                    'SIC17', 'SIC18', 'SIC19', 'SIC20', 'SIC21', 'SIC22', 'SIC23', 'SIC24',
-                    'SIC25', 'SIC26', 'SIC27', 'SIC28', 'SIC29', 'SIC30', 'SIC31',
-                    'SIC32', 'SIC33', 'SIC34', 'SIC35', 'SIC36', 'SIC37', 'SIC38', 
-                    'SIC39', 'SIC40', 'SIC41', 'SIC42', 'SIC43', 'SIC44', 'SIC45']]      
-"""
+    # TODO: Replace placeholders
+    
+    # Run sic/soc lookup
+    sic_soc = build_sic_to_soc()
+
+    # TODO: Import 5 digit SIC from Bres data
+    sic_soc = # TODO: 5 digit split
+
+    # Overlay - bring though SIC/SOC splits
+    attraction_employments = None # Placeholder
+
+    # Export to Y:/Data or a database
+
+    return(attraction_employments)
+
 
