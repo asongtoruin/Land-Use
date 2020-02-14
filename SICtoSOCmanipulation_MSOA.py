@@ -1,19 +1,30 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Nov 21 16:10:36 2019
-
 @author: mags15
-
+Updated: 14/02/2020 using @author: sclayton' uplift to 2018 built for NELUM's work
 more info: Y:/NorMITs Land Use/import/NPR Segmentation/DataPrepProcess.doc
+Uplift steps: 
+# Code takes SOC data sectored by industry sectors and by MSOA and factors 
+# total number of employees in MSOA according to ONS employment data by 
+# Steps are:
+#   1. Read in 'employees' data (at LAD and County level for 2017)
+#   2. Read in 'people in work' data for 2018, to be used for overall control
+#   3. Read in HSL MSOA data for 2018, which has spatial detail but not right total
+#   4. Scale up 2017 LAD and County level employees data to 2018 people-in-work control
+#   5. Group HSL MSOA level data to LAD/County where appropriate and calculate new scaling factors
+#   6. Apply scaling factors at an MSOA level
 
 """
 
 import os
 import pandas as pd
+import sys
+sys.path.append('C:/Users/' + os.getlogin() + '/S/NorMITs Utilities/Python')
 import nu_project as nup
 
 output = 'emp'
-defaultHomeDir = 'C:/output'
+defaultHomeDir = 'C:/NorMITs_export/'
 
 def SetWd(homeDir = defaultHomeDir, iteration=output):
     os.chdir(homeDir)
@@ -23,29 +34,40 @@ def SetWd(homeDir = defaultHomeDir, iteration=output):
 # File paths
 # MSOA divisions HSL data
 msoa_sic = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/sic_div_msoa_2018.csv')
+path = 'Y:\\NorMITs Land Use\\import\\NPR Segmentation\\processed data\\LAD controls 2018\\'
+os.chdir(path) # changes directory up one folder
+
 
 # region splits. Source: HSL. Categories for SIC here are different to HSL data
-ee_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_East of England.csv')
-ne_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_NorthEast.csv')
-se_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_SouthEast.csv')
-yor_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_Yorkshire.csv')
-wal_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_Wales.csv')
-sw_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_SouthWest.csv')
-lon_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_London.csv')
-em_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_East Midlands.csv')
-nw_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_NorthWest.csv')
-scot_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_Scotland.csv')
-wm_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/SIC_West Midlands.csv')
+ee_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_East of England.csv')
+ne_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_NorthEast.csv')
+se_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_SouthEast.csv')
+yor_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_Yorkshire.csv')
+wal_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_Wales.csv')
+sw_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_SouthWest.csv')
+lon_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_London.csv')
+em_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_East Midlands.csv')
+nw_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_NorthWest.csv')
+scot_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_Scotland.csv')
+wm_splits = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/SIC_West Midlands.csv')
 
+Sictrans = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/CE industry categories.csv')
 
-Sictrans = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/Regional_SICsplits/CE industry categories.csv')
+# tfn industry sectors
+tfnindsectors = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/TfN industrial sector splits.csv')
+
+# read in data for the uplift
+ons_employees = pd.ExcelFile('Employees by LAD - table52017p.xlsx') # ONS data in thousands of employees to scale to - use 2017 as 2018 data is provisional
+ons_people_in_work = pd.ExcelFile('lfs_people_in_employment_2018.xlsx')
+employees_socPath = (defaultHomeDir +"/"+output+'UK_SICtoSOC_HSL.csv') # SICtoSOC output split into 12 TfN sectors
+area_code_lookup = pd.read_csv('MSOA_LAD_APR19.csv') # lookup msoa, LA, county and NELUM zone, _APR19 changes E06000028 and E06000029 to E06000058
+
 
 SetWd(homeDir = 'C:/NorMITs_Export', iteration=output)
 
-
 # Regionsplits combine
     
-    nw_splits = nw_splits.rename(columns={'Unnamed: 0': 'Siccat'})
+  #  nw_splits = nw_splits.rename(columns={'Unnamed: 0': 'Siccat'})
 
     ee_splits['RGN11nm'] = 'East of England'
     ne_splits['RGN11nm'] = 'North East'
@@ -79,34 +101,39 @@ SetWd(homeDir = 'C:/NorMITs_Export', iteration=output)
     splits['total'] = splits['higher']+splits['medium']+splits['skilled']
     splits = splits[['RGN11nm', 'Siccat', 'higher', 'medium', 'skilled']]
     splits = splits.rename(columns={'Siccat':'CE_SIC'})
+    # splits['total'].sum() # check all add up to 1
     # now they should add up to 100%
 
 
     # Melt the HSL MSOA division table
-    sic_columns = msoa_sic.columns[2:]   
     msoa_sic = msoa_sic.drop(columns = {'RGN11cd'})
+    sic_columns = msoa_sic.columns[2:]   
+
     msoatrans = pd.melt(msoa_sic, id_vars = ['MSOA', 'RGN11nm'], value_vars = sic_columns)
     msoatrans = msoatrans.rename(columns = {'variable':'HSL_SIC', 'value':'total'})
     msoatrans['total'].sum()
     #msoatrans = msoatrans.rename(columns={'Siccat': 'HSL_SIC'})
-    
-    # need to join the CE codes
-    # msoa_sic = msoa_sic.drop(columns = {'RGN11cd'})
-
     Sictrans = Sictrans.drop(columns = {'CE_SIC_categories'})
     msoatrans2 = msoatrans.merge(Sictrans, on = 'HSL_SIC', how = 'outer')
 
-    socs = msoatrans2.merge(splits, on = ['RGN11nm', 'CE_SIC'], how = 'outer')
+    # need to join the CE codes
+    # msoa_sic = msoa_sic.drop(columns = {'RGN11cd'})
 
+    #Sictrans = Sictrans.drop(columns = {'CE_cat.1'})
+    msoatrans2 = msoatrans.merge(Sictrans, on = 'HSL_SIC', how = 'left')
+    msoatrans2 = msoatrans2.rename(columns={'CE_cat':'CE_SIC'}).drop(columns={'CE_cat.1'})
+    socs = msoatrans2.merge(splits, on = ['RGN11nm', 'CE_SIC'], how = 'left')
+    socs['total'].sum()
+    
     socs.update(socs.iloc[:, 5:8].mul(socs.total, 0))
     socs['check']= socs['higher']+socs['medium']+socs['skilled']
+    socs= socs.drop(columns={'RGN11nm', 'CE_SIC'})
     print(socs['check'].sum())
 
-    socs.to_csv('C:/NorMITs_Export/UK_SICtoSOC_HSL.csv')
-    splits.to_csv('Y:/NorMITs Land Use/import/NPR Segmentation/splits.csv')
+    socs.to_csv('UK_SICtoSOC_HSL.csv')
     
 # Use TfN Industry sectors weights
-    tfnindsectors = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/TfN industrial sector splits.csv')
+    """
     tfnindsectors = tfnindsectors.rename(columns = {'HsL_sIC':'HSL_SIC'})
     tfnindsectors = tfnindsectors.drop(columns = {'SIC_division', 'Description', 'North sector weights'})
     indcols = tfnindsectors.columns[1:]
@@ -134,9 +161,77 @@ SetWd(homeDir = 'C:/NorMITs_Export', iteration=output)
         by = ['MSOA'],
         as_index = False,
         ).sum(axis= 0)
+    tfnsocs2.to_csv('C:/NorMITs_Export/SOCbyTfNindsutrysectors.csv')
+    """
+    
+############################# GENERATE LAD LEVEL CONTROL ################################
+    
+# rename LAD columns
+    employees_lad = pd.read_excel(ons_employees, sheet_name=2, header=1, usecols=[0, 2, 13])
+    employees_lad.columns = ['LA Code', 'County Code', 'Total Employees']
+
+# factor Employees by LAD 2017 up to 2018 (provisional) total
+    people_in_work_18 = pd.read_excel(ons_people_in_work, sheet_name=0, header=7, usecols=[0, 3])
+    people_in_work_18.columns = ['Region', 'Total in employment - aged 16 and over']
+    people_in_work_18[['Total in employment - aged 16 and over']] =people_in_work_18[['Total in employment - aged 16 and over']].div(1000)
+
+# calculate factor to scale up employees per LAD (2017) to people in work (2018)
+    ons_factor = people_in_work_18[['Total in employment - aged 16 and over']].sum().div(employees_lad['Total Employees'].sum(), axis='index')
+    employees_lad['Total Employees Factored'] = employees_lad['Total Employees'] * ons_factor[0]
+    employees_lad = employees_lad.drop(['Total Employees'], axis=1)
+    employees_lad['Total Employees Factored'] = employees_lad['Total Employees Factored']*1000
+
+############################# GENERATE LAD/COUNTY/SCOT-WALES LEVEL SCALING FACTORS ################################
+    employees_soc = pd.read_csv(employees_socPath).drop(columns={'Unnamed: 0'})
+    employees_soc_code_join = area_code_lookup.join(employees_soc.set_index('MSOA'), on='MSOA_code')
+
+# group soc data by LA Code and sum total
+    employees_soc_la_gr = employees_soc_code_join.groupby(['LAD18CD'], as_index=False).sum().rename(
+        columns={'check': 'SOC total'}).drop(['NELUM_zone', 'higher', 'medium', 'skilled'], axis=1)
+# group soc data by County Code and sum total
+    employees_soc_county_gr = employees_soc_code_join.groupby(['CTY18CD'], as_index=False).sum().rename(
+        columns={'check': 'SOC total'}).drop(['NELUM_zone', 'higher', 'medium', 'skilled'], axis=1)
+# group LAD data by LA code to group Scotland and Wales rows
+    employees_lad_la_gr = employees_lad.groupby(['LA Code'], as_index=False).sum()
+
+# Two domains - LA and County, due to way ONS data is presented
+# join LA grouped soc data to LAD table for comparison (LA)
+    employees_la_comp = employees_soc_la_gr.join(employees_lad_la_gr.set_index('LA Code'), on='LAD18CD').rename(
+        columns={'Total Employees Factored': 'LAD total LA'})
+# join County grouped soc data to LAD table for comparison (County)
+    employees_county_comp = employees_soc_county_gr.join(employees_lad.set_index('County Code'), on='CTY18CD').rename(
+        columns={'Total Employees Factored': 'LAD total County'}).drop(['LA Code'], axis=1)
+
+# now calculate % difference between SOC and LAD for both LA and County df's
+    employees_la_comp['soc_to_lad_factor_la'] = employees_la_comp['SOC total'] / employees_la_comp['LAD total LA']
+    employees_county_comp['soc_to_lad_factor_county'] = employees_county_comp['SOC total'] / employees_county_comp['LAD total County']
+    employees_county_comp = employees_county_comp.drop(columns={'total'})
+############################# JOIN BACK TO MSOA ################################
+
+# multiple joins required since some areas are in the LA domain but others in County domain
+# join on LAD18CD and drop totals
+    msoa_factors = area_code_lookup.join(employees_la_comp.set_index('LAD18CD'), on='LAD18CD').drop(
+        ['SOC total', 'LAD total LA', 'NELUM_zone'], axis=1)
+# join on CTY18CD and drop totals
+    msoa_factors = msoa_factors.join(employees_county_comp.set_index('CTY18CD'), on='CTY18CD').drop(columns=
+        {'SOC total', 'LAD total County'}).rename(columns={'MSOA_code':'MSOA'})
+# create new column of 'LA or County factor' - fillna 
+    msoa_factors['factor'] = msoa_factors['soc_to_lad_factor_la'].fillna(msoa_factors['soc_to_lad_factor_county'])
+    msoa_factors = msoa_factors.drop(columns = {'total'})
+# join factors to employees by msoa
+    employees_soc_factors = employees_soc.join(msoa_factors.set_index('MSOA'), on='MSOA', how='left').drop(
+        ['LAD18CD', 'CTY18CD', 'soc_to_lad_factor_la', 'soc_to_lad_factor_county'], axis=1).set_index(
+                ['MSOA', 'HSL_SIC'])
+
+############################# APPLY CONTROL AND WRITE OUT FILE ################################
+
+    factored_employees = employees_soc_factors[['higher', 'medium', 'skilled']].div(employees_soc_factors['factor'], axis='index')
+    factored_employees['check']=factored_employees['higher']+factored_employees['medium']+factored_employees['skilled']
+    factored_employees.reset_index().to_csv('C:/NorMITs_Export/'+'jobs_by_industry_skill_2018.csv', index=False)
+    
 
 """
-# This is now redundant as it calculates the SIC definitions proposed by CE which are different.
+# This is now redundant as it calculates the SIC definitions proposed by CE  (Cambridge Econometrics) which are different.
 
 msoa_sic['SIC1'] = msoa_sic['SIC_1']+msoa_sic['SIC_1.1']+msoa_sic['SIC_1.2']
 msoa_sic['SIC2'] = msoa_sic['SIC_2']+msoa_sic['SIC_2.1']+msoa_sic['SIC_2.2']+msoa_sic['SIC_2.3']+msoa_sic['SIC_2.4']
