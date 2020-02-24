@@ -5,7 +5,7 @@ Created on Tue Feb 18 13:44:50 2020
 Created on Tue Feb 18 13:31:24 2020
 
 @author: Systra
-Updated by: MagdaSmith
+Updated by: Mags15
 """
 
 import pandas as pd
