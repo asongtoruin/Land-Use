@@ -241,24 +241,31 @@ factored_employees.reset_index().to_csv('C:/NorMITs_Export/'+'jobs_by_industry_s
 
 
 def build_attraction_employments():
-    
-    # TODO: Replace placeholders
-    employees_lad = build_employees_by_lad(ons_employees, ons_people_in_work)
-    
+        
     # Run sic/soc lookup
     sic_soc = build_sic_to_soc(balance_soc_factors = True,
                                output = 'emp',
                                sic_2digit_path = _default_sic_2digit_path,
                                write = False)
     
+    # Replace non integer values in jobs - get 2 digit SIC
+    # 2 digit SIC is basis for weighting - hence why we needed 5 digit lookup.
+    # Potentially not anymore.
+    unq_sic = sic_soc['HSL_SIC'].drop_duplicates()
+    print(unq_sic)
+    sic_soc['sic_2d'] = sic_soc['HSL_SIC'].str.replace('s','')
+    sic_soc['sic_2d'] = sic_soc['sic_2d'].str.replace('_Wrkr','')
+    
     # Group, sum & tidy columns
     sic_soc = sic_soc.reindex(
-            ['MSOA', 'soc_class', 'seg_jobs'],
-            axis=1).groupby([]).sum()
-    
-    sic_soc = sort_values(
-                    ['MSOA','soc_class']).reset_index(
-                            drop=True)
+            ['MSOA', 'sic_2d', 'soc_class', 'seg_jobs'],
+            axis=1).groupby(
+                    ['MSOA', 'sic_2d', 'soc_class']).sum(
+                            ).reset_index()
+
+    sic_soc = sic_soc.sort_values(
+            ['MSOA','soc_class']).reset_index(
+                    drop=True)
 
     # Bit stuck - can't remember:
     # How we're supposed to overlay purpose weighting
@@ -272,15 +279,9 @@ def build_attraction_employments():
     else:
         print('Some MSOAs missing')
 
-    # TODO: Import 5 digit SIC from Bres data
-    sic_soc = five_digit_split() # TODO: 5 digit split
-
-    # Overlay - bring though SIC/SOC splits
-    attraction_employments = None # Placeholder
-
     # Export to Y:/Data or a database
+    sic_soc.to_csv('soc_2_digit_sic_2018.csv', index=False)
 
-
-    return(attraction_employments)
+    return(sic_soc)
 
 
