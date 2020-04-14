@@ -93,11 +93,11 @@ def classify_soc(soc_value):
     # TODO: All placeholders! Replace with accurate lookup!!
   
     if soc_value <= 30:
-        soc_class = 'high'
+        soc_class = 1
     elif soc_value > 30 and soc_value <=50:
-        soc_class = 'medium'
+        soc_class = 2
     elif soc_value > 50 and soc_value <100:
-        soc_class = 'skilled'
+        soc_class = 3
     else:
         soc_class = None
     return(soc_class)
