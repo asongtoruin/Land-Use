@@ -43,10 +43,10 @@ _default_zone_folder = ('Y:/NorMITs Synthesiser/Zone Translation/')
 _default_zone_ref_folder = 'Y:/Data Strategy/GIS Shapefiles/'
 
 
-_default_uprn_lookup_path = (_default_home_dir + _default_iter + '/uprnLookup.csv')
+_default_uprn_lookup_path = (_import_folder + 'AddressBase/2018/uprnLookup.csv')
 _default_census_property_types_path = (_import_folder+'Census_Property_Type_Maps.xlsx')
-_default_alladdresses_path = (_default_home_dir + _default_iter + '/allAddresses.csv')
-_default_allproperties_path = (_default_home_dir + _default_iter + '/allProperties.csv')
+_default_alladdresses_path = (_import_folder + 'AddressBase/2018/allAddresses.csv')
+_default_allproperties_path = (_import_folder + 'AddressBase/2018/allProperties.csv')
 # remember to switch everything from msoaRef to _default_msoaRef
 _default_lsoaRef = _default_zone_ref_folder+'/UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz.shp'
 _default_msoaRef = _default_zone_ref_folder+'/UK MSOA and Intermediate Zone Clipped 2011/uk_ew_msoa_s_iz.shp'
@@ -473,12 +473,12 @@ def ZonalPropertyCount(RD,
                        targetZones=CountListShp(shp=_default_zoning_path)[1],
                        writeOut=False,
                        reportName=''):
-    
-    # Another standard report but outputs at zonal grouping
-    # Uses the ZoneID cols by default
-    # Takes grouping variable as a column name
-    # TODO: Make properly zone agnostic - this will probably break with LSOA
-    
+    """
+    Another standard report but outputs at zonal grouping
+    Uses the ZoneID cols by default
+    Takes grouping variable as a column name
+    TODO: Make properly zone agnostic - this will probably break with LSOA
+    """
     if groupingCol is None:
         pByZone = RD.groupby(['ZoneID']).count().reindex(['UPRN'],axis=1).reset_index()
     else:
@@ -488,9 +488,9 @@ def ZonalPropertyCount(RD,
     print(pByZone.UPRN.nlargest(n=10))
     print('Least properties by Zone:')
     print(pByZone.UPRN.nsmallest(n=10))
-    print('Total Mainland GB properties')
+    print('Total Mainland GB properties:')
     print(pByZone.UPRN.sum(), ', ', round(pByZone.UPRN.sum()/1000000,2), 'M')
-    print('ONS reports 27.4M in 2017')
+    print('VOA reports 25.6M residential props in E+W in 2018')
     
     zoneCount = len(pByZone)
     
@@ -498,7 +498,6 @@ def ZonalPropertyCount(RD,
         print('Some zones missing, writing missing zones to audit folder')
         mz = targetZones[~targetZones.isin(pByZone.ZoneID)]
         mz = mz.to_frame()
-        # Placeholder here for vis (can't filter on nothing)
         mz['exists'] = 'No'
         mz.to_csv('Land Use Audits/' + reportName + '_missing_zones.csv', \
                   index=False)
@@ -584,19 +583,17 @@ def PropertyTypeAnalysis(subset = None,
     audit[0].to_csv('Land Use Audits/pre_classification_land_use.csv')
     audit[1].to_csv('Land Use Audits/classification_os.csv')
     #zonalPRoperties = BuildCorrespondence(allResProperty)
+    """
+    TODO: This should take any of the 3 zoning systems in the UPRN lookup 
+    as described in the function parameters
+    do we need to filter out the parent/child UPRNs, this would make a diff for flats
     
-    # Join zone codes on at this point to allow for spatial groupings 
-    # in classification algo
-    # TODO: This should take any of the 3 zoning systems in the UPRN 
-    # lookup as described in the function parameters
-    # do we need to filter out the parent/child UPRNs, this would make a diff for flats
-    
-    # Remove non-existing property types:
-    # 1 under construction, 2 In use, 3 Unoccupied / vacant / derelict, 
-    # 4 Demolished, 6 Planning permission granted
-    # technical spec: 
-    # https://www.ordnancesurvey.co.uk/documents/product-support/tech-spec/addressbase-premium-technical-specification.pdf
-    
+    Remove non-existing property types:
+    1 under construction, 2 In use, 3 Unoccupied / vacant / derelict, 
+    4 Demolished, 6 Planning permission granted
+    technical spec: 
+    https://www.ordnancesurvey.co.uk/documents/product-support/tech-spec/addressbase-premium-technical-specification.pdf
+    """
     print('Removing demolished or under construction properties')
     noneProperties=[3,4,6]
     allResProperty = allResProperty[~allResProperty.BLPU_STATE.isin(noneProperties)]
@@ -628,11 +625,11 @@ def PropertyTypeAnalysis(subset = None,
     
     def ApplyClassificationLogic(allResProperty, logic=None):
         """
-        # Function to process census types for RD06
-        # Main function can be applied to a dataframe, sub function is 
-        # a case when for pandas apply method
+        Function to process census types for RD06
+        Main function can be applied to a dataframe, sub function is 
+        a case when for pandas apply method
         
-        # TODO: RD06 is now just flats category 4
+        TODO: RD06 is now just flats category 4
         """        
         # Build scf - property classification subset - also useful for audits
         scf = allResProperty[allResProperty.loc[:, 'CLASSIFICATION_CODE'] == logic]        
@@ -844,9 +841,9 @@ def ClassificationCount(cRD, allResCountPath = _default_home_dir+_default_iter+'
 
 def UprnAudit(defaultZoneName):
     """
-    # Check the MSOA zoning system we're all in on matches across types
-    # Needed because of everyone using different scottish Geographies
-    # TODO: Get this to work with any zoning system in the UPRN lookup
+    Check the MSOA zoning system we're all in on matches across types
+    Needed because of everyone using different scottish Geographies
+    TODO: Get this to work with any zoning system in the UPRN lookup
     """
            
     uprnLookup = get_uprn_lookup()
@@ -885,7 +882,7 @@ def LandUseAudits(zonalResProperty,
     """   
     TODO: Replace the import path with the VOA properties for 2018
     Function to count classified zonal property outputs and compare to and audit dataset
-    # TODO: ATM it's just either LSOA or MSOA
+    TODO: ATM it's just either LSOA or MSOA
     Need a loop to convert the property types from the audit into other
     zoning systems as required, OA as well in the future?
     TODO: Have this error handle if the lookup doesn't work as it's non-crucial
@@ -965,7 +962,7 @@ def LandUseAudits(zonalResProperty,
     # for England and Wales only.
         return(zoneResPropertyCount)
         
-def run_abp_prep(projectName, importFromSQL=False, subset=None, importClassifiedProperty=False,
+def run_abp_prep(project = _default_iter, importFromSQL=False, subset=None, importClassifiedProperty=False,
                     zoningShpPath=_default_zoning_path, level = 'MSOA',
                     zoningShpName=_default_zone_name, XYcols=['X_COORDINATE', 'Y_COORDINATE']):
     """
@@ -973,15 +970,15 @@ def run_abp_prep(projectName, importFromSQL=False, subset=None, importClassified
 
     Parameters
     ----------
-    
+    Raw data from AddressBase
 
     Returns
     ----------
-   
+    Fully classified property data.
     """  
     print('Starting the ABP data prep')
 
-    set_wd(homeDir = _default_home_dir, iteration=projectName)
+    set_wd(homeDir = _default_home_dir, iteration=project)
 
     if not importClassifiedProperty:
 
