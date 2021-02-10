@@ -913,7 +913,7 @@ def LandUseAudits(zonalResProperty,
     
         for pt in unqPropertyTypes: 
             temp = zoneResPropertyCount[zoneResPropertyCount['census_property_type'] == pt]
-            temp.to_csv('census_property_type_' + repr(pt) + '_audit.csv') 
+            temp.to_csv('Land Use Audits/census_property_type_' + repr(pt) + '_audit.csv') 
         del(temp)
     
         if writeOut:
@@ -951,7 +951,7 @@ def LandUseAudits(zonalResProperty,
     
         for pt in unqPropertyTypes: 
             temp = zoneResPropertyCount[zoneResPropertyCount['census_property_type'] == pt]
-            temp.to_csv('census_property_type_' + repr(pt) + '_audit.csv') 
+            temp.to_csv('Land Use Audits/census_property_type_' + repr(pt) + '_audit.csv') 
         del(temp)
     
         if writeOut:
