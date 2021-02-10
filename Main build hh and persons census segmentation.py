@@ -18,7 +18,6 @@ Main Build:
     - distinguishes communal establishments
 ## TODO: ApplyNtEM Segments: Scottish MSOAs show population of 0s. Need to double check what's gone wrong here
 # Audit that splits out population by England/Wales/Scotland using startswith and matching to actual population
-<<<<<<< Updated upstream
 # Need to check it reads everything in - if error then needs reporting
 """
 import os # File operations
@@ -27,24 +26,17 @@ sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Demand Tool/Python
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/TAME shared resources/Python/')
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Utilities/Python')
 
-=======
-"""
-import os # File operations
-import sys 
->>>>>>> Stashed changes
 import numpy as np # Vector operations
 import pandas as pd # main module
 import geopandas as gpd
 from shapely.geometry import *
-<<<<<<< Updated upstream
+
 import nu_project as nup
-=======
-import utils as nup
->>>>>>> Stashed changes
 
 # Default file paths
 
 _default_iter = 'iter4'
+_default_home = 'D:/NorMITs_Export/'
 _default_home_dir = ('D:/NorMITs_Export/' + _default_iter)
 _import_folder = 'Y:/NorMITs Land Use/import/'
 _import_file_drive = 'Y:/'
@@ -62,7 +54,8 @@ _default_census_population = (_import_folder+'Communal Establishments 2011 QS421
 _default_lad_translation = (_default_zone_folder+'Export/lad_to_msoa/lad_to_msoa.csv')    
 _default_census_dat = (_import_folder+'Nomis Census 2011 Head & Household')
 _default_zone_ref_folder = 'Y:/Data Strategy/GIS Shapefiles/'
-
+_default_area_types = ('Y:/NorMITs Land Use/import/area_types_msoa.csv')
+    
 _default_lsoaRef = _default_zone_ref_folder+'UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz.shp'
 _default_msoaRef = _default_zone_ref_folder+'UK MSOA and Intermediate Zone Clipped 2011/uk_ew_msoa_s_iz.shp'
 _default_ladRef = _default_zone_ref_folder+'LAD GB 2017/Local_Authority_Districts_December_2017_Full_Clipped_Boundaries_in_Great_Britain.shp'
@@ -71,6 +64,7 @@ _default_mladRef = _default_zone_ref_folder+'Merged_LAD_December_2011_Clipped_GB
 
 # 1. Functions to read in the source data 
 # todo: function to check addressbase_prep was run?
+
 def get_addressbase_extract(path = _default_addressbase_extract_path):
 
     """
@@ -162,16 +156,12 @@ def PathConfig(datPath=_default_census_dat):
     files = os.listdir(dat)
      
     return(dat, files)
-<<<<<<< Updated upstream
     
-def set_wd(homeDir = _default_home_dir, iteration=_default_iter):
+def set_wd(homeDir = _default_home, iteration = _default_iter):
     os.chdir(homeDir)
     nup.CreateProjectFolder(iteration)
     return()
     
-=======
-
->>>>>>> Stashed changes
 def LSOACensusDataPrep(datPath, EWQS401, SQS401, EWQS402, SQS402, geography = _default_lsoaRef):
     """
     This function prepares the census data by picking fields out of the csvs:
@@ -242,15 +232,12 @@ def AggregateCpt(cptData, groupingCol=None, writeOut=True):
 def ZoneUp(cptData, hlsaName = 'MSOA', zoneTranslationPath = _default_zone_folder+'Export/msoa_to_lsoa/msoa_to_lsoa.csv', 
            groupingCol='msoaZoneID'):
     """
-<<<<<<< Updated upstream
+
     Function to raise up a level of spatial aggregation & aggregate at that level, then bring new factors back down
     # TODO: Might be nice to have this zone up any level of zonal aggregation
     Raise LSOA to MSOA for spatial aggregation
-=======
-    # Function to raise up a level of spatial aggregation & aggregate at that level, then bring new factors back down
-    # TODO: Might be nice to have this zone up any level of zonal aggregation
-    # Raise LSOA to MSOA for spatial aggregation
->>>>>>> Stashed changes
+
+
     """
     zoneTranslation = pd.read_csv(zoneTranslationPath)
     zoneTranslation = zoneTranslation.rename(columns={'lsoa_zone_id':'lsoaZoneID',
@@ -527,16 +514,12 @@ def CreateNtemAreas(bsqImportPath=_import_folder+'/Bespoke Census Query/formatte
     
 def FilledProperties():
     """
-    #this is a rough account for unoccupied properties
-    #using KS401UK LSOA level to infer whether the properties have any occupants
+    this is a rough account for unoccupied properties
+    using KS401UK LSOA level to infer whether the properties have any occupants
     """
    
-<<<<<<< Updated upstream
     KS401 = pd.read_csv(_import_folder+'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv')
-=======
-    KS401 = pd.read_csv(_default_zone_folder+'/Nomis Census 2011 Head & Household/KS401UK_LSOA.csv')
->>>>>>> Stashed changes
-    
+  
     KS401permhops = KS401.reindex(columns = ['geography code', 
                                      'Dwelling Type: All categories: Household spaces; measures: Value', 
                                      'Dwelling Type: Household spaces with at least one usual resident; measures: Value'
@@ -648,12 +631,9 @@ def ApplyHouseholdOccupancy(doImport=False, writeOut=True, \
 
     hgCols = ['Area code','11_to_18']
     hopsGrowth = pd.read_csv(hopsPath).loc[:,hgCols]
-<<<<<<< Updated upstream
     
     # using HOPS growth data to uplift the figures to 2018
-=======
 
->>>>>>> Stashed changes
     balancedCptData = balancedCptData.merge(hopsGrowth,
                         how='left', left_on='lad17cd', 
                         right_on='Area code').drop('Area code',axis=1).reset_index(drop=True)
@@ -687,10 +667,7 @@ def ApplyHouseholdOccupancy(doImport=False, writeOut=True, \
         else:
             print('All Hops areas accounted for')
                 
-<<<<<<< Updated upstream
-=======
        # allResPropertyZonal.merge(FilledProperties, on = 'ZoneID')
->>>>>>> Stashed changes
         allResPropertyZonal['population'] = allResPropertyZonal['UPRN'] * allResPropertyZonal['household_occupancy_18'] 
    
     # Create folder for exports
@@ -780,11 +757,8 @@ def ApplyNtemSegments(classifiedResPropertyImportPath = 'classifiedResPropertyMS
                       bsqImportPath=_import_folder+'Bespoke Census Query/formatted_long_bsq.csv',
                       areaTypeImportPath = _import_folder+'CTripEnd/ntem_zone_area_type.csv',
                       ksEmpImportPath=_import_folder+'KS601-3UK/uk_msoa_ks601equ_w_gender.csv',
-<<<<<<< Updated upstream
                       level = _default_zone_name, writeSteps = False):
-=======
-                      writeSteps = False, level = _default_zone_name):
->>>>>>> Stashed changes
+                      
         """
         Function to join the bespoke census query to the classified residential 
         property data
@@ -883,14 +857,10 @@ def ApplyNtemSegments(classifiedResPropertyImportPath = 'classifiedResPropertyMS
     
         pop = crp['people'].sum()
         print('Final population', pop)
-<<<<<<< Updated upstream
         crp = crp.dropna()
         print('Final population after removing nans', pop)
        
-=======
-
->>>>>>> Stashed changes
-        crp.to_csv('landUseOutput' + level + '.csv', index = False)
+        crp.to_csv('/landUseOutput' + level + '.csv', index = False)
     
     # Total MSOA Pop Audit
         msoaAudit = crp.reindex(['ZoneID', 'people'], axis=1).groupby('ZoneID').sum()
@@ -958,7 +928,8 @@ def communal_establishments_employment():
     print('Communal establishments employment splits done')
     return(communal_emp)
     
-def join_establishments():
+def join_establishments(level = _default_zone_name):
+    # add areatypes
     communal_establishments = communal_establishments_splits()
     communal_emp = communal_establishments_employment()
     
@@ -981,56 +952,54 @@ def join_establishments():
                                         ).rename(columns={'comm_people':'people'})
     communal_establishments = CommunalEstActive.append(CommunalNonWork, sort = True)
     print('Communal Establishment total for 2018 should be ~1.1m and is ',
-          communal_establishments['people'].sum())
+          communal_establishments['people'].sum()/1000000)
 
     communal_establishments['property_type'] = 8
     communal_establishments = communal_establishments.rename(columns={'msoacd':'ZoneID'})
-<<<<<<< Updated upstream
+    communal_establishments = communal_establishments.merge(areatypes, on = 'ZoneID')
     
     #### bring in landuse for hc ####
-    landuse = pd.read_csv(_default_home_dir+'landuseOutput'+_default_zone_name+'.csv')
+    landuse = pd.read_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'.csv')
     zones = landuse["ZoneID"].drop_duplicates().dropna()
     Ezones = zones[zones.str.startswith('E')]
     Elanduse = landuse[landuse.ZoneID.isin(Ezones)]
     
 # work out household composition - arguably not needed - see IW's comments 09/06/20        
-=======
-    #### bring in landuse for hc
-    landuse = pd.read_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'.csv')
-    Elanduse = landuse[landuse.ZoneID.isin(landuse.ZoneID.str.startswith('E'))]
-
-# work out household composition        
->>>>>>> Stashed changes
-    HouseComp = Elanduse.groupby(by = ['ZoneID', 'Age', 'Gender', 
+    HouseComp = Elanduse.groupby(by = ['area_type', 'Age', 'Gender', 
                                         'employment_type', 'household_composition'], 
                                         as_index = False).sum()
 
-    HouseComp['total'] = HouseComp.groupby(by=['ZoneID', 'Age', 'Gender', 
+    HouseComp['total'] = HouseComp.groupby(by=['area_type', 'Age', 'Gender', 
                                      'employment_type'])['people'].transform('sum')
     HouseComp['hc'] = HouseComp['people']/HouseComp['total'] 
     HouseComp = HouseComp.drop(columns={'total', 'people'})
     
     CommunalEstablishments = communal_establishments.merge(HouseComp, 
-                                              on=['ZoneID', 'Age', 'Gender',
+                                              on=['area_type', 'Age', 'Gender',
                                                   'employment_type'], how = 'outer')
     CommunalEstablishments['newpop'] = CommunalEstablishments['people']*CommunalEstablishments['hc']
     CommunalEstablishments = CommunalEstablishments.drop(
-                columns = {'people', 'hc'}).rename(columns= {'newpop': 'people'})
+                columns = {'people', 'hc', 'property_type', 'properties','census_property_type'}).rename(columns= {'newpop': 'people'})
     CommunalEstablishments['people'].sum()
-    
-<<<<<<< Updated upstream
-def nssecsoc 
+    CommunalEstFolder = 'CommunalEstablishments'
+    nup.CreateFolder(CommunalEstFolder)
+    CommunalEstablishments.to_csv(CommunalEstFolder + '/' + _default_zone_name + 
+                                      'CommunalEstablishments2011.csv', index=False)
+    CommunalEstablishments['property_type'] = 8
+    landusewComm['people'].sum()
+
+    landusewComm = landuse.append(CommunalEstablishments) 
+    landusewComm.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_withCommunal.csv')   
     
     
     def run_main_build():
         set_wd()
+        FilledProperties()
         ApplyHouseholdOccupancy()
         ApplyNtemSegments()
         join_establishments()
 
     
-=======
->>>>>>> Stashed changes
 
 
 
