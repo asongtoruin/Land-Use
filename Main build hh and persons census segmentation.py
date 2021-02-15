@@ -861,7 +861,7 @@ def ApplyNtemSegments(classifiedResPropertyImportPath = 'classifiedResPropertyMS
         crp = crp.dropna()
         print('Final population after removing nans', pop)
        
-        crp.to_csv('/landUseOutput' + level + '.csv', index = False)
+        crp.to_csv(_default_home_dir+ '/landUseOutput' + level + '.csv', index = False)
     
     # Total MSOA Pop Audit
         msoaAudit = crp.reindex(['ZoneID', 'people'], axis=1).groupby('ZoneID').sum()
