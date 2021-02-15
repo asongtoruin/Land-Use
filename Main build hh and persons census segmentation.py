@@ -30,7 +30,7 @@ import numpy as np # Vector operations
 import pandas as pd # main module
 import geopandas as gpd
 from shapely.geometry import *
-
+import shutil as sh
 import nu_project as nup
 
 # Default file paths
@@ -65,13 +65,33 @@ _nssecPath = _import_folder+'NPR Segmentation/processed data/TfN_households_expo
 
 # 1. Functions to read in the source data 
 # todo: function to check addressbase_prep was run?
+def copy_addressbase_files (file_path_list =r"Y:\NorMITs Land Use\import\AddressBase\2018\List of ABP datasets.csv"):
+    """
+    Copy the relevant ABP files from Y drive
+    Parameters
+    ----------
+    file_path_list:
+        Path to csv of AddressBase extract paths.
+
+    Returns
+    ----------
+    Copies over the specified files to _default_home_dir for use in later functions.   
+    """
+    dest = _default_home_dir
+    data = pd.read_csv(file_path_list)
+
+    i = 1 #Start at 2nd row
+    for i in range(1, len(data)):
+       try:
+           sh.copy(data.FilePath[i], dest)
+           print("Copied over file into default iter folder: " + data.FilePath[i])
+       except:
+           print ("File not found")
 
 def get_addressbase_extract(path = _default_addressbase_extract_path):
 
     """
     Import a csv of AddressBase extract (2018) already filtered out and classified.
-
-    This might point to pre-processing function or modelling folders in the future.
 
     Parameters
     ----------
@@ -82,8 +102,11 @@ def get_addressbase_extract(path = _default_addressbase_extract_path):
     ----------
     AddressBase extract:
         DataFrame containing AddressBase extract.
+        
+    Copy across from Y    
     """
     ABPFile = pd.read_csv(path)
+    
 
     print('Reading in AddressBase extract')
     
@@ -1308,6 +1331,7 @@ def ApplyNSSECSOCsplits():
             
 def run_main_build():
     set_wd()
+    copy_addressbase_files()
     FilledProperties()
     ApplyHouseholdOccupancy()
     ApplyNtemSegments()
