@@ -75,7 +75,7 @@ def copy_addressbase_files (file_path_list =r"Y:\NorMITs Land Use\import\Address
 
     Returns
     ----------
-    Copies over the specified files to _default_home_dir for use in later functions.   
+        Copies over the specified files to _default_home_dir for use in later functions.   
     """
     dest = _default_home_dir
     data = pd.read_csv(file_path_list)
@@ -1020,7 +1020,7 @@ def join_establishments(level = _default_zone_name):
     landuse = landuse.reindex(columns=cols)
     landusewComm = landuse.append(CommunalEstablishments)
     print('Joined communal communitiies. Total pop for GB is now', landusewComm['people'].sum())
-    landusewComm.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_withCommunal.csv')   
+    landusewComm.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_withCommunal.csv', index=False)   
 
 def LanduseFormatting(landusePath = _default_home_dir+'/landuseOutput'+_default_zone_name+'_withCommunal.csv'):
     """
@@ -1044,7 +1044,7 @@ def LanduseFormatting(landusePath = _default_home_dir+'/landuseOutput'+_default_
     
     landuse = landuse.drop(columns = 'property_type').rename(columns = {'new_prop_type':'property_type'})
     landuse['people'].sum()
-    landuse = landuse.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv')
+    landuse = landuse.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv', index=False)
 
 def ApplyNSSECSOCsplits():
         """
@@ -1117,7 +1117,7 @@ def ApplyNSSECSOCsplits():
                                              '75 or over':'NA',
                                              'children':'NA'}})
         # split the nssec into inactive and active
-        nssec_formatted = nssec_melt.to_csv(_default_home_dir+'/NSSECformatted'+_default_zone_name +'.csv')
+        nssec_formatted = nssec_melt.to_csv(_default_home_dir+'/NSSECformatted'+_default_zone_name +'.csv', index=False)
         inactive = ['stu', 'non_wa']
         InactiveNSSECPot = nssec_melt[nssec_melt.employment_type.isin(inactive)].copy()
         ActiveNSSECPot = nssec_melt[~nssec_melt.employment_type.isin(inactive)].copy()
@@ -1314,8 +1314,8 @@ def ApplyNSSECSOCsplits():
               
 #### AppendAllGroups ####
 
-        NPRSegments = ['ZoneID', 'area_type', 'property_type', 'Age', 'employment_type', 
-                       'ns_sec', 'SOC_category', 'newpop'] 
+        NPRSegments = ['ZoneID', 'area_type', 'property_type', 'Age', 'Gender','employment_type', 
+                       'ns_sec', 'household_composition', 'SOC_category', 'newpop'] 
         CommunalInactive = CommunalInactive.reindex(columns= NPRSegments)
         Inactive_Eng = Inactive_Eng.reindex(columns=NPRSegments)
         ActiveScotland = ActiveScotland.reindex(columns = NPRSegments)
@@ -1326,9 +1326,10 @@ def ApplyNSSECSOCsplits():
         All = CommunalInactive.append(Inactive_Eng).append(CommunalActive).append(Active_emp)
         All = All.append(InactiveScotland).append(ActiveScotland)
         All = All.rename(columns={'newpop':'people'})
-        All.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage4.csv')
+        All['SOC_category'] = All['SOC_category'].fillna(0)
+        All.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage4.csv', index=False)
         print(All['people'].sum())
-            
+        
 def run_main_build():
     set_wd()
     copy_addressbase_files()
