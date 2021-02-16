@@ -61,10 +61,7 @@ _mype_males = _import_folder+'MYE 2018 ONS/2018_MidyearMSOA/MYEmales_2018.csv'
 _hops2011 = _default_home_dir+'/UKHouseHoldOccupancy2011.csv'
 _mypeScot_females = _import_folder+'MYE 2018 ONS/2018_MidyearMSOA/Females_Scotland_2018.csv'
 _mypeScot_males = _import_folder+'MYE 2018 ONS/2018_MidyearMSOA/Males_Scotland_2018.csv'
-
-    ladCols = ['objectid','lad17cd']
-    ukLAD = gpd.read_file(_default_ladRef)
-    ukLAD = ukLAD.loc[:,ladCols]
+_landuse_segments = _default_home_dir+'/landuseOutput'+_default_zone_name+'_stage4.csv'
 
 def format_english_mype():
     """
@@ -117,7 +114,7 @@ def format_scottish_mype():
     Scot_adjust- one formatted DataFrame of new Scottish MYPE including population
     split by age and gender by MSOA
     """
-
+    landusesegments = pd.read_csv(_landuse_segments)
     # this has the translation from LAD to MSOAs
     LadTranslation = pd.read_csv(_default_lad_translation).rename(columns={'lad_zone_id':'ladZoneID'})
     ladCols = ['objectid','lad17cd']
@@ -143,7 +140,7 @@ def format_scottish_mype():
     ScotMSOA = ScotMSOA.drop(columns={'overlap_type', 'lad_to_msoa', 'msoa_to_lad',
                                      '2018pop', 'lad17cd', 'ladZoneID'}).rename(columns={'msoa_zone_id':'ZoneID'})
    
-    Scotlanduse = landuseoutput[landuseoutput.ZoneID.str.startswith('S')]
+    Scotlanduse = landusesegments[landusesegments.ZoneID.str.startswith('S')]
 
     Scotlandusegrouped  = Scotlanduse.groupby(
             by=['ZoneID', 'Age', 'Gender'],
@@ -190,12 +187,12 @@ def sort_communal_uplift():
         DataFrame containing Communal Establishments according to the MYPE (2018).
     """
     communal = pd.read_csv(_default_communal_2011).rename(columns={'people':'communal'})
-    landuseoutput = pd.read_csv(_default_landuse_2011)
+    censusoutput = pd.read_csv(_default_landuse_2011)
          
     # split landuse data into 2 pots: Scotland and E+W
-    zones = landuseoutput["ZoneID"].drop_duplicates().dropna()
+    zones = censusoutput["ZoneID"].drop_duplicates().dropna()
     Scott = zones[zones.str.startswith('S')]
-    EWlanduse = landuseoutput[~landuseoutput.ZoneID.isin(Scott)]
+    EWlanduse = censusoutput[~censusoutput.ZoneID.isin(Scott)]
     # group to ZoneID, Gender, Age to match info from MYPE
     EWlandusegroup = EWlanduse.groupby(by=['ZoneID', 'Gender', 'Age'], as_index = False).sum().reindex(
             columns={'ZoneID', 'Gender', 'Age', 'people'})
@@ -234,19 +231,19 @@ def adjust_landuse_to_MYPE():
     
     """
     # summarise land use output
-    landusesegmented = pd.read_csv(_default_home_dir+'/landuseOutputMSOA_stage4.csv')
+    landusesegments = pd.read_csv(_land_use_segments)
     
-    pop_pc_totals = landusesegmented.groupby(
+    pop_pc_totals = landusesegments.groupby(
             by = ['ZoneID', 'Age', 'Gender'],
             as_index=False
-            ).sum().drop(columns ={ 'area_type', 
-                 'household_composition', 'property_type'})
+            ).sum()
+    
     mye_adjust = sort_communal_uplift()
     myepops = pop_pc_totals.merge(mye_adjust, on = ['ZoneID', 'Gender', 'Age'])
     
     myepops['pop_factor'] = myepops['mype_notcommunal']/myepops['people']
     myepops = myepops.drop(columns={'people'})
-    popadj = landussegmented.merge(myepops, on = ['ZoneID', 'Gender', 'Age'])
+    popadj = landusesegments.merge(myepops, on = ['ZoneID', 'Gender', 'Age'])
     popadj['newpop'] = popadj['people']*popadj['pop_factor']
     print('The adjusted 2018 population for England and Wales is', 
           popadj['newpop'].sum()/1000000, 'M')
@@ -261,7 +258,7 @@ def adjust_landuse_to_MYPE():
     GB_adjusted = popadj.append(Scot_adjust)
     # this might not be needed but there were some zones that weren't behaving properly before
     check = GB_adjusted['ZoneID'].drop_duplicates()   
-    otherrestofUK = landuseoutput[~landuseoutput.ZoneID.isin(check)]
+    otherrestofUK = landusesegments[~landusesegments.ZoneID.isin(check)]
     fullGBadjustment = GB_adjusted.append(otherrestofUK)
     
     print('Full population for 2018 is now =', 
@@ -336,6 +333,142 @@ def ControlToLAD(LAdTranslation):
     emp = NRSegments.groupby(by=['employment_type', 'ns_sec','SOC_category'], as_index = False).sum()
     NPRSegments2 = pd.read_csv('Y:/NorMITs Land Use/iter3/NPR_Segments.csv')
     emp2 = NPRSegments2.groupby(by=['employment_type', 'ns_sec','SOC_category'], as_index = False).sum()
+  
+####################      
+# employment adjustment
+# car availability adjustment
+def run_mype():
+    adjust_landuse_to_MYPE()
+    sort_out_hops_uplift()
+    ControlToLAD()
+    
+    
+     
+# control to LAD
+# load in AdjustedPopulationData
+NPRSegments = pd.read_csv('Y:/NorMITs Land Use/iter3/NPR_Segments.csv')
+#this includes a mixture of regions and LADs
+LADActive = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/processed data/LAD controls 2018/EconomicallyActive2018.csv').rename(columns={'Unnamed: 15':'Region' })
+
+Inactive = ['stu', 'non_wa']
+ActivePot = NPRSegments[~NPRSegments.employment_type.isin(Inactive)]
+
+EmploymentFigures = NPRSegments.groupby(by =['ZoneID', 'employment_type'], 
+                                  as_index = False).sum().reindex(['ZoneID',
+                                                       'employment_type',
+                                                       'people'],axis=1)
+
+# TotalsbyZone = NPRSegments.groupby(by = ['ZoneID'], as_index = False).sum().reindex(['ZoneID', 'people'], axis = 1)
+# TotalsbyZone = TotalsbyZone.rename(columns={'people':'totals'})
+# EmploymentFigures = EmploymentFigures.merge(TotalsbyZone, on = 'ZoneID')
+EmploymentFigures['totals'] = EmploymentFigures.groupby('ZoneID')['people'].transform('sum')
+EmploymentFigures['splits'] = EmploymentFigures['people']/EmploymentFigures['totals']
+EmploymentFigures['group'] = 'Emp Rate'
+
+EmploymentFigures.loc[EmploymentFigures['employment_type']=='stu','group']='Inactive Rate'
+EmploymentFigures.loc[EmploymentFigures['employment_type']=='non_wa','group']='Inactive Rate'
+EmploymentFigures.loc[EmploymentFigures['employment_type']=='unm','group']='Unm Rate'
+
+EmpRates = EmploymentFigures.groupby(by = ['ZoneID', 'group'], 
+                                     as_index = False).sum().drop(columns=
+                                                          {'totals', 'people'})
+LadTranslation = pd.read_csv('Y:/NorMITs Synthesiser/Zone Translation/Export/lad_to_msoa/lad_to_msoa.csv')
+LadTranslation = LadTranslation.rename(columns={'lad_zone_id':'objectid', 'msoa_zone_id':'MSOA'})
+EmpRates = EmpRates.rename(columns={'ZoneID':'MSOA'})
+
+EmpRates = EmpRates.merge(LadTranslation, on = 'MSOA', how = 'left')
+EmpRates = EmpRates.merge(ladShp, on = 'objectid')
+Columns = ['MSOA', 'ZoneID', 'group', 'splits']
+EmpRates = EmpRates.reindex(columns=Columns)
+EmpRatesLAD = EmpRates.groupby(by = ['ZoneID', 'group'], as_index = False).mean()
+# get the 2018 splits into shape for merging
+ladShp = gpd.read_file(ladRef).drop(columns = {'lad17nm', 'lad17nmw', 'bng_e',
+                      'bng_n','long', 'lat', 'st_areasha', 'st_lengths', 
+                      'centroid_x', 'centroid_y', 'geometry'})
+LADActive = LADActive.rename(columns={'Geography code':'ZoneID'})
+ladShp = ladShp.rename(columns={'lad17cd':'ZoneID'})
+LADActive = LADActive.merge(ladShp, on = 'ZoneID')
+LADActive = LADActive.rename(columns={'Employment 16-64 Rate (%)': 'Emp Rate', 
+                               'Unemployment Rate4 (%)': 'Unm Rate', 
+                               'Economic inactivity 16-64 Rate (%)':'Inactive Rate'})
+LADActive = LADActive[['ZoneID', 'Emp Rate', 'Unm Rate', 'Inactive Rate']]
+LADempsplits = pd.melt(LADActive, id_vars = ['ZoneID'], value_vars = ['Emp Rate',
+                       'Unm Rate', 'Inactive Rate'])
+LADempsplits = LADempsplits.rename(columns={'variable':'group', 'value':'LAD2018splits'})
+# merge the splits to compare
+LADemplits_compare = LADempsplits.merge(EmpRatesLAD, on = ['ZoneID','group'])
+LADemplits_compare['splits'] = LADemplits_compare['splits']*100
+
+# apply the 2018 splits to the dataset - this means whatever we raise in 
+# the Emp Rate, we need to balance in Inactive Rate and Unm
+
+LAD_controls = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/processed data/LAD controls 2018/nomis_2018_segment_lad_constraints.csv')
+
+LAD_controls = LAD_controls.rename(columns={
+        '% all in employment who are - 1: managers, directors and senior officials (SOC2010)':'SOC1%',
+        '% all in employment who are - 2: professional occupations (SOC2010)': 'SOC2%',
+        '% all in employment who are - 3: associate prof & tech occupations (SOC2010)':'SOC3%',
+        '% all in employment who are - 4: administrative and secretarial occupations (SOC2010)':'SOC4%',
+        '% all in employment who are - 5: skilled trades occupations (SOC2010)':'SOC5%',
+        '% all in employment who are - 6: caring, leisure and other service occupations (SOC2010)':'SOC6%',
+        '% all in employment who are - 7: sales and customer service occupations (SOC2010)':'SOC7%',
+        '% all in employment who are - 8: process, plant and machine operatives (SOC2010)':'SOC8%',
+        '% all in employment who are - 9: elementary occupations (SOC2010)':'SOC9%'})
+LADcols = ['local authority','SOC1%', 'SOC2%', 'SOC3%', 'SOC4%', 'SOC5%',
+                            'SOC6%', 'SOC7%', 'SOC8%', 'SOC9%']
+LADcontrols = LAD_controls.reindex(columns= LADcols)
+LADcontrols2 = LADcontrols.copy()
+
+LADcontrols['higher']= LADcontrols.iloc[:,1:4].sum(axis = 1)
+LADcontrols['medium']= LADcontrols.iloc[:,4:8].sum(axis = 1)
+LADcontrols['skilled']= LADcontrols.iloc[:,8:10].sum(axis = 1)
+LADcontrolsCols = ['local authority', 'higher', 'medium', 'skilled']
+
+MSOAlookup = pd.read_csv('Y:/NorMITs Synthesiser/Zone Translation/Export/lad_to_msoa/lad_to_msoa.csv').drop(columns={'overlap_type'})
+LAD
+
+
+# get the look up between MSOAs and LAD
+# sum up the MSOA population within each LAD
+# work out the factor between the LAD totals for 2018 and the aggregated sums for 2011
+# apply the factor for each MSOA
+
+        LADActivePop = ActivePop.groupby(by=['lad17cd', 'Gender', 'Age', 'employment_type','property_type', 
+                                         'household_composition'], as_index = False).sum()
         
-            
+        'splittingfactor' 
+
+        FactoredEmployees['newpop'].sum()
+        Activeprops = ActivePot.groupby(by=['ZoneID', 'Gender', 'Age','employment_type', 
+                                        'property_type'], as_index = False).sum()
+        Activeprops['total'] = Activeprops.groupby(['ZoneID', 'Age', 'Gender', 
+                                           'employment_type'])['people'].transform('sum')
+        Activeprops['factor']= Activeprops['people']/Activeprops['total']
+        Newpopulation = LADcontrolled.merge(Activeprops, on = ['ZoneID', 'Gender', 
+                                                                'employment_type'], how = 'outer')
+        Newpopulation['newpop'] = Newpopulation['people2018']*Newpopulation['pop_factor']
+       # Newpopulation = Newpopulation.drop(columns= {'people', 'lad_to_msoa', 
+                                     #      'msoa_to_lad', 'pop_factor'})
+        Newpopulation['newpop'].sum()
+        Newpopulation = Newpopulation.drop(columns={'pop_factor', 'people2018'})
+       
+        Activecategs = ActivePop.groupby(by=['ZoneID','area_type', 'Age', 'Gender', 
+                                             'property_type', 'employment_type', 
+                                             'household_composition'], 
+                                              as_index = False).sum()
+        Activecategs['total'] = Activecategs.groupby(['ZoneID', 'Age', 'Gender', 
+                                          'property_type', 'employment_type'])['people'].transform('sum')
+        Activecategs['pop_factor']=Activecategs['people']/Activecategs['total']
+        Newpopulation2 = Newpopulation.merge(Activecategs, on = ['ZoneID', 'area_type',
+                                                                 'property_type',
+                                                                 'Gender', 'Age',
+                                                                 'employment_type'], how = 'outer')
+        Newpopulation2['people']=Newpopulation2['newpop']*Newpopulation2['pop_factor']
+        Newpopulation2 = Newpopulation2.drop(columns={'newpop', 'total', 'pop_factor'})
+        
+        Newpopulation2 = Newpopulation.reindex(columns=['ZoneID', 'area_type', 'property_type', 
+                                                'Age', 'employment_type', 'household_composition',
+                                                'Gender', 'people'])
+
+           
         
