@@ -16,7 +16,8 @@ once run the source data should be ready for other functions
 # TODO: change the RD06 to categiry 4 = 'flats' in next iter
 # TODO: change 'ONS reports 27.4M in 2017' to be VOA based
 # TODO: take into account classifications for communal establishments
- 
+You need to copy the files from Y:\NorMITs Land Use\import\AddressBase\2018 into the iteration folder 
+before running this
 """
 import gc
 import os
@@ -39,7 +40,7 @@ _default_iter = 'iter4'
 _default_home_dir = ('D:/NorMITs_Export/')
 _import_folder = 'Y:/NorMITs Land Use/import/'
 _import_file_drive = 'Y:/'
-_default_zone_folder = ('Y:/NorMITs Synthesiser/Zone Translation/')
+_default_zone_folder = ('I:/NorMITs Synthesiser/Zone Translation/')
 _default_zone_ref_folder = 'Y:/Data Strategy/GIS Shapefiles/'
 
 
