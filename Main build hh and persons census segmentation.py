@@ -1330,15 +1330,20 @@ def ApplyNSSECSOCsplits():
         All.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage4.csv', index=False)
         print(All['people'].sum())
         
-def run_main_build():
+def run_main_build(ABPImport = True):
+    """
+    Set Import = True if you want to copy over the ABP files to iter folder
+    """
     set_wd()
-    copy_addressbase_files()
-    FilledProperties()
-    ApplyHouseholdOccupancy()
-    ApplyNtemSegments()
-    join_establishments()
-    LanduseFormatting()
-    ApplyNSSECSOCsplits()
+    if ABPImport:
+        copy_addressbase_files()
+    else:
+        FilledProperties()
+        ApplyHouseholdOccupancy()
+        ApplyNtemSegments()
+        join_establishments()
+        LanduseFormatting()
+        ApplyNSSECSOCsplits()
 
     
 
