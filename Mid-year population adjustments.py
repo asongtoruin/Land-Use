@@ -25,22 +25,23 @@ import sys
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Demand Tool/Python/ZoneTranslation')
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/TAME shared resources/Python/')
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Utilities/Python')
-
 import numpy as np # Vector operations
 import pandas as pd # main module
 import geopandas as gpd
 from shapely.geometry import *
-
+import gc 
+import dask.dataframe as dd
+from functools import reduce
 import nu_project as nup
 
 # Default file paths
 
 _default_iter = 'iter4'
-_default_home = 'D:/NorMITs_Export/'
-_default_home_dir = ('D:/NorMITs_Export/' + _default_iter)
+_default_home = 'E:/NorMITs_Export/'
+_default_home_dir = (_default_home + _default_iter)
 _import_folder = 'Y:/NorMITs Land Use/import/'
 _import_file_drive = 'Y:/'
-_default_zone_folder = ('I:/NorMITs Synthesiser/Zone Translation/')
+_default_zone_folder = ('I:/NorMITs Synthesiser/Zone Translation/Export/')
 # Default zone names
 _default_zone_names = ['LSOA','MSOA']
 _default_zone_name = 'MSOA' #MSOA or LSOA
@@ -65,6 +66,14 @@ _mypeScot_males = _import_folder+'MYE 2018 ONS/2018_MidyearMSOA/Males_Scotland_2
 _landuse_segments = _default_home_dir+'/landuseOutput'+_default_zone_name+'_stage4.csv'
 _ward_to_msoa = 'Y:/NTS/new area type lookup/uk_ward_msoa_pop_weighted_lookup.csv'
 _nts_path = 'Y:/NTS/import/tfn_unclassified_build.csv'
+_country_control = _import_folder + 'NPR Segmentation/processed data/Country Control 2018/nomis_CountryControl.csv'
+_gb_soc_totals = _import_folder +'NPR Segmentation/raw data and lookups/LAD labour market data/nomis_SOCGBControl.csv'
+_soc_lookup = 'Y:/NTS/lookups/soc_cat---XSOC2000_B02ID.csv'
+_LADSOCControlPath = _import_folder + 'NPR Segmentation/raw data and lookups/LAD labour market data/nomis_lad_SOC2018_constraints.csv'
+_emp_controls = _import_folder + 'NPR Segmentation/raw data and lookups/LAD labour market data/Nomis_lad_EconomicActivity3.csv'
+
+def isnull_any(df):
+    return df.isnull().any()
 
 def format_english_mype():
     """
@@ -97,7 +106,7 @@ def format_english_mype():
     mype = mype.drop_duplicates()
     mype = mype.drop(columns={'2018pop'}).drop_duplicates().rename(columns={
                             'gender':'Gender'})
-    cols = ['ZoneID', 'Gender', 'Age', 'Gender', 'pop']
+    cols = ['ZoneID', 'Gender', 'Age', 'pop']
     mype = mype.reindex(columns=cols)
 
     return(mype)
@@ -156,21 +165,20 @@ def format_scottish_mype():
     
     Scot = Scotlandusegrouped.merge(ScotMSOA, how = 'outer', on = ['ZoneID', 'Gender', 'Age'])
     Scot['pop_factor'] = Scot['people2018']/Scot['people']
-    #Scot = landuseoutput.merge(myepops, on = ['ZoneID', 'Gender', 'Age'])
     Scot['newpop'] = Scot['people']*Scot['pop_factor']
     Scot = Scot.drop(columns={'people'})
-    scot_mype = Scotlanduse.merge(Scot, on =['ZoneID','Gender', 'Age'])
-    scot_mype['newpop'] = Scot_mype['people']*Scot_mype['pop_factor']
-    Scot_mype = Scot_mype.drop(columns={'people', 'people2018', 
+    scottish_mype = Scotlanduse.merge(Scot, on =['ZoneID','Gender', 'Age'])
+    scottish_mype['newpop'] = scottish_mype['people']*scottish_mype['pop_factor']
+    scottish_mype = scottish_mype.drop(columns={'people', 'people2018', 
                                             'pop_factor'}).rename(
-                                            columns= {'newpop':'people'})
-    cols = ['ZoneID', 'Gender', 'Age', 'people']
-    Scot_mype = Scot_mype.reindex(columns=cols)
+                                            columns= {'newpop':'pop'})
+    cols = ['ZoneID', 'Gender', 'Age', 'pop']
+    scottish_mype = scottish_mype.reindex(columns=cols)
 
     print('The adjusted MYPE/future year population for Scotland is', 
-         Scot_mype['people'].sum()/1000000, 'M')
+         scottish_mype['pop'].sum()/1000000, 'M')
 
-    return(Scot_mype)
+    return(scottish_mype)
     
 def get_ewpopulation():
     
@@ -191,7 +199,7 @@ def get_ewpopulation():
     cols = ['ZoneID', 'Gender', 'Age', 'pop']
     mype = mype.reindex(columns=cols)
 
-    print('Reading in new population data')
+    print('Reading in new EW population data')
     
     return(mype)
 
@@ -213,7 +221,7 @@ def get_scotpopulation():
     cols = ['ZoneID', 'Gender', 'Age', 'pop']
     scot_mype = scot_mype.reindex(columns=cols)
 
-    print('Reading in new population data')
+    print('Reading in new Scot population data')
     
     return(scot_mype)
 
@@ -249,14 +257,16 @@ def sort_communal_uplift(midyear = True):
     Uplifted Communal:
         DataFrame containing Communal Establishments according to the MYPE (2018).
     """
-    if midyear:
-        communal = pd.read_csv(_default_communal_2011).rename(columns={'people':'communal'})
-        censusoutput = pd.read_csv(_default_landuse_2011)
-         
+    communal = pd.read_csv(_default_communal_2011).rename(columns={'people':'communal'})
+    censusoutput = pd.read_csv(_default_landuse_2011)
+          
         # split landuse data into 2 pots: Scotland and E+W
-        zones = censusoutput["ZoneID"].drop_duplicates().dropna()
-        Scott = zones[zones.str.startswith('S')]
-        EWlanduse = censusoutput[~censusoutput.ZoneID.isin(Scott)]
+    zones = censusoutput["ZoneID"].drop_duplicates().dropna()
+    Scott = zones[zones.str.startswith('S')]
+    EWlanduse = censusoutput[~censusoutput.ZoneID.isin(Scott)]
+        
+    if midyear:
+
         # group to ZoneID, Gender, Age to match info from MYPE
         EWlandusegroup = EWlanduse.groupby(by=['ZoneID', 'Gender', 'Age'], 
                                        as_index = False).sum().reindex(columns=
@@ -273,21 +283,45 @@ def sort_communal_uplift(midyear = True):
     
         # uplift communal to MYPE
         mype = get_ewpopulation()  
-        mye_adjust = mype.merge(com2011, on = ['ZoneID', 'Gender', 'Age'], how = 'outer')
-        mye_adjust['communal_mype'] = mye_adjust['pop'].values * mye_adjust['CommunalFactor'].values
+        mype_adjust = mype.merge(com2011, on = ['ZoneID', 'Gender', 'Age'], how = 'outer')
+        mype_adjust['communal_mype'] = mype_adjust['pop'].values * mype_adjust['CommunalFactor'].values
         print('Communal establishments total for new MYPE is ', 
-          mye_adjust['communal_mype'].sum())
+          mype_adjust['communal_mype'].sum())
     
-        mye_adjust['mype_notcommunal'] = mye_adjust['pop'].values - mye_adjust['communal_mype'].values
-        mye_adjust = mye_adjust.drop(columns={ 'pop', 'CommunalFactor', 'Census', 'communal'})
-        return (mye_adjust)
-        print('Population total for England & Wales after adjusting for communal establishments is:', 
-          mye_adjust['mype_notcommunal'].sum())
+        mype_communal = mype_adjust[['ZoneID', 'Gender', 'Age', 'communal_mype']]
+        return(mype_communal)
+    
     else:
     
-        print('FY not set up yet')
+        EWlandusegroup = EWlanduse.groupby(by=['ZoneID'], as_index = False).sum().reindex(columns={'ZoneID', 'people'})
+        communalgroup = communal.groupby(by=['ZoneID'], 
+                                     as_index = False).sum().reindex(
+                                     columns = {'ZoneID', 'communal'})
+        com2011 = EWlandusegroup.merge(communalgroup, on = ['ZoneID'])
+        com2011['CommunalFactor'] = com2011['communal']/com2011['people']
+        com2011 = com2011.rename(columns={'people':'Census'})
+        fy = get_fy_population()
+        fype_adjust = fy.merge(com2011, on = ['ZoneID'], how = 'left')
+        fype_adjust['communal_fype'] = fype_adjust['pop'].values * fype_adjust['CommunalFactor'].values
+        print('Communal establishments total for fy is ', 
+          fype_adjust['communal_mype'].sum())
+
+def adjust_mype():
+    """
+    adjust mype in EW to get rid of communal
+    """
+    mype_communal = sort_communal_uplift()
+    ewmype = get_ewpopulation()
         
-def adjust_landuse_to_MYPE(midyear = True):
+    ewmype = ewmype.merge(mype_communal, on = ['ZoneID', 'Gender', 'Age'])
+    ewmype['newpop'] = ewmype['pop'] - ewmype['communal_mype'] 
+    ewmype = ewmype[['ZoneID', 'Gender', 'Age', 'newpop']].rename(columns={'newpop':'pop'})
+    return(ewmype)
+
+import dask
+import dask.dataframe as dd
+
+def adjust_landuse_to_specific_yr(midyear = True, verbose: bool = True):
     """    
     Takes adjusted landuse (after splitting out communal establishments)
     Parameters
@@ -300,10 +334,15 @@ def adjust_landuse_to_MYPE(midyear = True):
     ----------
     
     """
-    # summarise land use output
-    landusesegments = pd.read_csv(_landuse_segments)
-    landusesegments['SOC_category'] = landusesegments['SOC_category'].fillna(0)
-    
+    #landusesegments = landusesegments.groupby(by=['ZoneID', 'area_type',
+    #                                                 'property_type', 'Age',
+     #                                                'Gender', 'employment_type',
+   #                                                  'ns_sec', 'household_composition',
+     #                                                'SOC_category'],as_index = False).sum().drop_duplicates()
+  #  landusesegments = landusesegments.replace({'Age': {'under 16':1, '16-74':2, 'over 75':3}})
+  #  landusesegments = landusesegments.replace({'Gender': {'Children':1, 'Females':2, 'Male':3}})
+  #  landusesegments = landusesegments.replace({'employment_type': {'non_wa':1, 'fte':2, 'pte':3, 'stu':4, 'unm':5}})
+       
     if midyear:
 
         pop_pc_totals = landusesegments.groupby(
@@ -311,49 +350,143 @@ def adjust_landuse_to_MYPE(midyear = True):
             as_index=False
             ).sum().reindex(columns={'ZoneID', 'Age', 'Gender', 'people'})
     
-        mye_adjust = sort_communal_uplift()
-        myepops = pop_pc_totals.merge(mye_adjust, on = ['ZoneID', 'Gender', 'Age'])
-    
-        myepops['pop_factor'] = myepops['mype_notcommunal']/myepops['people']
-        myepops = myepops.drop(columns={'people'})
-        popadj = landusesegments.merge(myepops, on = ['ZoneID', 'Gender', 'Age'])
-        popadj['newpop'] = popadj['people']*popadj['pop_factor']
-        print('The adjusted 2018 population for England and Wales is', 
-          popadj['newpop'].sum()/1000000, 'M')
-
-        # need to retain the missing MSOAs for both population landuse outputs and HOPs
-        popadj = popadj.drop(columns = {'pop_factor','people'}).rename(columns={'newpop':'people'})
-    
         Scot_adjust = get_scotpopulation()
-    
+        ewmype = adjust_mype()
+        
+        mype_gb = ewmype.append(Scot_adjust)
+        mypepops = pop_pc_totals.merge(mype_gb, on = ['ZoneID', 'Gender', 'Age'])
+        del(Scot_adjust, ewmype, mype_gb)
+        mypepops['pop_factor'] = mypepops['pop']/mypepops['people']
+        gc.collect()
+        
+        mypepops = mypepops.reindex(columns={'ZoneID', 'Gender', 'Age', 'pop_factor'}).drop_duplicates().reset_index(drop=True)
+        landusesegments = dd.read_csv(_landuse_segments, blocksize=16 * 1024 * 1024, usecols = ['ZoneID', 'area_type',
+                                                 'property_type', 'Age',
+                                                 'Gender', 'employment_type',
+                                                 'ns_sec', 'household_composition',
+                                                 'SOC_category', 'people']).drop_duplicates()
+###### solution 1 runs out of memory  ######     
+        print('Splitting the population after the uplift')
+                    
+        landuse = dd.merge(landusesegments, mypepops, how = 'left', on = ['ZoneID', 'Gender', 'Age'])
+        
+        landuse['newpop'] = landuse['people']*landuse['pop_factor']
+        landuse = landuse.compute(num_workers=4)
+        landuse.to_csv('E:/NorMITs_Export/iter4/landuse.csv')
+
+        
+###### solution 2 runs out of memory  ######     
+        if verbose:
+            print(mypepops) 
+            print(list(mypepops))
+            zones = mypepops['ZoneID'].unique()
+            pops_bin = []
+        for index, row in mypepops.iterrows():
+            pop_sub = mypepops.copy()
+            for zone, zones in row.iteritems():
+                pop_sub = pop_sub[pop_sub[zone] == zones]
+                                
+                if verbose:
+                    print('List of p sub')
+                    print(list(pop_sub))
+                    print(pop_sub)
+                    print('List of population')
+                    print(list(landusesegments))
+                pop_sub = pd.merge(pop_sub, landusesegments, how = 'right', on = ['ZoneID', 'Age', 'Gender'])
+                pop_sub['newpop'] = pop_sub['people']*pop_sub['pop_factor']
+                pop_sub = pop_sub.drop(columns={'pop_factor', 'people'})
+          
+        pops_bin.append(pop_sub)
+        landuse = pd.concat(pops_bin)
+        landuse.to_csv('E:/NorMITs_Export/landuse_test.csv')
+     
+            
+
+###### solution 3 runs out of memory  ######     
+
+def split_dataframe_to_chunks(df, n):
+    df_len = len(df)
+    count = 0
+    dfs = []
+
+    while True:
+        if count > df_len-1:
+            break
+
+        start = count
+        count += n
+        #print("%s : %s" % (start, count))
+        dfs.append(df.iloc[start : count])
+    return dfs
+
+        split_df_to_chunks_of_10 = split_dataframe_to_chunks(df,10)
+        out = []
+        
+        for i in split_df_to_chunks_of_10:
+            temp = pd.merge(i, mypepops, on = columnstomerge, how = 'left')
+            out.append(temp)
+        
+        temp.to_csv('E:/NorMITs_Export/temp.csv')
+
+"""
+processed_df = pd.concat(temp)
+"""
+
+
+        popadj = landusesegments.merge(mypepops, on = ['ZoneID', 'Gender', 'Age'])
+        popadj['newpop'] = popadj['pop']*popadj['pop_factor']
+        popadj = popadj.drop(columns = {'pop_factor','people'}).rename(columns={'newpop':'people'})
+        print('The adjusted 2018 population for England, Wales and Scotland is', 
+              popadj['people'].sum()/1000000, 'M')
         cols = ['ZoneID', 'area_type', 'property_type', 'Gender', 'Age', 'employment_type', 
-            'SOC_category', 'ns_sec', 'household_composition', 'people']
+        'SOC_category', 'ns_sec', 'household_composition', 'people']
         popadj = popadj.reindex(columns=cols)
-        GB_adjusted = popadj.append(Scot_adjust)
+        
+### code cont.
+        ##### COMMUNAL ######
+        ewmype = get_ewpopulation()
+        landuse_comm = landusesegments[landusesegments.property_type ==8] 
+        pop_pc_comms = landuse_comm.groupby(by=['ZoneID', 'Age', 'Gender'], 
+                                              as_index = False).sum().reindex(
+                                                      columns={'ZoneID', 'Age', 
+                                                               'Gender', 'people'})
+        myepops = pop_pc_comms.merge(mype_communal, on = ['ZoneID', 'Gender', 'Age'])
+        myepops['pop_factor'] = myepops['communal_mype']/myepops['people']
+        myepops = myepops.drop(columns={'communal_mype', 'people'})
+        communal_pop = landuse_comm.merge(myepops, on = ['ZoneID', 'Gender', 'Age'])
+        communal_pop['newpop'] = communal_pop['people']*communal_pop['pop_factor']
+        communal_pop['newpop'].sum()
+        communal_pop= communal_pop.drop(columns={'people', 'pop_factor'}).rename(columns={'newpop':'people'}) 
+        communal_pop = communal_pop.reindex(columns=cols)
+    # need to retain the missing MSOAs for both population landuse outputs and HOPs  
     # ensure communal pop or popadj columns is the same as Scottish
-    
-        # this might not be needed but there were some zones that weren't behaving properly before
-        check = GB_adjusted['ZoneID'].drop_duplicates()   
-        missingMSOAs = landusesegments[~landusesegments.ZoneID.isin(check)]
+        GB_adjusted = popadj.append(communal_pop)
+        isnull_any(GB_adjusted)
+    # this might not be needed but there were some zones that weren't behaving properly before
+        check_zones = GB_adjusted['ZoneID'].drop_duplicates()   
+        missingMSOAs = landusesegments[~landusesegments.ZoneID.isin(check_zones)]
         fullGBadjustment = GB_adjusted.append(missingMSOAs)
-    
-    
+
+
         print('Full population for 2018 is now =', 
-          fullGBadjustment['people'].sum())
+              fullGBadjustment['people'].sum())
         print('check all MSOAs are present, should be 8480:', 
-          fullGBadjustment['ZoneID'].drop_duplicates().count())
+              fullGBadjustment['ZoneID'].drop_duplicates().count())
         fullGBadjustment = fullGBadjustment.reindex(columns = {'ZoneID', 'property_type', 
-                                                           'household_composition', 
-                                                           'employment_type', 'SOC_category', 
-                                                           'ns_sec', 
-                                                           })
+                                                       'household_composition', 
+                                                       'employment_type', 'SOC_category', 
+                                                       'ns_sec', 'people'
+                                                       })
+        fullGBadjustment = fullGBadjustment.drop_duplicates()
         fullGBadjustment.to_csv(_default_home_dir + '/landUseOutputMSOA_2018.csv', index = False)
+        print('Checking for Nans',isnull_any(fullGBadjustment)) 
+
         return(fullGBadjustment)
         del(otherrestofUK, check, Scot_Adjust, GB_adjusted, popadj)
  
     else:
         print ('FY not set up yet')
-        
+              
     
 def sort_out_hops_uplift():
     """    
@@ -372,12 +505,11 @@ def sort_out_hops_uplift():
     hops2011 = pd.read_csv(_hops2011).rename(columns={'msoaZoneID':'ZoneID', 
                           'census_property_type':'property_type'})
                
-    MYPEpop = sort_communal_uplift()
+    MYPEpop = pd.read_csv(_default_home_dir + '/landUseOutputMSOA_2018.csv')
     
-    msoaShp = gpd.read_file(_default_msoaRef).reindex(['objectid','msoa11cd'],axis=1)
-    hops2011 = hops2011.rename(columns={'msoaZoneID':'ZoneID', 'census_property_type':'property_type'})
-    msoaShp = msoaShp.rename(columns={
-                'msoa11cd':'ZoneID'})
+    msoaShp = gpd.read_file(_default_msoaRef).reindex(['objectid','msoa11cd'],
+                           axis=1).rename(columns={
+                                   'msoa11cd':'ZoneID'})
     hops2011 = hops2011.merge(msoaShp, on = 'ZoneID')
 
     hopsadj = hops2011.merge(property_count, on = ['ZoneID', 'property_type'])
@@ -398,7 +530,10 @@ def sort_out_hops_uplift():
     
     
 def control_to_lad():
-    ladactive = pd.read_csv().rename(columns={'Unnamed: 15':'Region' })
+    """
+    this might be redundant
+    """
+    ladactive = pd.read_csv().rename(columns={'Unnamed: 15':'Region'})
     employmentfigures = NPRSegments.groupby(by =['ZoneID', 'employment_type'], 
                                          as_index = False).sum().reindex(['ZoneID',
                                                                'employment_type',
@@ -415,9 +550,6 @@ def control_to_lad():
     NPRSegments2 = pd.read_csv('Y:/NorMITs Land Use/iter3/NPR_Segments.csv')
     emp2 = NPRSegments2.groupby(by=['employment_type', 'ns_sec','SOC_category'], as_index = False).sum()
   
-####################      
-# employment adjustment
-# car availability adjustment
 def ntsimport (year = ['2017']):
     """
     imports car availability from nts extract
@@ -436,6 +568,8 @@ def ntsimport (year = ['2017']):
     ntsextract = ntsextract.rename(columns = {'HHoldOSWard_B01ID': 'uk_ward_zone_id'})
     # change household number of adults into household composition
     # change SOC to standard 1,2,3
+    soc_cats = pd.read_csv(_soc_lookup)
+    ntsextract = ntsextract.merge(soc_cats, on = 'XSOC2000_B02ID')
     
     cars = ntsextract.groupby(by=['uk_ward_zone_id', 'household_composition',  
                                 'employment'], 
@@ -484,7 +618,7 @@ def ntsimport (year = ['2017']):
    
 def car_availability(midyear = True, year = '2017'):
     """
-    
+    applies nts extract to landuse
     """
     landuse = pd.read_csv(landusePath)
 
@@ -497,22 +631,24 @@ def car_availability(midyear = True, year = '2017'):
     else: 
         #placeholder, read in random csv?
         
-def AdjustSOCGB(
+def adjust_soc_gb(
         GBSOCTotalsPath = 'Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/LAD labour market data/nomis_SOCGBControl.csv'
         LadPath= 'Y:/NorMITs Synthesiser/Zone Translation/Export/lad_to_msoa/lad_to_msoa.csv',
-        Lad = 'Y:/NorMITs Land Use/import/Documentation/LAD_2017.csv')
- 
+        Lad = 'Y:/NorMITs Land Use/import/Documentation/LAD_2017.csv'):
+    """
+    adjusts soc values to gb levels for 2018
     
-    LADref = pd.read_csv(Lad).iloc[:,0:2]
-        
+    """
+    
+    ladref = gpd.read_file(_default_ladRef).iloc[:,0:2]
+    gb_soc_totals = pd.read_csv(_gb_soc_totals)
 
-    LadTranslation = pd.read_csv(LadPath).drop(columns={'overlap_type', 
+    LadTranslation = pd.read_csv(_default_lad_translation).drop(columns={'overlap_type', 
                                         'lad_to_msoa','msoa_to_lad'}).rename(columns={
                                         'msoa_zone_id':'ZoneID', 'lad_zone_id':'objectid'}
                                         )
 
-    SOCcontrol = pd.read_csv(GBSOCTotalsPath)
-    SOCcontrol = SOCcontrol.rename(columns={
+    gb_soc_totals = gb_soc_totals.rename(columns={
             'T12a:1 (1 Managers, Directors and Senior Officials (SOC2010) : All people )':'SOC1',
             'T12a:4 (2 Professional Occupations (SOC2010) : All people )': 'SOC2',
             'T12a:7 (3 Associate Prof & Tech Occupations (SOC2010) : All people )':'SOC3',
@@ -525,79 +661,78 @@ def AdjustSOCGB(
 
     SOCcols = ['Country','SOC1', 'SOC2', 'SOC3', 'SOC4', 'SOC5',
                         'SOC6', 'SOC7', 'SOC8', 'SOC9']
-    SOCcontrol = SOCcontrol.reindex(columns= SOCcols)
+    gb_soc_totals = gb_soc_totals.reindex(columns= SOCcols)
 
     Rows = ['England and Wales number', 'Scotland number']
-    SOCcontrol = SOCcontrol[SOCcontrol.Country.isin(Rows)]
+    gb_soc_totals = gb_soc_totals[gb_soc_totals.Country.isin(Rows)]
     
-    SOCcontrol = pd.melt(SOCcontrol, id_vars = 'Country', value_vars = ['SOC1', 
+    gb_soc_totals = pd.melt(gb_soc_totals, id_vars = 'Country', value_vars = ['SOC1', 
                                             'SOC2', 'SOC3', 'SOC4', 'SOC5', 'SOC6', 
                                             'SOC7', 'SOC8', 'SOC9'])
-    SOCcontrol['value'] = pd.to_numeric(SOCcontrol['value'])
+    gb_soc_totals['value'] = pd.to_numeric(gb_soc_totals['value'])
  
-    SOCcontrol =SOCcontrol.replace({'variable':{'SOC1':1, 'SOC2':1,'SOC3':1, 
+    gb_soc_totals =gb_soc_totals.replace({'variable':{'SOC1':1, 'SOC2':1,'SOC3':1, 
                                                 'SOC4':2, 'SOC5':2, 'SOC6':2,'SOC7':2,
                                                 'SOC8':3, 'SOC9':3}})
-    SOCcontrol = SOCcontrol.rename(columns={'variable':'SOC_category'})
-    SOCcontrol = SOCcontrol.groupby(by=['Country', 'SOC_category'], as_index = False).sum()
+    gb_soc_totals = gb_soc_totals.rename(columns={'variable':'SOC_category'})
+    gb_soc_totals = gb_soc_totals.groupby(by=['Country', 'SOC_category'], as_index = False).sum()
     
-    SOCcontrol['total']= SOCcontrol.groupby(['Country'])['value'].transform('sum')
-    SOCcontrol['splits'] = SOCcontrol['value']/SOCcontrol['total']
+    gb_soc_totals['total']= gb_soc_totals.groupby(['Country'])['value'].transform('sum')
+    gb_soc_totals['splits'] = gb_soc_totals['value']/gb_soc_totals['total']
     
     ########################## CALCULATE COUNTRY SPLITS FROM LANDUSE ########
+    landusesegments = pd.read_csv(_landuse_segments)
     Emp = ['fte', 'pte']
-    Employed = AllSOCs[AllSOCs.employment_type.isin(Emp)]
+    Employed = landusesegments[landusesegments.employment_type.isin(Emp)]
     Employed = Employed.merge(LadTranslation, on = 'ZoneID')
-    zones = AllSOCs["ZoneID"].drop_duplicates().dropna()
+    zones = landusesegments["ZoneID"].drop_duplicates().dropna()
     Employed['Country']= 'England and Wales number'
     Employed.loc[Employed['ZoneID'].str.startswith('S'), 'Country']= 'Scotland number'
     
     EmpSOCTotal = Employed.groupby(by=['Country', 'SOC_category'],
                                    as_index = False).sum().reindex(
-                                           columns=['Country', 'SOC_category', 'newpop'])
-    EmpSOCTotal['total_land'] = EmpSOCTotal.groupby(['Country'])['newpop'].transform('sum')
+                                           columns=['Country', 'SOC_category', 'people'])
+    EmpSOCTotal['total_land'] = EmpSOCTotal.groupby(['Country'])['people'].transform('sum')
     
     # for audit
-    EmpSOCTotal['splits_land']= EmpSOCTotal['newpop']/EmpSOCTotal['total_land']
+    EmpSOCTotal['splits_land']= EmpSOCTotal['people']/EmpSOCTotal['total_land']
     # EmpSOCTotal = EmpSOCTotal.drop(columns={'newpop', 'total_land'})
     EmpSOCTotal['SOC_category'] = pd.to_numeric(EmpSOCTotal['SOC_category'])
     
     #save for comparison
-    EmpCompare = EmpSOCTotal.merge(SOCcontrol, on = ['Country', 'SOC_category'], 
-                                   how = 'left').drop(columns={'newpop', 'splits_land', 'value', 'total'})
-    .drop(columns={'newpop', 'total_land', 'value', 'total'})
-    EmpCompare = EmpCompare
+    EmpCompare = EmpSOCTotal.merge(gb_soc_totals, on = ['Country', 'SOC_category'], 
+                                   how = 'left').drop(columns={'people', 'splits_land', 'value', 'total'})
 
-    EmpCompare.to_csv('C:/NorMITs_Export/iter3_2/SOCsplitsComparison.csv')
+    EmpCompare.to_csv(_default_home_dir + '/SOCsplitsComparison.csv')
     
     EmpCompare['pop'] = EmpCompare['splits']*EmpCompare['total_land']
-    EmpCompare['pop'].sum()
+    print(EmpCompare['pop'].sum())
     EmpCompare = EmpCompare.drop(columns={'total_land', 'splits'})
     
     LanduseGrouped = Employed.groupby(by=['ZoneID', 'Country', 'ns_sec', 'employment_type', 
                                          'household_composition', 'Gender', 'Age', 
                                          'property_type',],as_index = False).sum()
-    LanduseGrouped['total'] = LanduseGrouped.groupby(['Country'])['newpop'].transform('sum')
-    LanduseGrouped['factor']= LanduseGrouped['newpop']/LanduseGrouped['total']
+    LanduseGrouped['total'] = LanduseGrouped.groupby(['Country'])['people'].transform('sum')
+    LanduseGrouped['factor']= LanduseGrouped['people']/LanduseGrouped['total']
     
     SOCrevised = EmpCompare.merge(LanduseGrouped, on = 'Country', how= 'left')
-    SOCrevised['people']= SOCrevised['factor']*SOCrevised['pop']
-    SOCrevised['people'].sum()
-    SOCrevised = SOCrevised.drop(columns={'pop', 'factor', 'newpop', 'objectid'}
-                    ).rename(columns={'people':'newpop'})
+    SOCrevised['newpop']= SOCrevised['factor']*SOCrevised['people']
+    print(SOCrevised['newpop'].sum())
+    SOCrevised = SOCrevised.drop(columns={'pop', 'factor', 'objectid'})
+                    
     NPRSegments = ['ZoneID', 'area_type', 'property_type', 'employment_type', 
                    'Age', 'Gender', 'household_composition',
                    'ns_sec', 'SOC_category', 'newpop'] 
 
     SOCrevised = SOCrevised.reindex(columns=NPRSegments)
-    SOCrevised['newpop'].sum()
+    print(SOCrevised['newpop'].sum())
     # join to the rest
     
-    NotEmployed = AllSOCs[~AllSOCs.employment_type.isin(Emp)]
+    NotEmployed = landusesegments[~landusesegments.employment_type.isin(Emp)]
     NPRSegmentation = NotEmployed.append(SOCrevised)
     NPRSegmentation['newpop'].sum()
     
-    NPRSegmentation.to_csv('C:/NorMITs_Export/iter3_2/NPRSegments.csv')
+    NPRSegmentation.to_csv(_default_home_dir+'/NPRSegments.csv')
     
 
 ################################################################
@@ -609,7 +744,7 @@ def AdjustSOCs (LADSOCControlPath = 'Y:/NorMITs Land Use/import/NPR Segmentation
                 Lad = 'Y:/NorMITs Land Use/import/Documentation/LAD_2017.csv',
                 #AllPath = 'C:/NorMITs_Export/NPRSegments.csv'):
     
-    LADref = pd.read_csv(Lad).iloc[:,0:2]
+    ladref = pd.read_csv(Lad).iloc[:,0:2]
 
     # format the LAD controls data
     LADSOCcontrol = pd.read_csv(LADSOCControlPath)
@@ -627,7 +762,7 @@ def AdjustSOCs (LADSOCControlPath = 'Y:/NorMITs Land Use/import/NPR Segmentation
                         'SOC6', 'SOC7', 'SOC8', 'SOC9']
     LADSOCcontrol = LADSOCcontrol.reindex(columns= LADcols)
     LADSOCcontrol= LADSOCcontrol.replace({'!':0, '~':0, '-':0, '#':0})
-    # getting rid of City of London as there're a lot of 
+    # getting rid of City of London 
    # LADSOCcontrol = LADSOCcontrol[LADSOCcontrol['lad17cd'] != 'E09000001']
     #LADSOCcontrol = LADSOCcontrol.copy()
     LADSoc = pd.melt(LADSOCcontrol, id_vars = 'lad17cd', 
@@ -652,7 +787,7 @@ def AdjustSOCs (LADSOCControlPath = 'Y:/NorMITs Land Use/import/NPR Segmentation
    # LADSoc['SOC_category'] = LADSoc['SOC_category'].astype(float)
    
     ####################### READ IN POPULATION TO ADJUST ####################
-    LadTranslation = pd.read_csv(LadPath).drop(columns={'overlap_type', 
+    LadTranslation = pd.read_csv(_default_ladRef).drop(columns={'overlap_type', 
                                         'lad_to_msoa','msoa_to_lad'}).rename(columns={
                                         'msoa_zone_id':'ZoneID', 'lad_zone_id':'objectid'}
                                         ).merge(LADref, on = 'objectid')
@@ -763,7 +898,7 @@ def AdjustSOCs (LADSOCControlPath = 'Y:/NorMITs Land Use/import/NPR Segmentation
     
 def ControltoLADEmploymentGender(#AllPath = 'C:/NorMITs_Export/iter3_2/NPRSegments_stage1.csv'
                                  , areatypesPath,
-                                 EmpControls = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/LAD labour market data/Nomis_lad_EconomicActivity3.csv'),
+                                 EmpControls = pd.read_csv(_emp_controls),
                                  LadPath= 'Y:/NorMITs Synthesiser/Zone Translation/Export/lad_to_msoa/lad_to_msoa.csv',
                                  Lad = 'Y:/NorMITs Land Use/import/Documentation/LAD_2017.csv',
                                  GBlandusePath = 'C:/NorMITs_Export/iter3_2/landuseGBMYE_flatcombined.csv' 
@@ -985,9 +1120,9 @@ def ControltoLADEmploymentGender(#AllPath = 'C:/NorMITs_Export/iter3_2/NPRSegmen
     GBlanduseControlled.to_csv('C:/NorMITs_Export/iter3_2/GBlanduseControlled.csv')
     
     
-    def CountryControl():
+def CountryControl():
     ############## Cuontry control #################
-    CountryControl = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/processed data/Country Control 2018/nomis_CountryControl.csv')
+    CountryControl = pd.read_csv(_country_control)
     CountryEmp = CountryControl.rename(columns={
             'T01:7 (All aged 16 & over - In employment : All People )':'Emp'
             })
@@ -1078,7 +1213,7 @@ def ControltoLADEmploymentGender(#AllPath = 'C:/NorMITs_Export/iter3_2/NPRSegmen
    # CommunalEstablishments = GBlanduseControlled[GBlanduseControlled.property_type ==8]
 # Check = GBlanduseControlled.groupby(by=['ZoneID'], as_index = False).sum()
     
-    
+  """  
 
 
     ############################# JOIN BACK TO MSOA ################################
@@ -1166,11 +1301,11 @@ def ControltoLADEmploymentGender(#AllPath = 'C:/NorMITs_Export/iter3_2/NPRSegmen
     del( LADControlPath, Activeatwork)
     del(Unemployed, Unemployedtype)
     NEWpopulation.to_csv('C:/NorMITs_Export/iter3/NewAdjustedpopulation.csv')
-
+"""
     
 def run_mype(midyear = True):
-    adjust_landuse_to_MYPE()
+    adjust_landuse_to_specific_year()
     sort_out_hops_uplift()
     control_to_lad()
-    
+    adjust_soc_gb()
     
