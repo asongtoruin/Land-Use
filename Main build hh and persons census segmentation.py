@@ -64,10 +64,9 @@ _nssecPath = _import_folder+'NPR Segmentation/processed data/TfN_households_expo
 
 
 # 1. Functions to read in the source data 
-# todo: function to check addressbase_prep was run?
 def copy_addressbase_files (file_path_list =r"Y:\NorMITs Land Use\import\AddressBase\2018\List of ABP datasets.csv"):
     """
-    Copy the relevant ABP files from Y drive
+    Copy the relevant ABP files from import drive
     Parameters
     ----------
     file_path_list:
@@ -191,11 +190,7 @@ def LSOACensusDataPrep(datPath, EWQS401, SQS401, EWQS402, SQS402, geography = _d
     This function prepares the census data by picking fields out of the csvs:
         
     """
-    # 401 = people 402 = properties
-    # Takes LSOA shapefile from 'Y:/Data Strategy/GIS Shapefiles/UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz.shp'
-    # However, join is on code so if you have different IDs, just change the path and it'll be fine.
     # TODO: need to add percentage filled by msoa to account for seasonal households
-    # FilledProperties()
     geography = gpd.read_file(_default_lsoaRef)
     geography = geography.iloc[:, 0:3]
         
@@ -237,7 +232,7 @@ def LSOACensusDataPrep(datPath, EWQS401, SQS401, EWQS402, SQS402, geography = _d
     
 def AggregateCpt(cptData, groupingCol=None, writeOut=True):
     """
-    # Take some census property type data and return hops totals
+    Take some census property type data and return hops totals
     """
     if not groupingCol:
         cptData = cptData.loc[:,['census_property_type','population', 'properties']]
@@ -248,7 +243,7 @@ def AggregateCpt(cptData, groupingCol=None, writeOut=True):
         aggData = cptData.groupby(['census_property_type', groupingCol]).sum().reset_index()
         aggData['household_occupancy'] = aggData['population']/aggData['properties']
 
-   # if writeOut:
+    #if writeOut:
        # aggData.to_csv('cptlsoa2011.csv')
         
     return(aggData)
@@ -398,9 +393,6 @@ def CreateEmploymentSegmentation(bsq,
     bsq = bsq.reindex(['msoaZoneID','Age','Gender','employment_type',
                        'household_composition','property_type','B','R',
                        'Zone_Desc','pop_factor'],axis=1)
-# Pull out one msoa worth of segements to audit
-    # testSegments = bsq[bsq.msoaZoneID == 1500]
-    # testSegments.to_csv('testSegmentsMSOA.csv')
     
     return(bsq)
     
@@ -479,7 +471,6 @@ def CreateNtemAreas(bsqImportPath=_import_folder+'/Bespoke Census Query/formatte
     # testSegments = bsq[bsq.LAD_code == 'E41000001']
     # testSegments.to_csv('testSegments.csv')
 
-    # TODO: This would be the place to tweak the 2011 population compositions to 2018
     # Define a basic function to count the MSOAs in the bsq - so I don't have 
     # to write it again later.
 
@@ -1332,7 +1323,7 @@ def ApplyNSSECSOCsplits():
         
 def run_main_build(ABPImport = True):
     """
-    Set Import = True if you want to copy over the ABP files to iter folder
+    Set ABPImport to True if you want to copy over the ABP files to iter folder
     """
     set_wd()
     if ABPImport:
