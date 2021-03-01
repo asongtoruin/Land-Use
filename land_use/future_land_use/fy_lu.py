@@ -24,7 +24,7 @@ class FutureYearLandUse:
         # Basic config
         self.model_zoning = model_zoning
         self.base_year = base_year
-        self.future_years = future_year
+        self.future_year = future_year
         self.scenario_name = scenario_name
 
         # Segmentation
@@ -39,7 +39,6 @@ class FutureYearLandUse:
             'ca_growth': ca_growth_path,
             'base_soc_mix': base_soc_mix_path}
 
-
     def build_fy_pop(self,
                      export=True,
                      verbose=False):
@@ -50,14 +49,11 @@ class FutureYearLandUse:
 
         return fy_pop
 
-
     def build_fy_emp(self,
                      export=True):
         return 0
 
-
     def _grow_pop(self,
-                  segmentation_cols=None,
                   population_infill=0.001,
                   verbose=False
                   ):
@@ -66,26 +62,30 @@ class FutureYearLandUse:
         if 'zone_id' not in self.model_zoning:
             zone_col = self.model_zoning.lower() + '_zone_id'
         else:
-            zone_cols = self.model_zoning.lower()
+            zone_col = self.model_zoning.lower()
 
         # Cars or CA??
-        if segmentation_cols is None:
+        if self.pop_segmentation_cols is None:
             segmentation_cols = [
                 'area_type',
+                'household_composition',
                 'traveller_type',
                 'soc',
                 'ns',
-                'cars'
+                'ca'
             ]
 
-        population_growth = pd.read_csv(self.paths['pop_growth'])
+        # Get pop growth, filter to target year only
+        population_growth = self._get_fy_pop_emp(
+            'pop')
 
         # ## BASE YEAR POPULATION ## #
+        # TODO: Fix the segmentation cols in utils
         print("Loading the base year population data...")
         base_year_pop = fyu.get_land_use(
             self.paths['base_land_use'],
-            segmentation_cols=segmentation_cols,
-            apply_ca_model=False)
+            model_zone_col=zone_col,
+            segmentation_cols=None)
         base_year_pop = base_year_pop.rename(
             columns={'people': self.base_year})
 
@@ -96,7 +96,7 @@ class FutureYearLandUse:
         print("Generating future year population data...")
         # Merge on all possible segmentations - not years
         merge_cols = fyu.intersection(list(base_year_pop), list(population_growth))
-        merge_cols = fyu.list_safe_remove(merge_cols, all_years)
+        # merge_cols = fyu.list_safe_remove(merge_cols, self.future_year)
 
         population = fyu.grow_to_future_years(
             base_year_df=base_year_pop,
@@ -133,11 +133,11 @@ class FutureYearLandUse:
         return 0
 
     def _get_soc_weights(self,
-                        zone_col: str = 'msoa_zone_id',
-                        soc_col: str = 'soc_class',
-                        jobs_col: str = 'seg_jobs',
-                        str_cols: bool = False
-                        ) -> pd.DataFrame:
+                         zone_col: str = 'msoa_zone_id',
+                         soc_col: str = 'soc_class',
+                         jobs_col: str = 'seg_jobs',
+                         str_cols: bool = False
+                         ) -> pd.DataFrame:
         """
         Converts the input file into soc weights by zone
 
@@ -293,7 +293,6 @@ class FutureYearLandUse:
         # Finally, stick the two back together
         return pd.concat([split_df, retain_df])
 
-
     def _grow_emp(self,
                  base_year='2018',
                  future_years=['2033', '2035', '2050'],
@@ -402,3 +401,21 @@ class FutureYearLandUse:
                 print('. Total jobs for year %s is: %.4f'
                       % (str(year), total_emp))
             print('\n')
+
+        return employment
+
+    def _get_fy_pop_emp(self,
+                        vector_type):
+        """
+        vector_type = 'pop' or 'emp'
+        """
+
+        if vector_type == 'pop':
+            dat = pd.read_csv(self.paths['pop_growth'])
+        elif vector_type == 'emp':
+            dat = pd.read_csv(self.paths['emp_growth'])
+        ri_cols = [
+            self.model_zoning + '_zone_id', self.future_year]
+        dat = dat.reindex(ri_cols, axis=1)
+
+        return dat

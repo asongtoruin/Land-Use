@@ -107,7 +107,7 @@ def list_safe_remove(lst: List[Any],
 
 def convert_growth_off_base_year(growth_df: pd.DataFrame,
                                  base_year: str,
-                                 future_years: List[str]
+                                 future_year: str,
                                  ) -> pd.DataFrame:
     """
     Converts the multiplicative growth value of each future_years to be
@@ -122,7 +122,7 @@ def convert_growth_off_base_year(growth_df: pd.DataFrame,
     base_year:
         The new base year to base all the all_years growth off of.
 
-    future_years:
+    future_year:
         The years in growth_dataframe to convert to be based off of
         base_year growth
 
@@ -137,8 +137,7 @@ def convert_growth_off_base_year(growth_df: pd.DataFrame,
     growth_df.columns = growth_df.columns.astype(str)
 
     # Do base year last, otherwise conversion won't work
-    for year in future_years + [base_year]:
-        growth_df[year] /= growth_df[base_year]
+    growth_df[future_year] /= growth_df[base_year]
 
     return growth_df
 
@@ -324,7 +323,9 @@ def grow_to_future_years(base_year_df: pd.DataFrame,
         base year data grown by the factors provided in growth_df.
     """
     # Init
-    all_years = [base_year] + future_years
+    all_years = list(base_year)
+    for col in list(future_years):
+        all_years.append(col)
 
     # Get the growth factors based from base year
     growth_df = convert_growth_off_base_year(
@@ -355,8 +356,8 @@ def grow_to_future_years(base_year_df: pd.DataFrame,
 
 def get_land_use(
         path,
+        model_zone_col='msoa_zone_id',
         segmentation_cols=None,
-        apply_ca_model=False,
         col_limit=None
         ):
     """
@@ -370,7 +371,9 @@ def get_land_use(
 
     if segmentation_cols is not None:
         # Get cols to reindex with
-        ri_cols = segmentation_cols.copy()
+        ri_cols = list([model_zone_col])
+        for col in segmentation_cols:
+            ri_cols.append(col)
         group_cols = ri_cols.copy()
         if 'people' not in segmentation_cols:
             ri_cols.append('people')

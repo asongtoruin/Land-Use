@@ -20,7 +20,7 @@ RESI_LAND_USE_MSOA = os.path.join(
     LU_FOLDER,
     LU_MR_ITER,
     'outputs',
-    'land_use_output_msoa.csv'
+    'land_use_output_safe_msoa.csv'
 )
 
 EMPLOYMENT_MSOA = os.path.join(
@@ -35,7 +35,7 @@ NTEM_POP_GROWTH = os.path.join(
     'scenarios',
     'NTEM',
     'population',
-    'future_population_growth.csv'
+    'future_population_values.csv'
 )
 
 NTEM_EMP_GROWTH = os.path.join(
@@ -44,7 +44,17 @@ NTEM_EMP_GROWTH = os.path.join(
     'scenarios',
     'NTEM',
     'employment',
-    'future_workers_growth.csv'
+    'future_workers_values.csv'
+)
+
+# This is growth not values
+NTEM_CA_GROWTH = os.path.join(
+    LU_FOLDER,
+    LU_IMPORTS,
+    'scenarios',
+    'NTEM',
+    'car ownership',
+    'future_car_ownership_growth.csv'
 )
 
 SOC_2DIGIT_SIC = os.path.join(
