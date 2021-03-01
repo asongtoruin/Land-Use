@@ -10,19 +10,21 @@ from land_use import utils as fyu
 class FutureYearLandUse:
     def __init__(self,
                  model_zoning='msoa',
-                 base_land_use=consts.LAND_USE_MSOA,
+                 base_land_use_path=consts.RESI_LAND_USE_MSOA,
+                 base_employment_path=consts.EMPLOYMENT_MSOA,
                  base_year='2018',
-                 future_years=['2033', '2035', '2050'],
+                 future_year='2033',
                  scenario_name='NTEM',
                  pop_growth_path=consts.NTEM_POP_GROWTH,
+                 emp_growth_path=consts.NTEM_EMP_GROWTH,
+                 ca_growth_path=consts.NTEM_CA_GROWTH,
                  base_soc_mix_path=consts.SOC_2DIGIT_SIC,
                  pop_segmentation_cols=None):
 
         # Basic config
         self.model_zoning = model_zoning
-        self.base_land_use = base_land_use
         self.base_year = base_year
-        self.future_years = future_years
+        self.future_years = future_year
         self.scenario_name = scenario_name
 
         # Segmentation
@@ -30,24 +32,36 @@ class FutureYearLandUse:
 
         # Pathing
         self.paths = {
-            'base_land_use': base_land_use,
+            'base_land_use': base_land_use_path,
+            'base_employment': base_employment_path,
             'pop_growth': pop_growth_path,
+            'emp_growth': emp_growth_path,
+            'ca_growth': ca_growth_path,
             'base_soc_mix': base_soc_mix_path}
 
 
-    def main(self):
+    def build_fy_pop(self,
+                     export=True,
+                     verbose=False):
+        """
+        """
+        fy_pop = self._grow_pop(verbose=verbose)
 
+
+        return fy_pop
+
+
+    def build_fy_emp(self,
+                     export=True):
         return 0
 
-    def grow_pop(self,
-                 base_year='2018',
-                 future_years=['2033', '2035', '2050'],
-                 segmentation_cols=None,
-                 population_infill=0.001,
-                 verbose=False
-                 ):
-        # Setup
-        all_years = [str(x) for x in [base_year] + future_years]
+
+    def _grow_pop(self,
+                  segmentation_cols=None,
+                  population_infill=0.001,
+                  verbose=False
+                  ):
+
         # Define zone col name
         if 'zone_id' not in self.model_zoning:
             zone_col = self.model_zoning.lower() + '_zone_id'
@@ -68,14 +82,15 @@ class FutureYearLandUse:
 
         # ## BASE YEAR POPULATION ## #
         print("Loading the base year population data...")
-        base_year_pop = fyu.get_land_use_data(
+        base_year_pop = fyu.get_land_use(
             self.paths['base_land_use'],
             segmentation_cols=segmentation_cols,
             apply_ca_model=False)
-        base_year_pop = base_year_pop.rename(columns={'people': base_year})
+        base_year_pop = base_year_pop.rename(
+            columns={'people': self.base_year})
 
         # Audit population numbers
-        print("Base Year Population: %d" % base_year_pop[base_year].sum())
+        print("Base Year Population: %d" % base_year_pop[self.base_year].sum())
 
         # ## FUTURE YEAR POPULATION ## #
         print("Generating future year population data...")
@@ -86,8 +101,8 @@ class FutureYearLandUse:
         population = fyu.grow_to_future_years(
             base_year_df=base_year_pop,
             growth_df=population_growth,
-            base_year=base_year,
-            future_years=future_years,
+            base_year=self.base_year,
+            future_years=self.future_year,
             infill=population_infill,
             growth_merge_cols=merge_cols
         )
@@ -114,7 +129,10 @@ class FutureYearLandUse:
 
         return population
 
-    def get_soc_weights(self,
+    def _adjust_ca(self):
+        return 0
+
+    def _get_soc_weights(self,
                         zone_col: str = 'msoa_zone_id',
                         soc_col: str = 'soc_class',
                         jobs_col: str = 'seg_jobs',
@@ -184,7 +202,7 @@ class FutureYearLandUse:
 
         return soc_weights
 
-    def split_by_soc(df: pd.DataFrame,
+    def _split_by_soc(df: pd.DataFrame,
                      soc_weights: pd.DataFrame,
                      zone_col: str = 'msoa_zone_id',
                      p_col: str = 'p',
@@ -275,10 +293,13 @@ class FutureYearLandUse:
         # Finally, stick the two back together
         return pd.concat([split_df, retain_df])
 
-    def grow_emp(base_year='2018',
+
+    def _grow_emp(self,
+                 base_year='2018',
                  future_years=['2033', '2035', '2050'],
                  segmentation_cols=None,
                  employment_infill=0.001,
+                 audits=True,
                  reports=True
                  ):
         # Init
@@ -292,12 +313,12 @@ class FutureYearLandUse:
         if segmentation_cols is None:
             segmentation_cols = [emp_cat_col]
 
-        employment_growth = pd.read_csv(EMP_GROWTH_PATH)
+        employment_growth = pd.read_csv(self.paths['emp_growth_path'])
 
         # ## BASE YEAR EMPLOYMENT ## #
         print("Loading the base year employment data...")
-        base_year_emp = get_employment_data(
-            import_path=imports['base_employment'],
+        base_year_emp = fyu.get_land_use(
+            import_path=self.paths['base_employment'],
             zone_col=zone_col,
             emp_cat_col=emp_cat_col,
             return_format='long',
@@ -314,9 +335,10 @@ class FutureYearLandUse:
         # If soc splits in the growth factors, we have a few extra steps
         if 'soc' in employment_growth:
             # Add Soc splits into the base year
-            base_year_emp = split_by_soc(
+            base_year_emp = self.split_by_soc(
                 df=base_year_emp,
-                soc_weights=self.get_soc_weights(pd.read_csv(SOC_WEIGHTS_PATH)),
+                soc_weights=self._get_soc_weights(
+                    pd.read_csv(self.paths['base_soc_mix'])),
                 unique_col=base_year,
                 split_cols=[zone_col, emp_cat_col]
             )
@@ -351,7 +373,6 @@ class FutureYearLandUse:
             base_year=base_year,
             future_years=future_years,
             growth_merge_cols=merge_cols,
-            no_neg_growth=no_neg_growth,
             infill=employment_infill
         )
 
@@ -381,8 +402,3 @@ class FutureYearLandUse:
                 print('. Total jobs for year %s is: %.4f'
                       % (str(year), total_emp))
             print('\n')
-
-
-
-
-

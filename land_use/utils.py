@@ -273,7 +273,6 @@ def growth_recombination(df: pd.DataFrame,
     return df
 
 
-
 def grow_to_future_years(base_year_df: pd.DataFrame,
                          growth_df: pd.DataFrame,
                          base_year: str,
@@ -358,7 +357,7 @@ def get_land_use(
         path,
         segmentation_cols=None,
         apply_ca_model=False,
-        col_limit = None
+        col_limit=None
         ):
     """
     Import land use from somewhere.

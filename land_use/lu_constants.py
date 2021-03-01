@@ -9,17 +9,42 @@ import pandas as pd
 # PATHS
 # Default land use folder
 LU_FOLDER = 'Y://NorMITs Land Use'
+DATA_FOLDER = 'Y://Data Strategy//Data//'
 
 # Most recent Land Use Iteration
 LU_MR_ITER = 'iter3b'
 LU_IMPORTS = 'import'
 
 # Path to a default land use build
-LAND_USE_MSOA = os.path.join(
+RESI_LAND_USE_MSOA = os.path.join(
     LU_FOLDER,
     LU_MR_ITER,
     'outputs',
     'land_use_output_msoa.csv'
+)
+
+EMPLOYMENT_MSOA = os.path.join(
+    DATA_FOLDER,
+    '2018',
+    'non_freight_msoa.csv'
+)
+
+NTEM_POP_GROWTH = os.path.join(
+    LU_FOLDER,
+    LU_IMPORTS,
+    'scenarios',
+    'NTEM',
+    'population',
+    'future_population_growth.csv'
+)
+
+NTEM_EMP_GROWTH = os.path.join(
+    LU_FOLDER,
+    LU_IMPORTS,
+    'scenarios',
+    'NTEM',
+    'employment',
+    'future_workers_growth.csv'
 )
 
 SOC_2DIGIT_SIC = os.path.join(
