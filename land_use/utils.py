@@ -214,7 +214,7 @@ def get_growth_values(base_year_df: pd.DataFrame,
     # If these don't match, something has gone wrong
     new_by_pop = growth_values[base_year_col].sum()
     if not is_almost_equal(base_year_pop, new_by_pop):
-        raise NormitsDemandError(
+        raise ValueError(
             "Base year totals have changed before and after growing the "
             "future years - something must have gone wrong. Perhaps the "
             "merge columns are wrong and data is being replicated.\n"
@@ -279,7 +279,6 @@ def grow_to_future_years(base_year_df: pd.DataFrame,
                          base_year: str,
                          future_years: List[str],
                          growth_merge_cols: Union[str, List[str]] = 'msoa_zone_id',
-                         no_neg_growth: bool = True,
                          infill: float = 0.001,
                          ) -> pd.DataFrame:
     """
@@ -344,13 +343,6 @@ def grow_to_future_years(base_year_df: pd.DataFrame,
         merge_cols=growth_merge_cols
     )
 
-    # TODO: Maybe allow negative growth at MSOA but not LAD
-    # Ensure there is no minus growth
-    # if no_neg_growth:
-    #     for year in all_years:
-    #         mask = (grown_df[year] < 0)
-    #         grown_df.loc[mask, year] = infill
-
     # Add base year back in to get full grown values
     grown_df = growth_recombination(
         grown_df,
@@ -360,3 +352,31 @@ def grow_to_future_years(base_year_df: pd.DataFrame,
     )
 
     return grown_df
+
+
+def get_land_use(
+        path,
+        segmentation_cols=None,
+        apply_ca_model=False,
+        col_limit = None
+        ):
+    """
+    Import land use from somewhere.
+    Subset cols if required.
+    Apply ca lookup on cars, if required.
+    Col limit if subset required
+    """
+
+    lu = pd.read_csv(path, nrows=col_limit)
+
+    if segmentation_cols is not None:
+        # Get cols to reindex with
+        ri_cols = segmentation_cols.copy()
+        group_cols = ri_cols.copy()
+        if 'people' not in segmentation_cols:
+            ri_cols.append('people')
+        lu = lu.reindex(
+            ri_cols, axis=1).groupby(group_cols).sum().reset_index()
+        lu = lu.sort_values(group_cols)
+
+    return lu
