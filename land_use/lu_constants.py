@@ -25,8 +25,9 @@ RESI_LAND_USE_MSOA = os.path.join(
 
 EMPLOYMENT_MSOA = os.path.join(
     DATA_FOLDER,
+    'HSL',
     '2018',
-    'non_freight_msoa.csv'
+    'non_freight_msoa_2018.csv'
 )
 
 NTEM_POP_GROWTH = os.path.join(
@@ -35,7 +36,7 @@ NTEM_POP_GROWTH = os.path.join(
     'scenarios',
     'NTEM',
     'population',
-    'future_population_values.csv'
+    'future_population_growth.csv'
 )
 
 NTEM_EMP_GROWTH = os.path.join(
@@ -44,7 +45,7 @@ NTEM_EMP_GROWTH = os.path.join(
     'scenarios',
     'NTEM',
     'employment',
-    'future_workers_values.csv'
+    'future_workers_growth.csv'
 )
 
 # This is growth not values
@@ -54,7 +55,7 @@ NTEM_CA_GROWTH = os.path.join(
     'scenarios',
     'NTEM',
     'car ownership',
-    'future_car_ownership_growth.csv'
+    'ca_future_shares.csv'
 )
 
 SOC_2DIGIT_SIC = os.path.join(

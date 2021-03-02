@@ -104,44 +104,6 @@ def list_safe_remove(lst: List[Any],
 
     return lst
 
-
-def convert_growth_off_base_year(growth_df: pd.DataFrame,
-                                 base_year: str,
-                                 future_year: str,
-                                 ) -> pd.DataFrame:
-    """
-    Converts the multiplicative growth value of each future_years to be
-    based off of the base year.
-
-    Parameters
-    ----------
-    growth_df:
-        The starting dataframe containing the growth values of all_years
-        and base_year
-
-    base_year:
-        The new base year to base all the all_years growth off of.
-
-    future_year:
-        The years in growth_dataframe to convert to be based off of
-        base_year growth
-
-    Returns
-    -------
-    converted_growth_dataframe:
-        The original growth dataframe with all growth values converted
-
-    """
-    # Init
-    growth_df = growth_df.copy()
-    growth_df.columns = growth_df.columns.astype(str)
-
-    # Do base year last, otherwise conversion won't work
-    growth_df[future_year] /= growth_df[base_year]
-
-    return growth_df
-
-
 def get_growth_values(base_year_df: pd.DataFrame,
                       growth_df: pd.DataFrame,
                       base_year_col: str,
