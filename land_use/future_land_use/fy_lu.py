@@ -9,6 +9,8 @@ from land_use import utils as fyu
 
 class FutureYearLandUse:
     def __init__(self,
+                 model_folder=consts.LU_FOLDER,
+                 iteration=consts.LU_MR_ITER,
                  model_zoning='msoa',
                  base_land_use_path=consts.RESI_LAND_USE_MSOA,
                  base_employment_path=consts.EMPLOYMENT_MSOA,
@@ -30,8 +32,23 @@ class FutureYearLandUse:
         # Segmentation
         self.pop_segmentation_cols = pop_segmentation_cols
 
+        write_folder = os.path.join(
+            model_folder,
+            iteration,
+            'outputs',
+            'scenarios',
+            scenario_name)
+
+        pop_write_name = os.path.join(
+            write_folder,
+            ('land_use_' + str(self.future_year) + '_pop.csv'))
+
+        emp_write_name = os.path.join(
+            write_folder,
+            ('land_use_' + str(self.future_year) + '_emp.csv'))
+
         # Pathing
-        self.paths = {
+        self.in_paths = {
             'base_land_use': base_land_use_path,
             'base_employment': base_employment_path,
             'pop_growth': pop_growth_path,
@@ -39,41 +56,59 @@ class FutureYearLandUse:
             'ca_growth': ca_growth_path,
             'base_soc_mix': base_soc_mix_path}
 
+        self.out_paths = {
+            'write_folder': write_folder,
+            'pop_write_path': pop_write_name,
+            'emp_write_path': emp_write_name
+        }
+
     def build_fy_pop(self,
+                     adjust_ca=True,
+                     adjust_soc=True,
                      export=True,
-                     verbose=False):
+                     verbose=True):
         """
         """
         fy_pop = self._grow_pop(verbose=verbose)
 
+        if adjust_ca:
+            fy_pop = self._adjust_ca(fy_pop)
+
+        if adjust_soc:
+            print('If this were an FTS youd be adjusting soc by now')
+
+        if export:
+            if verbose:
+                print('Writing to:')
+                print(self.out_paths['pop_write_path'])
+            fy_pop.to_csv(self.out_paths['pop_write_path'],
+                          index=False)
 
         return fy_pop
 
     def build_fy_emp(self,
-                     export=True):
-        return 0
+                     export=True,
+                     verbose=True):
+
+        fy_emp = self._grow_emp(verbose=verbose)
+
+        if export:
+            if verbose:
+                print('Writing to:')
+                print(self.out_paths['emp_write_path'])
+            fy_emp.to_csv(self.out_paths['emp_write_path'],
+                          index=False)
+
+        return fy_emp
 
     def _grow_pop(self,
-                  population_infill=0.001,
                   verbose=False
                   ):
 
         # Define zone col name
-        if 'zone_id' not in self.model_zoning:
-            zone_col = self.model_zoning.lower() + '_zone_id'
-        else:
-            zone_col = self.model_zoning.lower()
+        zone_col = self._define_zone_col()
 
-        # Cars or CA??
-        if self.pop_segmentation_cols is None:
-            segmentation_cols = [
-                'area_type',
-                'household_composition',
-                'traveller_type',
-                'soc',
-                'ns',
-                'ca'
-            ]
+        #TODO: Need to refactor the growth if bases are misaligned
 
         # Get pop growth, filter to target year only
         population_growth = self._get_fy_pop_emp(
@@ -83,7 +118,7 @@ class FutureYearLandUse:
         # TODO: Fix the segmentation cols in utils
         print("Loading the base year population data...")
         base_year_pop = fyu.get_land_use(
-            self.paths['base_land_use'],
+            self.in_paths['base_land_use'],
             model_zone_col=zone_col,
             segmentation_cols=None)
         base_year_pop = base_year_pop.rename(
@@ -96,30 +131,20 @@ class FutureYearLandUse:
         print("Generating future year population data...")
         # Merge on all possible segmentations - not years
         merge_cols = fyu.intersection(list(base_year_pop), list(population_growth))
-        # merge_cols = fyu.list_safe_remove(merge_cols, self.future_year)
 
-        population = fyu.grow_to_future_years(
-            base_year_df=base_year_pop,
-            growth_df=population_growth,
-            base_year=self.base_year,
-            future_years=self.future_year,
-            infill=population_infill,
-            growth_merge_cols=merge_cols
+        population = self._grow_to_future_year(
+            by_vector=base_year_pop,
+            fy_vector=population_growth,
+            merge_cols=merge_cols
         )
 
         # ## TIDY UP, WRITE TO DISK ## #
         # Reindex and sum
-        group_cols = [zone_col] + segmentation_cols
-        index_cols = group_cols.copy() + all_years
-        population = population.reindex(index_cols, axis='columns')
-        population = population.groupby(group_cols).sum().reset_index()
 
         # Population Audit
         if verbose:
             print('\n', '-' * 15, 'Population Audit', '-' * 15)
-            for year in all_years:
-                print('. Total population for year %s is: %.4f'
-                      % (year, population[year].sum()))
+            print('Total population for year %s is: %.4f' % (self.future_year, population[self.future_year].sum()))
             print('\n')
 
         # Write the produced population to file
@@ -129,8 +154,161 @@ class FutureYearLandUse:
 
         return population
 
-    def _adjust_ca(self):
-        return 0
+    def _grow_emp(self,
+                  verbose=False):
+        # Init
+        zone_col = self._define_zone_col()
+        emp_cat_col = 'employment_cat'
+
+        employment_growth = pd.read_csv(self.in_paths['emp_growth'])
+
+        # ## BASE YEAR EMPLOYMENT ## #
+        print("Loading the base year employment data...")
+        base_year_emp = fyu.get_land_use(
+            path=self.in_paths['base_employment'],
+            model_zone_col=zone_col,
+            segmentation_cols=None)
+        # Fill in an EO1 Value, if you have to
+        if 'E01' not in list(base_year_emp):
+            # TODO: Make an EO1
+
+        # Audit employment numbers
+
+        mask = (base_year_emp[emp_cat_col] == 'E01')
+        total_base_year_emp = base_year_emp.loc[mask, self.base_year].sum()
+        print("Base Year Employment: %d" % total_base_year_emp)
+
+        # ## FUTURE YEAR EMPLOYMENT ## #
+        print("Generating future year employment data...")
+        # If soc splits in the growth factors, we have a few extra steps
+        if 'soc' in employment_growth:
+            # Add Soc splits into the base year
+            base_year_emp = self._split_by_soc(
+                df=base_year_emp,
+                soc_weights=self._get_soc_weights(
+                    pd.read_csv(self.in_paths['base_soc_mix'])),
+                unique_col=self.base_year,
+                split_cols=[zone_col, emp_cat_col]
+            )
+
+        # Merge on all possible segmentations - not years
+        merge_cols = fyu.intersection(list(base_year_emp), list(employment_growth))
+
+        employment = self._grow_to_future_year(
+            by_vector=base_year_emp,
+            fy_vector=employment_growth)
+
+        return employment
+
+    def _adjust_ca(self,
+                   fy_pop_vector,
+                   verbose=True) -> pd.DataFrame:
+        """
+
+        Parameters
+        ----------
+        fy_pop_vector: Ready adjusted future year pop vector
+
+        Returns
+        -------
+        fy_pop_vector: Population vector with adjusted car availability
+        ca_adjustment_factors: Report Dataframe
+
+        """
+        # Get zone name
+        zone_col = self._define_zone_col()
+
+        # Build base year ca totals
+        by_ca = fy_pop_vector.copy()
+        by_ca = by_ca.reindex(
+            [zone_col, 'ca', self.future_year], axis=1).groupby(
+            [zone_col, 'ca']).sum().reset_index()
+        # Get by ca totals
+        by_ca = by_ca.pivot(
+            index=zone_col,
+            columns='ca',
+            values=self.future_year).reset_index()
+        by_ca['total'] = by_ca[1] + by_ca[2]
+        by_ca[1] /= by_ca['total']
+        by_ca[2] /= by_ca['total']
+        by_ca = by_ca.drop('total', axis=1)
+        by_ca = by_ca.melt(id_vars = zone_col,
+                           var_name='ca',
+                           value_name=self.future_year)
+        by_ca = by_ca.rename(
+            columns={self.future_year:'by_ca'})
+
+        # Get ca shares
+        ca_shares = pd.read_csv(self.in_paths['ca_growth'])
+        # Filter to target_year
+        ca_shares = ca_shares.reindex(
+            [zone_col, 'ca', self.future_year], axis=1)
+        ca_shares = ca_shares.rename(columns={self.future_year: 'fy_ca'})
+
+        # Join
+        fy_ca_factors = by_ca.merge(
+            ca_shares,
+            how='left',
+            on=[zone_col, 'ca'])
+        fy_ca_factors['ca_adj'] = fy_ca_factors['fy_ca'] / fy_ca_factors['by_ca']
+        fy_ca_factors = fy_ca_factors.drop(['by_ca', 'fy_ca'], axis=1)
+
+        before = fy_pop_vector[self.future_year].sum()
+
+        # Adjust CA
+        fy_pop_vector = fy_pop_vector.merge(
+            fy_ca_factors,
+            how='left',
+            on=[zone_col, 'ca'])
+        fy_pop_vector[self.future_year] *= fy_pop_vector['ca_adj']
+        fy_pop_vector = fy_pop_vector.drop('ca_adj', axis=1)
+
+        after = fy_pop_vector[self.future_year].sum()
+
+        if verbose:
+            print('*' * 15)
+            print('Car availability adjustment')
+            print('Total before: ' + str(before))
+            print('Total after: ' + str(after))
+
+        return fy_pop_vector
+
+    def _grow_to_future_year(self,
+                             by_vector: pd.DataFrame,
+                             fy_vector: pd.DataFrame,
+                             merge_cols=None,
+                             verbose=True) -> pd.DataFrame:
+        """
+        Parameters
+        ----------
+        by_vector: Dataframe of a base year pop/emp vector
+        fy_vector: Dataframe of growth factors from a given base year
+        to a give future year, by year
+
+        Returns
+        -------
+        fy_vector: Absolute totals from by_vector, grown to fy totals
+        """
+        if merge_cols is None:
+            merge_cols = self._define_zone_col()
+
+        start = by_vector[self.base_year].sum()
+
+        fy_vector = by_vector.merge(fy_vector,
+                                    how='left',
+                                    on=merge_cols)
+        merge = fy_vector[self.base_year].sum()
+
+        fy_vector[self.future_year] *= fy_vector[self.base_year]
+        end = fy_vector[self.future_year].sum()
+        fy_vector = fy_vector.drop(self.base_year, axis=1)
+
+        if verbose:
+            print('Start: ' + str(start))
+            print('Merge:' + str(merge))
+            print('End:' + str(end))
+
+        return fy_vector
 
     def _get_soc_weights(self,
                          zone_col: str = 'msoa_zone_id',
@@ -169,7 +347,7 @@ class FutureYearLandUse:
             sum to 1.
         """
         # Init
-        soc_weighted_jobs = pd.read_csv(self.paths['soc_weights'])
+        soc_weighted_jobs = pd.read_csv(self.in_paths['soc_weights'])
 
         # Convert soc numbers to names (to differentiate from ns)
         soc_weighted_jobs[soc_col] = soc_weighted_jobs[soc_col].astype(int).astype(str)
@@ -203,13 +381,13 @@ class FutureYearLandUse:
         return soc_weights
 
     def _split_by_soc(df: pd.DataFrame,
-                     soc_weights: pd.DataFrame,
-                     zone_col: str = 'msoa_zone_id',
-                     p_col: str = 'p',
-                     unique_col: str = 'trips',
-                     soc_col: str = 'soc',
-                     split_cols: str = None
-                     ) -> pd.DataFrame:
+                      soc_weights: pd.DataFrame,
+                      zone_col: str = 'msoa_zone_id',
+                      p_col: str = 'p',
+                      unique_col: str = 'trips',
+                      soc_col: str = 'soc',
+                      split_cols: str = None
+                      ) -> pd.DataFrame:
         """
         Splits df purposes by the soc_weights given.
 
@@ -293,117 +471,6 @@ class FutureYearLandUse:
         # Finally, stick the two back together
         return pd.concat([split_df, retain_df])
 
-    def _grow_emp(self,
-                 base_year='2018',
-                 future_years=['2033', '2035', '2050'],
-                 segmentation_cols=None,
-                 employment_infill=0.001,
-                 audits=True,
-                 reports=True
-                 ):
-        # Init
-        zoning_system = 'msoa'
-        zone_col = '%s_zone_id' % zoning_system
-        emp_cat_col = 'employment_cat'
-
-        all_years = [str(x) for x in [base_year] + future_years]
-
-        # Setup
-        if segmentation_cols is None:
-            segmentation_cols = [emp_cat_col]
-
-        employment_growth = pd.read_csv(self.paths['emp_growth_path'])
-
-        # ## BASE YEAR EMPLOYMENT ## #
-        print("Loading the base year employment data...")
-        base_year_emp = fyu.get_land_use(
-            import_path=self.paths['base_employment'],
-            zone_col=zone_col,
-            emp_cat_col=emp_cat_col,
-            return_format='long',
-            value_col=base_year,
-        )
-
-        # Audit employment numbers
-        mask = (base_year_emp[emp_cat_col] == 'E01')
-        total_base_year_emp = base_year_emp.loc[mask, base_year].sum()
-        print("Base Year Employment: %d" % total_base_year_emp)
-
-        # ## FUTURE YEAR EMPLOYMENT ## #
-        print("Generating future year employment data...")
-        # If soc splits in the growth factors, we have a few extra steps
-        if 'soc' in employment_growth:
-            # Add Soc splits into the base year
-            base_year_emp = self.split_by_soc(
-                df=base_year_emp,
-                soc_weights=self._get_soc_weights(
-                    pd.read_csv(self.paths['base_soc_mix'])),
-                unique_col=base_year,
-                split_cols=[zone_col, emp_cat_col]
-            )
-
-            # Aggregate the growth factors to remove extra segmentation
-            group_cols = [zone_col, 'soc']
-            index_cols = group_cols.copy() + all_years
-
-            # Make sure both soc columns are the same format
-            base_year_emp['soc'] = base_year_emp['soc'].astype('float').astype('int')
-            employment_growth['soc'] = employment_growth['soc'].astype('float').astype('int')
-        else:
-            # We're not using soc, remove it from our segmentations
-            emp_segments.remove('soc')
-            attr_segments.remove('soc')
-
-        # Make sure our growth factors are at the right segmentation
-        group_cols = [zone_col] + emp_segments.copy()
-        group_cols.remove(emp_cat_col)
-        index_cols = group_cols.copy() + all_years
-
-        employment_growth = employment_growth.reindex(columns=index_cols)
-        employment_growth = employment_growth.groupby(group_cols).mean().reset_index()
-
-        # Merge on all possible segmentations - not years
-        merge_cols = fyu.intersection(list(base_year_emp), list(employment_growth))
-        merge_cols = fyu.list_safe_remove(merge_cols, all_years)
-
-        employment = fyu.grow_to_future_years(
-            base_year_df=base_year_emp,
-            growth_df=employment_growth,
-            base_year=base_year,
-            future_years=future_years,
-            growth_merge_cols=merge_cols,
-            infill=employment_infill
-        )
-
-        # ## TIDY UP, WRITE TO DISK ## #
-        # Earlier than previously to also save the soc segmentation
-        if out_path is None:
-            print("WARNING! No output path given. "
-                  "Not writing employment to file.")
-        else:
-            print("Writing employment to file...")
-            path = os.path.join(out_path, consts.EMP_FNAME % self.zone_col)
-            employment.to_csv(path, index=False)
-
-        # Reindex and sum
-        # Removes soc splits - attractions weights can't cope
-        group_cols = [zone_col] + emp_segments
-        index_cols = group_cols.copy() + all_years
-        employment = employment.reindex(index_cols, axis='columns')
-        employment = employment.groupby(group_cols).sum().reset_index()
-
-        # Population Audit
-        if audits:
-            print('\n', '-' * 15, 'Employment Audit', '-' * 15)
-            mask = (employment[emp_cat_col] == 'E01')
-            for year in all_years:
-                total_emp = employment.loc[mask, year].sum()
-                print('. Total jobs for year %s is: %.4f'
-                      % (str(year), total_emp))
-            print('\n')
-
-        return employment
-
     def _get_fy_pop_emp(self,
                         vector_type):
         """
@@ -411,11 +478,27 @@ class FutureYearLandUse:
         """
 
         if vector_type == 'pop':
-            dat = pd.read_csv(self.paths['pop_growth'])
+            dat = pd.read_csv(self.in_paths['pop_growth'])
         elif vector_type == 'emp':
-            dat = pd.read_csv(self.paths['emp_growth'])
+            dat = pd.read_csv(self.in_paths['emp_growth'])
         ri_cols = [
             self.model_zoning + '_zone_id', self.future_year]
         dat = dat.reindex(ri_cols, axis=1)
 
         return dat
+
+    def _define_zone_col(self):
+        """
+        Work out a sensible column name to use as the model zoning id.
+
+        Returns
+        -------
+        mz_id: A model zoning ID
+
+        """
+        if 'zone_id' not in self.model_zoning:
+            zone_col = self.model_zoning.lower() + '_zone_id'
+        else:
+            zone_col = self.model_zoning.lower()
+
+        return zone_col
