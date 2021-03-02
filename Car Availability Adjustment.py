@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Apr 21 16:01:59 2020
-
 @author: mags15
 Was built based on nts = pd.read_csv('Y:/NTS/tfn_ntem_build.csv') 
 but can't find it now so rewritten to take 'tfn_unclassified_build.csv'
-
+Look in Y:\NTS\Docs for documentation of NTS col headings descriptions
 """
 import pandas as pd
 
@@ -24,7 +22,13 @@ _emp_lookup = _import_folder+'Car availability/emp_type.csv'
 _adults_lookup = _import_folder +'Car availability/adults_lookup.csv'
 
 
-def ntsimport (year = ['2017']):
+def ntsimport (_nts_path,
+               _emp_lookup,
+               _hc_lookup,
+               _adults_lookup,
+               _ward_to_msoa,
+               _default_area_types,
+               year = ['2017']):
     """
     imports car availability from nts extract 'tfn_unclassified_build'
     
@@ -53,9 +57,6 @@ def ntsimport (year = ['2017']):
     cars = ntsextract.groupby(by=['uk_ward_zone_id', 'household_composition',  
                                 'employment_type'], 
                                 as_index = False).sum().drop(columns = {'W1', 'W2'})
-    #null_values = [-8,-9]
-    #cars = cars[~cars.NumCarVan_B02ID.isin(null_values)]
-    #cars = cars[~cars.EcoStat_B01ID.isin(null_values)]
     cars['people'].sum()
     wardToMSOA = pd.read_csv(_ward_to_msoa).drop(columns={'overlap_var', 
                           'uk_ward_var', 'msoa_var', 'overlap_type', 'overlap_msoa_split_factor'})
