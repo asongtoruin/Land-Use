@@ -7,9 +7,12 @@ if __name__ == '__main__':
         fy = fylu.FutureYearLandUse(
             future_year=target_fy
         )
+        """
         fy.build_fy_pop(
             export=True
         )
+        """
         fy.build_fy_emp(
             export=True
         )
+
