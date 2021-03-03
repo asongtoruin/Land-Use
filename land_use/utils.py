@@ -10,6 +10,7 @@ Other updates made by:
 File purpose:
 WRITE PURPOSE
 """
+import os
 
 from typing import Any
 from typing import List
@@ -19,6 +20,21 @@ from math import isclose
 
 import pandas as pd
 
+
+def create_folder(folder, ch_dir=False, verbose=True):
+    """
+    """
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+        if ch_dir:
+            os.chdir(folder)
+        if verbose:
+            print("New project folder created in " + folder)
+    else:
+        if ch_dir:
+            os.chdir(folder)
+        if verbose:
+            print('Folder already exists', verbose=echo)
 
 def is_almost_equal(v1: float,
                     v2: float,

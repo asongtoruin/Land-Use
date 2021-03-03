@@ -11,23 +11,43 @@ class FutureYearLandUse:
     def __init__(self,
                  model_folder=consts.LU_FOLDER,
                  iteration=consts.LU_MR_ITER,
+                 import_folder=consts.LU_IMPORTS,
                  model_zoning='msoa',
                  base_land_use_path=consts.RESI_LAND_USE_MSOA,
                  base_employment_path=consts.EMPLOYMENT_MSOA,
+                 base_soc_mix_path=consts.SOC_2DIGIT_SIC,
                  base_year='2018',
                  future_year='2033',
                  scenario_name='NTEM',
-                 pop_growth_path=consts.NTEM_POP_GROWTH,
-                 emp_growth_path=consts.NTEM_EMP_GROWTH,
-                 ca_growth_path=consts.NTEM_CA_GROWTH,
-                 base_soc_mix_path=consts.SOC_2DIGIT_SIC,
+                 pop_growth_path=None,
+                 emp_growth_path=None,
+                 ca_growth_path=None,
                  pop_segmentation_cols=None):
+
+        # File ops
+        self.model_folder = model_folder
+        self.iteration = iteration
+        self.import_folder = import_folder
 
         # Basic config
         self.model_zoning = model_zoning
         self.base_year = base_year
         self.future_year = future_year
-        self.scenario_name = scenario_name
+        self.scenario_name = scenario_name.upper()
+
+        # If Nones passed in, parse paths
+        if pop_growth_path is None:
+            pop_growth_path = self._get_scenario_path(
+                'pop_growth',
+            )
+        if emp_growth_path is None:
+            emp_growth_path = self._get_scenario_path(
+                'emp_growth',
+            )
+        if ca_growth_path is None:
+            ca_growth_path = self._get_scenario_path(
+                'ca_growth',
+            )
 
         # Segmentation
         self.pop_segmentation_cols = pop_segmentation_cols
@@ -38,6 +58,9 @@ class FutureYearLandUse:
             'outputs',
             'scenarios',
             scenario_name)
+
+        if not os.path.exists(write_folder):
+            fyu.create_folder(write_folder)
 
         pop_write_name = os.path.join(
             write_folder,
@@ -51,10 +74,11 @@ class FutureYearLandUse:
         self.in_paths = {
             'base_land_use': base_land_use_path,
             'base_employment': base_employment_path,
+            'base_soc_mix': base_soc_mix_path,
             'pop_growth': pop_growth_path,
             'emp_growth': emp_growth_path,
-            'ca_growth': ca_growth_path,
-            'base_soc_mix': base_soc_mix_path}
+            'ca_growth': ca_growth_path
+            }
 
         self.out_paths = {
             'write_folder': write_folder,
@@ -101,6 +125,43 @@ class FutureYearLandUse:
 
         return fy_emp
 
+    def _get_scenario_path(self,
+                           vector):
+        """
+        Parameters
+        ----------
+        vector = ['pop_growth', 'emp_growth','ca_growth']
+
+        Returns
+        -------
+        path : path to required vector
+        """
+
+        if vector == 'pop_growth':
+            target_folder = 'population',
+            target_file = 'future_population_growth.csv'
+        elif vector == 'emp_growth':
+            target_folder = 'employment',
+            target_file = 'future_employment_growth.csv'
+        elif vector == 'ca_growth':
+            target_folder = 'car ownership'
+            target_file = 'ca_future_shares.csv'
+        else:
+            raise ValueError('Not sure where to look for ' + vector)
+
+        # Run scenario name through consts to get name
+        sc_path = os.path.join(
+            self.model_folder,
+            self.iteration,
+            self.import_folder,
+            consts.SCENARIO_FOLDERS[self.scenario_name],
+            target_folder,
+            target_file
+        )
+
+        return sc_path
+
+
     def _grow_pop(self,
                   verbose=False
                   ):
@@ -143,6 +204,7 @@ class FutureYearLandUse:
 
         # Population Audit
         if verbose:
+            print(list(population))
             print('\n', '-' * 15, 'Population Audit', '-' * 15)
             print('Total population for year %s is: %.4f' % (self.future_year, population[self.future_year].sum()))
             print('\n')
@@ -171,6 +233,7 @@ class FutureYearLandUse:
         # Fill in an EO1 Value, if you have to
         if 'E01' not in list(base_year_emp):
             # TODO: Make an EO1
+            print('Code filler')
 
         # Audit employment numbers
 
