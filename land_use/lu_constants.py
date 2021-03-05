@@ -24,9 +24,9 @@ RESI_LAND_USE_MSOA = os.path.join(
 )
 
 EMPLOYMENT_MSOA = os.path.join(
-    DATA_FOLDER,
-    'HSL',
-    '2018',
+    LU_FOLDER,
+    LU_IMPORTS,
+    'HSL 2018',
     'non_freight_msoa_2018.csv'
 )
 
@@ -67,7 +67,7 @@ NTEM_CA_GROWTH = os.path.join(
 SOC_2DIGIT_SIC = os.path.join(
     LU_FOLDER,
     LU_IMPORTS,
-    'fy_soc',
+    'SOC Mix',
     'soc_2_digit_sic_2018.csv'
 )
 
