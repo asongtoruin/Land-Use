@@ -11,23 +11,43 @@ class FutureYearLandUse:
     def __init__(self,
                  model_folder=consts.LU_FOLDER,
                  iteration=consts.LU_MR_ITER,
+                 import_folder=consts.LU_IMPORTS,
                  model_zoning='msoa',
                  base_land_use_path=consts.RESI_LAND_USE_MSOA,
                  base_employment_path=consts.EMPLOYMENT_MSOA,
+                 base_soc_mix_path=consts.SOC_2DIGIT_SIC,
                  base_year='2018',
                  future_year='2033',
                  scenario_name='NTEM',
-                 pop_growth_path=consts.NTEM_POP_GROWTH,
-                 emp_growth_path=consts.NTEM_EMP_GROWTH,
-                 ca_growth_path=consts.NTEM_CA_GROWTH,
-                 base_soc_mix_path=consts.SOC_2DIGIT_SIC,
+                 pop_growth_path=None,
+                 emp_growth_path=None,
+                 ca_growth_path=None,
                  pop_segmentation_cols=None):
+
+        # File ops
+        self.model_folder = model_folder
+        self.iteration = iteration
+        self.import_folder = import_folder
 
         # Basic config
         self.model_zoning = model_zoning
         self.base_year = base_year
         self.future_year = future_year
-        self.scenario_name = scenario_name
+        self.scenario_name = scenario_name.upper()
+
+        # If Nones passed in, parse paths
+        if pop_growth_path is None:
+            pop_growth_path = self._get_scenario_path(
+                'pop_growth',
+            )
+        if emp_growth_path is None:
+            emp_growth_path = self._get_scenario_path(
+                'emp_growth',
+            )
+        if ca_growth_path is None:
+            ca_growth_path = self._get_scenario_path(
+                'ca_growth',
+            )
 
         # Segmentation
         self.pop_segmentation_cols = pop_segmentation_cols
@@ -38,6 +58,9 @@ class FutureYearLandUse:
             'outputs',
             'scenarios',
             scenario_name)
+
+        if not os.path.exists(write_folder):
+            fyu.create_folder(write_folder)
 
         pop_write_name = os.path.join(
             write_folder,
@@ -51,10 +74,11 @@ class FutureYearLandUse:
         self.in_paths = {
             'base_land_use': base_land_use_path,
             'base_employment': base_employment_path,
+            'base_soc_mix': base_soc_mix_path,
             'pop_growth': pop_growth_path,
             'emp_growth': emp_growth_path,
-            'ca_growth': ca_growth_path,
-            'base_soc_mix': base_soc_mix_path}
+            'ca_growth': ca_growth_path
+            }
 
         self.out_paths = {
             'write_folder': write_folder,
@@ -101,6 +125,42 @@ class FutureYearLandUse:
 
         return fy_emp
 
+    def _get_scenario_path(self,
+                           vector):
+        """
+        Parameters
+        ----------
+        vector = ['pop_growth', 'emp_growth','ca_growth']
+
+        Returns
+        -------
+        path : path to required vector
+        """
+
+        if vector == 'pop_growth':
+            target_folder = 'population'
+            target_file = 'future_population_growth.csv'
+        elif vector == 'emp_growth':
+            target_folder = 'employment'
+            target_file = 'future_employment_growth.csv'
+        elif vector == 'ca_growth':
+            target_folder = 'car ownership'
+            target_file = 'ca_future_shares.csv'
+        else:
+            raise ValueError('Not sure where to look for ' + vector)
+
+        # Run scenario name through consts to get name
+        sc_path = os.path.join(
+            self.model_folder,
+            self.import_folder,
+            'scenarios',
+            consts.SCENARIO_FOLDERS[self.scenario_name],
+            target_folder,
+            target_file
+        )
+
+        return sc_path
+
     def _grow_pop(self,
                   verbose=False
                   ):
@@ -108,14 +168,14 @@ class FutureYearLandUse:
         # Define zone col name
         zone_col = self._define_zone_col()
 
-        #TODO: Need to refactor the growth if bases are misaligned
+        #TODO: Check if bases are misaligned
 
         # Get pop growth, filter to target year only
         population_growth = self._get_fy_pop_emp(
-            'pop')
+            'pop',
+            retain_cols=['soc', 'ns'])  # If there's NPR segments, keep them
 
         # ## BASE YEAR POPULATION ## #
-        # TODO: Fix the segmentation cols in utils
         print("Loading the base year population data...")
         base_year_pop = fyu.get_land_use(
             self.in_paths['base_land_use'],
@@ -130,7 +190,8 @@ class FutureYearLandUse:
         # ## FUTURE YEAR POPULATION ## #
         print("Generating future year population data...")
         # Merge on all possible segmentations - not years
-        merge_cols = fyu.intersection(list(base_year_pop), list(population_growth))
+        merge_cols = fyu.intersection(list(base_year_pop),
+                                      list(population_growth))
 
         population = self._grow_to_future_year(
             by_vector=base_year_pop,
@@ -143,6 +204,9 @@ class FutureYearLandUse:
 
         # Population Audit
         if verbose:
+            print('Merged on:')
+            print(merge_cols)
+            print(list(population))
             print('\n', '-' * 15, 'Population Audit', '-' * 15)
             print('Total population for year %s is: %.4f' % (self.future_year, population[self.future_year].sum()))
             print('\n')
@@ -160,23 +224,24 @@ class FutureYearLandUse:
         zone_col = self._define_zone_col()
         emp_cat_col = 'employment_cat'
 
-        employment_growth = pd.read_csv(self.in_paths['emp_growth'])
+        employment_growth = self._get_fy_pop_emp(
+            'emp',
+            retain_cols=['soc', 'ns'])
 
         # ## BASE YEAR EMPLOYMENT ## #
         print("Loading the base year employment data...")
         base_year_emp = fyu.get_land_use(
             path=self.in_paths['base_employment'],
             model_zone_col=zone_col,
-            segmentation_cols=None)
-        # Fill in an EO1 Value, if you have to
-        if 'E01' not in list(base_year_emp):
-            # TODO: Make an EO1
+            segmentation_cols=None,
+            add_total=True,
+            total_col_name='E01',
+            to_long=True,
+            long_var_name=emp_cat_col,
+            long_value_name=self.base_year)
 
-        # Audit employment numbers
-
-        mask = (base_year_emp[emp_cat_col] == 'E01')
-        total_base_year_emp = base_year_emp.loc[mask, self.base_year].sum()
-        print("Base Year Employment: %d" % total_base_year_emp)
+        # Print employment numbers
+        print(base_year_emp[base_year_emp[emp_cat_col] == 'E01'])
 
         # ## FUTURE YEAR EMPLOYMENT ## #
         print("Generating future year employment data...")
@@ -185,8 +250,7 @@ class FutureYearLandUse:
             # Add Soc splits into the base year
             base_year_emp = self._split_by_soc(
                 df=base_year_emp,
-                soc_weights=self._get_soc_weights(
-                    pd.read_csv(self.in_paths['base_soc_mix'])),
+                soc_weights=self._get_soc_weights(),
                 unique_col=self.base_year,
                 split_cols=[zone_col, emp_cat_col]
             )
@@ -196,7 +260,8 @@ class FutureYearLandUse:
 
         employment = self._grow_to_future_year(
             by_vector=base_year_emp,
-            fy_vector=employment_growth)
+            fy_vector=employment_growth,
+            merge_cols=merge_cols)
 
         return employment
 
@@ -219,6 +284,8 @@ class FutureYearLandUse:
         zone_col = self._define_zone_col()
 
         # Build base year ca totals
+        # Var name 'base year' ca comes from future year vector
+        # Think about it
         by_ca = fy_pop_vector.copy()
         by_ca = by_ca.reindex(
             [zone_col, 'ca', self.future_year], axis=1).groupby(
@@ -232,11 +299,11 @@ class FutureYearLandUse:
         by_ca[1] /= by_ca['total']
         by_ca[2] /= by_ca['total']
         by_ca = by_ca.drop('total', axis=1)
-        by_ca = by_ca.melt(id_vars = zone_col,
+        by_ca = by_ca.melt(id_vars=zone_col,
                            var_name='ca',
                            value_name=self.future_year)
         by_ca = by_ca.rename(
-            columns={self.future_year:'by_ca'})
+            columns={self.future_year: 'by_ca'})
 
         # Get ca shares
         ca_shares = pd.read_csv(self.in_paths['ca_growth'])
@@ -253,7 +320,8 @@ class FutureYearLandUse:
         fy_ca_factors['ca_adj'] = fy_ca_factors['fy_ca'] / fy_ca_factors['by_ca']
         fy_ca_factors = fy_ca_factors.drop(['by_ca', 'fy_ca'], axis=1)
 
-        before = fy_pop_vector[self.future_year].sum()
+        before = fy_pop_vector.groupby(['ca'])[self.future_year].sum()
+
 
         # Adjust CA
         fy_pop_vector = fy_pop_vector.merge(
@@ -263,13 +331,13 @@ class FutureYearLandUse:
         fy_pop_vector[self.future_year] *= fy_pop_vector['ca_adj']
         fy_pop_vector = fy_pop_vector.drop('ca_adj', axis=1)
 
-        after = fy_pop_vector[self.future_year].sum()
+        after = fy_pop_vector.groupby(['ca'])[self.future_year].sum()
 
         if verbose:
             print('*' * 15)
             print('Car availability adjustment')
-            print('Total before: ' + str(before))
-            print('Total after: ' + str(after))
+            print('Total before: ' + str(before.astype(int)))
+            print('Total after: ' + str(after.astype(int)))
 
         return fy_pop_vector
 
@@ -347,7 +415,7 @@ class FutureYearLandUse:
             sum to 1.
         """
         # Init
-        soc_weighted_jobs = pd.read_csv(self.in_paths['soc_weights'])
+        soc_weighted_jobs = pd.read_csv(self.in_paths['base_soc_mix'])
 
         # Convert soc numbers to names (to differentiate from ns)
         soc_weighted_jobs[soc_col] = soc_weighted_jobs[soc_col].astype(int).astype(str)
@@ -367,7 +435,7 @@ class FutureYearLandUse:
             index=zone_col,
             columns=soc_col,
             values=jobs_col
-        )
+        ).reset_index()
 
         # Convert to factors
         soc_segments = soc_weighted_jobs[soc_col].unique()
@@ -380,6 +448,7 @@ class FutureYearLandUse:
 
         return soc_weights
 
+    @staticmethod
     def _split_by_soc(df: pd.DataFrame,
                       soc_weights: pd.DataFrame,
                       zone_col: str = 'msoa_zone_id',
@@ -428,6 +497,8 @@ class FutureYearLandUse:
         """
         # Init
         soc_cats = list(soc_weights.columns)
+        # Drop zone col if it's made its way in
+        soc_cats = [x for x in soc_cats if zone_col not in x]
         split_cols = [zone_col] if split_cols is None else split_cols
 
         # Figure out which rows need splitting
@@ -454,6 +525,7 @@ class FutureYearLandUse:
 
         # Tidy up the split dataframe ready to re-merge
         split_df = split_df.drop(unique_col, axis='columns')
+        # Re melt - get soc back as col
         split_df = split_df.melt(
             id_vars=id_cols,
             value_vars=soc_cats,
@@ -472,17 +544,21 @@ class FutureYearLandUse:
         return pd.concat([split_df, retain_df])
 
     def _get_fy_pop_emp(self,
-                        vector_type):
+                        vector_type,
+                        retain_cols):
         """
         vector_type = 'pop' or 'emp'
         """
 
         if vector_type == 'pop':
-            dat = pd.read_csv(self.in_paths['pop_growth'])
+            dat = pd.read_csv(self.in_paths['pop_growth'], dtype={'soc': str})
         elif vector_type == 'emp':
-            dat = pd.read_csv(self.in_paths['emp_growth'])
-        ri_cols = [
-            self.model_zoning + '_zone_id', self.future_year]
+            dat = pd.read_csv(self.in_paths['emp_growth'], dtype={'soc': str})
+        ri_cols = list([self.model_zoning + '_zone_id'])
+        for col in retain_cols:
+            if col in list(dat):
+                ri_cols.append(col)
+        ri_cols.append(self.future_year)
         dat = dat.reindex(ri_cols, axis=1)
 
         return dat
