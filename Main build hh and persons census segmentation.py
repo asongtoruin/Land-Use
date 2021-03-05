@@ -2,7 +2,7 @@
 """
 Created on Tue May 26 09:05:40 2020
 
-@author: ESRIAdmin
+@author: mags15
 Version number: 
 
 Written using: Python 3.7.3
@@ -18,7 +18,6 @@ Main Build:
     - distinguishes communal establishments
 ## TODO: ApplyNtEM Segments: Scottish MSOAs show population of 0s. Need to double check what's gone wrong here
 # Audit that splits out population by England/Wales/Scotland using startswith and matching to actual population
-<<<<<<< Updated upstream
 # Need to check it reads everything in - if error then needs reporting
 """
 import os # File operations
@@ -27,24 +26,17 @@ sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Demand Tool/Python
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/TAME shared resources/Python/')
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Utilities/Python')
 
-=======
-"""
-import os # File operations
-import sys 
->>>>>>> Stashed changes
 import numpy as np # Vector operations
 import pandas as pd # main module
 import geopandas as gpd
 from shapely.geometry import *
-<<<<<<< Updated upstream
+import shutil as sh
 import nu_project as nup
-=======
-import utils as nup
->>>>>>> Stashed changes
 
 # Default file paths
 
 _default_iter = 'iter4'
+_default_home = 'D:/NorMITs_Export/'
 _default_home_dir = ('D:/NorMITs_Export/' + _default_iter)
 _import_folder = 'Y:/NorMITs Land Use/import/'
 _import_file_drive = 'Y:/'
@@ -62,21 +54,43 @@ _default_census_population = (_import_folder+'Communal Establishments 2011 QS421
 _default_lad_translation = (_default_zone_folder+'Export/lad_to_msoa/lad_to_msoa.csv')    
 _default_census_dat = (_import_folder+'Nomis Census 2011 Head & Household')
 _default_zone_ref_folder = 'Y:/Data Strategy/GIS Shapefiles/'
-
+_default_area_types = ('Y:/NorMITs Land Use/import/area_types_msoa.csv')
+    
 _default_lsoaRef = _default_zone_ref_folder+'UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz.shp'
 _default_msoaRef = _default_zone_ref_folder+'UK MSOA and Intermediate Zone Clipped 2011/uk_ew_msoa_s_iz.shp'
 _default_ladRef = _default_zone_ref_folder+'LAD GB 2017/Local_Authority_Districts_December_2017_Full_Clipped_Boundaries_in_Great_Britain.shp'
 _default_mladRef = _default_zone_ref_folder+'Merged_LAD_December_2011_Clipped_GB/Census_Merged_Local_Authority_Districts_December_2011_Generalised_Clipped_Boundaries_in_Great_Britain.shp'
+_nssecPath = _import_folder+'NPR Segmentation/processed data/TfN_households_export.csv'
 
 
 # 1. Functions to read in the source data 
-# todo: function to check addressbase_prep was run?
+def copy_addressbase_files (file_path_list =r"Y:\NorMITs Land Use\import\AddressBase\2018\List of ABP datasets.csv"):
+    """
+    Copy the relevant ABP files from import drive
+    Parameters
+    ----------
+    file_path_list:
+        Path to csv of AddressBase extract paths.
+
+    Returns
+    ----------
+        Copies over the specified files to _default_home_dir for use in later functions.   
+    """
+    dest = _default_home_dir
+    data = pd.read_csv(file_path_list)
+
+    i = 1 #Start at 2nd row
+    for i in range(1, len(data)):
+       try:
+           sh.copy(data.FilePath[i], dest)
+           print("Copied over file into default iter folder: " + data.FilePath[i])
+       except:
+           print ("File not found")
+
 def get_addressbase_extract(path = _default_addressbase_extract_path):
 
     """
     Import a csv of AddressBase extract (2018) already filtered out and classified.
-
-    This might point to pre-processing function or modelling folders in the future.
 
     Parameters
     ----------
@@ -87,8 +101,11 @@ def get_addressbase_extract(path = _default_addressbase_extract_path):
     ----------
     AddressBase extract:
         DataFrame containing AddressBase extract.
+        
+    Copy across from Y    
     """
     ABPFile = pd.read_csv(path)
+    
 
     print('Reading in AddressBase extract')
     
@@ -162,26 +179,18 @@ def PathConfig(datPath=_default_census_dat):
     files = os.listdir(dat)
      
     return(dat, files)
-<<<<<<< Updated upstream
     
-def set_wd(homeDir = _default_home_dir, iteration=_default_iter):
+def set_wd(homeDir = _default_home, iteration = _default_iter):
     os.chdir(homeDir)
     nup.CreateProjectFolder(iteration)
     return()
     
-=======
-
->>>>>>> Stashed changes
 def LSOACensusDataPrep(datPath, EWQS401, SQS401, EWQS402, SQS402, geography = _default_lsoaRef):
     """
     This function prepares the census data by picking fields out of the csvs:
         
     """
-    # 401 = people 402 = properties
-    # Takes LSOA shapefile from 'Y:/Data Strategy/GIS Shapefiles/UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz.shp'
-    # However, join is on code so if you have different IDs, just change the path and it'll be fine.
     # TODO: need to add percentage filled by msoa to account for seasonal households
-    # FilledProperties()
     geography = gpd.read_file(_default_lsoaRef)
     geography = geography.iloc[:, 0:3]
         
@@ -223,7 +232,7 @@ def LSOACensusDataPrep(datPath, EWQS401, SQS401, EWQS402, SQS402, geography = _d
     
 def AggregateCpt(cptData, groupingCol=None, writeOut=True):
     """
-    # Take some census property type data and return hops totals
+    Take some census property type data and return hops totals
     """
     if not groupingCol:
         cptData = cptData.loc[:,['census_property_type','population', 'properties']]
@@ -234,7 +243,7 @@ def AggregateCpt(cptData, groupingCol=None, writeOut=True):
         aggData = cptData.groupby(['census_property_type', groupingCol]).sum().reset_index()
         aggData['household_occupancy'] = aggData['population']/aggData['properties']
 
-   # if writeOut:
+    #if writeOut:
        # aggData.to_csv('cptlsoa2011.csv')
         
     return(aggData)
@@ -242,15 +251,12 @@ def AggregateCpt(cptData, groupingCol=None, writeOut=True):
 def ZoneUp(cptData, hlsaName = 'MSOA', zoneTranslationPath = _default_zone_folder+'Export/msoa_to_lsoa/msoa_to_lsoa.csv', 
            groupingCol='msoaZoneID'):
     """
-<<<<<<< Updated upstream
+
     Function to raise up a level of spatial aggregation & aggregate at that level, then bring new factors back down
     # TODO: Might be nice to have this zone up any level of zonal aggregation
     Raise LSOA to MSOA for spatial aggregation
-=======
-    # Function to raise up a level of spatial aggregation & aggregate at that level, then bring new factors back down
-    # TODO: Might be nice to have this zone up any level of zonal aggregation
-    # Raise LSOA to MSOA for spatial aggregation
->>>>>>> Stashed changes
+
+
     """
     zoneTranslation = pd.read_csv(zoneTranslationPath)
     zoneTranslation = zoneTranslation.rename(columns={'lsoa_zone_id':'lsoaZoneID',
@@ -387,9 +393,6 @@ def CreateEmploymentSegmentation(bsq,
     bsq = bsq.reindex(['msoaZoneID','Age','Gender','employment_type',
                        'household_composition','property_type','B','R',
                        'Zone_Desc','pop_factor'],axis=1)
-# Pull out one msoa worth of segements to audit
-    # testSegments = bsq[bsq.msoaZoneID == 1500]
-    # testSegments.to_csv('testSegmentsMSOA.csv')
     
     return(bsq)
     
@@ -468,7 +471,6 @@ def CreateNtemAreas(bsqImportPath=_import_folder+'/Bespoke Census Query/formatte
     # testSegments = bsq[bsq.LAD_code == 'E41000001']
     # testSegments.to_csv('testSegments.csv')
 
-    # TODO: This would be the place to tweak the 2011 population compositions to 2018
     # Define a basic function to count the MSOAs in the bsq - so I don't have 
     # to write it again later.
 
@@ -527,16 +529,12 @@ def CreateNtemAreas(bsqImportPath=_import_folder+'/Bespoke Census Query/formatte
     
 def FilledProperties():
     """
-    #this is a rough account for unoccupied properties
-    #using KS401UK LSOA level to infer whether the properties have any occupants
+    this is a rough account for unoccupied properties
+    using KS401UK LSOA level to infer whether the properties have any occupants
     """
    
-<<<<<<< Updated upstream
     KS401 = pd.read_csv(_import_folder+'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv')
-=======
-    KS401 = pd.read_csv(_default_zone_folder+'/Nomis Census 2011 Head & Household/KS401UK_LSOA.csv')
->>>>>>> Stashed changes
-    
+  
     KS401permhops = KS401.reindex(columns = ['geography code', 
                                      'Dwelling Type: All categories: Household spaces; measures: Value', 
                                      'Dwelling Type: Household spaces with at least one usual resident; measures: Value'
@@ -648,12 +646,9 @@ def ApplyHouseholdOccupancy(doImport=False, writeOut=True, \
 
     hgCols = ['Area code','11_to_18']
     hopsGrowth = pd.read_csv(hopsPath).loc[:,hgCols]
-<<<<<<< Updated upstream
     
     # using HOPS growth data to uplift the figures to 2018
-=======
 
->>>>>>> Stashed changes
     balancedCptData = balancedCptData.merge(hopsGrowth,
                         how='left', left_on='lad17cd', 
                         right_on='Area code').drop('Area code',axis=1).reset_index(drop=True)
@@ -687,10 +682,7 @@ def ApplyHouseholdOccupancy(doImport=False, writeOut=True, \
         else:
             print('All Hops areas accounted for')
                 
-<<<<<<< Updated upstream
-=======
        # allResPropertyZonal.merge(FilledProperties, on = 'ZoneID')
->>>>>>> Stashed changes
         allResPropertyZonal['population'] = allResPropertyZonal['UPRN'] * allResPropertyZonal['household_occupancy_18'] 
    
     # Create folder for exports
@@ -780,11 +772,8 @@ def ApplyNtemSegments(classifiedResPropertyImportPath = 'classifiedResPropertyMS
                       bsqImportPath=_import_folder+'Bespoke Census Query/formatted_long_bsq.csv',
                       areaTypeImportPath = _import_folder+'CTripEnd/ntem_zone_area_type.csv',
                       ksEmpImportPath=_import_folder+'KS601-3UK/uk_msoa_ks601equ_w_gender.csv',
-<<<<<<< Updated upstream
                       level = _default_zone_name, writeSteps = False):
-=======
-                      writeSteps = False, level = _default_zone_name):
->>>>>>> Stashed changes
+                      
         """
         Function to join the bespoke census query to the classified residential 
         property data
@@ -883,14 +872,10 @@ def ApplyNtemSegments(classifiedResPropertyImportPath = 'classifiedResPropertyMS
     
         pop = crp['people'].sum()
         print('Final population', pop)
-<<<<<<< Updated upstream
         crp = crp.dropna()
         print('Final population after removing nans', pop)
        
-=======
-
->>>>>>> Stashed changes
-        crp.to_csv('landUseOutput' + level + '.csv', index = False)
+        crp.to_csv(_default_home_dir+ '/landUseOutput' + level + '.csv', index = False)
     
     # Total MSOA Pop Audit
         msoaAudit = crp.reindex(['ZoneID', 'people'], axis=1).groupby('ZoneID').sum()
@@ -958,7 +943,11 @@ def communal_establishments_employment():
     print('Communal establishments employment splits done')
     return(communal_emp)
     
-def join_establishments():
+def join_establishments(level = _default_zone_name):
+    areatypes = pd.read_csv(_default_area_types)
+    areatypes = areatypes.drop(columns={'zone_desc'})
+    areatypes = areatypes.rename(columns = {'msoa_zone_id':'ZoneID'})
+    # add areatypes
     communal_establishments = communal_establishments_splits()
     communal_emp = communal_establishments_employment()
     
@@ -981,56 +970,373 @@ def join_establishments():
                                         ).rename(columns={'comm_people':'people'})
     communal_establishments = CommunalEstActive.append(CommunalNonWork, sort = True)
     print('Communal Establishment total for 2018 should be ~1.1m and is ',
-          communal_establishments['people'].sum())
+          communal_establishments['people'].sum()/1000000)
 
     communal_establishments['property_type'] = 8
     communal_establishments = communal_establishments.rename(columns={'msoacd':'ZoneID'})
-<<<<<<< Updated upstream
+    communal_establishments = communal_establishments.merge(areatypes, on = 'ZoneID')
     
     #### bring in landuse for hc ####
-    landuse = pd.read_csv(_default_home_dir+'landuseOutput'+_default_zone_name+'.csv')
+    landuse = pd.read_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'.csv')
     zones = landuse["ZoneID"].drop_duplicates().dropna()
     Ezones = zones[zones.str.startswith('E')]
     Elanduse = landuse[landuse.ZoneID.isin(Ezones)]
+    Restlanduse = landuse[~landuse.ZoneID.isin(Ezones)].drop(columns={'properties', 'census_property_type'})
     
 # work out household composition - arguably not needed - see IW's comments 09/06/20        
-=======
-    #### bring in landuse for hc
-    landuse = pd.read_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'.csv')
-    Elanduse = landuse[landuse.ZoneID.isin(landuse.ZoneID.str.startswith('E'))]
-
-# work out household composition        
->>>>>>> Stashed changes
-    HouseComp = Elanduse.groupby(by = ['ZoneID', 'Age', 'Gender', 
+    HouseComp = Elanduse.groupby(by = ['area_type', 'Age', 'Gender', 
                                         'employment_type', 'household_composition'], 
                                         as_index = False).sum()
 
-    HouseComp['total'] = HouseComp.groupby(by=['ZoneID', 'Age', 'Gender', 
+    HouseComp['total'] = HouseComp.groupby(by=['area_type', 'Age', 'Gender', 
                                      'employment_type'])['people'].transform('sum')
     HouseComp['hc'] = HouseComp['people']/HouseComp['total'] 
-    HouseComp = HouseComp.drop(columns={'total', 'people'})
+    HouseComp = HouseComp.drop(columns={'total', 'people', 'property_type'})
     
     CommunalEstablishments = communal_establishments.merge(HouseComp, 
-                                              on=['ZoneID', 'Age', 'Gender',
+                                              on=['area_type', 'Age', 'Gender',
                                                   'employment_type'], how = 'outer')
     CommunalEstablishments['newpop'] = CommunalEstablishments['people']*CommunalEstablishments['hc']
     CommunalEstablishments = CommunalEstablishments.drop(
-                columns = {'people', 'hc'}).rename(columns= {'newpop': 'people'})
+                columns = {'people', 'hc', 'properties','census_property_type'}).rename(columns= {'newpop': 'people'})
     CommunalEstablishments['people'].sum()
+    CommunalEstFolder = 'CommunalEstablishments'
+    nup.CreateFolder(CommunalEstFolder)
+    CommunalEstablishments.to_csv(CommunalEstFolder + '/' + _default_zone_name + 
+                                      'CommunalEstablishments2011.csv', index=False)
+    CommunalEstablishments['people'].sum()
+    cols = ['ZoneID', 'area_type', 'property_type', 'Age', 'Gender', 'employment_type', 
+                       'household_composition', 'people'] 
+    CommunalEstablishments = CommunalEstablishments.reindex(columns = cols)
+    landuse = landuse.reindex(columns=cols)
+    landusewComm = landuse.append(CommunalEstablishments)
+    print('Joined communal communitiies. Total pop for GB is now', landusewComm['people'].sum())
+    landusewComm.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_withCommunal.csv', index=False)   
+
+def LanduseFormatting(landusePath = _default_home_dir+'/landuseOutput'+_default_zone_name+'_withCommunal.csv'):
+    """
+    Combines all flats into one category, i.e. property types = 4,5,6
+
+    Parameters
+    ----------
+    landusePath:
+        Path to Census segmented property linked landuse from Main build hh script
+    Returns
+    ----------
+    formattedLanduse:
+        DataFrame containing landuse with combined flats.
+    """
     
-<<<<<<< Updated upstream
-def nssecsoc 
+        # 1.Combine all flat types. Sort out flats on the landuse side; actually there's no 7
+    landuse = pd.read_csv(landusePath)
+    landuse['new_prop_type'] = landuse['property_type']
+    landuse.loc[landuse['property_type']==5, 'new_prop_type'] = 4
+    landuse.loc[landuse['property_type']==6, 'new_prop_type'] = 4
     
+    landuse = landuse.drop(columns = 'property_type').rename(columns = {'new_prop_type':'property_type'})
+    landuse['people'].sum()
+    landuse = landuse.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv', index=False)
+
+def ApplyNSSECSOCsplits():
+        """
+        Parameters
+        ----------
+        nssecPath:
+            Path to Census NS-SEC table
+        Returns
+        ----------
+            NS-SEC from Census       
+            house type definition - change NS-SEC house types detached etc to 1/2/3/4
+        """
+
+        nssec = pd.read_csv(_nssecPath)
+        nssec.loc[nssec['house_type'] == 'Detached', 'property_type'] = 1
+        nssec.loc[nssec['house_type'] == 'Semi-detached', 'property_type'] = 2
+        nssec.loc[nssec['house_type'] == 'Terraced', 'property_type'] = 3
+        nssec.loc[nssec['house_type'] == 'Flat', 'property_type'] = 4
+        nssec = nssec.drop(columns={'house_type'})
+
+        nssec.loc[nssec['NS_SeC'] == 'NS-SeC 1-2', 'ns_sec'] = 1
+        nssec.loc[nssec['NS_SeC'] == 'NS-SeC 3-5', 'ns_sec'] = 2
+        nssec.loc[nssec['NS_SeC'] == 'NS-SeC 6-7', 'ns_sec'] = 3
+        nssec.loc[nssec['NS_SeC'] == 'NS-SeC 8', 'ns_sec'] = 4
+        nssec.loc[nssec['NS_SeC'] == 'NS-SeC L15', 'ns_sec'] = 5
+        nssec = nssec.drop(columns={'NS_SeC'}).rename(columns = {'MSOA name': 'ZoneID'})
+
+        # all economically active in one group 
+        nssec = nssec.rename(columns = {'Economically active FT 1-3':'FT higher',
+                                'Economically active FT 4-7': 'FT medium',
+                                'Economically active FT 8-9':'FT skilled',
+                                'Economically active PT 1-3':'PT higher',
+                                'Economically active PT 4-7':'PT medium',
+                                'Economically active PT 8-9':'PT skilled',
+                                'Economically active unemployed':'unm',
+                                'Economically inactive':'children',
+                                'Economically inactive retired':'75 or over',
+                                'Full-time students':'stu'}).drop(columns={
+                                        'TfN area type'})
+        nssec2 = nssec.copy()
+        # rename columns and melt it down
+        nssec = nssec.rename(columns = {'msoa_name':'ZoneID'})
+        nssec_melt = pd.melt(nssec, id_vars = ['ZoneID', 'property_type', 'ns_sec'], 
+                     value_vars = ['FT higher', 'FT medium', 'FT skilled', 
+                                   'PT medium', 'PT skilled',
+                                   'PT higher', 'unm', 'children', '75 or over', 'stu'])
+        nssec_melt = nssec_melt.rename(columns = {'variable':'employment_type', 
+                                      'value':'numbers'})
+        # map out categories to match the landuse format
+        nssec_melt['SOC_category'] = nssec_melt['employment_type']  
+        nssec_melt['Age'] = '16-74'
+        nssec_melt.loc[nssec_melt['employment_type'] == 'children', 'Age']= 'under 16'
+        nssec_melt.loc[nssec_melt['employment_type'] == '75 or over', 'Age']= '75 or over'
+        nssec_melt = nssec_melt.replace({'employment_type':{ 'FT higher':'fte', 
+                                         'FT medium':'fte',
+                                         'FT skilled':'fte',
+                                         'PT higher':'pte',
+                                         'PT skilled':'pte',
+                                         'PT medium':'pte',
+                                         'children':'non_wa',
+                                         '75 or over':'non_wa'
+                                         }})
+        nssec_melt = nssec_melt.replace({'SOC_category':{'FT higher':'1',
+                                             'FT medium':'2',
+                                             'FT skilled':'3',
+                                             'PT higher':'1',
+                                             'PT medium':'2',
+                                             'PT skilled':'3',
+                                             'unm':'NA',
+                                             '75 or over':'NA',
+                                             'children':'NA'}})
+        # split the nssec into inactive and active
+        nssec_formatted = nssec_melt.to_csv(_default_home_dir+'/NSSECformatted'+_default_zone_name +'.csv', index=False)
+        inactive = ['stu', 'non_wa']
+        InactiveNSSECPot = nssec_melt[nssec_melt.employment_type.isin(inactive)].copy()
+        ActiveNSSECPot = nssec_melt[~nssec_melt.employment_type.isin(inactive)].copy()
+
+        del(nssec_melt, nssec)
+
+        
+#### Active Splits ####     
+        areatypes = pd.read_csv(_default_area_types).rename(columns={
+                         'msoa_zone_id':'ZoneID'}).drop(columns={'zone_desc'})
+        ActiveNSSECPot = ActiveNSSECPot.merge(areatypes, on = 'ZoneID')
+        # MSOAActiveNSSECSplits for Zones
+        MSOAActiveNSSECSplits = ActiveNSSECPot.copy()
+        MSOAActiveNSSECSplits['totals'] = MSOAActiveNSSECSplits.groupby(['ZoneID', 'property_type',
+                      'employment_type'])['numbers'].transform('sum')
+        MSOAActiveNSSECSplits['empsplits'] = MSOAActiveNSSECSplits['numbers']/MSOAActiveNSSECSplits['totals']
+        # For Scotland
+        GlobalActiveNSSECSplits = ActiveNSSECPot.copy()
+        GlobalActiveNSSECSplits = ActiveNSSECPot.groupby(['area_type', 'property_type',
+                                                   'employment_type', 'Age', 
+                                                   'ns_sec', 'SOC_category'], 
+                                                    as_index = False).sum()
+        GlobalActiveNSSECSplits['totals'] = GlobalActiveNSSECSplits.groupby(['area_type', 'property_type',
+                      'Age','employment_type'])['numbers'].transform('sum')
+        GlobalActiveNSSECSplits['global_splits'] = GlobalActiveNSSECSplits['numbers']/GlobalActiveNSSECSplits['totals']
+                
+        GlobalActiveNSSECSplits = GlobalActiveNSSECSplits.drop(columns = {'numbers', 'totals'})
+        # for communal establishments
+        AverageActiveNSSECSplits = ActiveNSSECPot.copy()
+
+        AverageActiveNSSECSplits = AverageActiveNSSECSplits.groupby(by=['area_type', 
+                                                                          'employment_type',
+                                                                          'Age', 'ns_sec'], 
+                                                                            as_index = False).sum()
+        AverageActiveNSSECSplits['totals2'] = AverageActiveNSSECSplits.groupby(['area_type',
+                      'Age','employment_type'])['numbers'].transform('sum')
+        AverageActiveNSSECSplits['average_splits']= AverageActiveNSSECSplits['numbers']/AverageActiveNSSECSplits['totals2']
+        AverageActiveNSSECSplits['SOC_category']= 'NA'
+        AverageActiveNSSECSplits = AverageActiveNSSECSplits.drop(columns={'totals2', 'numbers', 'property_type'})
+
+#### InactiveSplits ####
+        """
+        There is 17m in this category
+        Sorts out the Inactive splits   
+        CommunalEstablishment segments won't have splits so use Area types for 'globalsplits'
+        
+        """
+        InactiveNSSECPot = InactiveNSSECPot.merge(areatypes, on='ZoneID')
+        # Zone splits
+        MSOAInactiveNSSECSplits = InactiveNSSECPot.copy()
+        MSOAInactiveNSSECSplits['totals'] = MSOAInactiveNSSECSplits.groupby(['ZoneID', 'property_type',
+                        'Age','employment_type'])['numbers'].transform('sum')
+        MSOAInactiveNSSECSplits['msoa_splits'] = MSOAInactiveNSSECSplits['numbers']/MSOAInactiveNSSECSplits['totals']
+        MSOAInactiveNSSECSplits['SOC_category'] ='NA' 
+        MSOAInactiveNSSECSplits = MSOAInactiveNSSECSplits.drop(columns={'totals', 'numbers'})
+        MSOAInactiveNSSECSplits['SOC_category'] ='NA' 
+        # For Scotland
+        GlobalInactiveNSSECSplits = InactiveNSSECPot.copy()
+        GlobalInactiveNSSECSplits = GlobalInactiveNSSECSplits.groupby(by=['area_type', 
+                                                                          'property_type', 
+                                                                          'employment_type',
+                                                                          'Age', 'ns_sec'], 
+                                                                            as_index = False).sum()
+        GlobalInactiveNSSECSplits['totals2'] = GlobalInactiveNSSECSplits.groupby(['area_type', 'property_type',
+                      'Age','employment_type'])['numbers'].transform('sum')
+        GlobalInactiveNSSECSplits['global_splits'] = GlobalInactiveNSSECSplits['numbers']/GlobalInactiveNSSECSplits['totals2']
+        GlobalInactiveNSSECSplits['SOC_category'] ='NA' 
+        GlobalInactiveNSSECSplits = GlobalInactiveNSSECSplits.drop(columns={'totals2', 'numbers'})
+        # for communal establishments
+        AverageInactiveNSSECSplits = InactiveNSSECPot.copy()
+        AverageInactiveNSSECSplits = AverageInactiveNSSECSplits.groupby(by=['area_type', 
+                                                                          'employment_type',
+                                                                          'Age', 'ns_sec'], 
+                                                                            as_index = False).sum()
+        AverageInactiveNSSECSplits['totals2'] = AverageInactiveNSSECSplits.groupby(['area_type',
+                      'Age','employment_type'])['numbers'].transform('sum')
+        AverageInactiveNSSECSplits['average_splits']= AverageInactiveNSSECSplits['numbers']/AverageInactiveNSSECSplits['totals2']
+        AverageInactiveNSSECSplits['SOC_category']= 'NA'
+        AverageInactiveNSSECSplits = AverageInactiveNSSECSplits.drop(columns={'totals2', 'numbers', 'property_type'})
+        
+        InactiveSplits = MSOAInactiveNSSECSplits.merge(GlobalInactiveNSSECSplits, 
+                                                       on = ['area_type', 'property_type',
+                                                             'employment_type', 'Age',
+                                                             'SOC_category', 'ns_sec'], how = 'right')
+                                                                
+        InactiveSplits = InactiveSplits.merge(AverageInactiveNSSECSplits, 
+                                              on = ['area_type',
+                                                'employment_type', 'SOC_category','ns_sec','Age'
+                                                ], how = 'right')
+        # check where there's no splitting factors, use the zone average for age?
+        InactiveNSSECPot['SOC_category'] ='NA' 
+        InactiveSplits['splits2'] = InactiveSplits['msoa_splits']  
+        InactiveSplits['splits2']= InactiveSplits['splits2'].fillna(InactiveSplits['global_splits'])          
+        InactiveSplits['splits2']= InactiveSplits['splits2'].fillna(InactiveSplits['average_splits'])
+        InactiveSplits.loc[InactiveSplits['splits2'] == InactiveSplits['msoa_splits'], 'type'] = 'msoa_splits' 
+        InactiveSplits.loc[(InactiveSplits['splits2'] == InactiveSplits['global_splits']), 'type'] = 'global_splits' 
+        InactiveSplits.loc[InactiveSplits['splits2'] == InactiveSplits['average_splits'], 'type'] = 'average_splits' 
+        # InactiveSplits = InactiveSplits.drop(columns={'numbers_x','numbers_y', 'totals2_x', 'totals2_y', 'msoa_splits'})
+        #InactiveSplits = InactiveSplits.drop(columns={'average_splits', 'global_splits'})
+        InactiveSplits = InactiveSplits.drop(columns={'msoa_splits', 'global_splits'})
+        InactiveSplitsAudit = InactiveSplits.groupby(by = ['ZoneID', 'property_type', 'Age' ]).sum()
+          
+###### APPLICATION OF SPLITS Apply EW splits ####
+        #England and Wales - applies splits for inactive people
+        # apply splits
+        landuse = pd.read_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv')
+        Inactive_categs = ['stu', 'non_wa']
+        #landuse = pd.read_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv')
+        ActivePot = landuse[~landuse.employment_type.isin(Inactive_categs)].copy()
+        InactivePot = landuse[landuse.employment_type.isin(Inactive_categs)].copy()
+
+        #InactivePot = InactivePot.groupby(by=['ZoneID', 'area_type', 'property_type',
+               #                               'Age', 'employment_type'], as_index = False).sum()
+            
+        # take out Scottish MSOAs from this pot - nssec/soc data is only for E+W
+        # Scotland will be calculated based on area type
+        areatypes = pd.read_csv(_default_area_types).drop(columns={'zone_desc'}
+                                    ).rename(columns={'msoa_zone_id':'ZoneID'})
+        ZoneIDs = ActivePot['ZoneID'].drop_duplicates().dropna()
+        Scott = ZoneIDs[ZoneIDs.str.startswith('S')]
+        ActiveScot = ActivePot[ActivePot.ZoneID.isin(Scott)].copy()
+        ActiveScot = ActiveScot.drop(columns={'area_type'})
+        ActiveScot = ActiveScot.merge(areatypes, on = 'ZoneID')
+        #ActiveEng['people'].sum()
+        ActiveEng = ActivePot[~ActivePot.ZoneID.isin(Scott)].copy()
+        InactiveScot = InactivePot[InactivePot.ZoneID.isin(Scott)].copy()
+        InactiveScot = InactiveScot.drop(columns={'area_type'})
+        InactiveScot = InactiveScot.merge(areatypes, on = 'ZoneID')
+        InactiveEng = InactivePot[~InactivePot.ZoneID.isin(Scott)].copy()
+        print("total number of economically active people in the E+W landuse"+
+              "pot should be around 41m and is ", ActiveEng['people'].sum()/1000000)
+       
+        CommunalEstablishments = [8]
+        CommunalInactive = InactiveEng[InactiveEng.property_type.isin(CommunalEstablishments)].copy()
+        CommunalInactive['people'].sum()
+        InactiveNotCommunal = InactiveEng[~InactiveEng.property_type.isin(CommunalEstablishments)].copy()
+        Inactive_Eng = InactiveSplits.merge(InactiveNotCommunal, on = ['ZoneID', 'area_type' ,
+                                                                 'property_type',
+                                                                 'Age',
+                                                                 'employment_type'], 
+                                                                how = 'right')
+        Inactive_Eng['newpop']= Inactive_Eng['people'].values*Inactive_Eng['splits2'].values
+              
+        CommunalInactive = CommunalInactive.merge(AverageInactiveNSSECSplits, on =[ 'area_type',
+                                                'employment_type','Age'
+                                                ], how = 'left')
+        CommunalInactive['newpop'] = CommunalInactive['people']*CommunalInactive['average_splits']
+        print("Communal Inactive should be about 600k and is ", CommunalInactive['newpop'].sum())
+              
+#### Apply Scottish Inactive ####
     
-    def run_main_build():
-        set_wd()
+        #Scotland - applies splits for inactive people
+        InactiveScot['people'].sum()
+        InactiveScotland = GlobalInactiveNSSECSplits.merge(InactiveScot, on = [ 'area_type' ,
+                                                                 'property_type',
+                                                                 'Age',
+                                                                 'employment_type'], 
+                                                                how = 'right')
+        InactiveScotland['newpop']= InactiveScotland['people'].values*InactiveScotland['global_splits'].values
+        InactiveScotland['newpop'].sum()
+              
+#### Apply EW active splits ####       
+        # England and Wales - applies splits for active people
+        CommunalEstablishments = [8]
+        CommunalActive = ActiveEng[ActiveEng.property_type.isin(CommunalEstablishments)].copy()
+        ActiveNotCommunal = ActiveEng[~ActiveEng.property_type.isin(CommunalEstablishments)].copy()
+        Active_emp = ActiveNotCommunal.merge(MSOAActiveNSSECSplits, on = ['ZoneID', 'Age', 
+                                                                          'property_type', 'employment_type'
+                                                                          ],how = 'outer')
+        # apply the employment splits for ActivePot to work out population
+        Active_emp.groupby('employment_type')
+        Active_emp['newpop'] = Active_emp['people']*Active_emp['empsplits']
+ 
+        Active_emp = Active_emp.drop(columns = {'area_type_x', 'area_type_y'})
+        Active_emp = Active_emp.merge(areatypes, on = 'ZoneID')
+        if (Active_emp['people'].sum() < (40.6*0.01)):
+            print('something has gone wrong with splits')
+        else: print('EWsplits has worked fine')
+        CommunalActive = CommunalActive.merge(AverageActiveNSSECSplits, on =[ 'area_type',
+                                                'employment_type','Age'
+                                                ], how = 'left')
+        CommunalActive['newpop'] = CommunalActive['people']*CommunalActive['average_splits']
+
+        # apply error catcher here if it's within 10% then accept  
+
+#### Apply Scottish Active splits ####
+        ActiveScotland = GlobalActiveNSSECSplits.merge(ActiveScot, on = [ 'area_type' ,
+                                                                 'property_type',
+                                                                 'Age',
+                                                                 'employment_type'], 
+                                                                how = 'right')
+        ActiveScotland['newpop']= ActiveScotland['people'].values*ActiveScotland['global_splits'].values
+        ActiveScotland['newpop'].sum()
+              
+#### AppendAllGroups ####
+
+        NPRSegments = ['ZoneID', 'area_type', 'property_type', 'Age', 'Gender','employment_type', 
+                       'ns_sec', 'household_composition', 'SOC_category', 'newpop'] 
+        CommunalInactive = CommunalInactive.reindex(columns= NPRSegments)
+        Inactive_Eng = Inactive_Eng.reindex(columns=NPRSegments)
+        ActiveScotland = ActiveScotland.reindex(columns = NPRSegments)
+        CommunalActive = CommunalActive.reindex(columns=NPRSegments)
+        Active_emp = Active_emp.reindex(columns= NPRSegments)
+        InactiveScotland= InactiveScotland.reindex(columns= NPRSegments)
+        
+        All = CommunalInactive.append(Inactive_Eng).append(CommunalActive).append(Active_emp)
+        All = All.append(InactiveScotland).append(ActiveScotland)
+        All = All.rename(columns={'newpop':'people'})
+        All['SOC_category'] = All['SOC_category'].fillna(0)
+        All.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage4.csv', index=False)
+        print(All['people'].sum())
+        
+def run_main_build(ABPImport = True):
+    """
+    Set ABPImport to True if you want to copy over the ABP files to iter folder
+    """
+    set_wd()
+    if ABPImport:
+        copy_addressbase_files()
+    else:
+        FilledProperties()
         ApplyHouseholdOccupancy()
         ApplyNtemSegments()
         join_establishments()
+        LanduseFormatting()
+        ApplyNSSECSOCsplits()
 
     
-=======
->>>>>>> Stashed changes
 
 
 
