@@ -31,10 +31,10 @@ EMPLOYMENT_MSOA = os.path.join(
 )
 
 SCENARIO_FOLDERS = {'NTEM': 'SC00_NTEM',
-                    'JAM': 'SC01_JAM',
-                    'PP': 'SC02_PP',
-                    'DD': 'SC03_DD',
-                    'UZC': 'SC04_UZC'}
+                    'SC01_JAM': 'SC01_JAM',
+                    'SC02_PP': 'SC02_PP',
+                    'SC03_DD': 'SC03_DD',
+                    'SC04_UZC': 'SC04_UZC'}
 
 NTEM_POP_GROWTH = os.path.join(
     LU_FOLDER,
