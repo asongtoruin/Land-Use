@@ -24,11 +24,17 @@ RESI_LAND_USE_MSOA = os.path.join(
 )
 
 EMPLOYMENT_MSOA = os.path.join(
-    DATA_FOLDER,
-    'HSL',
-    '2018',
+    LU_FOLDER,
+    LU_IMPORTS,
+    'HSL 2018',
     'non_freight_msoa_2018.csv'
 )
+
+SCENARIO_FOLDERS = {'NTEM': 'SC00_NTEM',
+                    'JAM': 'SC01_JAM',
+                    'PP': 'SC02_PP',
+                    'DD': 'SC03_DD',
+                    'UZC': 'SC04_UZC'}
 
 NTEM_POP_GROWTH = os.path.join(
     LU_FOLDER,
@@ -61,9 +67,11 @@ NTEM_CA_GROWTH = os.path.join(
 SOC_2DIGIT_SIC = os.path.join(
     LU_FOLDER,
     LU_IMPORTS,
-    'fy_soc',
+    'SOC Mix',
     'soc_2_digit_sic_2018.csv'
 )
+
+
 
 # REFERENCES
 # purposes to apply soc split to
