@@ -4,6 +4,7 @@ Created on Mon Mar  1 19:26:56 2021
 
 @author: genie
 """
+# TODO: Define lookups for every traveller type category
 
 import pandas as pd
 

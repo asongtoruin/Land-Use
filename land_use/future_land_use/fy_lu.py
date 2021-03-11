@@ -89,6 +89,7 @@ class FutureYearLandUse:
     def build_fy_pop(self,
                      adjust_ca=True,
                      adjust_soc=True,
+                     adjust_area_type = False,
                      export=True,
                      verbose=True):
         """
@@ -100,6 +101,9 @@ class FutureYearLandUse:
 
         if adjust_soc:
             print('If this were an FTS youd be adjusting soc by now')
+            
+         if adjust_area_type:
+            print('Adjusting area type')
 
         if export:
             if verbose:
