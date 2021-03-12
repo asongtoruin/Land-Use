@@ -61,10 +61,12 @@ _default_msoaRef = _default_zone_ref_folder+'UK MSOA and Intermediate Zone Clipp
 _default_ladRef = _default_zone_ref_folder+'LAD GB 2017/Local_Authority_Districts_December_2017_Full_Clipped_Boundaries_in_Great_Britain.shp'
 _default_mladRef = _default_zone_ref_folder+'Merged_LAD_December_2011_Clipped_GB/Census_Merged_Local_Authority_Districts_December_2011_Generalised_Clipped_Boundaries_in_Great_Britain.shp'
 _nssecPath = _import_folder+'NPR Segmentation/processed data/TfN_households_export.csv'
-
+_file_path_list =r"Y:\NorMITs Land Use\import\AddressBase\2018\List of ABP datasets.csv"
 
 # 1. Functions to read in the source data 
-def copy_addressbase_files (file_path_list =r"Y:\NorMITs Land Use\import\AddressBase\2018\List of ABP datasets.csv"):
+def copy_addressbase_files (_file_path_list,
+                            _default_addressbase_extract_path
+                            ):
     """
     Copy the relevant ABP files from import drive
     Parameters
@@ -77,7 +79,7 @@ def copy_addressbase_files (file_path_list =r"Y:\NorMITs Land Use\import\Address
         Copies over the specified files to _default_home_dir for use in later functions.   
     """
     dest = _default_home_dir
-    data = pd.read_csv(file_path_list)
+    data = pd.read_csv(_file_path_list)
 
     i = 1 #Start at 2nd row
     for i in range(1, len(data)):
@@ -333,7 +335,7 @@ def AggWapFactor(ksSub, newSeg):
     ksSub['employment_type']=newSeg
     return(ksSub)
 
-def CreateEmploymentSegmentation(bsq, 
+def CreateEmploymentSegmentation(bsq, _default_msoaRef,
     ksEmpImportPath=_import_folder+'/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
     """
 # Synthesise in employment segmentation using 2011 data
@@ -527,13 +529,14 @@ def CreateNtemAreas(bsqImportPath=_import_folder+'/Bespoke Census Query/formatte
     
     return(bsq)
     
-def FilledProperties():
+def FilledProperties(KS401path = _import_folder+'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv',
+                     zoneTranslationPath, _default_msoaRef):
     """
     this is a rough account for unoccupied properties
     using KS401UK LSOA level to infer whether the properties have any occupants
     """
    
-    KS401 = pd.read_csv(_import_folder+'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv')
+    KS401 = pd.read_csv(KS401path)
   
     KS401permhops = KS401.reindex(columns = ['geography code', 
                                      'Dwelling Type: All categories: Household spaces; measures: Value', 
@@ -883,7 +886,7 @@ def ApplyNtemSegments(classifiedResPropertyImportPath = 'classifiedResPropertyMS
     
         return(crp, bsq)
                     
-def communal_establishments_splits():
+def communal_establishments_splits(get_communal_types, get_census_population):
     """
     Function to establish the proportions of communal establishment population 
     across zones and gender and age
@@ -930,7 +933,7 @@ def communal_establishments_splits():
     return(communal_establishments)
     
     
-def communal_establishments_employment():
+def communal_establishments_employment(get_communal_employment):
     communal_emp = get_communal_employment()
     communal_emp = pd.melt(communal_emp, id_vars = ['Gender', 'Age'], value_vars = 
                      ['fte', 'pte', 'unm', 'stu']).rename(columns={'variable':'employment_type',
@@ -943,7 +946,12 @@ def communal_establishments_employment():
     print('Communal establishments employment splits done')
     return(communal_emp)
     
-def join_establishments(level = _default_zone_name):
+def join_establishments(_default_area_types,
+                        communal_establishments_splits,
+                        communal_establishments_employment,
+                        level = _default_zone_name,
+                        _default_home_dir,
+                        landusePath = _default_home_dir+'/landuseOutput'+_default_zone_name+'.csv'):
     areatypes = pd.read_csv(_default_area_types)
     areatypes = areatypes.drop(columns={'zone_desc'})
     areatypes = areatypes.rename(columns = {'msoa_zone_id':'ZoneID'})
@@ -977,7 +985,7 @@ def join_establishments(level = _default_zone_name):
     communal_establishments = communal_establishments.merge(areatypes, on = 'ZoneID')
     
     #### bring in landuse for hc ####
-    landuse = pd.read_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'.csv')
+    landuse = pd.read_csv(landusePath)
     zones = landuse["ZoneID"].drop_duplicates().dropna()
     Ezones = zones[zones.str.startswith('E')]
     Elanduse = landuse[landuse.ZoneID.isin(Ezones)]
@@ -1037,7 +1045,8 @@ def LanduseFormatting(landusePath = _default_home_dir+'/landuseOutput'+_default_
     landuse['people'].sum()
     landuse = landuse.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv', index=False)
 
-def ApplyNSSECSOCsplits():
+def ApplyNSSECSOCsplits(_nssecPath, _default_area_types,
+                        landusePath = _default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv'):
         """
         Parameters
         ----------
@@ -1214,14 +1223,11 @@ def ApplyNSSECSOCsplits():
 ###### APPLICATION OF SPLITS Apply EW splits ####
         #England and Wales - applies splits for inactive people
         # apply splits
-        landuse = pd.read_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv')
+        landuse = pd.read_csv(landusePath)
         Inactive_categs = ['stu', 'non_wa']
         #landuse = pd.read_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv')
         ActivePot = landuse[~landuse.employment_type.isin(Inactive_categs)].copy()
         InactivePot = landuse[landuse.employment_type.isin(Inactive_categs)].copy()
-
-        #InactivePot = InactivePot.groupby(by=['ZoneID', 'area_type', 'property_type',
-               #                               'Age', 'employment_type'], as_index = False).sum()
             
         # take out Scottish MSOAs from this pot - nssec/soc data is only for E+W
         # Scotland will be calculated based on area type
