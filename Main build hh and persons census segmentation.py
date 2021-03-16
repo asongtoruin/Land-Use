@@ -36,11 +36,11 @@ import nu_project as nup
 # Default file paths
 
 _default_iter = 'iter4'
-_default_home = 'D:/NorMITs_Export/'
-_default_home_dir = ('D:/NorMITs_Export/' + _default_iter)
+_default_home = 'E:/NorMITs_Export/'
+_default_home_dir = (_default_home + _default_iter)
 _import_folder = 'Y:/NorMITs Land Use/import/'
 _import_file_drive = 'Y:/'
-_default_zone_folder = ('Y:/NorMITs Synthesiser/Zone Translation/')
+_default_zone_folder = ('I:/NorMITs Synthesiser/Zone Translation/')
 # Default zone names
 _default_zone_names = ['LSOA','MSOA']
 _default_zone_name = 'MSOA' #MSOA or LSOA
@@ -64,9 +64,7 @@ _nssecPath = _import_folder+'NPR Segmentation/processed data/TfN_households_expo
 _file_path_list =r"Y:\NorMITs Land Use\import\AddressBase\2018\List of ABP datasets.csv"
 
 # 1. Functions to read in the source data 
-def copy_addressbase_files (_file_path_list,
-                            _default_addressbase_extract_path
-                            ):
+def copy_addressbase_files ():
     """
     Copy the relevant ABP files from import drive
     Parameters
@@ -335,7 +333,7 @@ def AggWapFactor(ksSub, newSeg):
     ksSub['employment_type']=newSeg
     return(ksSub)
 
-def CreateEmploymentSegmentation(bsq, _default_msoaRef,
+def CreateEmploymentSegmentation(bsq,
     ksEmpImportPath=_import_folder+'/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
     """
 # Synthesise in employment segmentation using 2011 data
@@ -529,8 +527,9 @@ def CreateNtemAreas(bsqImportPath=_import_folder+'/Bespoke Census Query/formatte
     
     return(bsq)
     
-def FilledProperties(KS401path = _import_folder+'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv',
-                     zoneTranslationPath, _default_msoaRef):
+def FilledProperties(zoneTranslationPath = _default_zone_folder+'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
+                     KS401path = _import_folder+'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv'
+                    ):
     """
     this is a rough account for unoccupied properties
     using KS401UK LSOA level to infer whether the properties have any occupants
@@ -886,7 +885,7 @@ def ApplyNtemSegments(classifiedResPropertyImportPath = 'classifiedResPropertyMS
     
         return(crp, bsq)
                     
-def communal_establishments_splits(get_communal_types, get_census_population):
+def communal_establishments_splits():
     """
     Function to establish the proportions of communal establishment population 
     across zones and gender and age
@@ -933,7 +932,7 @@ def communal_establishments_splits(get_communal_types, get_census_population):
     return(communal_establishments)
     
     
-def communal_establishments_employment(get_communal_employment):
+def communal_establishments_employment():
     communal_emp = get_communal_employment()
     communal_emp = pd.melt(communal_emp, id_vars = ['Gender', 'Age'], value_vars = 
                      ['fte', 'pte', 'unm', 'stu']).rename(columns={'variable':'employment_type',
@@ -946,11 +945,7 @@ def communal_establishments_employment(get_communal_employment):
     print('Communal establishments employment splits done')
     return(communal_emp)
     
-def join_establishments(_default_area_types,
-                        communal_establishments_splits,
-                        communal_establishments_employment,
-                        level = _default_zone_name,
-                        _default_home_dir,
+def join_establishments(level = _default_zone_name,
                         landusePath = _default_home_dir+'/landuseOutput'+_default_zone_name+'.csv'):
     areatypes = pd.read_csv(_default_area_types)
     areatypes = areatypes.drop(columns={'zone_desc'})
@@ -1045,8 +1040,7 @@ def LanduseFormatting(landusePath = _default_home_dir+'/landuseOutput'+_default_
     landuse['people'].sum()
     landuse = landuse.to_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv', index=False)
 
-def ApplyNSSECSOCsplits(_nssecPath, _default_area_types,
-                        landusePath = _default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv'):
+def ApplyNSSECSOCsplits(landusePath = _default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv'):
         """
         Parameters
         ----------
