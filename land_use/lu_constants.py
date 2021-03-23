@@ -36,6 +36,10 @@ SCENARIO_FOLDERS = {'NTEM': 'SC00_NTEM',
                     'SC03_DD': 'SC03_DD',
                     'SC04_UZC': 'SC04_UZC'}
 
+# TODO: Fill this in
+SCENARIO_NUMBERS = {0: 'NTEM',
+                    1: 'SC01_JAM'}
+
 NTEM_POP_GROWTH = os.path.join(
     LU_FOLDER,
     LU_IMPORTS,

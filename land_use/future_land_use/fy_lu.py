@@ -16,12 +16,15 @@ class FutureYearLandUse:
                  base_land_use_path=consts.RESI_LAND_USE_MSOA,
                  base_employment_path=consts.EMPLOYMENT_MSOA,
                  base_soc_mix_path=consts.SOC_2DIGIT_SIC,
+                 fy_at_mix_path=None,
+                 fy_soc_mix_path=None,
                  base_year='2018',
-                 future_year='2033',
-                 scenario_name='NTEM',
+                 future_year=None,
+                 scenario_name=None,
                  pop_growth_path=None,
                  emp_growth_path=None,
                  ca_growth_path=None,
+                 ca_shares_path=None,
                  pop_segmentation_cols=None):
 
         # File ops
@@ -36,18 +39,34 @@ class FutureYearLandUse:
         self.scenario_name = scenario_name.upper()
 
         # If Nones passed in, parse paths
+        if fy_at_mix_path is None:
+            try:
+                fy_at_mix_path = self._get_scenario_path('at_mix')
+            except:
+                print('Future year area type mix init failed')
+                fy_at_mix_path = None
+        if fy_soc_mix_path is None:
+            try:
+                fy_soc_mix_path = self._get_scenario_path('soc_mix')
+            except:
+                print('Future year soc mix init failed')
+                fy_soc_mix_path = None
         if pop_growth_path is None:
-            pop_growth_path = self._get_scenario_path(
-                'pop_growth',
-            )
+            pop_growth_path = self._get_scenario_path('pop_growth')
         if emp_growth_path is None:
-            emp_growth_path = self._get_scenario_path(
-                'emp_growth',
-            )
+            emp_growth_path = self._get_scenario_path('emp_growth')
         if ca_growth_path is None:
-            ca_growth_path = self._get_scenario_path(
-                'ca_growth',
-            )
+            try:
+                ca_growth_path = self._get_scenario_path('ca_growth')
+            except:
+                print('CA growth init failed')
+                ca_growth_path = None
+        if ca_shares_path is None:
+            try:
+                ca_shares_path = self._get_scenario_path('ca_shares')
+            except:
+                print('CA shares init failed')
+                ca_shares_path = None
 
         # Segmentation
         self.pop_segmentation_cols = pop_segmentation_cols
@@ -62,6 +81,12 @@ class FutureYearLandUse:
         if not os.path.exists(write_folder):
             fyu.create_folder(write_folder)
 
+        report_folder = os.path.join(write_folder,
+                                     'reports')
+
+        if not os.path.exists(report_folder):
+            fyu.create_folder(report_folder)
+
         pop_write_name = os.path.join(
             write_folder,
             ('land_use_' + str(self.future_year) + '_pop.csv'))
@@ -75,35 +100,64 @@ class FutureYearLandUse:
             'base_land_use': base_land_use_path,
             'base_employment': base_employment_path,
             'base_soc_mix': base_soc_mix_path,
+            'fy_at_mix': fy_at_mix_path,
+            'fy_soc_mix': fy_soc_mix_path,
             'pop_growth': pop_growth_path,
             'emp_growth': emp_growth_path,
-            'ca_growth': ca_growth_path
+            'ca_growth': ca_growth_path,
+            'ca_shares': ca_shares_path
             }
 
         self.out_paths = {
             'write_folder': write_folder,
+            'report_folder': report_folder,
             'pop_write_path': pop_write_name,
             'emp_write_path': emp_write_name
         }
 
+        # Write init report for param audits
+        init_report = pd.DataFrame(self.in_paths.values(),
+                                   self.in_paths.keys()
+                                   )
+        init_report.to_csv(
+            os.path.join(self.out_paths['report_folder'],
+                         '%s_%s_run_params.csv' % (self.scenario_name, self.future_year))
+        )
+
     def build_fy_pop(self,
                      adjust_ca=True,
                      adjust_soc=True,
-                     adjust_area_type = False,
+                     adjust_area_type=True,
+                     ca_growth_method='factor',
                      export=True,
-                     verbose=True):
+                     verbose=True,
+                     reports=True):
         """
         """
+        # Build population
         fy_pop = self._grow_pop(verbose=verbose)
 
         if adjust_ca:
-            fy_pop = self._adjust_ca(fy_pop)
+            # Adjust car availability mix
+            fy_pop = self._adjust_ca(fy_pop,
+                                     ca_growth_method=ca_growth_method)
 
         if adjust_soc:
-            print('If this were an FTS youd be adjusting soc by now')
+            # TODO: Adjust SOC mix
+            fy_pop = self._adjust_soc(fy_pop)
+            print('If this were an FTS you\'d be adjusting soc by now')
             
-         if adjust_area_type:
+        if adjust_area_type:
+            # Adjust area type
+            fy_pop, at_changes = self._adjust_area_type(fy_pop)
             print('Adjusting area type')
+            if reports:
+                at_changes.to_csv(
+                    os.path.join(self.out_paths['report_folder'],
+                                 'area_type_changes_' + str(self.future_year) +
+                                 '.csv'),
+                    index=False
+                )
 
         if export:
             if verbose:
@@ -134,22 +188,30 @@ class FutureYearLandUse:
         """
         Parameters
         ----------
-        vector = ['pop_growth', 'emp_growth','ca_growth']
+        vector = ['at_mix, 'soc_mix', 'pop_growth', 'emp_growth', 'ca_shares', 'ca_growth']
 
         Returns
         -------
         path : path to required vector
         """
-
-        if vector == 'pop_growth':
+        if vector == 'at_mix':
+            target_folder = 'at_mix'
+            target_file = 'future_area_type_mix.csv'
+        elif vector == 'soc_mix':
+            target_folder = 'soc_mix'
+            target_file = 'future_soc_mix.csv'
+        elif vector == 'pop_growth':
             target_folder = 'population'
             target_file = 'future_population_growth.csv'
         elif vector == 'emp_growth':
             target_folder = 'employment'
             target_file = 'future_employment_growth.csv'
-        elif vector == 'ca_growth':
+        elif vector == 'ca_shares':
             target_folder = 'car ownership'
             target_file = 'ca_future_shares.csv'
+        elif vector == 'ca_growth':
+            target_folder = 'car ownership'
+            target_file = 'ca_future_growth.csv'
         else:
             raise ValueError('Not sure where to look for ' + vector)
 
@@ -164,6 +226,50 @@ class FutureYearLandUse:
         )
 
         return sc_path
+
+    def _adjust_area_type(self,
+                          fy_pop: pd.DataFrame,
+                          verbose=False):
+
+        """
+        Parameters
+        ----------
+        fy_pop: pd.Dataframe
+        Data frame of population for future year by land use zoning (MSOA)
+
+        Returns
+        -------
+        fy_pop_w_at = Dataframe with future adjusted area types
+
+        changes = List of area types that have changed, for reporting
+
+        """
+        # Define model zone
+        model_zone = self.model_zoning.lower() + '_zone_id'
+
+        # Import and process future year area type
+        fy_at = pd.read_csv(self.in_paths['fy_at_mix'])
+        fy_at = fy_at.reindex([model_zone,
+                               self.future_year], axis=1)
+        fy_at = fy_at.rename(columns={self.future_year: 'fy_at'})
+
+        # Merge future onto base
+        fy_pop_w_at = fy_pop.merge(fy_at,
+                                   how='left',
+                                   on=model_zone)
+
+        # Make report
+        changes = fy_pop_w_at[
+            fy_pop_w_at['area_type'] != fy_pop_w_at['fy_at']]
+        changes = changes.reindex(
+            [model_zone, 'area_type', 'fy_at'], axis=1).drop_duplicates()
+        changes = changes.reset_index(drop=True)
+
+        # Re pick columns and drop
+        fy_pop_w_at['area_type'] = fy_pop_w_at['fy_at']
+        fy_pop_w_at = fy_pop_w_at.drop('fy_at', axis=1)
+
+        return fy_pop_w_at, changes
 
     def _grow_pop(self,
                   verbose=False
@@ -270,13 +376,15 @@ class FutureYearLandUse:
         return employment
 
     def _adjust_ca(self,
-                   fy_pop_vector,
+                   fy_pop_vector: pd.DataFrame,
+                   ca_growth_method: str,
                    verbose=True) -> pd.DataFrame:
         """
 
         Parameters
         ----------
         fy_pop_vector: Ready adjusted future year pop vector
+        ca_growth_method: flat adjustment in fy or factor based growth
 
         Returns
         -------
@@ -288,44 +396,87 @@ class FutureYearLandUse:
         zone_col = self._define_zone_col()
 
         # Build base year ca totals
-        # Var name 'base year' ca comes from future year vector
-        # Think about it
+        # This doesn't touch the future year vector, yet
         by_ca = fy_pop_vector.copy()
         by_ca = by_ca.reindex(
             [zone_col, 'ca', self.future_year], axis=1).groupby(
             [zone_col, 'ca']).sum().reset_index()
-        # Get by ca totals
-        by_ca = by_ca.pivot(
+
+        # Get the relative shares of each segment
+        by_ca_share = by_ca.copy()
+        by_ca_share = by_ca_share.pivot(
             index=zone_col,
             columns='ca',
             values=self.future_year).reset_index()
-        by_ca['total'] = by_ca[1] + by_ca[2]
-        by_ca[1] /= by_ca['total']
-        by_ca[2] /= by_ca['total']
-        by_ca = by_ca.drop('total', axis=1)
-        by_ca = by_ca.melt(id_vars=zone_col,
-                           var_name='ca',
-                           value_name=self.future_year)
-        by_ca = by_ca.rename(
+        by_ca_share['total'] = by_ca_share[1] + by_ca_share[2]
+        by_ca_share[1] /= by_ca_share['total']
+        by_ca_share[2] /= by_ca_share['total']
+        by_ca_share = by_ca_share.drop('total', axis=1)
+        by_ca_share = by_ca_share.melt(id_vars=zone_col,
+                                       var_name='ca',
+                                       value_name=self.future_year)
+        by_ca_share = by_ca_share.rename(
             columns={self.future_year: 'by_ca'})
+        by_ca_share = by_ca_share.sort_values([zone_col, 'ca']).reset_index(drop=True)
 
-        # Get ca shares
-        ca_shares = pd.read_csv(self.in_paths['ca_growth'])
-        # Filter to target_year
-        ca_shares = ca_shares.reindex(
-            [zone_col, 'ca', self.future_year], axis=1)
-        ca_shares = ca_shares.rename(columns={self.future_year: 'fy_ca'})
+        # So:
+        # base year ca totals are in by_ca
+        # each segment over sum is in by_ca_share
 
-        # Join
-        fy_ca_factors = by_ca.merge(
-            ca_shares,
-            how='left',
-            on=[zone_col, 'ca'])
-        fy_ca_factors['ca_adj'] = fy_ca_factors['fy_ca'] / fy_ca_factors['by_ca']
-        fy_ca_factors = fy_ca_factors.drop(['by_ca', 'fy_ca'], axis=1)
+        if ca_growth_method == 'flat':
+            # Get ca shares
+            # TODO: Import growth or flat depending on method
+            ca_shares = pd.read_csv(self.in_paths['ca_shares'])
+            # Filter to target_year
+            ca_shares = ca_shares.reindex(
+                [zone_col, 'ca', self.future_year], axis=1)
+            ca_shares = ca_shares.rename(columns={self.future_year: 'fy_ca'})
 
-        before = fy_pop_vector.groupby(['ca'])[self.future_year].sum()
+            # Join
+            fy_ca_factors = by_ca_share.merge(
+                ca_shares,
+                how='left',
+                on=[zone_col, 'ca'])
+            fy_ca_factors['ca_adj'] = fy_ca_factors['fy_ca'] / fy_ca_factors['by_ca']
+            fy_ca_factors = fy_ca_factors.drop(['by_ca', 'fy_ca'], axis=1)
 
+        elif ca_growth_method == 'factor':
+            # Get ca growth
+
+            # adj factor = ((fy growth factor * base year share) / Sum(fy
+            # growth factor * base year share)) / base year share fy
+            # ca = base year demand * adj factor
+            
+            ca_factors = pd.read_csv(self.in_paths['ca_growth'])
+            # Filter to target year
+            ca_factors = ca_factors.reindex(
+                [zone_col, 'ca', self.future_year], axis=1)
+            ca_factors = ca_factors.rename(columns={self.future_year: 'fy_ca'})
+
+            # Join
+            ca_shares = by_ca_share.merge(
+                ca_factors,
+                how='left',
+                on=[zone_col, 'ca'])
+            # Sum total so control factors to 1 (itself)
+            ca_shares['fy_ca'] *= ca_shares['by_ca']
+
+            totals = ca_shares.groupby('msoa_zone_id')['fy_ca'].sum().reset_index()
+            totals = totals.rename(columns={'fy_ca': 'fy_ca_tot'})
+
+            fy_ca_factors = ca_shares.merge(
+                totals,
+                how='left',
+                on=zone_col
+            )
+            fy_ca_factors['fy_ca'] /= fy_ca_factors['fy_ca_tot']
+            fy_ca_factors['ca_adj'] = fy_ca_factors['fy_ca']/fy_ca_factors['by_ca']
+
+            fy_ca_factors = fy_ca_factors.drop(
+                ['by_ca', 'fy_ca', 'fy_ca_tot'], axis=1)
+
+        before = fy_pop_vector[self.future_year].sum()
+        ca_before = fy_pop_vector.groupby(['ca'])[self.future_year].sum()
 
         # Adjust CA
         fy_pop_vector = fy_pop_vector.merge(
@@ -335,13 +486,17 @@ class FutureYearLandUse:
         fy_pop_vector[self.future_year] *= fy_pop_vector['ca_adj']
         fy_pop_vector = fy_pop_vector.drop('ca_adj', axis=1)
 
-        after = fy_pop_vector.groupby(['ca'])[self.future_year].sum()
+        after = fy_pop_vector[self.future_year].sum()
+        ca_after = fy_pop_vector.groupby(['ca'])[self.future_year].sum()
 
         if verbose:
             print('*' * 15)
             print('Car availability adjustment')
+            print('CA growth method: %s' % ca_growth_method)
             print('Total before: ' + str(before.astype(int)))
             print('Total after: ' + str(after.astype(int)))
+            print('Shares before: ' + str(ca_before.astype(int)))
+            print('Shares after: ' + str(ca_after.astype(int)))
 
         return fy_pop_vector
 
@@ -582,3 +737,28 @@ class FutureYearLandUse:
             zone_col = self.model_zoning.lower()
 
         return zone_col
+
+
+    def _adjust_soc(self,
+                    fy_pop):
+        """
+        fy_pop:
+        future year population vector
+
+        Returns
+        -------
+        soc_adjusted_pop:
+
+
+        fy_soc:
+        Summary report of
+        """
+        # Import SY SIC mix by scenario
+        # Translate SIC mix to SOC
+        # Translate FY SOC mix to % share by zone
+
+        # (Export FY SOC mix by zone)
+        # Factor FY pop to match zone mix
+
+        # Audit soc mix against LA level from NELUM
+        return 0    # soc_adjusted_pop, fy_soc
