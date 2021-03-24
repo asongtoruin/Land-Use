@@ -1,22 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Nov 21 16:10:36 2019
-@author: mags15
-Updated: 14/02/2020 using @author: sclayton' uplift to 2018 built for NELUM's work
-more info: Y:/NorMITs Land Use/import/NPR Segmentation/DataPrepProcess.doc
-Uplift steps: 
-# Code takes SOC data sectored by industry sectors and by MSOA and factors 
-# total number of employees in MSOA according to ONS employment data by 
-# Steps are:
-#   1. Read in 'employees' data (at LAD and County level for 2017)
-#   2. Read in 'people in work' data for 2018, to be used for overall control
-#   3. Read in HSL MSOA data for 2018, which has spatial detail but not right total
-#   4. Scale up 2017 LAD and County level employees data to 2018 people-in-work control
-#   5. Group HSL MSOA level data to LAD/County where appropriate and calculate new scaling factors
-#   6. Apply scaling factors at an MSOA level
 
 """
-"""
+
 For future years:
     1. combine all SIC to SOC splits into 1 for all regions
     2. shorten the SOCs
@@ -24,12 +9,11 @@ For future years:
     4. use the attractions divided by sic to work out the sic distribution in the fy
     5. use the translation from sic to soc to work out the distribution of the workers across soc categories
     6. use qualifications to soc to work out the fy control for soc (north level)
-    7. balance out the figures    
-    8. balance out unemployed and children, take the fy population and 
-    substitute the working population then either use 2018 splits for children/over75 or
-    use NPIER age splits to work out how many elderly and children there will be in the future
-    9. use soc to NS-SEC to uplift NS-SEC figures for fy
-    """
+    7. apply the control to fy regional splits
+    8. balance out the msoa to regions but keeping the msoa variation
+    9. balance out children/75 or over population, use 2018 splits for empl types for fy (might need readressing)
+    10.use soc to NS-SEC to uplift NS-SEC figures for fy
+"""
 
 import os
 import sys
@@ -61,17 +45,16 @@ _npierqualifications = 'Y:/NorMITs Demand/import - test/scenarios/FY SIC to SOC/
 _qualstosoctranslation = 'Y:/NorMITs Demand/import - test/scenarios/FY SIC to SOC/ONS NFQ quals by occ_raw - TfN_formatted.xlsx'
 _sic_lookup = 'Y:/NorMITs Land Use/import/NPR Segmentation/processed data/NPIER_SIC_to_CE.csv'
 _import_folder = 'Y:/NorMITs Demand/import - test/scenarios/'
-sc01_jam = _import_folder + 'SC01_JAM/employment/future_growth_values.csv'
-sc02_pp = _import_folder +'SC02_PP/employment/future_growth_values.csv'
-sc03_dd = _import_folder + 'SC03_DD/employment/future_growth_values.csv'
-sc04_uzc = _import_folder + 'SC04_UZC/employment/future_growth_values.csv'
-# read in data for the uplift
-ons_employees = pd.ExcelFile('Employees by LAD - table52017p.xlsx') # ONS data in thousands of employees to scale to - use 2017 as 2018 data is provisional
-ons_people_in_work = pd.ExcelFile('lfs_people_in_employment_2018.xlsx')
-employees_socPath = (defaultHomeDir +output+'/UK_SICtoSOC_HSL.csv') # SICtoSOC output split into 12 TfN sectors
-area_code_lookup = pd.read_csv('MSOA_LAD_APR19.csv') # lookup msoa, LA, county, _APR19 changes E06000028 and E06000029 to E06000058
+sc01_emp = _import_folder + 'SC01_JAM/employment/future_growth_values.csv'
+sc02_emp = _import_folder +'SC02_PP/employment/future_growth_values.csv'
+sc03_emp = _import_folder + 'SC03_DD/employment/future_growth_values.csv'
+sc04_emp = _import_folder + 'SC04_UZC/employment/future_growth_values.csv'
+sc01_pop =_import_folder + 'SC01_JAM/population/future_growth_values.csv'
+sc02_pop = _import_folder + 'SC02_PP/population/future_growth_values.csv'
+sc03_pop = _import_folder + 'SC03_DD/population/future_growth_values.csv'
+sc04_pop = _import_folder + 'SC04_UZC/population/future_growth_values.csv'
+_landuse_path = 'Y:/NorMITs Land Use/iter3b/outputs/land_use_output_msoa.csv'
 
-# TODO: Standard col format names for input
 
 def get_emp_values_fy(scenario):
     """
@@ -86,19 +69,19 @@ def get_emp_values_fy(scenario):
        Reads in the processed emp values for fy for a given scenario
     """
     if scenario == sc01_jam:
-        scenario_emp = pd.read_csv(sc01_jam)
+        scenario_emp = pd.read_csv(sc01_emp)
     elif scenario == sc02_pp:
-        scenario_emp = pd.read_csv(sc02_pp)
+        scenario_emp = pd.read_csv(sc02_emp)
     elif scenario == sc03_dd:
-        scenario_emp = pd.read_csv(sc03_dd)
+        scenario_emp = pd.read_csv(sc03_emp)
     elif scenario == sc04_uzc:
-        scenario_emp = pd.read_csv(sc04_uzc)
+        scenario_emp = pd.read_csv(sc04_emp)
     
     
     scenario_emp = scenario_emp.groupby(by=['msoa_zone_id'], as_index = False).sum().drop(columns={'soc', '% of MSOA_people_sum', 'MSOA people sum'})
     return(scenario_emp)
     
-def combine_splits_fy(target_folder = _sic_to_soc):
+def combine_sic_splits_fy(target_folder = _sic_to_soc):
     """
     Reads in all the sic to soc translators split in Excel file by region (for fy)
     Parameters
@@ -146,6 +129,7 @@ def classify_soc(soc_value):
     return(soc_class)
          
 def sic_splits_regions(scenario):
+    
     # the values in the spreadsheets are in thousands but since we're deriving splits, it doesn't matter
     if scenario == sc01_jam or scenario == sc02_pp:
         sic_npier_bau = pd.read_excel('Y:/NorMITs Demand/import - test/scenarios/NPIER/North_summary_040920_v2_sic_formatted.xlsx', 
@@ -182,22 +166,7 @@ def sic_splits_regions(scenario):
         sic_fy = reduce(lambda x, npier : pd.merge(x, npier, on = 'SIC'), tra)
         return(sic_fy)
 
-def work_out_2018_splits():
-    landuse = pd.read_csv('Y:/NorMITs Land Use/iter3b/outputs/land_use_output_msoa.csv')
-    landuse_emp = landuse.groupby(by=['soc_cat', 'msoa_zone_id'], as_index = False).sum()
-    msoa_lookup = pd.read_csv('Y:/NorMITs Land Use/import/MSOAtoRGNlookup.csv').rename(columns={'MSOA11CD':'msoa_zone_id'})
-    msoa_lookup = msoa_lookup[['msoa_zone_id', 'RGN11NM']]
-    msoa_lookup= msoa_lookup.rename(columns={'RGN11NM':'Region'})
-
-
-    landuse_emp = landuse_emp.merge(msoa_lookup, on = 'msoa_zone_id')
-    North = ['North West', 'North East', 'Yorkshire and The Humber', 'East Midlands']
-
-    landuse_emp = landuse_emp[landuse_emp.Region.isin(North)]
-    landuse_splits = landuse_emp.groupby(by=['soc_cat'], as_index = False).sum()
-    
 def derive_soc_fy(scenario):
-    # TODO: regions outside North
     scenario_emp = get_emp_values_fy(scenario) 
        
     scenario_emp = scenario_emp.groupby(by=['msoa_zone_id'], as_index = False).sum()
@@ -244,7 +213,7 @@ def derive_soc_fy(scenario):
             fy_scenario['jobs_'+(year)] = fy_scenario[(year)]*fy_scenario['splits_'+(year)]
             fy_scenario = fy_scenario.drop(columns={(year), 'splits_'+(year)})
     
-    regional_splits = combine_splits_fy()
+    regional_splits = combine_sic_splits_fy()
     regional_splits['SOC'] = pd.to_numeric(regional_splits['SOC'])
     regional_splits['soc_class'] = regional_splits['SOC'].apply(classify_soc)
 
@@ -260,39 +229,29 @@ def derive_soc_fy(scenario):
     
     for x in range(int(2019), int(2051)):
         fy_scenario_soc['emp_'+str(x)] = fy_scenario_soc[(x)]*fy_scenario_soc['jobs_'+str(x)]
-        fy_scenario_soc = fy_scenario_soc.drop(columns={(x), 'jobs_'+str(x)})
-   
+        fy_scenario_soc = fy_scenario_soc.drop(columns={(x), 'jobs_'+str(x)}) 
+        
+        # this format but by msoa should be ok to use as attractions later
+    # fy_scenario_soc.to_csv('Y:/NorMITs Demand/import - test/scenarios/FY SIC to SOC/fy_soc_splits/regional_sic_soc.csv')
+    
+    # totals for each region by SOC (exclulding SOC 0)
     soc_fy = fy_scenario_soc.groupby(by=['Region', 'soc_class'], as_index = False).sum().drop(columns={'North'})
-    #soc_fy.to_csv('E:/NorMITS_Export/sc01_jam_socs.csv')
     
-    
+    # Need to convert to splits
     soc_fy['North'] = 1
-    soc_fy_north = soc_fy.groupby(by = ['North', 'soc_class'], as_index = False).sum()
-    # do a loop for all years
-    soc_fy_north = soc_fy_north[['North', 'soc_class', str(year)]]
-    soc_fy_north_2019['total_2019'] = soc_fy_north_2019['emp_2019'].sum() 
-    soc_fy_north_2019['splits'] = soc_fy_north_2019['emp_2019']/soc_fy_north_2019['total_2019']
-
-    return(soc_fy)  # here's the 3 socs by region for every year in the future   
-    
-def compare_w_mype_soc_splits():
-# placeholder for comparison between the fy_splits from SIC and landuse 2018 splits
-# work out factor to multiply by        
-    
-def workout_northern_soc_splits():
-    soc_fy['North'] = 1
-    soc_fy_north = soc_fy.groupby(by = ['North', 'soc_class'], as_index = False).sum()
-    soc_fy_north_2019 = soc_fy_north[['North', 'soc_class', 'emp_2019']]
-    soc_fy_north_2019['total_2019'] = soc_fy_north_2019['emp_2019'].sum() 
-    soc_fy_north_2019['splits'] = soc_fy_north_2019['emp_2019']/soc_fy_north_2019['total_2019']
-                           
-def format_attractions():
-    # get a 
-    
+    soc_fy_splits = soc_fy.groupby(by = ['North', 'soc_class'], as_index = False).sum()
+    for x in range(int(2019), int(2051)):
+        soc_fy_splits['total_'+str(x)] = soc_fy_splits['emp_'+str(x)].sum()
+        soc_fy_splits['splits_'+str(x)] = soc_fy_splits['emp_'+str(x)]/soc_fy_splits['total_'+str(x)]
+        soc_fy_splits = soc_fy_splits.drop(columns={'emp_'+str(x), 'total_'+str(x)}) 
+        
+    return(soc_fy_splits)  # here's the 3 socs by region for every year in the future as splits   
+           
 def quals_to_soc(scenario):
     # this will be a control for SOC splits in the North
     # based on qualifications for fy from NPIER 
     # then relies on ONS historical data on qualifications to SOC translator
+    # for non-North regions use 2018 splits for now
     if scenario == sc01_jam or scenario == sc02_pp:
         npier_quals = pd.read_excel(_npierqualifications, Sheet = 'BAU - North demog')
         quals_to_soc = pd.read_excel(_qualstosoctranslation)
@@ -300,59 +259,253 @@ def quals_to_soc(scenario):
         # BAU scenario       
         fy_soc = npier_quals.merge(quals_to_soc, on = 'Labour force by highest qualification')
         g = []
+        s = []
         for year in range(int(2019), int(2051)):
             
             fy_quals = fy_soc[['Labour force by highest qualification', year]]
             fy_quals = fy_quals.merge(quals_to_soc, on = 'Labour force by highest qualification')
        
-            fy_quals['Highly_skilled'] = fy_quals[year]*fy_quals['High'] 
-            fy_quals['Medium_skilled'] = fy_quals[year]*fy_quals['Medium']
-            fy_quals['Skilled_'] = fy_quals[year]*fy_quals['Skilled']
+            fy_quals['higher'] = fy_quals[year]*fy_quals['High'] 
+            fy_quals['medium'] = fy_quals[year]*fy_quals['Medium']
+            fy_quals['skilled'] = fy_quals[year]*fy_quals['Skilled']
             
             # work out totals for each column
-            summarise = fy_quals[['Highly_skilled', 'Medium_skilled', 'Skilled_']].sum()
+            summarise = fy_quals[['higher', 'medium', 'skilled']].sum()
             summarise = summarise.to_frame()
             summarise.reset_index(inplace=True)
             summarise = summarise.rename(columns={'index':'soc', 0:year})
-            summarise['total'] = summarise[(year)].sum()
-            summarise['splits'] = summarise[(year)]/summarise['total']
-            summarise = summarise.drop(columns={(year), 'total'}).rename(columns={'splits':(year)})
             g.append(summarise)
+            # work out splits for each
+            splits = summarise.copy()
+            splits['total'] = splits[(year)].sum()
+            splits['splits'] = splits[(year)]/splits['total']
+            splits = splits.drop(columns={(year), 'total'}).rename(columns={'splits':(year)})
+            s.append(splits)
         
-        soc_bau_fy = reduce(lambda x, summarise : pd.merge(x, summarise, on = 'soc'), g)
-        soc_bau_fy = soc_bau_fy.rename(columns={'Skilled_':'Skilled'})
-        soc_bau_fy.to_csv('Y:/NorMITs Demand/import - test/scenarios/FY SIC to SOC/fy_soc_splits/soc_bau_splits.csv')
+        soc_quals_fy = reduce(lambda x, summarise : pd.merge(x, summarise, on = 'soc'), g)
+        soc_quals_splits = reduce(lambda x, splits : pd.merge(x, splits, on = 'soc'), s)
+      
+        # soc_bau_fy.to_csv('Y:/NorMITs Demand/import - test/scenarios/FY SIC to SOC/fy_soc_splits/soc_bau_splits.csv')
+        return(soc_quals_splits)
 
     if scenario == sc03_dd or scenario == sc04_uzc:
         npier_quals = pd.read_excel(_npierqualifications, Sheet = 'TRA - North demog')
         
         fy_soc = npier_quals.merge(quals_to_soc, on = 'Labour force by highest qualification')
         g = []
+        s = []
         for year in range(int(2019), int(2051)):
             
             fy_quals = fy_soc[['Labour force by highest qualification', year]]
             fy_quals = fy_quals.merge(quals_to_soc, on = 'Labour force by highest qualification')
        
-            fy_quals['Highly_skilled'] = fy_quals[year]*fy_quals['High'] 
-            fy_quals['Medium_skilled'] = fy_quals[year]*fy_quals['Medium']
-            fy_quals['Skilled_'] = fy_quals[year]*fy_quals['Skilled']
+            fy_quals['higher'] = fy_quals[year]*fy_quals['High'] 
+            fy_quals['medium'] = fy_quals[year]*fy_quals['Medium']
+            fy_quals['skilled'] = fy_quals[year]*fy_quals['Skilled']
             
             # work out totals for each column
-            summarise = fy_quals[['Highly_skilled', 'Medium_skilled', 'Skilled_']].sum()
+            summarise = fy_quals[['higher', 'medium', 'skilled']].sum()
             summarise = summarise.to_frame()
             summarise.reset_index(inplace=True)
             summarise = summarise.rename(columns={'index':'soc', 0:year})
-            summarise['total'] = summarise[(year)].sum()
-            summarise['splits'] = summarise[(year)]/summarise['total']
-            summarise = summarise.drop(columns={(year), 'total'}).rename(columns={'splits':(year)})
             g.append(summarise)
+           
+            splits = summarise.copy()
+            splits['total'] = splits[(year)].sum()
+            splits['splits'] = splits[(year)]/splits['total']
+            splits = splits.drop(columns={(year), 'total'}).rename(columns={'splits':(year)})
+            s.append(splits)
         
-        soc_tra_fy = reduce(lambda x, summarise : pd.merge(x, summarise, on = 'soc'), g)
+        soc_quals_fy = reduce(lambda x, summarise : pd.merge(x, summarise, on = 'soc'), g)
+        soc_quals_splits = reduce(lambda x, splits : pd.merge(x, splits, on = 'soc'), s)
+
+        return(soc_quals_splits)
+
+def balance_northern_socs_fy(scenario):
+    """
+    takes the soc splits by region for fy and constraints to the North
     
-        soc_tra_fy = soc_tra_fy.rename(columns={'Skilled_':'Skilled'})
-        soc_tra_fy.to_csv('Y:/NorMITs Demand/import - test/scenarios/FY SIC to SOC/fy_soc_splits/soc_tra_splits.csv')
     
+    """
+    # read in socs for fy  
+    regional_socs = derive_soc_fy(scenario)
+    regional_socs = regional_socs.rename(columns={'soc_class':'soc'})
+    # read in the constraining splits for the North
+    North_socs = quals_to_soc(scenario)
+    # remember to multiply NPIER data by 1000 as it's in thousands
+    # North_socs[North_socs.select_dtypes(include=['number']).columns] *= 1000
+    
+    #socs = regional_socs.groupby(by=['North', 'soc'], as_index = False).sum()
+    
+    # work out the factor for balancing regions' socs
+    blc = regional_socs.merge(North_socs, on = 'soc')
+    for year in range(int(2019), int(2051)):
+        blc['fc_'+str(year)] = blc[(year)]/blc['splits_'+str(year)]
+        blc = blc.drop(columns=[(year), 'splits_'+str(year)])
+    
+    # apply the factors to regions
+    # TODO: need to bring back soc_fy here to join the factor to values
+    blc_values = soc_fy
+    soc_fy = soc_fy.rename(columns={'soc_class':'soc'})
+    rgn_socs = soc_fy.merge(blc, on = 'soc')
+    for year in range(int(2019), int(2051)):
+        rgn_socs[(year)] = rgn_socs['fc_'+str(year)]*rgn_socs['emp_'+str(year)]
+        rgn_socs = rgn_socs.drop(columns=['fc_'+str(year), 'emp_'+str(year)])
+    return(rgn_socs)
+
+def base_yr_soc_splits():
+    # this is to compare to fy splits but mainly to use 2018 splits for non-North regions for fy
+    # use the landuse splits here
+
+    landuse = pd.read_csv(_landuse_path)
+    landuse_emp = landuse.groupby(by=['soc_cat', 'msoa_zone_id'], as_index = False).sum()
+    msoa_lookup = pd.read_csv('Y:/NorMITs Land Use/import/MSOAtoRGNlookup.csv').rename(columns={'MSOA11CD':'msoa_zone_id'})
+    msoa_lookup = msoa_lookup[['msoa_zone_id', 'RGN11NM']]
+    msoa_lookup= msoa_lookup.rename(columns={'RGN11NM':'Region'})
+
+    socs = [1,2,3] 
+
+    land = landuse_emp[landuse_emp.soc_cat.isin(socs)]
+
+    land = landuse_emp.groupby(by=['msoa_zone_id', 'soc_cat'], as_index = False).sum()
+    # first work out the SOC splits
+    tot = land.groupby(by=['msoa_zone_id'],as_index = False).sum().rename(columns={'people':'total'}).drop(columns={'soc_cat'})
+    land = land.merge(tot, on = 'msoa_zone_id', how = 'left')
+    land['soc_splits'] = land['people']/land['total']
+    return(land)
+    
+def balance_msoa_fy_socs(scenario):
+    # TODO: get the splits rather than values
+    # get the emp fy figures
+    fy_emp = get_emp_values_fy(scenario).drop(columns={'2018'})
+    # get landuse soc splits
+    soc_splits = base_yr_soc_splits()
+    soc_splits = soc_splits[['msoa_zone_id', 'soc_cat','soc_splits']]
+    
+    # join the two together
+    by_socs = fy_emp.merge(soc_splits, on = 'msoa_zone_id')
+    for year in range(int(2019), int(2051)):
+        by_socs['emp_'+str(year)] = by_socs[str(year)]*by_socs['soc_splits']
+        by_socs = by_socs.drop(columns={str(year)})
+    by_socs = by_socs.drop(columns={'soc_splits'}).rename(columns={'soc_cat':'soc'})
+    by_socs['soc'] = by_socs['soc'].replace(1,'higher')
+    by_socs['soc'] = by_socs['soc'].replace(2,'medium')
+    by_socs['soc'] = by_socs['soc'].replace(3,'skilled')
+    
+    # group landuse to region level
+    msoa_lookup = pd.read_csv('Y:/NorMITs Land Use/import/MSOAtoRGNlookup.csv').rename(columns={'MSOA11CD':'msoa_zone_id'})
+    msoa_lookup = msoa_lookup[['msoa_zone_id', 'RGN11NM']]
+    msoa_lookup= msoa_lookup.rename(columns={'RGN11NM':'Region'})
+
+    by_socs = by_socs.merge(msoa_lookup, on = 'msoa_zone_id')
+    North = ['North West', 'North East', 'Yorkshire and The Humber', 'East Midlands']
+    
+    # North regions only for constraint
+    by_socs_north = by_socs[by_socs.Region.isin(North)]
+    by_socs_reg = by_socs_north.groupby(by = ['Region', 'soc'], as_index = False).sum()
+    
+    # bring in regional constraint 
+    rgn_socs = balance_northern_socs_fy(scenario)
+    
+    # combine the two to get the factor
+    blcsocs = by_socs_reg.merge(rgn_socs, on = ['soc', 'Region'])
+    for year in range(int(2019), int(2051)):
+        blcsocs['fc_'+str(year)] = blcsocs[(year)]/blcsocs['emp_'+str(year)]
+        blcsocs = blcsocs.drop(columns=[(year), 'emp_'+str(year)])
+
+    # join and apply factors to msoa
+    zone_socs = by_socs_north.merge(blcsocs, on =['Region', 'soc'])
+    for year in range(int(2019), int(2051)):
+        zone_socs[(year)] = zone_socs['fc_'+str(year)]*zone_socs['emp_'+str(year)]
+        zone_socs = zone_socs.drop(columns=['fc_'+str(year), 'emp_'+str(year)])
+      
+    by_socs_out = by_socs[~by_socs.Region.isin(North)]
+    socs = ['higher', 'medium', 'skilled']
+    by_socs_out = by_socs_out[by_socs_out.soc.isin(socs)]
+    for year in range(int(2019), int(2051)):
+        by_socs_out[(year)] = by_socs_out['emp_'+str(year)]
+        by_socs_out = by_socs_out.drop(columns={'emp_'+str(year)})
+ 
+    zone_socs = zone_socs.drop(columns={'North_x', 'North_y'})
+    zone_socs_all = zone_socs.append(by_socs_out)
+    if scenario == sc01_jam: 
+        sc = 'sc01_jam'
+    elif scenario == sc02_pp:
+        sc = 'sc02_pp'
+    elif scenario == sc03_dd:
+        sc= 'sc03_dd'
+    elif scenario == sc04_uzc:
+        sc='sc04_uzc'
+    
+    zone_socs_all.to_csv('Y:/NorMITs Demand/import - test/scenarios/FY SIC to SOC/'+sc+'_msoa_socs.csv', index = False)
+    
+    return(rgn_socs)
+    # check emp values are still equal the ones read from nelum
+         
+def get_pop_values_fy(scenario):
+    """
+    Reads in processed pop figures for fy for a given scenario
+    Parameters
+    ----------
+    scenario_pop:
+        Path to csv population values 
+
+    Returns
+    ----------
+        Reads in the processed pop values for fy for a given scenario
+    """
+    if scenario == sc01_jam:
+        scenario_pop = pd.read_csv(sc01_pop)
+    elif scenario == sc02_pp:
+        scenario_pop = pd.read_csv(sc02_pop)
+    elif scenario == sc03_dd:
+        scenario_pop = pd.read_csv(sc03_pop)
+    elif scenario == sc04_uzc:
+        scenario_pop = pd.read_csv(sc04_pop)
+    
+    scenario_pop = scenario_pop.groupby(by=['msoa_zone_id'], as_index = False).sum().drop(columns={'soc', 'ns','% of MSOA_people_sum', 'MSOA_people_sum'})
+    return(scenario_pop)
                           
+def add_soc_zero(scenario):
+    if scenario == sc01_jam: 
+        sc = 'sc01_jam'
+    elif scenario == sc02_pp:
+        sc = 'sc02_pp'
+    elif scenario == sc03_dd:
+        sc= 'sc03_dd'
+    elif scenario == sc04_uzc:
+        sc='sc04_uzc'
+
+    emp_values = pd.read_csv('Y:/NorMITs Demand/import - test/scenarios/FY SIC to SOC/'+sc+'_msoa_socs.csv')
+    scenario_pop = get_pop_values_fy(scenario)
+    wa_pop = emp_values.groupby(by=['msoa_zone_id'], as_index = False).sum()
+    
+    pop_fy = scenario_pop.merge(wa_pop, on = ['msoa_zone_id'])
+    for year in range(int(2019), int(2051)):
+        pop_fy[(year)] = pop_fy[str(year)+'_x']- pop_fy[str(year)+'_y']
+        pop_fy = pop_fy.drop(columns={str(year)+'_x', str(year)+'_y'})
+        
+def format_attractions(scenario):
+    # bring in soc values
+    # population - socs = soc0
+    # format to SIC (99) by SOC then fy cols: 2019, 2020 etc
+
+def fy_age_splits(scenario): 
+    """
+    This reads in simple splits for nonworking category by age, so for children and 75 or over
+    No data on unemployed numbers from NPIER into the future
+    
+    """
+    if scenario == sc01_jam or scenario == sc02_pp:
+        nwa_age_splits = pd.read_excel('Y:/NorMITs Demand/import - test/scenarios/NPIER/North_summary_040920_v2_age.xlsx', Sheet = 'BAU')
+        
+    if scenario == sc03_dd or scenario == sc04_uzc:
+        nwa_age_splits = pd.read_excel('Y:/NorMITs Demand/import - test/scenarios/NPIER/North_summary_040920_v2_age.xlsx', Sheet = 'TRA')
+        
+    return(nwa_age_splits)
+    
+ # not sure below is needed                         
+"""
 def build_sic_to_soc(balance_soc_factors = True,
                      output = 'emp',
                      sic_2digit_path = _default_sic_2digit_path,
@@ -389,40 +542,15 @@ def build_sic_to_soc(balance_soc_factors = True,
                                                 on = ['RGN11nm', 'CE_SIC'])
         regional_splits['jobs'] = regional_splits['jobs'] * regional_splits['adj']
         del(regional_splits['adj'])
+"""
 
-    # Some Nan segments here - might be normal
-    sic_trans = pd.read_csv('Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/CE Industry categories.csv')
-
-    # Melt the HSL MSOA division table
-    sic_columns = list(msoa_sic)
-    sic_columns = [x for x in sic_columns if 'Wrkrs' in x]
-    del(msoa_sic['RGN11cd'])
-    msoatrans = pd.melt(msoa_sic, id_vars = ['MSOA', 'RGN11nm'],
-                        value_vars = sic_columns,
-                        var_name = 'HSL_SIC',
-                        value_name = 'total')
-    print('Total jobs: ' + str(msoatrans['total'].sum()))
-
-    # TODO: Is this a function?
-
-    # Get sic categories ready to join
-    sic_trans = sic_trans.drop(columns = {'CE_SIC_categories'})
-    # Seriously though, what problem does it have with 97 & 98?
-
-    msoatrans2 = msoatrans.merge(sic_trans, on = 'HSL_SIC', how = 'outer')
-    msoatrans2 = msoatrans2.rename(columns={'CE_cat':'CE_SIC'})
-
-    socs = msoatrans2.merge(regional_splits, on = ['RGN11nm', 'CE_SIC'], how = 'outer')
-
-    socs['seg_jobs'] = socs['total'] * socs['jobs']
-
-    if write:
-        socs.to_csv('Y:/NorMITs Land Use/import/NPR Segmentation/UK_SICtoSOCv3.csv')
-        splits.to_csv('Y:/NorMITs Land Use/import/NPR Segmentation/splits.csv')
         
 def build_employers_splits(scenario = sc01_jam):
     # scenario can be sc01_jam, sc02_pp, sc03_dd, sc04_uzc
-    derive_soc_fy(scenario)
+    balance_northern_socs_fy(scenario)
+    
+    
+    
     # constrain to North using quals_to_soc
     # balance out soc splits msoa level
     # work out SOC 0 using fy pop for each msoa
