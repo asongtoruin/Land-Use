@@ -446,7 +446,7 @@ class FutureYearLandUse:
             # adj factor = ((fy growth factor * base year share) / Sum(fy
             # growth factor * base year share)) / base year share fy
             # ca = base year demand * adj factor
-            
+
             ca_factors = pd.read_csv(self.in_paths['ca_growth'])
             # Filter to target year
             ca_factors = ca_factors.reindex(
