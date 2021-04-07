@@ -12,24 +12,27 @@ if __name__ == '__main__':
     pop = True
     emp = False
 
-    for target_scenario in scenarios:
-        for target_fy in future_years:
+    for scenario in scenarios:
+        for fy in future_years:
 
-            fy = fylu.FutureYearLandUse(
-                future_year=target_fy,
-                scenario_name=target_scenario,
+            fy_model = fylu.FutureYearLandUse(
+                future_year=fy,
+                scenario_name=scenario,
                 )
 
             # Define run preferences
-            if target_scenario == 'NTEM':
+            if scenario == 'NTEM':
+                balance_demographics = True
                 adjust_area_type = False
             else:
+                balance_demographics = False
                 adjust_area_type = True
             ca_growth_method = 'factor'
             adjust_soc = False
 
             if pop:
-                fy.build_fy_pop(
+                fy_model.build_fy_pop(
+                    balance_demographics=balance_demographics,
                     adjust_ca=True,
                     ca_growth_method='factor',
                     adjust_soc=adjust_soc,
@@ -38,6 +41,6 @@ if __name__ == '__main__':
                     export=False
                     )
             if emp:
-                fy.build_fy_emp(
+                fy_model.build_fy_emp(
                     export=False
                     )

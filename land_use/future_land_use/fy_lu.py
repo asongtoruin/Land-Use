@@ -12,9 +12,10 @@ class FutureYearLandUse:
                  iteration=consts.LU_MR_ITER,
                  import_folder=consts.LU_IMPORTS,
                  model_zoning='msoa',
-                 base_land_use_path=consts.RESI_LAND_USE_MSOA,
-                 base_employment_path=consts.EMPLOYMENT_MSOA,
-                 base_soc_mix_path=consts.SOC_2DIGIT_SIC,
+                 base_land_use_path=None,
+                 base_employment_path=None,
+                 base_soc_mix_path=None,
+                 fy_demographic_path=None,
                  fy_at_mix_path=None,
                  fy_soc_mix_path=None,
                  base_year='2018',
@@ -24,7 +25,10 @@ class FutureYearLandUse:
                  emp_growth_path=None,
                  ca_growth_path=None,
                  ca_shares_path=None,
-                 pop_segmentation_cols=None):
+                 pop_segmentation_cols=None,
+                 sub_for_defaults=False):
+
+        # TODO: Add versioning
 
         # File ops
         self.model_folder = model_folder
@@ -37,7 +41,38 @@ class FutureYearLandUse:
         self.future_year = future_year
         self.scenario_name = scenario_name.upper()
 
+        # If Nones passed in, set defaults
+        # This is for base datasets that don't vary between scenarios
+        if base_land_use_path is None:
+            if sub_for_defaults:
+                print('Using default Residential Land Use')
+                base_land_use_path = consts.RESI_LAND_USE_MSOA
+            else:
+                raise ValueError('No base land use provided')
+        if base_employment_path is None:
+            if sub_for_defaults:
+                print('Using default Employment Land Use')
+                base_employment_path = consts.EMPLOYMENT_MSOA
+            else:
+                raise ValueError('No base employment provided')
+        if base_soc_mix_path is None:
+            if sub_for_defaults:
+                print('Using default Employment Skill Mix')
+                base_soc_mix_path = consts.SOC_2DIGIT_SIC
+            else:
+                raise ValueError('No employment mix provided')
+
         # If Nones passed in, parse paths
+        # This is for datasets that change between scenarios
+        if fy_demographic_path is None:
+            try:
+                fy_demographic_path = self._get_scenario_path('dem_mix')
+            except:
+                if sub_for_defaults:
+                    print('Using default demographic mix')
+                    fy_demographic_path = consts.NTEM_DEMOGRAPHICS_MSOA
+                else:
+                    print('Demographic mix init failed')
         if fy_at_mix_path is None:
             try:
                 fy_at_mix_path = self._get_scenario_path('at_mix')
@@ -70,21 +105,13 @@ class FutureYearLandUse:
         # Segmentation
         self.pop_segmentation_cols = pop_segmentation_cols
 
+        # Build paths
         write_folder = os.path.join(
             model_folder,
             iteration,
             'outputs',
             'scenarios',
             scenario_name)
-
-        if not os.path.exists(write_folder):
-            utils.create_folder(write_folder)
-
-        report_folder = os.path.join(write_folder,
-                                     'reports')
-
-        if not os.path.exists(report_folder):
-            utils.create_folder(report_folder)
 
         pop_write_name = os.path.join(
             write_folder,
@@ -94,11 +121,21 @@ class FutureYearLandUse:
             write_folder,
             ('land_use_' + str(self.future_year) + '_emp.csv'))
 
-        # Pathing
+        report_folder = os.path.join(write_folder,
+                                     'reports')
+
+        # Build folders
+        if not os.path.exists(write_folder):
+            utils.create_folder(write_folder)
+        if not os.path.exists(report_folder):
+            utils.create_folder(report_folder)
+
+        # Set object paths
         self.in_paths = {
             'base_land_use': base_land_use_path,
             'base_employment': base_employment_path,
             'base_soc_mix': base_soc_mix_path,
+            'fy_dem_mix': fy_demographic_path,
             'fy_at_mix': fy_at_mix_path,
             'fy_soc_mix': fy_soc_mix_path,
             'pop_growth': pop_growth_path,
@@ -120,10 +157,12 @@ class FutureYearLandUse:
                                    )
         init_report.to_csv(
             os.path.join(self.out_paths['report_folder'],
-                         '%s_%s_run_params.csv' % (self.scenario_name, self.future_year))
+                         '%s_%s_run_params.csv' % (self.scenario_name,
+                                                   self.future_year))
         )
 
     def build_fy_pop(self,
+                     balance_demographics=True,
                      adjust_ca=True,
                      adjust_soc=True,
                      adjust_area_type=True,
@@ -135,6 +174,9 @@ class FutureYearLandUse:
         """
         # Build population
         fy_pop, pop_reports = self._grow_pop(verbose=verbose)
+
+        if balance_demographics:
+            fy_pop = self._balance_demographics(fy_pop)
 
         if adjust_ca:
             # Adjust car availability mix
@@ -197,15 +239,22 @@ class FutureYearLandUse:
     def _get_scenario_path(self,
                            vector):
         """
+        Function to build a path to the relevant scenario input.
+        This can scale indefinitely as long as it's private.
+
         Parameters
         ----------
-        vector = ['at_mix, 'soc_mix', 'pop_growth', 'emp_growth', 'ca_shares', 'ca_growth']
+        vector = one from ['dem_mix', 'at_mix, 'soc_mix', 'pop_growth',
+        'emp_growth', 'ca_shares', 'ca_growth']
 
         Returns
         -------
         path : path to required vector
         """
-        if vector == 'at_mix':
+        if vector == 'dem_mix':
+            target_folder = 'dem_mix'
+            target_file = 'future_demographic_values.csv'
+        elif vector == 'at_mix':
             target_folder = 'at_mix'
             target_file = 'future_area_type_mix.csv'
         elif vector == 'soc_mix':
@@ -513,6 +562,29 @@ class FutureYearLandUse:
 
         return fy_pop_vector
 
+    def _balance_demographics(self,
+                              fy_pop):
+        """
+        Reshape future year population to match a given demographic vector
+
+        Parameters
+        ----------
+        fy_pop:
+            Vector of future year population, already grown in volume
+
+        Returns
+        -------
+        fy_pop:
+            FY pop with age segments adjusted to demographic outputs
+        """
+        # Get target demographic mix data
+        demographics = pd.read_csv(self.in_paths['fy_dem_mix'])
+
+        # Infill traveller types
+        fy_pop = utils.infill_traveller_types(fy_pop)
+
+        return fy_pop
+
     def _grow_to_future_year(self,
                              by_vector: pd.DataFrame,
                              fy_vector: pd.DataFrame,
@@ -561,10 +633,6 @@ class FutureYearLandUse:
 
         Parameters
         ----------
-        soc_weights_path:
-            Path to the soc weights file. Must contain at least the following
-            column names [zone_col, soc_col, jobs_col]
-
         zone_col:
             The column name in soc_weights_path that contains the zone data.
 

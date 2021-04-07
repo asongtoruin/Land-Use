@@ -1,14 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Created on: Mon March 1 09:43:45 2020
-Updated on:
-
-Original author: Ben Taylor
-Last update made by:
-Other updates made by:
-
 File purpose:
-WRITE PURPOSE
+Generic utils for land use build
 """
 import os
 
@@ -20,6 +13,7 @@ from math import isclose
 
 import pandas as pd
 
+import land_use.lu_constants as consts
 
 def create_folder(folder, ch_dir=False, verbose=True):
     """
@@ -167,3 +161,66 @@ def get_land_use(
                              long_var_name]).reset_index(drop=True)
 
     return lu
+
+
+def infill_traveller_types(land_use_build: pd.DataFrame,
+                           traveller_type_lookup=consts.TT_INDEX,
+                           attribute_subset = None,
+                           left_tt_col='traveller_type',
+                           right_tt_col='traveller_type'):
+
+    """
+    Function to reapply traveller type to a normalised land use build
+    where normalisation means the removal of all non-traveller type data
+
+    Parameters
+    ----------
+    land_use_build:
+        DataFrame containing a NTEM style 88 integer normalised traveller
+        type vector
+    traveller_type_lookup:
+        vector containing normalised constituent values of traveller type
+    attribute_subset:
+        List or None, which attributes do you want to retain in the lookup
+    left_tt_col:
+        Join left on
+    right_tt_col:
+        Join right on
+
+    Returns
+    -------
+    land_use_build:
+        Land use build with added normalised categories
+    references: List:
+        list of Dataframes with descriptions of normalised values
+    """
+
+    # Check traveller type column in both sides
+    if left_tt_col not in list(land_use_build):
+        raise ValueError('Traveller type not in land use')
+    if right_tt_col not in list(traveller_type_lookup):
+        raise ValueError('Traveller type not in lookup, try default')
+
+    # Subset the traveller type, if the user wants
+    tt_cols = list(traveller_type_lookup)
+    lu_cols = list(land_use_build)
+    if attribute_subset is not None:
+        if right_tt_col in attribute_subset:
+            attribute_subset.remove(right_tt_col)
+        tt_cols = [right_tt_col] + attribute_subset
+    #  Drop any cols in the lookup that are already in land use
+    # This should pick up the reindex above too.
+    # All too concise, very sorry if this fails.
+    tt_cols = [x for x in tt_cols if x in lu_cols]
+    traveller_type_lookup = traveller_type_lookup.reindex(
+        tt_cols, axis=1)
+
+    # Join traveller type
+    land_use_build = land_use_build.merge(
+        traveller_type_lookup,
+        how='left',
+        left_on=left_tt_col,
+        right_on=right_tt_col
+    )
+
+    return land_use_build
