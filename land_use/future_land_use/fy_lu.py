@@ -252,13 +252,13 @@ class FutureYearLandUse:
         path : path to required vector
         """
         if vector == 'dem_mix':
-            target_folder = 'dem_mix'
+            target_folder = 'demographics'
             target_file = 'future_demographic_values.csv'
         elif vector == 'at_mix':
-            target_folder = 'at_mix'
+            target_folder = 'area types'
             target_file = 'future_area_type_mix.csv'
         elif vector == 'soc_mix':
-            target_folder = 'soc_mix'
+            target_folder = 'soc_mix'  # Deprecated??
             target_file = 'future_soc_mix.csv'
         elif vector == 'pop_growth':
             target_folder = 'population'
@@ -579,6 +579,13 @@ class FutureYearLandUse:
         """
         # Get target demographic mix data
         demographics = pd.read_csv(self.in_paths['fy_dem_mix'])
+        # Normalise pop in demographics
+        # Pick up here - just make the input or lookups standard, less faff.
+        demographics = utils.normalise_attribute(demographics,
+                                                 attribute_name='population',
+                                                 reference=consts.AGE_REF,
+                                                 fuzzy_match='numbers_only'
+                                                 )
 
         # Infill traveller types
         fy_pop = utils.infill_traveller_types(fy_pop)

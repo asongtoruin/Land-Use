@@ -165,7 +165,7 @@ def get_land_use(
 
 def infill_traveller_types(land_use_build: pd.DataFrame,
                            traveller_type_lookup=consts.TT_INDEX,
-                           attribute_subset = None,
+                           attribute_subset=None,
                            left_tt_col='traveller_type',
                            right_tt_col='traveller_type'):
 
@@ -211,7 +211,7 @@ def infill_traveller_types(land_use_build: pd.DataFrame,
     #  Drop any cols in the lookup that are already in land use
     # This should pick up the reindex above too.
     # All too concise, very sorry if this fails.
-    tt_cols = [x for x in tt_cols if x in lu_cols]
+    tt_cols = ['traveller_type'] + [x for x in tt_cols if x not in lu_cols]
     traveller_type_lookup = traveller_type_lookup.reindex(
         tt_cols, axis=1)
 
@@ -224,3 +224,46 @@ def infill_traveller_types(land_use_build: pd.DataFrame,
     )
 
     return land_use_build
+
+def normalise_attribute(attribute: pd.DataFrame,
+                        attribute_name: str,
+                        reference: pd.DataFrame,
+                        reference_desc_field=None,
+                        attribute_out_name: str = None,
+                        fuzzy_match=False):
+    """
+    Function to join a normalising index onto a descriptive variable
+
+    Parameters
+    ----------
+    attribute:
+        Dataframe with a normalisable attribute
+    attribute_name:
+        Name of the attribute to normalise
+    reference:
+        Dataframe of reference. If string should attempt to import
+    reference_desc_field:
+        Name of the column in reference to join on. If none will look for non
+        text col
+    attribute_out_name:
+        What to call the attribute if not whatever arrives. Defaults to in value
+    fuzzy_match:
+        Some tricks to make a decent match.
+        'numbers_only': reduce attribute to numbers and join
+
+    Returns
+    -------
+    attribute:
+        Attribute normalised to lookup standard
+    """
+
+    # Work out target join field
+    # Asking for trouble - must be a better way to do this
+
+
+
+
+
+
+
+    return attribute

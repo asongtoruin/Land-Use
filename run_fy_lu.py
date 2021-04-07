@@ -18,7 +18,7 @@ if __name__ == '__main__':
             fy_model = fylu.FutureYearLandUse(
                 future_year=fy,
                 scenario_name=scenario,
-                )
+                sub_for_defaults=True)  # Naughty - should be explicit
 
             # Define run preferences
             if scenario == 'NTEM':
