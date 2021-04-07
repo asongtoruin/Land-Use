@@ -4,8 +4,7 @@ import os
 import pandas as pd
 
 import land_use.lu_constants as consts
-from land_use import utils as fyu
-
+from land_use import utils
 
 class FutureYearLandUse:
     def __init__(self,
@@ -79,13 +78,13 @@ class FutureYearLandUse:
             scenario_name)
 
         if not os.path.exists(write_folder):
-            fyu.create_folder(write_folder)
+            utils.create_folder(write_folder)
 
         report_folder = os.path.join(write_folder,
                                      'reports')
 
         if not os.path.exists(report_folder):
-            fyu.create_folder(report_folder)
+            utils.create_folder(report_folder)
 
         pop_write_name = os.path.join(
             write_folder,
@@ -135,7 +134,7 @@ class FutureYearLandUse:
         """
         """
         # Build population
-        fy_pop = self._grow_pop(verbose=verbose)
+        fy_pop, pop_reports = self._grow_pop(verbose=verbose)
 
         if adjust_ca:
             # Adjust car availability mix
@@ -154,10 +153,22 @@ class FutureYearLandUse:
             if reports:
                 at_changes.to_csv(
                     os.path.join(self.out_paths['report_folder'],
-                                 'area_type_changes_' + str(self.future_year) +
-                                 '.csv'),
+                                 'area_type_changes_%s.csv' % str(self.future_year)),
                     index=False
                 )
+
+        if reports:
+            pop_reports[0].to_csv(
+                os.path.join(self.out_paths['report_folder'],
+                             'pop_changes_%s_for_%s.csv' % (str(self.base_year),
+                                                            str(self.future_year))),
+                index=False)
+
+            pop_reports[1].to_csv(
+                os.path.join(self.out_paths['report_folder'],
+                             'pop_changes_%s.csv' % str(self.future_year)),
+                index=False
+            )
 
         if export:
             if verbose:
@@ -287,12 +298,14 @@ class FutureYearLandUse:
 
         # ## BASE YEAR POPULATION ## #
         print("Loading the base year population data...")
-        base_year_pop = fyu.get_land_use(
+        base_year_pop = utils.get_land_use(
             self.in_paths['base_land_use'],
             model_zone_col=zone_col,
             segmentation_cols=None)
         base_year_pop = base_year_pop.rename(
             columns={'people': self.base_year})
+        by_pop_report = self._lu_out_report(base_year_pop,
+                                            pop_var=self.base_year)
 
         # Audit population numbers
         print("Base Year Population: %d" % base_year_pop[self.base_year].sum())
@@ -300,17 +313,16 @@ class FutureYearLandUse:
         # ## FUTURE YEAR POPULATION ## #
         print("Generating future year population data...")
         # Merge on all possible segmentations - not years
-        merge_cols = fyu.intersection(list(base_year_pop),
-                                      list(population_growth))
+        merge_cols = utils.intersection(list(base_year_pop),
+                                        list(population_growth))
 
         population = self._grow_to_future_year(
             by_vector=base_year_pop,
             fy_vector=population_growth,
             merge_cols=merge_cols
         )
-
-        # ## TIDY UP, WRITE TO DISK ## #
-        # Reindex and sum
+        fy_pop_report = self._lu_out_report(population,
+                                            pop_var=self.future_year)
 
         # Population Audit
         if verbose:
@@ -325,8 +337,9 @@ class FutureYearLandUse:
         # print("Writing population to file...")
         # population_output = os.path.join(out_path, self.pop_fname)
         # population.to_csv(population_output, index=False)
+        report = [by_pop_report, fy_pop_report]
 
-        return population
+        return population, report
 
     def _grow_emp(self,
                   verbose=False):
@@ -340,7 +353,7 @@ class FutureYearLandUse:
 
         # ## BASE YEAR EMPLOYMENT ## #
         print("Loading the base year employment data...")
-        base_year_emp = fyu.get_land_use(
+        base_year_emp = utils.get_land_use(
             path=self.in_paths['base_employment'],
             model_zone_col=zone_col,
             segmentation_cols=None,
@@ -366,7 +379,7 @@ class FutureYearLandUse:
             )
 
         # Merge on all possible segmentations - not years
-        merge_cols = fyu.intersection(list(base_year_emp), list(employment_growth))
+        merge_cols = utils.intersection(list(base_year_emp), list(employment_growth))
 
         employment = self._grow_to_future_year(
             by_vector=base_year_emp,
@@ -762,3 +775,38 @@ class FutureYearLandUse:
 
         # Audit soc mix against LA level from NELUM
         return 0    # soc_adjusted_pop, fy_soc
+
+    def _lu_out_report(self,
+                       pop,
+                       pop_var,
+                       regions=True):
+        # TODO: Off to a reporting script I reckon
+        """
+        Sum segments in LU
+
+        Parameters
+        ----------
+        fy_pop:
+            Future year population vector
+
+        Returns
+        -------
+        report:
+            LU summary report
+        """
+        # Add region summary
+        if regions:
+            msoa_regions = pd.read_csv(consts.MSOA_REGION)
+            pop = pop.merge(msoa_regions,
+                                  how='left',
+                                  on='msoa_zone_id')
+
+        report_cols = list(pop)
+        report_cols.remove('msoa_zone_id')
+
+        group_cols = report_cols.copy()
+        group_cols.remove(pop_var)
+
+        report = pop.reindex(report_cols, axis=1).groupby(group_cols).sum().reset_index()
+
+        return report

@@ -30,6 +30,12 @@ EMPLOYMENT_MSOA = os.path.join(
     'non_freight_msoa_2018.csv'
 )
 
+MSOA_REGION = os.path.join(
+    LU_FOLDER,
+    LU_IMPORTS,
+    'msoa_region.csv'
+)
+
 SCENARIO_FOLDERS = {'NTEM': 'SC00_NTEM',
                     'SC01_JAM': 'SC01_JAM',
                     'SC02_PP': 'SC02_PP',
