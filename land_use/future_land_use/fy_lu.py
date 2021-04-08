@@ -579,16 +579,20 @@ class FutureYearLandUse:
         """
         # Get target demographic mix data
         demographics = pd.read_csv(self.in_paths['fy_dem_mix'])
-        # Normalise pop in demographics
-        # Pick up here - just make the input or lookups standard, less faff.
-        demographics = utils.normalise_attribute(demographics,
-                                                 attribute_name='population',
-                                                 reference=consts.AGE_REF,
-                                                 fuzzy_match='numbers_only'
-                                                 )
+        # Get demographic factors
+        target_factors = self._get_age_factors(demographics)
+
 
         # Infill traveller types
         fy_pop = utils.infill_traveller_types(fy_pop)
+        # Get current factors
+        current_factors = _get_age_factors(fy_pop)
+
+        # Get correction factors
+
+        # Apply correction factors
+
+
 
         return fy_pop
 
@@ -885,3 +889,43 @@ class FutureYearLandUse:
         report = pop.reindex(report_cols, axis=1).groupby(group_cols).sum().reset_index()
 
         return report
+
+
+    def _get_age_factors(self,
+                         age_vector: pd.DataFrame,
+                         pop_col: str = None):
+        """
+        Get age factors from a df with age in
+
+        Parameters
+        ----------
+        self
+        age_vector
+
+        Returns
+        -------
+
+        """
+
+        if pop_col is None:
+            pop_col = self.future_year
+
+        # Reindex
+        dem_cols = ['msoa_zone_id', 'age', pop_col]
+        age_vector = age_vector.reindex(dem_cols, axis=1)
+        # Get total
+        total = age_vector.reindex(
+            ['msoa_zone_id', pop_col], axis=1).groupby(
+            'msoa_zone_id').sum().reset_index()
+        total = total.rename(columns={pop_col: 'total'})
+        # Merge on total
+        age_vector = age_vector.merge(total,
+                                      how='left',
+                                      on='msoa_zone_id')
+
+        age_vector['age_factor'] = age_vector[pop_col]/age_vector['total']
+
+        ri_cols = ['msoa_zone_id', 'age', 'age_factor']
+        age_factors = age_vector.reindex(ri_cols, axis=1).reset_index(drop=True)
+
+        return age_factors
