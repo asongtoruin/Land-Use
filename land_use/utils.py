@@ -11,9 +11,12 @@ from typing import Union
 
 from math import isclose
 
+import pandas
 import pandas as pd
 
 import land_use.lu_constants as consts
+from land_use import lu_constants
+
 
 def create_folder(folder, ch_dir=False, verbose=True):
     """
@@ -260,10 +263,48 @@ def normalise_attribute(attribute: pd.DataFrame,
     # Work out target join field
     # Asking for trouble - must be a better way to do this
 
+    return 0
 
 
+def lu_out_report(pop: pd.DataFrame,
+                  pop_var: str,
+                  group_vars: List = None,
+                  regions=True):
+    """
+    Sum segments in LU
 
+    Parameters
+    ----------
 
+    fy_pop:
+        Future year population vector
+    regions
+    group_vars
+    pop_var
+    pop
 
+    Returns
+    -------
+    report:
+        LU summary report
+    """
+    # Add region summary
+    if regions:
+        msoa_regions = pd.read_csv(consts.MSOA_REGION)
+        pop = pop.merge(msoa_regions,
+                              how='left',
+                              on='msoa_zone_id')
 
-    return attribute
+    report_cols = list(pop)
+    report_cols.remove('msoa_zone_id')
+    if group_vars is not None:
+        report_cols = group_vars
+        # Append pop var, just to drop
+        report_cols.append(pop_var)
+
+    group_cols = report_cols.copy()
+    group_cols.remove(pop_var)
+
+    report = pop.reindex(report_cols, axis=1).groupby(group_cols).sum().reset_index()
+
+    return report

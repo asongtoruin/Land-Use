@@ -6,6 +6,7 @@ import pandas as pd
 import land_use.lu_constants as consts
 from land_use import utils
 
+
 class FutureYearLandUse:
     def __init__(self,
                  model_folder=consts.LU_FOLDER,
@@ -176,7 +177,7 @@ class FutureYearLandUse:
         fy_pop, pop_reports = self._grow_pop(verbose=verbose)
 
         if balance_demographics:
-            fy_pop = self._balance_demographics(fy_pop)
+            fy_pop, dem_reports = self._balance_demographics(fy_pop)
 
         if adjust_ca:
             # Adjust car availability mix
@@ -353,7 +354,7 @@ class FutureYearLandUse:
             segmentation_cols=None)
         base_year_pop = base_year_pop.rename(
             columns={'people': self.base_year})
-        by_pop_report = self._lu_out_report(base_year_pop,
+        by_pop_report = utils.lu_out_report(base_year_pop,
                                             pop_var=self.base_year)
 
         # Audit population numbers
@@ -370,7 +371,7 @@ class FutureYearLandUse:
             fy_vector=population_growth,
             merge_cols=merge_cols
         )
-        fy_pop_report = self._lu_out_report(population,
+        fy_pop_report = utils.lu_out_report(population,
                                             pop_var=self.future_year)
 
         # Population Audit
@@ -563,7 +564,9 @@ class FutureYearLandUse:
         return fy_pop_vector
 
     def _balance_demographics(self,
-                              fy_pop):
+                              fy_pop,
+                              reports=False,
+                              verbose=True):
         """
         Reshape future year population to match a given demographic vector
 
@@ -576,25 +579,71 @@ class FutureYearLandUse:
         -------
         fy_pop:
             FY pop with age segments adjusted to demographic outputs
+        segment_change_report:
+            Report detailing how segments have fared with the change
         """
+        # Get totals by segment before and after
+        intact_cols = list(fy_pop)
+        report_cols = intact_cols.copy()
+        report_cols.remove('msoa_zone_id')
+        report_cols.remove(self.future_year)
+
+        if verbose:
+            print('Pop before = %d' % fy_pop[self.future_year].sum())
+
+        if reports:
+            before_reports = list()
+            for rc in report_cols:
+                before_reports.append({rc: utils.lu_out_report(
+                    fy_pop,
+                    pop_var=self.future_year,
+                    group_vars=[rc])})
+
         # Get target demographic mix data
         demographics = pd.read_csv(self.in_paths['fy_dem_mix'])
         # Get demographic factors
         target_factors = self._get_age_factors(demographics)
-
+        target_factors = target_factors.rename(
+            columns={'factor': 'target_factor'})
 
         # Infill traveller types
         fy_pop = utils.infill_traveller_types(fy_pop)
         # Get current factors
-        current_factors = _get_age_factors(fy_pop)
+        current_factors = self._get_age_factors(fy_pop)
+        current_factors = current_factors.rename(
+            columns={'factor': 'current_factor'})
 
         # Get correction factors
+        corr_factors = current_factors.merge(
+            target_factors, how='left', on=['msoa_zone_id', 'age']
+        )
+        corr_factors['corr'] = corr_factors['target_factor'] / corr_factors['current_factor']
 
         # Apply correction factors
+        fy_pop = fy_pop.merge(corr_factors,
+                              how='left',
+                              on=['msoa_zone_id', 'age'])
+        fy_pop[self.future_year] *= fy_pop['corr']
 
+        # Back to original cols
+        fy_pop = fy_pop.reindex(intact_cols, axis=1)
 
+        if verbose:
+            print('Pop after = %d' % fy_pop[self.future_year].sum())
 
-        return fy_pop
+        # TODO: Finish reports
+        if reports:
+            after_reports = list()
+            for rc in report_cols:
+                after_reports.append({rc: utils.lu_out_report(
+                    fy_pop,
+                    pop_var=self.future_year,
+                    group_vars=[rc])})
+            sc_reports = [before_reports, after_reports]
+        else:
+            sc_reports = list()
+
+        return fy_pop, sc_reports
 
     def _grow_to_future_year(self,
                              by_vector: pd.DataFrame,
@@ -855,42 +904,6 @@ class FutureYearLandUse:
         # Audit soc mix against LA level from NELUM
         return 0    # soc_adjusted_pop, fy_soc
 
-    def _lu_out_report(self,
-                       pop,
-                       pop_var,
-                       regions=True):
-        # TODO: Off to a reporting script I reckon
-        """
-        Sum segments in LU
-
-        Parameters
-        ----------
-        fy_pop:
-            Future year population vector
-
-        Returns
-        -------
-        report:
-            LU summary report
-        """
-        # Add region summary
-        if regions:
-            msoa_regions = pd.read_csv(consts.MSOA_REGION)
-            pop = pop.merge(msoa_regions,
-                                  how='left',
-                                  on='msoa_zone_id')
-
-        report_cols = list(pop)
-        report_cols.remove('msoa_zone_id')
-
-        group_cols = report_cols.copy()
-        group_cols.remove(pop_var)
-
-        report = pop.reindex(report_cols, axis=1).groupby(group_cols).sum().reset_index()
-
-        return report
-
-
     def _get_age_factors(self,
                          age_vector: pd.DataFrame,
                          pop_col: str = None):
@@ -911,21 +924,22 @@ class FutureYearLandUse:
             pop_col = self.future_year
 
         # Reindex
+        """
+        One liner challenge
+        
+        """
+
         dem_cols = ['msoa_zone_id', 'age', pop_col]
         age_vector = age_vector.reindex(dem_cols, axis=1)
+
         # Get total
-        total = age_vector.reindex(
-            ['msoa_zone_id', pop_col], axis=1).groupby(
-            'msoa_zone_id').sum().reset_index()
-        total = total.rename(columns={pop_col: 'total'})
-        # Merge on total
-        age_vector = age_vector.merge(total,
-                                      how='left',
-                                      on='msoa_zone_id')
+        age_vector['factor'] = age_vector[pop_col] / age_vector.groupby(
+            'msoa_zone_id')[pop_col].transform('sum')
 
-        age_vector['age_factor'] = age_vector[pop_col]/age_vector['total']
-
-        ri_cols = ['msoa_zone_id', 'age', 'age_factor']
-        age_factors = age_vector.reindex(ri_cols, axis=1).reset_index(drop=True)
+        ri_cols = ['msoa_zone_id', 'age', 'factor']
+        rig_cols = ri_cols.copy()
+        rig_cols.remove('factor')
+        age_factors = age_vector.reindex(ri_cols, axis=1).\
+            groupby(rig_cols).sum().reset_index()
 
         return age_factors
