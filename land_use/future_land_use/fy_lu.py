@@ -177,17 +177,19 @@ class FutureYearLandUse:
         fy_pop, pop_reports = self._grow_pop(verbose=verbose)
 
         if balance_demographics:
-            fy_pop, dem_reports = self._balance_demographics(fy_pop)
+            fy_pop, dem_reports = self._balance_demographics(fy_pop,
+                                                             reports=reports)
+        else:
+            dem_reports = dict({'null_report': 0})
 
+        # Adjust car availability mix
         if adjust_ca:
-            # Adjust car availability mix
             fy_pop = self._adjust_ca(fy_pop,
                                      ca_growth_method=ca_growth_method)
 
+        # TODO: Adjust SOC mix
         if adjust_soc:
-            # TODO: Adjust SOC mix
             fy_pop = self._adjust_soc(fy_pop)
-            print('If this were an FTS you\'d be adjusting soc by now')
             
         if adjust_area_type:
             # Adjust area type
@@ -200,6 +202,7 @@ class FutureYearLandUse:
                     index=False
                 )
 
+        # Reporting
         if reports:
             pop_reports[0].to_csv(
                 os.path.join(self.out_paths['report_folder'],
@@ -213,6 +216,15 @@ class FutureYearLandUse:
                 index=False
             )
 
+            for dr in list(dem_reports):
+                dem_reports[dr].to_csv(
+                    os.path.join(self.out_paths['report_folder'],
+                                 'dem_changes_%s_%s.csv' % (str(dr),
+                                                            str(self.future_year))),
+                    index=False
+                )
+
+        # Export main dataset
         if export:
             if verbose:
                 print('Writing to:')
@@ -584,20 +596,9 @@ class FutureYearLandUse:
         """
         # Get totals by segment before and after
         intact_cols = list(fy_pop)
-        report_cols = intact_cols.copy()
-        report_cols.remove('msoa_zone_id')
-        report_cols.remove(self.future_year)
 
         if verbose:
             print('Pop before = %d' % fy_pop[self.future_year].sum())
-
-        if reports:
-            before_reports = list()
-            for rc in report_cols:
-                before_reports.append({rc: utils.lu_out_report(
-                    fy_pop,
-                    pop_var=self.future_year,
-                    group_vars=[rc])})
 
         # Get target demographic mix data
         demographics = pd.read_csv(self.in_paths['fy_dem_mix'])
@@ -608,6 +609,23 @@ class FutureYearLandUse:
 
         # Infill traveller types
         fy_pop = utils.infill_traveller_types(fy_pop)
+
+        # Report on all tt segments
+        report_cols = list(fy_pop)
+        report_cols.remove('msoa_zone_id')
+        report_cols.remove(self.future_year)
+        if reports:
+            report_dict = dict()
+            for rc in report_cols:
+                before_report = utils.lu_out_report(
+                    fy_pop,
+                    pop_var=self.future_year,
+                    group_vars=[rc])
+                before_report = before_report.rename(
+                    columns={self.future_year: 'before'}
+                )
+                report_dict.update({rc: before_report})
+
         # Get current factors
         current_factors = self._get_age_factors(fy_pop)
         current_factors = current_factors.rename(
@@ -625,25 +643,33 @@ class FutureYearLandUse:
                               on=['msoa_zone_id', 'age'])
         fy_pop[self.future_year] *= fy_pop['corr']
 
+        if reports:
+            for rc in report_cols:
+                after_report = utils.lu_out_report(
+                    fy_pop,
+                    pop_var=self.future_year,
+                    group_vars=[rc])
+                after_report = after_report.rename(
+                    columns={self.future_year: 'after_adj'})
+                # Merge
+                after_report = report_dict[rc].merge(
+                    after_report,
+                    on=rc)
+                report_dict.update({rc: after_report})
+
+        else:
+            report_dict = dict()
+
         # Back to original cols
         fy_pop = fy_pop.reindex(intact_cols, axis=1)
 
         if verbose:
             print('Pop after = %d' % fy_pop[self.future_year].sum())
+            if reports:
+                print('Adjustment before/after')
+                print(report_dict['age'])
 
-        # TODO: Finish reports
-        if reports:
-            after_reports = list()
-            for rc in report_cols:
-                after_reports.append({rc: utils.lu_out_report(
-                    fy_pop,
-                    pop_var=self.future_year,
-                    group_vars=[rc])})
-            sc_reports = [before_reports, after_reports]
-        else:
-            sc_reports = list()
-
-        return fy_pop, sc_reports
+        return fy_pop, report_dict
 
     def _grow_to_future_year(self,
                              by_vector: pd.DataFrame,
