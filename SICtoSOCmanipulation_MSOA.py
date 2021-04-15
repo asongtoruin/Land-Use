@@ -31,12 +31,14 @@ import normits_utils as nup # Folder build utils
 # Default regional splits path. Soure: HSL. SIC categories are differnt for HSL and CE.
 _regional_splits_path = 'Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/'
 _default_sic_2digit_path = 'Y:/NorMITs Land Use/import/NPR Segmentation/raw data and lookups/sic_div_msoa_2018.csv'
+_uplift_path = 'Y:/NorMITs Land Use/Results/'
+_processed_data = 'Y:/NorMITs Land Use/import/NPR Segmentation/processed data/'
 
 # read in data for the uplift
-ons_employees = pd.ExcelFile('Employees by LAD - table52017p.xlsx') # ONS data in thousands of employees to scale to - use 2017 as 2018 data is provisional
-ons_people_in_work = pd.ExcelFile('lfs_people_in_employment_2018.xlsx')
-employees_socPath = (defaultHomeDir +output+'/UK_SICtoSOC_HSL.csv') # SICtoSOC output split into 12 TfN sectors
-area_code_lookup = pd.read_csv('MSOA_LAD_APR19.csv') # lookup msoa, LA, county, _APR19 changes E06000028 and E06000029 to E06000058
+ons_employees = pd.ExcelFile((_uplift_path + 'Employees by LAD - table52017p.xlsx')) # ONS data in thousands of employees to scale to - use 2017 as 2018 data is provisional
+ons_people_in_work = pd.ExcelFile((_uplift_path + 'lfs_people_in_employment_2018.xlsx'))
+employees_socPath = (_processed_data + '/UK_SICtoSOC_2018_HSLcategories.csv') # SICtoSOC output split into 12 TfN sectors
+area_code_lookup = pd.read_csv(_processed_data + 'LAD controls 2018/MSOA_LAD_APR19.csv') # lookup msoa, LA, county, _APR19 changes E06000028 and E06000029 to E06000058
 
 # TODO: Standard col format names for input
 
@@ -91,11 +93,11 @@ def classify_soc(soc_value):
     # TODO: All placeholders! Replace with accurate lookup!!
   
     if soc_value <= 30:
-        soc_class = 'high'
+        soc_class = 1
     elif soc_value > 30 and soc_value <=50:
-        soc_class = 'medium'
+        soc_class = 2
     elif soc_value > 50 and soc_value <100:
-        soc_class = 'skilled'
+        soc_class = 3
     else:
         soc_class = None
     return(soc_class)
@@ -103,11 +105,7 @@ def classify_soc(soc_value):
 def build_sic_to_soc(balance_soc_factors = True,
                      output = 'emp',
                      sic_2digit_path = _default_sic_2digit_path,
-                     defaultHomeDir = 'C:/output',
                      write = False):
-
-
-    nup.set_wd('C:/NorMITs_Export', iteration=output)
 
     # File paths
     # MSOA divisions HSL data
@@ -164,27 +162,34 @@ def build_sic_to_soc(balance_soc_factors = True,
 
     socs['seg_jobs'] = socs['total'] * socs['jobs']
 
-    if write:
-        socs.to_csv('Y:/NorMITs Land Use/import/NPR Segmentation/UK_SICtoSOCv3.csv')
-        splits.to_csv('Y:/NorMITs Land Use/import/NPR Segmentation/splits.csv')
+    return(socs)
         
-# TODO: functionalise this and might need toreplace the employees_socPath
+# TODO: functionalise this and might need to replace the employees_socPath
 ############################# GENERATE LAD LEVEL CONTROL ################################
 
 # rename LAD columns
-employees_lad = pd.read_excel(ons_employees, sheet_name=2, header=1, usecols=[0, 2, 13])
-employees_lad.columns = ['LA Code', 'County Code', 'Total Employees']
+def build_employees_by_lad(ons_employees,
+                           ons_people_in_work):
+    """
+    ons_employees = Excel object of ONS employees data
+    ons_people_in_work = Excel object of ONS people in work
+    """
+    # Import employees by LAD
+    employees_lad = pd.read_excel(ons_employees, sheet_name=2, header=1, usecols=[0, 2, 13])
+    employees_lad.columns = ['LA Code', 'County Code', 'Total Employees']
 
-# factor Employees by LAD 2017 up to 2018 (provisional) total
-people_in_work_18 = pd.read_excel(ons_people_in_work, sheet_name=0, header=7, usecols=[0, 3])
-people_in_work_18.columns = ['Region', 'Total in employment - aged 16 and over']
-people_in_work_18[['Total in employment - aged 16 and over']] =people_in_work_18[['Total in employment - aged 16 and over']].div(1000)
+    # factor Employees by LAD 2017 up to 2018 (provisional) total
+    people_in_work_18 = pd.read_excel(ons_people_in_work, sheet_name=0, header=7, usecols=[0, 3])
+    people_in_work_18.columns = ['Region', 'Total in employment - aged 16 and over']
+    people_in_work_18[['Total in employment - aged 16 and over']] =people_in_work_18[['Total in employment - aged 16 and over']].div(1000)
 
-# calculate factor to scale up employees per LAD (2017) to people in work (2018)
-ons_factor = people_in_work_18[['Total in employment - aged 16 and over']].sum().div(employees_lad['Total Employees'].sum(), axis='index')
-employees_lad['Total Employees Factored'] = employees_lad['Total Employees'] * ons_factor[0]
-employees_lad = employees_lad.drop(['Total Employees'], axis=1)
-employees_lad['Total Employees Factored'] = employees_lad['Total Employees Factored']*1000
+    # calculate factor to scale up employees per LAD (2017) to people in work (2018)
+    ons_factor = people_in_work_18[['Total in employment - aged 16 and over']].sum().div(employees_lad['Total Employees'].sum(), axis='index')
+    employees_lad['Total Employees Factored'] = employees_lad['Total Employees'] * ons_factor[0]
+    employees_lad = employees_lad.drop(['Total Employees'], axis=1)
+    employees_lad['Total Employees Factored'] = employees_lad['Total Employees Factored']*1000
+
+    return(employees_lad)
 
 ############################# GENERATE LAD/COUNTY/SCOT-WALES LEVEL SCALING FACTORS ################################
 employees_soc = pd.read_csv(employees_socPath).drop(columns={'Unnamed: 0'})
@@ -236,20 +241,47 @@ factored_employees.reset_index().to_csv('C:/NorMITs_Export/'+'jobs_by_industry_s
 
 
 def build_attraction_employments():
-    
-    # TODO: Replace placeholders
-    
+        
     # Run sic/soc lookup
-    sic_soc = build_sic_to_soc()
+    sic_soc = build_sic_to_soc(balance_soc_factors = True,
+                               output = 'emp',
+                               sic_2digit_path = _default_sic_2digit_path,
+                               write = False)
+    
+    # Replace non integer values in jobs - get 2 digit SIC
+    # 2 digit SIC is basis for weighting - hence why we needed 5 digit lookup.
+    # Potentially not anymore.
+    unq_sic = sic_soc['HSL_SIC'].drop_duplicates()
+    print(unq_sic)
+    sic_soc['sic_2d'] = sic_soc['HSL_SIC'].str.replace('s','')
+    sic_soc['sic_2d'] = sic_soc['sic_2d'].str.replace('_Wrkr','')
+    
+    # Group, sum & tidy columns
+    sic_soc = sic_soc.reindex(
+            ['MSOA', 'sic_2d', 'soc_class', 'seg_jobs'],
+            axis=1).groupby(
+                    ['MSOA', 'sic_2d', 'soc_class']).sum(
+                            ).reset_index()
 
-    # TODO: Import 5 digit SIC from Bres data
-    sic_soc = # TODO: 5 digit split
+    sic_soc = sic_soc.sort_values(
+            ['MSOA','soc_class']).reset_index(
+                    drop=True)
 
-    # Overlay - bring though SIC/SOC splits
-    attraction_employments = None # Placeholder
+    # Bit stuck - can't remember:
+    # How we're supposed to overlay purpose weighting
+    # Why I needed the lookup to 5 digit SIC
+    # How NS-sec is supposed to be important (if at all)
+
+    # Check MSOAs are intact
+    msoa_audit = sic_soc['MSOA'].drop_duplicates()
+    if len(msoa_audit) == 8480:
+        print('All MSOAs accounted for')
+    else:
+        print('Some MSOAs missing')
 
     # Export to Y:/Data or a database
+    sic_soc.to_csv('soc_2_digit_sic_2018.csv', index=False)
 
-    return(attraction_employments)
+    return(sic_soc)
 
 
