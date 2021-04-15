@@ -35,7 +35,7 @@ if __name__ == '__main__':
                 fym.build_fy_pop(
                     balance_demographics=balance_demographics,
                     adjust_ca=True,
-                    ca_growth_method='factor',
+                    ca_growth_method=ca_growth_method,
                     adjust_soc=adjust_soc,
                     adjust_area_type=adjust_area_type,
                     reports=True,
