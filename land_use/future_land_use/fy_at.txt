@@ -1,9 +1,0 @@
-Actions:
-* Make sure k-means code is up to date w/ stable centres /
-* Check that cluster definition is similar to what we got before
-* Build new predictive data sets using FY land use
-* Run predictions for future year
-* Merge FY AT into FY land use
-
-Qs:
-* What do we do if the base year re-run mucks up the classifications?
