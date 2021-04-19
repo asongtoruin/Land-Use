@@ -16,8 +16,7 @@ once run the source data should be ready for other functions
 # TODO: change the RD06 to categiry 4 = 'flats' in next iter
 # TODO: change 'ONS reports 27.4M in 2017' to be VOA based
 # TODO: take into account classifications for communal establishments
-You need to copy the files from Y:\NorMITs Land Use\import\AddressBase\2018 into the iteration folder 
-before running this
+
 """
 import gc
 import os
@@ -48,7 +47,7 @@ _default_uprn_lookup_path = (_import_folder + 'AddressBase/2018/uprnLookup.csv')
 _default_census_property_types_path = (_import_folder+'Census_Property_Type_Maps.xlsx')
 _default_alladdresses_path = (_import_folder + 'AddressBase/2018/allAddresses.csv')
 _default_allproperties_path = (_import_folder + 'AddressBase/2018/allProperties.csv')
-# remember to switch everything from msoaRef to _default_msoaRef
+
 _default_lsoaRef = _default_zone_ref_folder+'/UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz.shp'
 _default_msoaRef = _default_zone_ref_folder+'/UK MSOA and Intermediate Zone Clipped 2011/uk_ew_msoa_s_iz.shp'
 _default_ladRef = _default_zone_ref_folder+'/GIS Shapefiles/LAD GB 2017/Local_Authority_Districts_December_2017_Full_Clipped_Boundaries_in_Great_Britain.shp'
