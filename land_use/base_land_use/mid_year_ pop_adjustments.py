@@ -352,23 +352,25 @@ def adjust_landuse_to_specific_yr(landusePath = , #might need changing
                                              'Gender', 'employment_type',
                                              'ns_sec', 'household_composition',
                                              'SOC_category', 'people']).drop_duplicates()
-    # normalise here before joining etc?
-        list(landusesegments)
-        gender = landusesegments['Gender'].drop_duplicates()
-        gender_nt = pd.DataFrame({'Gender':['Male', 'Females', 'Children'],
-                                 'gender':['2', '3', '0']})
-        age = landusesegments['Age'].drop_duplicates()
-        age = pd.DataFrame({'Age':['under 16', '16-74', '75 or over'], 
-                            'age_code':[1,2,3]})
-        emp = landusesegments['employment_type'].drop_duplicates()
-        emp_nt = pd.DataFrame({'employment_type':['fte', 'pte', 'unm', 'stu', 'non_wa'],
-                               'emp':['1', '2', '3', '4', '5']})
+        # normalise here before joining etc?
+        # TODO: male singular and females/children plural. Check
+        gender_nt = {'Male': 2,
+                     'Females': 3,
+                     'Children': 0}
+        age_nt = {'under 16': 1,
+                  '16-74': 2,
+                  '75 or over': 3}
+        emp_nt = {'fte': 1,
+                  'pte': 2,
+                  'unm': 3,
+                  'stu': 4,
+                  'non_wa': 5}
         landusesegments['SOC_category'] = landusesegments['SOC_category'].fillna(0)
         # socs = landusesegments['SOC_category'].drop_duplicates()
         
-        landusesegments = landusesegments.merge(gender_nt, on = ['Gender']).drop(columns={'Gender'})    
-        landusesegments = landusesegments.merge(age, on = ['Age']).drop(columns={'Age'})    
-        landusesegments = landusesegments.merge(emp_nt, on = ['employment_type']).drop(columns={'employment_type'}) 
+        landusesegments['gender'] = landusesegments['Gender'].map(gender_nt)
+        landusesegments['age_code'] = landusesegments['Age'].map(age_nt)
+        landusesegments['emp'] = landusesegments['employment_type'].map(emp_nt)
         landusesegments.to_csv('E:/NorMITs_Export/landuse_segments.csv')
     
         pop_pc_totals = landusesegments.groupby(
@@ -379,8 +381,9 @@ def adjust_landuse_to_specific_yr(landusePath = , #might need changing
         ewmype = adjust_mype()
         
         mype_gb = ewmype.append(Scot_adjust)
-        mype_gb = mype_gb.merge(gender_nt, on = ['Gender']).drop(columns={'Gender'})
-        mype_gb = mype_gb.merge(age, on = ['Age']).drop(columns={'Age'})
+        mype_gb['gender'] = mype_gb['Gender'].map(gender_nt)
+        mype_gb['age_code'] = mype_gb['Age'].map(age_nt)
+        mype_gb = mype_gb.drop(columns={'Gender', 'Age'})
         
         mypepops = pop_pc_totals.merge(mype_gb, on = ['ZoneID', 'gender', 'age_code'])
         del(Scot_adjust, ewmype, mype_gb)
