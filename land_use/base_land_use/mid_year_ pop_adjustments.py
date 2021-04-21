@@ -121,11 +121,8 @@ def format_english_mype(_mype_males,
     del(mype_females, mype_males)
     print('ONS population MYE for E+W is:', mype['pop'].sum())
 
-def format_scottish_mype(_landuse_segments, # might need changing
-                         _default_lad_translation,
-                         _default_ladRef,
-                         _mypeScot_females,
-                         _mypeScot_males):
+def format_scottish_mype(scot_f = _mypeScot_females,
+                         scot_m = _mypeScot_males):
     """
     getting Scottish MYPE into the right format - 'melt' to get columns as rows, then rename them
     This should be a standard from any MYPE in the future segmented into females and males.
@@ -203,7 +200,7 @@ def get_ewpopulation(format_english_mype):
 
     Returns
     ----------
-    :
+    EW population:
         DataFrame containing formatted population ready to be joined to Census segmentation and 
         into sort_communal_output function
     """
@@ -546,9 +543,7 @@ processed_df = pd.concat(temp)
         print ('FY not set up yet')
               
     
-def sort_out_hops_uplift(_default_property_count,
-                         _hops2011
-                         ):
+def sort_out_hops_uplift():
     """    
     Parameters
     ----------
@@ -687,10 +682,7 @@ def adjust_car_availability( #might need changing
         car_available.to_csv('C:/NorMITs_Export/caravailable.csv')
         
         
-def adjust_soc_gb(_gb_soc_totals,
-                  _default_ladRef,
-                  _default_lad_translation,
-                  _landuse_segments # might need changing):
+def adjust_soc_gb( # might need changing):
     """
     To apply before the MYPE
     adjusts SOC values to gb levels for 2018
@@ -795,11 +787,7 @@ def adjust_soc_gb(_gb_soc_totals,
     
     NPRSegmentation.to_csv(_default_home_dir+'/NPRSegments.csv')
 
-def AdjustSOCs (_ladsoc_control, 
-                _default_lad_translation, 
-                _default_ladRef, 
-                _lad2017,
-                _landuse_segments2):
+def AdjustSOCs ():
                 #AllPath = 'C:/NorMITs_Export/NPRSegments.csv'):
     
     ladref = pd.read_csv(_default_lad_translation).iloc[:,0:2]
@@ -1275,108 +1263,15 @@ def Country_emp_control(_country_control,
     Employmenttypes = Adjusted.groupby(by=['employment_type'],as_index = False).sum()
     Employmenttypes.to_csv('C:/NorMITs_Export/employment2.csv')
     """
-   # CommunalEstablishments = landuse[landuse.property_type ==8]
-# Check = landuse.groupby(by=['ZoneID'], as_index = False).sum()
     
-  """  
-
-
-    ############################# JOIN BACK TO MSOA ################################
-    
-    Activeatwork = ['fte', 'pte']
-    ActivePopAtWork = ActivePop[ActivePop.employment_type.isin(Activeatwork)]
-    ###
-    ActivePopGender = ActivePop.groupby(by=['ZoneID', 'Gender'], as_index = False).sum()
-    ActivePopGender = ActivePopGender.drop(columns={'household_composition','SOC_category','ns_sec'})
-    
-    FactoredEmployees = ActivePop.merge(compare, on = ['lad17cd', 'Gender'], how = 'left')
-    FactoredEmployees = 
-    FactoredEmployees['newpop2'] = FactoredEmployees['newpop']/FactoredEmployees['factor']
-    CityofLondon = FactoredEmployees[FactoredEmployees.ZoneID=='E02000001']
-    
-    FactoredEmployees = FactoredEmployees.replace([np.inf, -np.inf], np.nan)
-    FactoredEmployees['newpop2'] = FactoredEmployees['newpop2'].fillna(FactoredEmployees['newpop'])
-    FactoredEmployees['newpop2'].sum()
-    FactoredEmployees = FactoredEmployees.replace([np.inf, -np.inf], np.nan)
-    FactoredEmployees.loc[FactoredEmployees['factor'] == 0, 'newpop2']=FactoredEmployees['newpop']    
-    FactoredEmployees['newpop2'].sum()
-
-    ########################### WORK OUT UNEMPLOYED ######################################
-    # if Employees['newpop']= 0 don't readjust & for Scotland's few LAs
-    Unemployed = FactoredEmployees.groupby(by=['lad17cd', 'Gender'],as_index = False).sum().drop(columns=
-                                          {'landuse_total', 'SOC_category', 'household_composition','LADcontrol_total', 'property_type',
-                                           'area_type','ns_sec', 'objectid', 'Unnamed: 0'})
-    Unemployed['unm_people']= Unemployed['newpop']- Unemployed['newpop2']
-    # this is only for City of London:
-    Unemployed.loc[Unemployed['unm_people'] <= 0,'unm_people'] = 0
-    Unemployed = Unemployed.drop(columns={'newpop', 'newpop2', 'factor'})
-    Unemployed['employment_type'] = 'unm'
-           
-    ########################## JOIN TO LANDUSE TOTALS TO GET A FACTOR #############################
-    Unemployedtype=['unm', 'stu']
-    LanduseLADunm = LanduseLAD[LanduseLAD.employment_type.isin(Unemployedtype)]
-    compareunm = LanduseLADunm.merge(Unemployed, on = ['lad17cd', 'Gender', 'employment_type'], how = 'left')
-    compareunm['factorunm']= compareunm['unm_people']/compareunm['landuse_total']
-
-    
-    ######################### JOIN BACK TO LANDUSE TO WORK OUT NEW UNM PEOPLE #####################
-    #compare = compare.drop(columns={'landuse_total', 'LADcontrol_total'})
-    Unemployedtype=['unm']
-    ActiveUnemployed = ActivePop[ActivePop.employment_type.isin(Unemployedtype)]
-
-    # LanduseLADunm = LanduseLAD[LanduseLAD.employment_type.isin(Unemployedtype)]
-    FactoredUnemployment = ActiveUnemployed.merge(compareunm, on = ['lad17cd', 
-                                                                    'Gender', 
-                                                                    'employment_type'], how = 'outer')
-    FactoredUnemployment['newpop2'] = FactoredUnemployment['factorunm']*FactoredUnemployment['newpop']
-    
-    
-    FactoredUnemployment['newpop2'].sum()
-    FactoredUnemployment = FactoredUnemployment.drop(columns={'newpop'}).rename(columns={'newpop2':'people'})
-    ####################### JOIN THE TWO TOGETHER ###########################################
-    FactoredEmployees= FactoredEmployees.drop(columns={'people'})
-    FactoredEmployees = FactoredEmployees.rename(columns={'newpop2':'people'})
-
-    FactoredEmployees = FactoredEmployees.reindex(columns=['ZoneID', 'area_type',
-                                                   'property_type','Age', 'employment_type',
-                                                   'household_composition', 'Gender', 'ns_sec', 
-                                                   'SOC_category','people'])
-    
-    FactoredUnemployment = FactoredUnemployment.reindex(columns= ['ZoneID', 'area_type',
-                                                   'property_type','Age', 'employment_type',
-                                                   'household_composition', 'Gender', 'ns_sec',
-                                                   'SOC_category','people'])
-    Unm = FactoredUnemployment['people'].sum()
-    Emp = FactoredEmployees['people'].sum()
-
-    FactoredActive = FactoredUnemployment.append(FactoredEmployees)
-    check = FactoredActive['people'].sum()
-    FactoredActive = FactoredActive.reindex(columns=['ZoneID', 'Age', 'Gender','employment_type', 'area_type', 
-                                    'property_type', 'household_composition',
-                                    'people'])
-    
-    InactivePot = InactivePot.reindex(columns=['ZoneID', 'Age', 'Gender','employment_type', 'area_type', 
-                                    'property_type', 'household_composition',
-                                    'people'])
-    NEWpopulation = FactoredActive.append(InactivePot)
-    NEWpopulation.to_csv('C:/NorMITs_Export/cotnrolledpopulation.csv')
-    
-    del(compareunm, compare, LADcontrolled)
-    del(FactoredActive, FactoredEmployees, FactoredUnemployment, ActiveUnemployed)
-    del( LADControlPath, Activeatwork)
-    del(Unemployed, Unemployedtype)
-    NEWpopulation.to_csv('C:/NorMITs_Export/iter3/NewAdjustedpopulation.csv')
-"""
     
 def run_mype(midyear = True):
     control_to_lad_employment()
-    # normalise_landuse()
     adjust_landuse_to_specific_year()
     sort_out_hops_uplift()
     Country_emp_control()
     adjust_soc_gb()
     get_ca()
-    normalise
     adjust_car_availability()
 
     
