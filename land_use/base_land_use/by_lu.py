@@ -1,13 +1,12 @@
 import os
-
 import pandas as pd
-
 import land_use.lu_constants as consts
 from land_use import utils
+from land_use.base_land_use import main_build
 
 """
 1. Run base_land_use/Land Use data prep.py - this prepares the AddressBase extract and classifies the properties to prep the property data
-2. Run base_land_use/main_build_hh_and_ persons_census_segmentation.py - this prepares evertything to do with Census and joins to property data
+2. Run base_land_use/main_build_hh_and_persons_census_segmentation.py - this prepares evertything to do with Census and joins to property data
 3. Run mid_year_ pop_adjustments.py - this does the uplift to 2018
 
 TODO:
@@ -145,29 +144,44 @@ class BaseYearLandUse:
 
         """
         # Check which parts of the process need running
+        # TODO: decide how to handle the 5.2.2 read in core property data and 5.2.3 property type mapping steps
+        main_build.copy_addressbase_files()
         if self.state['5.2.2 read in core property data'] == 0:
-            self._read_core_property_data()
+            pass
+
         if self.state['5.2.3 property type mapping'] == 0:
             pass
-        if self.state['5.2.3 property type mapping'] == 0:
-            pass
+
+        # Steps from main build
         if self.state['5.2.4 filled property adjustment'] == 0:
-            pass
+            main_build.FilledProperties()
+            self.state['5.2.4 filled property adjustment'] = 1
+
         if self.state['5.2.5 household occupancy adjustment'] == 0:
-            pass
+            main_build.ApplyHouseholdOccupancy()
+            self.state['5.2.5 household occupancy adjustment'] = 1
+
         if self.state['5.2.6 NTEM segmentation'] == 0:
-            pass
+            main_build.ApplyNtemSegments()
+            self.state['5.2.6 NTEM segmentation'] = 1
+
         if self.state['5.2.7 communal establishments'] == 0:
-            pass
+            main_build.join_establishments()
+            self.state['5.2.7 communal establishments'] = 1
+
+        # TODO: work out what main_build.LanduseFormatting() and main_build.ApplyNSSECSOCsplits() are for
+
+        # Steps from mid-year population estimate adjustment
         if self.state['5.2.8 MYPE adjustment'] == 0:
             pass
+
         if self.state['5.2.9 employment adjustment'] == 0:
             pass
+
         if self.state['5.2.10 SEC/SOC'] == 0:
             pass
+
+        # Car availability
         if self.state['5.2.11 car availability'] == 0:
             pass
 
-    # Then we'll have a method for each of the steps
-    def _read_core_property_data(self):
-        pass
