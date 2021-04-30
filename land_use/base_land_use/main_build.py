@@ -34,18 +34,17 @@ import shutil as sh
 import nu_project as nup
 
 # Default file paths
+# TODO: Implement taking these from the base year object. Comments below indicate relevant attributes
 
-_default_iter = 'iter4'
-_default_home = 'E:/NorMITs_Export/'
-_default_home_dir = (_default_home + _default_iter)
-_import_folder = 'Y:/NorMITs Land Use/import/'
-_import_file_drive = 'Y:/'
-_default_zone_folder = ('I:/NorMITs Synthesiser/Zone Translation/')
+_default_iter = 'iter4'  # take from self.iteration
+_default_home = 'E:/NorMITs_Export/'  # needs to be on Y drive, self.model_folder?
+_default_home_dir = (_default_home + _default_iter)  # perhaps this can stay as-is if the above two are in base object
+_import_folder = 'Y:/NorMITs Land Use/import/'  # self.import_folder
+_default_zone_folder = ('I:/NorMITs Synthesiser/Zone Translation/')  # these are for zone translations, I think not yet in base object
 # Default zone names
-_default_zone_names = ['LSOA','MSOA']
-_default_zone_name = 'MSOA' #MSOA or LSOA
+_default_zone_name = 'MSOA'  # MSOA or LSOA, perhaps needs to be self.model_zoning
 
-
+# As these are constructed from the above, perhaps it's ok to leave as they are but it would still be better in the constants
 _default_addressbase_extract_path = (_default_home_dir+'/allResProperty'+ _default_zone_name +'Classified.csv')
 _default_census_property_types_path = (_import_folder+'Census_Property_Type_Maps.xlsx')
 _default_communal_types_path = (_import_folder+'Communal Establishments 2011 QS421EW/communal_msoaoutput.csv')
