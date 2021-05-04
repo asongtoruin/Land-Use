@@ -292,28 +292,6 @@ def zone_up(cpt_data, hlsaName='MSOA',
     return cpt_data
 
 
-# TODO: replace this with np.where()
-def FinalHoCaseWhen(row):
-    """
-    Useful function when resolving household occupancies
-    """
-    if np.isnan(row['msoa_ho']):
-        return (row['global_ho'])
-    else:
-        return (row['msoa_ho'])
-
-
-# TODO: replace this with np.where()
-def HoTypeCaseWhen(row):
-    """
-    Useful function when resolving household occupancies
-    """
-    if np.isnan(row['msoa_ho']):
-        return ('global')
-    else:
-        return ('msoa')
-
-
 # TODO: improve the docstring here
 def balance_missing_hops(cpt_data, grouping_col='msoaZoneID', hlsaName=_default_zone_name,
                          zone_translation_path=(_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv')):
@@ -338,9 +316,10 @@ def balance_missing_hops(cpt_data, grouping_col='msoaZoneID', hlsaName=_default_
 
     print('Resolving ambiguous household occupancies')
 
-    cpt_data['final_ho'] = cpt_data.apply(FinalHoCaseWhen, axis=1)
-    cpt_data['ho_type'] = cpt_data.apply(HoTypeCaseWhen, axis=1)
-    cpt_data = cpt_data.drop(['msoa_ho', 'global_ho'], axis=1).rename(columns={'final_ho': 'household_occupancy'})
+    # Use the global household occupancy where the MSOA household occupancy is unavailable
+    cpt_data['household_occupancy'] = cpt_data['msoa_ho'].fillna(cpt_data['global_ho'])
+    cpt_data['ho_type'] = np.where(np.isnan(cpt_data['msoa_ho']), 'global', 'msoa')  # record where global has been used
+    cpt_data = cpt_data.drop(['msoa_ho', 'global_ho'], axis=1)
 
     return cpt_data
 
