@@ -156,7 +156,7 @@ def LSOACensusDataPrep(dat_path, EWQS401, SQS401, EWQS402, SQS402, geography=_de
 
     UKHouseholdOccupancyGeo['household_occupancy'] = UKHouseholdOccupancyGeo['population'] / UKHouseholdOccupancyGeo[
         'properties']
-    return (UKHouseholdOccupancyGeo)
+    return UKHouseholdOccupancyGeo
 
 
 # TODO: case when write_out=True plus update docstring
