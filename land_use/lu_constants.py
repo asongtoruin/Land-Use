@@ -104,7 +104,16 @@ SOC_2DIGIT_SIC = os.path.join(
 # purposes to apply soc split to
 SOC_P = [1, 2, 12]
 
-PROPERTY_TYPE = {}
+# Property type dictionary: combines all flat types
+PROPERTY_TYPE = {
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 4,
+    5: 4,
+    6: 4,
+    7: 4
+}
 
 # Car availabiity reference
 CA_MODEL = pd.DataFrame({'cars': [0, 1, 2, 3],

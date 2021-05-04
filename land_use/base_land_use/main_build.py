@@ -34,6 +34,7 @@ import geopandas as gpd
 from shapely.geometry import *
 import shutil as sh
 from land_use import utils
+import land_use.lu_constants as consts
 
 # Default file paths
 # TODO: Implement taking these from the base year object. Comments below indicate relevant attributes
@@ -964,13 +965,8 @@ def land_use_formatting(land_use_path=_default_home_dir + '/landuseOutput' + _de
     """
 
     # 1.Combine all flat types. Sort out flats on the landuse side; actually there's no 7
-    # TODO: map a dictionary instead? Even if there is no 7 in this data, should we include it here just in case?
     land_use = pd.read_csv(land_use_path)
-    land_use['new_prop_type'] = land_use['property_type']
-    land_use.loc[land_use['property_type'] == 5, 'new_prop_type'] = 4
-    land_use.loc[land_use['property_type'] == 6, 'new_prop_type'] = 4
-
-    land_use = land_use.drop(columns='property_type').rename(columns={'new_prop_type': 'property_type'})
+    land_use['property_type'] = land_use['property_type'].map(consts.PROPERTY_TYPE)
     land_use = land_use.to_csv(_default_home_dir + '/landuseOutput' + _default_zone_name + '_stage3.csv', index=False)
 
     return land_use
