@@ -319,20 +319,20 @@ def create_employment_segmentation(bsq,
 def create_ntem_segmentation(bsq_import_path=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
                              areaTypeImportPath=_import_folder + '/CTripEnd/ntem_zone_area_type.csv',
                              ksEmpImportPath=_import_folder + '/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
-    bsq = create_ntem_areas(bsq_import_path)
-    bsq = create_employment_segmentation(bsq)
+    bsq = create_ntem_areas(bsq_import_path, areaTypeImportPath)
+    bsq = create_employment_segmentation(bsq, ksEmpImportPath)
 
     return bsq
 
 
 # TODO review this function and switch to lower case. Include a docstring
-def create_ntem_areas(bsqImportPath=_import_folder + '/Bespoke Census Query/formatted_long_bsq.csv',
-                      areaTypeImportPath=_import_folder + '/CTripEnd/ntem_zone_area_type.csv'):
+def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/formatted_long_bsq.csv',
+                      area_type_import_path=_import_folder + '/CTripEnd/ntem_zone_area_type.csv'):
     # Import Bespoke Census Query - already transformed to long format in R
     print('Importing bespoke census query')
-    bsq = pd.read_csv(bsqImportPath)
+    bsq = pd.read_csv(bsq_import_path)
     # Import area types
-    areaTypes = pd.read_csv(areaTypeImportPath)
+    area_types = pd.read_csv(area_type_import_path)
 
     # Shapes
     mlaShp = gpd.read_file(_default_mladRef).reindex(['objectid', 'cmlad11cd'], axis=1)
@@ -348,6 +348,7 @@ def create_ntem_areas(bsqImportPath=_import_folder + '/Bespoke Census Query/form
         ['ntemZoneID', 'msoaZoneID', 'overlap_ntem_pop_split_factor'], axis=1)
 
     # Reduce age & gender categories down to NTEM requirements
+    # TODO: review whether a subfunction is necessary
     def SegmentTweaks(bsq, asisSegments, groupingCol, aggCols, targetCol, newSegment):
         # Take a bsq set, segments to leave untouched and a target column.
         # Sum and reclassify all values not in the untouched segments
@@ -358,13 +359,16 @@ def create_ntem_areas(bsqImportPath=_import_folder + '/Bespoke Census Query/form
         changePot = changePot.reindex(
             ['LAD_code', 'LAD_Desc', 'Gender', 'Age', 'Dwelltype', 'household_type', 'population'], axis=1)
         bsq = asisPot.append(changePot).reset_index(drop=True)
-        return (bsq)
+        return bsq
 
     # All working age population comes in one monolithic block - 16-74
-    bsq = SegmentTweaks(bsq, asisSegments=['under 16', '75 or over'],
-                        groupingCol='Age', aggCols=[
-            'LAD_code', 'LAD_Desc', 'Gender', 'Dwelltype',
-            'household_type'], targetCol='Age', newSegment='16-74')
+    bsq = SegmentTweaks(bsq,
+                        asisSegments=['under 16', '75 or over'],
+                        groupingCol='Age',
+                        aggCols=['LAD_code', 'LAD_Desc', 'Gender', 'Dwelltype', 'household_type'],
+                        targetCol='Age',
+                        newSegment='16-74')
+
     # Children have no gender in NTEM - Aggregate & replace gender with 'Children'
     bsq = SegmentTweaks(bsq, asisSegments=['16-74', '75 or over'],
                         groupingCol='Age', aggCols=['LAD_code', 'LAD_Desc',
@@ -375,11 +379,11 @@ def create_ntem_areas(bsqImportPath=_import_folder + '/Bespoke Census Query/form
     bsq = bsq.merge(pType, how='left', left_on='Dwelltype',
                     right_on='c_type').drop(['Dwelltype', 'c_type'], axis=1)
     bsq = bsq.merge(hType, how='left', on='household_type').drop('household_type', axis=1)
-    bsqTotal = bsq.reindex(['LAD_code', 'LAD_Desc', 'population'], axis=1).groupby(
+    bsq_total = bsq.reindex(['LAD_code', 'LAD_Desc', 'population'], axis=1).groupby(
         ['LAD_code', 'LAD_Desc']).sum().reset_index().rename(columns=
                                                              {'population': 'lad_pop'})
-    bsq = bsq.merge(bsqTotal, how='left', on=['LAD_code', 'LAD_Desc'])
-    del (bsqTotal)
+    bsq = bsq.merge(bsq_total, how='left', on=['LAD_code', 'LAD_Desc'])
+    del bsq_total
     bsq['pop_factor'] = bsq['population'] / bsq['lad_pop']
     bsq = bsq.reindex(['LAD_code', 'LAD_Desc', 'Gender', 'Age', 'property_type',
                        'household_composition', 'pop_factor'], axis=1)
@@ -421,7 +425,7 @@ def create_ntem_areas(bsqImportPath=_import_folder + '/Bespoke Census Query/form
                                                                     'Gender', 'Age',
                                                                     'property_type',
                                                                     'household_composition']).mean().reset_index()
-    del (northMsoaBsq)
+    del northMsoaBsq
     # TODO: Spot check that these balance to 1
     audit = genericNorthTypeBsq.groupby('R').sum()
     # Fix missing msoas in bsq
@@ -439,15 +443,15 @@ def create_ntem_areas(bsqImportPath=_import_folder + '/Bespoke Census Query/form
     audit = bsq.groupby(['msoaZoneID']).sum().reindex(['pop_factor'],
                                                       axis=1)
     audit.to_csv('msoa_pop_factor_audit.csv', index=False)
-    landAudit = bsq.reindex(['msoaZoneID', 'Zone_Desc'],
+    land_audit = bsq.reindex(['msoaZoneID', 'Zone_Desc'],
                             axis=1).drop_duplicates().merge(
         msoaShp, how='inner',
         left_on='msoaZoneID',
         right_on='objectid').drop(
         'objectid', axis=1)
-    landAudit.to_csv('landAudit.csv', index=False)
+    land_audit.to_csv('landAudit.csv', index=False)
 
-    return (bsq)
+    return bsq
 
 
 # TODO: is zone translation path needed? Improve the docstring
