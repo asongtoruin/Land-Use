@@ -178,20 +178,22 @@ def get_census_population(path=_default_census_population):
 
 
 # 2. Main analysis functions - everything related to census and segmentation
-def path_config(datPath=_default_census_dat):
-    dat = datPath
-    files = os.listdir(dat)
-
-    return dat, files
+def path_config(dat_path=_default_census_dat):
+    files = os.listdir(dat_path)
+    return dat_path, files
 
 
-def set_wd(homeDir=_default_home, iteration=_default_iter):
-    os.chdir(homeDir)
+def set_wd(home_dir=_default_home, iteration=_default_iter):
+    """
+    Makes a new folder, if needed, for the iteration as a child of the home directory.
+    The working directory is then set as this new iteration folder.
+    """
+    os.chdir(home_dir)
     utils.create_folder(iteration, ch_dir=True)
-    return ()
 
 
-def LSOACensusDataPrep(datPath, EWQS401, SQS401, EWQS402, SQS402, geography=_default_lsoaRef):
+# TODO: work out what this is for and what it does. Update docstring accordingly
+def LSOACensusDataPrep(dat_path, EWQS401, SQS401, EWQS402, SQS402, geography=_default_lsoaRef):
     """
     This function prepares the census data by picking fields out of the csvs:
         
@@ -200,13 +202,13 @@ def LSOACensusDataPrep(datPath, EWQS401, SQS401, EWQS402, SQS402, geography=_def
     geography = gpd.read_file(_default_lsoaRef)
     geography = geography.iloc[:, 0:3]
 
-    EWQS401import = pd.read_csv(datPath + '/' + EWQS401)
+    EWQS401import = pd.read_csv(dat_path + '/' + EWQS401)
     EWQS401numbers = EWQS401import.iloc[:, [2, 6, 7, 8, 10, 11, 12, 13]]
     del (EWQS401import)
     EWQS401numbers.columns = ['geography_code', 'cpt1', 'cpt2', 'cpt3', 'cpt4', 'cpt5', 'cpt6', 'cpt7']
 
     ## Something
-    SQS401import = pd.read_csv(datPath + '/' + SQS401)
+    SQS401import = pd.read_csv(dat_path + '/' + SQS401)
     SQS401numbers = SQS401import.iloc[:, [2, 6, 7, 8, 10, 11, 12, 13]]
     del (SQS401import)
     SQS401numbers.columns = ['geography_code', 'cpt1', 'cpt2', 'cpt3', 'cpt4', 'cpt5', 'cpt6', 'cpt7']
@@ -216,12 +218,12 @@ def LSOACensusDataPrep(datPath, EWQS401, SQS401, EWQS402, SQS402, geography=_def
     UKQS401 = pd.wide_to_long(UKQS401, stubnames='cpt', i='geography_code',
                               j='census_property_type').reset_index().rename(columns={"cpt": "population"})
 
-    EWQS402import = pd.read_csv(datPath + '/' + EWQS402)
+    EWQS402import = pd.read_csv(dat_path + '/' + EWQS402)
     EWQS402numbers = EWQS402import.iloc[:, [2, 6, 7, 8, 10, 11, 12, 13]]
     del (EWQS402import)
     EWQS402numbers.columns = ['geography_code', 'cpt1', 'cpt2', 'cpt3', 'cpt4', 'cpt5', 'cpt6', 'cpt7']
 
-    SQS402import = pd.read_csv(datPath + '/' + SQS402)
+    SQS402import = pd.read_csv(dat_path + '/' + SQS402)
     SQS402numbers = SQS402import.iloc[:, [2, 6, 7, 8, 10, 11, 12, 13]]
     del (SQS402import)
     SQS402numbers.columns = ['geography_code', 'cpt1', 'cpt2', 'cpt3', 'cpt4', 'cpt5', 'cpt6', 'cpt7']
@@ -241,56 +243,56 @@ def LSOACensusDataPrep(datPath, EWQS401, SQS401, EWQS402, SQS402, geography=_def
     return (UKHouseholdOccupancyGeo)
 
 
-def AggregateCpt(cptData, groupingCol=None, writeOut=True):
+# TODO: case when write_out=True plus update docstring
+def aggregate_cpt(cpt_data, grouping_col=None, write_out=True):
     """
     Take some census property type data and return hops totals
     """
-    if not groupingCol:
-        cptData = cptData.loc[:, ['census_property_type', 'population', 'properties']]
-        aggData = cptData.groupby('census_property_type').sum().reset_index()
-        aggData['household_occupancy'] = aggData['population'] / aggData['properties']
+    if not grouping_col:
+        cpt_data = cpt_data.loc[:, ['census_property_type', 'population', 'properties']]
+        agg_data = cpt_data.groupby('census_property_type').sum().reset_index()
+        agg_data['household_occupancy'] = agg_data['population'] / agg_data['properties']
     else:
-        cptData = cptData.loc[:, ['census_property_type', 'population', 'properties', groupingCol]]
-        aggData = cptData.groupby(['census_property_type', groupingCol]).sum().reset_index()
-        aggData['household_occupancy'] = aggData['population'] / aggData['properties']
+        cpt_data = cpt_data.loc[:, ['census_property_type', 'population', 'properties', grouping_col]]
+        agg_data = cpt_data.groupby(['census_property_type', grouping_col]).sum().reset_index()
+        agg_data['household_occupancy'] = agg_data['population'] / agg_data['properties']
 
-    # if writeOut:
+    # if write_out:
     # aggData.to_csv('cptlsoa2011.csv')
 
-    return (aggData)
+    return agg_data
 
 
-def ZoneUp(cptData, hlsaName='MSOA', zoneTranslationPath=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
-           groupingCol='msoaZoneID'):
+def zone_up(cpt_data, hlsaName='MSOA',
+            zone_translation_path=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
+            grouping_col='msoaZoneID'):
     """
-
     Function to raise up a level of spatial aggregation & aggregate at that level, then bring new factors back down
     # TODO: Might be nice to have this zone up any level of zonal aggregation
     Raise LSOA to MSOA for spatial aggregation
-
-
     """
-    zoneTranslation = pd.read_csv(zoneTranslationPath)
-    zoneTranslation = zoneTranslation.rename(columns={'lsoa_zone_id': 'lsoaZoneID',
-                                                      'msoa_zone_id': 'msoaZoneID'})
-    zoneTranslation = zoneTranslation.loc[:, ['lsoaZoneID', groupingCol]]
+    zone_translation = pd.read_csv(zone_translation_path)
+    zone_translation = zone_translation.rename(columns={'lsoa_zone_id': 'lsoaZoneID',
+                                                        'msoa_zone_id': 'msoaZoneID'})
+    zone_translation = zone_translation.loc[:, ['lsoaZoneID', groupingCol]]
     # Audit any missing objectids
-    datLSOAs = len(cptData.loc[:, 'objectid'].drop_duplicates())
-    ztLSOAs = len(zoneTranslation.loc[:, 'lsoaZoneID'])
+    datLSOAs = len(cpt_data.loc[:, 'objectid'].drop_duplicates())
+    ztLSOAs = len(zone_translation.loc[:, 'lsoaZoneID'])
 
     if datLSOAs == ztLSOAs:
         print('zones match 1:1 - zoning up should be smooth')
     else:
         print('some zones missing')
         # TODO: Be more specific with your criticism - could say which or how many, export missing?
-    cptData = cptData.rename(columns={'lsoa11cd': 'lsoaZoneID'})
-    cptData = cptData.merge(zoneTranslation, how='left', on='lsoaZoneID').reset_index()
-    print(cptData)
-    cptData = AggregateCpt(cptData, groupingCol=groupingCol)
+    cpt_data = cpt_data.rename(columns={'lsoa11cd': 'lsoaZoneID'})
+    cpt_data = cpt_data.merge(zone_translation, how='left', on='lsoaZoneID').reset_index()
+    print(cpt_data)
+    cpt_data = aggregate_cpt(cpt_data, grouping_col=grouping_col)
 
-    return (cptData)
+    return cpt_data
 
 
+# TODO: replace this with np.where()
 def FinalHoCaseWhen(row):
     """
     Useful function when resolving household occupancies
@@ -301,6 +303,7 @@ def FinalHoCaseWhen(row):
         return (row['msoa_ho'])
 
 
+# TODO: replace this with np.where()
 def HoTypeCaseWhen(row):
     """
     Useful function when resolving household occupancies
@@ -311,57 +314,60 @@ def HoTypeCaseWhen(row):
         return ('msoa')
 
 
-def BalanceMissingHOPs(cptData, groupingCol='msoaZoneID', hlsaName=_default_zone_name,
-                       zoneTranslationPa0th=(_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv')):
+# TODO: improve the docstring here
+def balance_missing_hops(cpt_data, grouping_col='msoaZoneID', hlsaName=_default_zone_name,
+                         zone_translation_path=(_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv')):
     """
     # TODO: Replace global with LAD or Country - likely to be marginal improvements
     This resolves the  msoa/lad household occupancy
     """
-    msoaAgg = ZoneUp(cptData, hlsaName='MSOA',
-                     zoneTranslationPath=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
-                     groupingCol=groupingCol)
-    msoaAgg = msoaAgg.loc[:, [groupingCol, 'census_property_type',
-                              'household_occupancy']].rename(columns={'household_occupancy': 'msoa_ho'})
+    msoa_agg = zone_up(cpt_data, hlsaName='MSOA',
+                       zone_translation_path=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
+                       grouping_col=grouping_col)
+    msoa_agg = msoa_agg.loc[:, [grouping_col, 'census_property_type',
+                                'household_occupancy']].rename(columns={'household_occupancy': 'msoa_ho'})
 
-    globalAgg = ZoneUp(cptData, hlsaName='MSOA',
-                       zoneTranslationPath=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
-                       groupingCol=groupingCol)
-    globalAgg = AggregateCpt(globalAgg, groupingCol=None)
-    globalAgg = globalAgg.loc[:, ['census_property_type',
-                                  'household_occupancy']].rename(columns={'household_occupancy': 'global_ho'})
+    global_agg = zone_up(cpt_data, hlsaName='MSOA',
+                         zone_translation_path=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
+                         grouping_col=grouping_col)
+    global_agg = aggregate_cpt(global_agg, grouping_col=None)
+    global_agg = global_agg.loc[:, ['census_property_type',
+                                    'household_occupancy']].rename(columns={'household_occupancy': 'global_ho'})
 
-    cptData = msoaAgg.merge(globalAgg, how='left', on='census_property_type')
+    cpt_data = msoa_agg.merge(global_agg, how='left', on='census_property_type')
 
     print('Resolving ambiguous household occupancies')
 
-    cptData['final_ho'] = cptData.apply(FinalHoCaseWhen, axis=1)
-    cptData['ho_type'] = cptData.apply(HoTypeCaseWhen, axis=1)
-    cptData = cptData.drop(['msoa_ho', 'global_ho'], axis=1).rename(columns={'final_ho': 'household_occupancy'})
+    cpt_data['final_ho'] = cpt_data.apply(FinalHoCaseWhen, axis=1)
+    cpt_data['ho_type'] = cpt_data.apply(HoTypeCaseWhen, axis=1)
+    cpt_data = cpt_data.drop(['msoa_ho', 'global_ho'], axis=1).rename(columns={'final_ho': 'household_occupancy'})
 
-    return (cptData)
+    return cpt_data
 
 
-def AggWapFactor(ksSub, newSeg):
+# TODO: what is this for exactly? Very short so it could be a candidate for using directly in another function
+def agg_wap_factor(ksSub, newSeg):
     """
     Function to combine working age population factors to create NTEM 
     employment categories
     """
     ksSub = ksSub.groupby(['msoaZoneID', 'Gender']).sum().reset_index()
     ksSub['employment_type'] = newSeg
-    return (ksSub)
+    return ksSub
 
 
+# TODO: review this function
 def CreateEmploymentSegmentation(bsq,
                                  ksEmpImportPath=_import_folder + '/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
     """
-# Synthesise in employment segmentation using 2011 data
-# TODO: Growth 2011 employment segments
-# TODO employment category should probably be conscious of property type
-# Get to segments:
-# full time employment
-# part time employment
-# students
-# not employed/students
+    # Synthesise in employment segmentation using 2011 data
+    # TODO: Growth 2011 employment segments
+    # TODO employment category should probably be conscious of property type
+    # Get to segments:
+    # full time employment
+    # part time employment
+    # students
+    # not employed/students
     """
     # Shapes
     msoaShp = gpd.read_file(_default_msoaRef).reindex(['objectid', 'msoa11cd'], axis=1)
@@ -372,7 +378,7 @@ def CreateEmploymentSegmentation(bsq,
     # Add non working age placeholder
     placeholderValue = 'non_wa'
     nonWorkingAgePot['employment_type'] = placeholderValue
-    del (placeholderValue)
+    del placeholderValue
 
     # Import UK MSOA Employment - tranformed to long in R - most segments left in for aggregation here
     # Factors are already built in R - will aggregate to 2 per msoa 1 for Males 1 for Females
@@ -386,19 +392,19 @@ def CreateEmploymentSegmentation(bsq,
 
     # full time employment =  sum(emp_ft, emp_se)
     ksFte = ksEmp[ksEmp.employment_type.isin(['emp_ft', 'emp_se'])]
-    ksFte = AggWapFactor(ksFte, newSeg='fte')
+    ksFte = agg_wap_factor(ksFte, newSeg='fte')
     # part time employment = sum(emp_pt)
     ksPte = ksEmp[ksEmp.employment_type.isin(['emp_pt'])]
-    ksPte = AggWapFactor(ksPte, newSeg='pte')
+    ksPte = agg_wap_factor(ksPte, newSeg='pte')
     # students = sum(emp_stu)
     ksStu = ksEmp[ksEmp.employment_type.isin(['emp_stu'])]
-    ksStu = AggWapFactor(ksStu, newSeg='stu')
+    ksStu = agg_wap_factor(ksStu, newSeg='stu')
     # not employed/students = sum(unemp, unemp_ret, unemp_stu, unemp_care,
     # unemp_lts, unemp_other)
     ksUnm = ksEmp[ksEmp.employment_type.isin(['unemp', 'unemp_ret', 'unemp_stu',
                                               'unemp_care', 'unemp_lts',
                                               'unemp_other'])]
-    ksUnm = AggWapFactor(ksUnm, newSeg='unm')
+    ksUnm = agg_wap_factor(ksUnm, newSeg='unm')
 
     ksEmp = ksFte.append(ksPte).append(ksStu).append(ksUnm).reset_index(drop=True)
 
@@ -412,23 +418,26 @@ def CreateEmploymentSegmentation(bsq,
                        'household_composition', 'property_type', 'B', 'R',
                        'Zone_Desc', 'pop_factor'], axis=1)
 
-    return (bsq)
+    return bsq
 
 
+# TODO: switch to lower case
 def CreateNtemSegmentation(bsqImportPath=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
                            areaTypeImportPath=_import_folder + '/CTripEnd/ntem_zone_area_type.csv',
                            ksEmpImportPath=_import_folder + '/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
     bsq = CreateNtemAreas(bsqImportPath)
     bsq = CreateEmploymentSegmentation(bsq)
-    # bsq.to_csv('bsq.csv')
-    return (bsq)
+
+    return bsq
 
 
+# TODO put this explicitly in the code as len(bsq.msoaZoneID.unique())
 def CountMsoa(bsq):
     unqMSOA = bsq.reindex(['msoaZoneID'], axis=1).drop_duplicates()
     return (len(unqMSOA))
 
 
+# TODO review this function and switch to lower case. Include a docstring
 def CreateNtemAreas(bsqImportPath=_import_folder + '/Bespoke Census Query/formatted_long_bsq.csv',
                     areaTypeImportPath=_import_folder + '/CTripEnd/ntem_zone_area_type.csv'):
     # Import Bespoke Census Query - already transformed to long format in R
@@ -553,9 +562,10 @@ def CreateNtemAreas(bsqImportPath=_import_folder + '/Bespoke Census Query/format
     return (bsq)
 
 
-def FilledProperties(zoneTranslationPath=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
-                     KS401path=_import_folder + 'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv'
-                     ):
+# TODO: is zone translation path needed? Improve the docstring
+def filled_properties(zone_translation_path=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
+                      KS401path=_import_folder + 'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv'
+                      ):
     """
     this is a rough account for unoccupied properties
     using KS401UK LSOA level to infer whether the properties have any occupants
@@ -585,21 +595,24 @@ def FilledProperties(zoneTranslationPath=_default_zone_folder + 'Export/msoa_to_
 
     zoneTranslation = zoneTranslation.loc[:, ['lsoaZoneID', 'msoaZoneID']]
     KS401permhops = KS401permhops.rename(columns={'geography_code': 'lsoaZoneID'})
-    FilledProperties = KS401permhops.merge(zoneTranslation, on='lsoaZoneID')
-    FilledProperties = FilledProperties.drop(columns={'lsoaZoneID'}).groupby(['msoaZoneID']).mean().reset_index()
+    filled_properties = KS401permhops.merge(zoneTranslation, on='lsoaZoneID')
+    filled_properties = filled_properties.drop(columns={'lsoaZoneID'}).groupby(['msoaZoneID']).mean().reset_index()
 
     # the above filleddwellings probability is based on E+W so need to join back to Scottish MSOAs
     # needed for later when multiplying by this factor to adjust the household occupancies
+    # TODO: why is filled_properties2 made?
     ukMSOA = gpd.read_file(_default_msoaRef).reindex(columns={'msoa11cd'}).rename(columns={'msoa11cd': 'msoaZoneID'})
-    FilledProperties2 = ukMSOA.merge(FilledProperties, on='msoaZoneID', how='outer')
-    FilledProperties = FilledProperties2.fillna(1)
-    FilledProperties.to_csv('ProbabilityDwellfilled.csv', index=False)
+    filled_properties2 = ukMSOA.merge(filled_properties, on='msoaZoneID', how='outer')
+    filled_properties = filled_properties2.fillna(1)
+    filled_properties.to_csv('ProbabilityDwellfilled.csv', index=False)
 
-    return (FilledProperties)
+    return filled_properties
 
 
-def ApplyHouseholdOccupancy(doImport=False, writeOut=True, \
-                            level=_default_zone_name, hopsPath=_import_folder + '/HOPs/hops_growth_factors.csv'):
+def apply_household_occupancy(do_import=False,
+                              write_out=True,
+                              level=_default_zone_name,
+                              hops_path=_import_folder + '/HOPs/hops_growth_factors.csv'):
     """
     # Import household occupancy data and apply to property data
     # TODO: toggles for unused 'level' parameter. Want to be able to run
@@ -608,12 +621,11 @@ def ApplyHouseholdOccupancy(doImport=False, writeOut=True, \
     # classification
     """
 
-    if doImport:
-        balancedCptData = pd.read_csv('UKHouseHoldOccupancy2011.csv')
+    if do_import:
+        balanced_cpt_data = pd.read_csv('UKHouseHoldOccupancy2011.csv')
 
     else:
-        censusDat = path_config(_import_folder + '/Nomis Census 2011 Head & Household')
-        print(censusDat[1])
+        census_dat = path_config(_import_folder + '/Nomis Census 2011 Head & Household')
 
         # TODO: - This was a patch to get it to work fast and it did. 
         # Make these a bit cleverer to reduce risk of importing the wrong thing
@@ -623,50 +635,51 @@ def ApplyHouseholdOccupancy(doImport=False, writeOut=True, \
         SQS402 = 'QS402UK_DZ_2011.csv'
         # KS401 = 'KS401_UK_LSOA.csv'
 
-        # cptData = LSOACensusDataPrep(censusDat[0], EWQS401, SQS401, EWQS402, SQS402, KS40EW, geography = lsoaRef))
-        cptData = LSOACensusDataPrep(censusDat[0], EWQS401, SQS401, EWQS402, SQS402, geography=_default_lsoaRef)
+        cpt_data = LSOACensusDataPrep(census_dat[0], EWQS401, SQS401, EWQS402, SQS402, geography=_default_lsoaRef)
 
-        # ZoneUp here to MSOA aggregations
-        balancedCptData = BalanceMissingHOPs(cptData, groupingCol='msoaZoneID')
-        balancedCptData = balancedCptData.fillna(0)
-        FilledProperties = pd.read_csv(_default_home_dir + '/ProbabilityDwellfilled.csv')
-        balancedCptData = balancedCptData.merge(FilledProperties, how='outer', on='msoaZoneID')
-        balancedCptData['household_occupancy'] = balancedCptData['household_occupancy'] * balancedCptData[
+        # Zone up here to MSOA aggregations
+        balanced_cpt_data = balance_missing_hops(cpt_data, grouping_col='msoaZoneID')
+        balanced_cpt_data = balanced_cpt_data.fillna(0)
+        filled_properties = pd.read_csv(_default_home_dir + '/ProbabilityDwellfilled.csv')
+        balanced_cpt_data = balanced_cpt_data.merge(filled_properties, how='outer', on='msoaZoneID')
+        balanced_cpt_data['household_occupancy'] = balanced_cpt_data['household_occupancy'] * balanced_cpt_data[
             'Prob_DwellsFilled']
-        balancedCptData = balancedCptData.drop(columns={'Prob_DwellsFilled'})
-        balancedCptData.to_csv('UKHouseHoldOccupancy2011.csv', index=False)
+        balanced_cpt_data = balanced_cpt_data.drop(columns={'Prob_DwellsFilled'})
+        balanced_cpt_data.to_csv('UKHouseHoldOccupancy2011.csv', index=False)
 
+    # TODO: consider if these are really needed. gpd.read_file is quite a heavy way to get the MSOA codes and names
     msoaCols = ['objectid', 'msoa11cd']
     ladCols = ['ladZoneID', 'msoaZoneID']
     ukMSOA = gpd.read_file(_default_msoaRef)
     ukMSOA = ukMSOA.loc[:, msoaCols]
 
     # Visual spot checks - count zones, check cpt
-    audit = balancedCptData.groupby(['msoaZoneID']).count().reset_index()
+    audit = balanced_cpt_data.groupby(['msoaZoneID']).count().reset_index()
     print('census hops zones =', audit['msoaZoneID'].drop_duplicates().count(), 'should be', len(ukMSOA))
     print('counts of property type by zone', audit['census_property_type'].drop_duplicates())
 
     # Join MSOA ids to balanced cptdata
     ukMSOA = ukMSOA.rename(columns={'msoa11cd': 'msoaZoneID'})
-    balancedCptData = balancedCptData.merge(ukMSOA, how='left',
-                                            on='msoaZoneID').drop('objectid', axis=1)
+    balanced_cpt_data = balanced_cpt_data.merge(ukMSOA, how='left',
+                                                on='msoaZoneID').drop('objectid', axis=1)
     # Import msoa to lad translation
-    ladTranslation = pd.read_csv(_default_zone_folder + 'Export/lad_to_msoa/lad_to_msoa.csv')
-    ladTranslation = ladTranslation.rename(columns={'lad_zone_id': 'ladZoneID',
-                                                    'msoa_zone_id': 'msoaZoneID'}).loc[:, ladCols]
-    unqLad = ladTranslation['ladZoneID'].unique()
-    balancedCptData = balancedCptData.merge(ladTranslation, how='left',
-                                            on='msoaZoneID')
+    lad_translation = pd.read_csv(_default_zone_folder + 'Export/lad_to_msoa/lad_to_msoa.csv')
+    lad_translation = lad_translation.rename(columns={'lad_zone_id': 'ladZoneID',
+                                                      'msoa_zone_id': 'msoaZoneID'}).loc[:, ladCols]
+    unqLad = lad_translation['ladZoneID'].unique()
+    balanced_cpt_data = balanced_cpt_data.merge(lad_translation, how='left',
+                                                on='msoaZoneID')
 
-    joinLad = balancedCptData['ladZoneID'].unique()
+    joinLad = balanced_cpt_data['ladZoneID'].unique()
 
     ladCols = ['objectid', 'lad17cd']
     ukLAD = gpd.read_file(_default_ladRef)
     ukLAD = ukLAD.loc[:, ladCols]
 
-    balancedCptData = balancedCptData.merge(ukLAD, how='left',
-                                            left_on='ladZoneID', right_on='objectid').drop(['ladZoneID', 'objectid'],
-                                                                                           axis=1)
+    balanced_cpt_data = balanced_cpt_data.merge(ukLAD, how='left',
+                                                left_on='ladZoneID', right_on='objectid').drop(
+        ['ladZoneID', 'objectid'],
+        axis=1)
 
     if len(joinLad) == len(unqLad):
         print('All LADs joined properly')
@@ -674,57 +687,58 @@ def ApplyHouseholdOccupancy(doImport=False, writeOut=True, \
         print('Some LAD zones not accounted for')
     del (unqLad, joinLad)
 
-    hgCols = ['Area code', '11_to_18']
-    hopsGrowth = pd.read_csv(hopsPath).loc[:, hgCols]
+    hops_growth = pd.read_csv(hops_path).loc[:, ['Area code', '11_to_18']]
 
     # using HOPS growth data to uplift the figures to 2018
 
-    balancedCptData = balancedCptData.merge(hopsGrowth,
-                                            how='left', left_on='lad17cd',
-                                            right_on='Area code').drop('Area code', axis=1).reset_index(drop=True)
-    balancedCptData['household_occupancy_18'] = balancedCptData['household_occupancy'] * 1 + balancedCptData['11_to_18']
+    balanced_cpt_data = balanced_cpt_data.merge(hops_growth,
+                                                how='left', left_on='lad17cd',
+                                                right_on='Area code').drop('Area code', axis=1).reset_index(drop=True)
+    # TODO: was there a reason for the multiplication by 1?
+    balanced_cpt_data['household_occupancy_18'] = balanced_cpt_data['household_occupancy'] * 1 + balanced_cpt_data[
+        '11_to_18']
 
-    trimCols = ['msoaZoneID', 'msoa11cd', 'census_property_type',
-                'household_occupancy_18', 'ho_type']
-    balancedCptData = balancedCptData.reindex(trimCols, axis=1)
-    # balancedCptData = balancedCptData.drop(columns = {'msoa11cd'})
+    trim_cols = ['msoaZoneID', 'msoa11cd', 'census_property_type',
+                 'household_occupancy_18', 'ho_type']
+    balanced_cpt_data = balanced_cpt_data.reindex(trim_cols, axis=1)
 
     # Read in all res property for the level of aggregation
-    allResProperty = get_addressbase_extract()
+    all_res_property = get_addressbase_extract()
 
-    allResProperty = allResProperty.reindex(['ZoneID', 'census_property_type',
-                                             'UPRN'], axis=1)
-    allResPropertyZonal = allResProperty.groupby(['ZoneID',
-                                                  'census_property_type']).count().reset_index()
-    del (allResProperty)
+    all_res_property = all_res_property.reindex(['ZoneID', 'census_property_type',
+                                                 'UPRN'], axis=1)
+    all_res_property_zonal = all_res_property.groupby(['ZoneID',
+                                                       'census_property_type']).count().reset_index()
+    del all_res_property
 
     if level == 'MSOA':
 
-        allResPropertyZonal = allResPropertyZonal.merge(balancedCptData,
-                                                        how='inner',
-                                                        left_on=['ZoneID', 'census_property_type'],
-                                                        right_on=['msoaZoneID', 'census_property_type']).drop(
-            'msoaZoneID', axis=1)
+        all_res_property_zonal = all_res_property_zonal.merge(balancedCptData,
+                                                              how='inner',
+                                                              left_on=['ZoneID', 'census_property_type'],
+                                                              right_on=['msoaZoneID', 'census_property_type'])
+        all_res_property_zonal = all_res_property_zonal.drop('msoaZoneID', axis=1)
 
         # Audit join - ensure all zones accounted for
-        if allResPropertyZonal['ZoneID'].drop_duplicates().count() != ukMSOA['msoaZoneID'].drop_duplicates().count():
+        if all_res_property_zonal['ZoneID'].drop_duplicates().count() != ukMSOA['msoaZoneID'].drop_duplicates().count():
             ValueError('Some zones dropped in Hops join')
         else:
             print('All Hops areas accounted for')
 
-        # allResPropertyZonal.merge(FilledProperties, on = 'ZoneID')
-        allResPropertyZonal['population'] = allResPropertyZonal['UPRN'] * allResPropertyZonal['household_occupancy_18']
+        # allResPropertyZonal.merge(filled_properties, on = 'ZoneID')
+        all_res_property_zonal['population'] = all_res_property_zonal['UPRN'] * all_res_property_zonal[
+            'household_occupancy_18']
 
         # Create folder for exports
-        arpMsoaAudit = allResPropertyZonal.groupby('ZoneID').sum().reset_index()
+        arpMsoaAudit = all_res_property_zonal.groupby('ZoneID').sum().reset_index()
         arpMsoaAudit = arpMsoaAudit.reindex(['ZoneID', 'population'], axis=1)
         hpaFolder = 'Hops Population Audits'
         utils.create_folder(hpaFolder)
         arpMsoaAudit.to_csv(hpaFolder + '/' + level + '_population_from_2018_hops.csv', index=False)
-        if writeOut:
-            allResPropertyZonal.to_csv('classifiedResProperty' + level + '.csv', index=False)
+        if write_out:
+            all_res_property_zonal.to_csv('classifiedResProperty' + level + '.csv', index=False)
 
-        return (allResPropertyZonal)
+        return all_res_property_zonal
 
     if level == 'LSOA':
         # here change msoa that is expected in the function above to lsoa Zone ID.
@@ -792,20 +806,22 @@ def ApplyHouseholdOccupancy(doImport=False, writeOut=True, \
         arpMsoaAudit = arpMsoaAudit['population'].sum()
         print(arpMsoaAudit)
 
-        if writeOut:
+        if write_out:
             allResPropertyZonal.to_csv('classifiedResPropertyLSOA.csv', index=False)
 
+            # TODO: put checks for the following comment into the code eg print warning?
             # it has 1900 too many people
 
     else:
         print("no support for this zone")
 
 
-def ApplyNtemSegments(classifiedResPropertyImportPath='classifiedResPropertyMSOA.csv',
-                      bsqImportPath=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
-                      areaTypeImportPath=_import_folder + 'CTripEnd/ntem_zone_area_type.csv',
-                      ksEmpImportPath=_import_folder + 'KS601-3UK/uk_msoa_ks601equ_w_gender.csv',
-                      level=_default_zone_name, writeSteps=False):
+# TODO: are arguments 2-4 actually needed?
+def apply_ntem_segments(classified_res_property_import_path='classifiedResPropertyMSOA.csv',
+                        bsqImportPath=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
+                        areaTypeImportPath=_import_folder + 'CTripEnd/ntem_zone_area_type.csv',
+                        ksEmpImportPath=_import_folder + 'KS601-3UK/uk_msoa_ks601equ_w_gender.csv',
+                        level=_default_zone_name, writeSteps=False):
     """
     Function to join the bespoke census query to the classified residential
     property data
@@ -815,40 +831,36 @@ def ApplyNtemSegments(classifiedResPropertyImportPath='classifiedResPropertyMSOA
     Import bespoke census query - this function creates it
     At the moment only works for MSOA
     """
-    crp = pd.read_csv(classifiedResPropertyImportPath)
-    crpCols = ['ZoneID', 'census_property_type', 'UPRN', 'household_occupancy_18', 'population']
-    crp = crp.reindex(crpCols, axis=1)
-    unqMSOA = crp.reindex(['ZoneID'], axis=1).drop_duplicates()
-    len(unqMSOA)
+    crp = pd.read_csv(classified_res_property_import_path)
+    crp_cols = ['ZoneID', 'census_property_type', 'UPRN', 'household_occupancy_18', 'population']
+    crp = crp.reindex(crp_cols, axis=1)
     crp['population'].sum()
 
     bsq = CreateNtemSegmentation()
 
+    # TODO: is the following a TODO?
     # if level == 'MSOA':
     # Split bsq pop factors out to represent property type as well as zone
 
-    factorPropertyType = bsq.reindex(['msoaZoneID', 'property_type', 'pop_factor'], axis=1).groupby(
-        ['msoaZoneID', 'property_type']).sum().reset_index()
-    factorPropertyType = factorPropertyType.rename(columns={'pop_factor': 'pt_pop_factor'})
-    bsq = bsq.merge(factorPropertyType, how='left', \
-                    on=['msoaZoneID', 'property_type'])
+    factor_property_type = bsq.reindex(['msoaZoneID', 'property_type', 'pop_factor'],
+                                       axis=1).groupby(['msoaZoneID',
+                                                        'property_type']).sum().reset_index()
+    factor_property_type = factor_property_type.rename(columns={'pop_factor': 'pt_pop_factor'})
+    bsq = bsq.merge(factor_property_type, how='left', on=['msoaZoneID', 'property_type'])
 
     bsq['pop_factor'] = bsq['pop_factor'] / bsq['pt_pop_factor']
     bsq = bsq.drop('pt_pop_factor', axis=1)
 
-    testSegment = bsq[bsq['msoaZoneID'] == 1]
-    testSegment = testSegment[testSegment['property_type'] == 4]
-    testSegment['pop_factor'].sum()
-    # This is a good audit - all population factors by zoneID &
-    # property type before the join
-    segFolder = 'NTEM Segmentation Audits'
-    utils.create_folder(segFolder)
-    audit = bsq.reindex(['msoaZoneID', 'property_type', 'pop_factor'], axis=1).groupby(['msoaZoneID', 'property_type']). \
-        sum().reset_index()
-    audit.to_csv(segFolder + '/Zone_PT_Factor_Pre_Join_Audit.csv', index=False)
+    seg_folder = 'NTEM Segmentation Audits'
+    utils.create_folder(seg_folder)
+    audit = bsq.reindex(['msoaZoneID', 'property_type', 'pop_factor'],
+                        axis=1).groupby(['msoaZoneID',
+                                         'property_type']).sum().reset_index()
+    audit.to_csv(seg_folder + '/Zone_PT_Factor_Pre_Join_Audit.csv', index=False)
 
     print('Should be near to zones x property types - ie. 8480 x 6 = 50880 :', bsq['pop_factor'].sum())
 
+    # TODO: again is there a better way to get the MSOA codes than gpd?
     msoaCols = ['objectid', 'msoa11cd']
     ukMSOA = gpd.read_file(_default_msoaRef)
     ukMSOA = ukMSOA.loc[:, msoaCols]
@@ -856,22 +868,20 @@ def ApplyNtemSegments(classifiedResPropertyImportPath='classifiedResPropertyMSOA
     # Join in MSOA names and format matrix for further steps
     # TODO: Some handling required here for other zoning systems
     bsq = bsq.merge(ukMSOA, how='left', left_on='msoaZoneID', right_on='objectid')
-    bsqCols = ['msoa11cd', 'Age', 'Gender', 'employment_type', 'household_composition', 'property_type', 'R',
-               'pop_factor']
-    bsq = bsq.reindex(bsqCols, axis=1)
+    bsq_cols = ['msoa11cd', 'Age', 'Gender', 'employment_type', 'household_composition', 'property_type', 'R',
+                'pop_factor']
+    bsq = bsq.reindex(bsq_cols, axis=1)
     bsq = bsq.rename(columns={'R': 'area_type'})
-    unqMSOA = bsq.reindex(['msoa11cd'], axis=1).drop_duplicates()
-    len(unqMSOA)
 
-    audit = bsq.reindex(['msoa11cd', 'property_type', 'pop_factor'], axis=1).groupby(
-        ['msoa11cd', 'property_type']).sum().reset_index()
-    audit.to_csv(segFolder + '/Zone_PT_Factor_Audit_Inter_Join.csv', index=False)
+    audit = bsq.reindex(['msoa11cd', 'property_type', 'pop_factor'],
+                        axis=1).groupby(['msoa11cd', 'property_type']).sum().reset_index()
+    audit.to_csv(seg_folder + '/Zone_PT_Factor_Audit_Inter_Join.csv', index=False)
 
-    bsqAudit = bsq.groupby(['msoa11cd', 'property_type']).count().reset_index()
-    print(bsqAudit['pop_factor'].drop_duplicates())
-    crpAudit = crp['population'].sum()
-    print(crpAudit)
-    # So far so good
+    # TODO: record these audits more formally? Lots of examples of audits in the rest of this function
+    bsq_audit = bsq.groupby(['msoa11cd', 'property_type']).count().reset_index()
+    print(bsq_audit['pop_factor'].drop_duplicates())
+    crp_audit = crp['population'].sum()
+    print(crp_audit)
 
     # TODO: Fix join issue.
     # inner join crp - will lose land use bits on non-classified & communal establishments
@@ -879,19 +889,15 @@ def ApplyNtemSegments(classifiedResPropertyImportPath='classifiedResPropertyMSOA
                     right_on=['msoa11cd', 'property_type'])
     print('pop factor needs to be same as no of zones - 8480')
     print('population needs to resolve back to 60+ million once duplicates are removed')
-    crp['pop_factor'].sum()
-    crpAudit = crp['population'].drop_duplicates().sum()
-    print(crpAudit)
-    # Still fine
+    crp_audit = crp['population'].drop_duplicates().sum()
+    print(crp_audit)
 
     crp['pop_factor'].sum()
-    crpAudit = crp['population'].drop_duplicates().sum()
-    print(crpAudit)
+    crp_audit = crp['population'].drop_duplicates().sum()
+    print(crp_audit)
     # Still fine...
 
     # Audit bank
-    unqMSOA = crp.reindex(['ZoneID'], axis=1).drop_duplicates()
-    len(unqMSOA)
     print(crp['population'].sum())
     print(crp['pop_factor'].sum())
 
@@ -899,9 +905,9 @@ def ApplyNtemSegments(classifiedResPropertyImportPath='classifiedResPropertyMSOA
     # Apply population factor to populations to get people by property type
     crp['people'] = crp['population'] * crp['pop_factor']
 
-    outputCols = ['ZoneID', 'area_type', 'census_property_type', 'property_type', 'UPRN',
-                  'household_composition', 'Age', 'Gender', 'employment_type', 'people']
-    crp = crp.reindex(outputCols, axis=1)
+    output_cols = ['ZoneID', 'area_type', 'census_property_type', 'property_type', 'UPRN',
+                   'household_composition', 'Age', 'Gender', 'employment_type', 'people']
+    crp = crp.reindex(output_cols, axis=1)
     crp = crp.rename(columns={'UPRN': 'properties'})
 
     pop = crp['people'].sum()
@@ -912,10 +918,10 @@ def ApplyNtemSegments(classifiedResPropertyImportPath='classifiedResPropertyMSOA
     crp.to_csv(_default_home_dir + '/landUseOutput' + level + '.csv', index=False)
 
     # Total MSOA Pop Audit
-    msoaAudit = crp.reindex(['ZoneID', 'people'], axis=1).groupby('ZoneID').sum()
-    msoaAudit.to_csv(segFolder + '/2018MSOAPopulation_OutputEnd.csv', index=False)
+    msoa_audit = crp.reindex(['ZoneID', 'people'], axis=1).groupby('ZoneID').sum()
+    msoa_audit.to_csv(seg_folder + '/2018MSOAPopulation_OutputEnd.csv', index=False)
 
-    return (crp, bsq)
+    return crp, bsq
 
 
 def communal_establishments_splits():
@@ -924,7 +930,7 @@ def communal_establishments_splits():
     across zones and gender and age
     
     """
-
+    # TODO: why are columns renamed?
     communal_types = get_communal_types().reindex(columns=['msoa11cd', 'Age', 'gender',
                                                            'Total_people']).rename(
         columns={'msoa11cd': 'msoacd',
@@ -962,7 +968,7 @@ def communal_establishments_splits():
     print('Communal establishments average split for 2011 was', communal_establishments['CommunalFactor'].mean())
     communal_establishments = communal_establishments.replace({'Gender': {'Female': 'Females'}})
 
-    return (communal_establishments)
+    return communal_establishments
 
 
 def communal_establishments_employment():
@@ -976,7 +982,7 @@ def communal_establishments_employment():
     communal_emp = communal_emp.drop(columns={'splits', 'total'})
 
     print('Communal establishments employment splits done')
-    return (communal_emp)
+    return communal_emp
 
 
 def join_establishments(level=_default_zone_name,
@@ -1051,7 +1057,7 @@ def join_establishments(level=_default_zone_name,
     landusewComm.to_csv(_default_home_dir + '/landuseOutput' + _default_zone_name + '_withCommunal.csv', index=False)
 
 
-def LanduseFormatting(landusePath=_default_home_dir + '/landuseOutput' + _default_zone_name + '_withCommunal.csv'):
+def land_use_formatting(land_use_path=_default_home_dir + '/landuseOutput' + _default_zone_name + '_withCommunal.csv'):
     """
     Combines all flats into one category, i.e. property types = 4,5,6
 
@@ -1066,17 +1072,19 @@ def LanduseFormatting(landusePath=_default_home_dir + '/landuseOutput' + _defaul
     """
 
     # 1.Combine all flat types. Sort out flats on the landuse side; actually there's no 7
-    landuse = pd.read_csv(landusePath)
-    landuse['new_prop_type'] = landuse['property_type']
-    landuse.loc[landuse['property_type'] == 5, 'new_prop_type'] = 4
-    landuse.loc[landuse['property_type'] == 6, 'new_prop_type'] = 4
+    # TODO: map a dictionary instead? Even if there is no 7 in this data, should we include it here just in case?
+    land_use = pd.read_csv(land_use_path)
+    land_use['new_prop_type'] = land_use['property_type']
+    land_use.loc[land_use['property_type'] == 5, 'new_prop_type'] = 4
+    land_use.loc[land_use['property_type'] == 6, 'new_prop_type'] = 4
 
-    landuse = landuse.drop(columns='property_type').rename(columns={'new_prop_type': 'property_type'})
-    landuse['people'].sum()
-    landuse = landuse.to_csv(_default_home_dir + '/landuseOutput' + _default_zone_name + '_stage3.csv', index=False)
+    land_use = land_use.drop(columns='property_type').rename(columns={'new_prop_type': 'property_type'})
+    land_use = land_use.to_csv(_default_home_dir + '/landuseOutput' + _default_zone_name + '_stage3.csv', index=False)
+
+    return land_use
 
 
-def ApplyNSSECSOCsplits(landusePath=_default_home_dir + '/landuseOutput' + _default_zone_name + '_stage3.csv'):
+def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' + _default_zone_name + '_stage3.csv'):
     """
         Parameters
         ----------
@@ -1088,6 +1096,7 @@ def ApplyNSSECSOCsplits(landusePath=_default_home_dir + '/landuseOutput' + _defa
             house type definition - change NS-SEC house types detached etc to 1/2/3/4
         """
 
+    # TODO: map a dictionary instead for these - define it in lu_constants?
     nssec = pd.read_csv(_nssecPath)
     nssec.loc[nssec['house_type'] == 'Detached', 'property_type'] = 1
     nssec.loc[nssec['house_type'] == 'Semi-detached', 'property_type'] = 2
@@ -1367,6 +1376,7 @@ def ApplyNSSECSOCsplits(landusePath=_default_home_dir + '/landuseOutput' + _defa
     print(All['people'].sum())
 
 
+# TODO: should we switch to __name__=__main here?
 def run_main_build(ABPImport=True):
     """
     Set ABPImport to True if you want to copy over the ABP files to iter folder
@@ -1375,9 +1385,9 @@ def run_main_build(ABPImport=True):
     if ABPImport:
         copy_addressbase_files()
     else:
-        FilledProperties()
-        ApplyHouseholdOccupancy()
-        ApplyNtemSegments()
+        filled_properties()
+        apply_household_occupancy()
+        apply_ntem_segments()
         join_establishments()
-        LanduseFormatting()
-        ApplyNSSECSOCsplits()
+        land_use_formatting()
+        apply_ns_sec_soc_splits()
