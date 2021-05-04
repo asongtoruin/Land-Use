@@ -316,15 +316,6 @@ def create_employment_segmentation(bsq,
     return bsq
 
 
-def create_ntem_segmentation(bsq_import_path=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
-                             areaTypeImportPath=_import_folder + '/CTripEnd/ntem_zone_area_type.csv',
-                             ksEmpImportPath=_import_folder + '/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
-    bsq = create_ntem_areas(bsq_import_path, areaTypeImportPath)
-    bsq = create_employment_segmentation(bsq, ksEmpImportPath)
-
-    return bsq
-
-
 # TODO review this function and switch to lower case. Include a docstring
 def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/formatted_long_bsq.csv',
                       area_type_import_path=_import_folder + '/CTripEnd/ntem_zone_area_type.csv'):
@@ -711,7 +702,7 @@ def apply_household_occupancy(do_import=False,
 
 # TODO: are arguments 2-4 actually needed?
 def apply_ntem_segments(classified_res_property_import_path='classifiedResPropertyMSOA.csv',
-                        bsqImportPath=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
+                        bsq_import_path=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
                         areaTypeImportPath=_import_folder + 'CTripEnd/ntem_zone_area_type.csv',
                         ksEmpImportPath=_import_folder + 'KS601-3UK/uk_msoa_ks601equ_w_gender.csv',
                         level=_default_zone_name, writeSteps=False):
@@ -729,7 +720,9 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
     crp = crp.reindex(crp_cols, axis=1)
     crp['population'].sum()
 
-    bsq = create_ntem_segmentation()
+    # Read in the Bespoke Census Query and create NTEM areas and employment segmentation
+    bsq = create_ntem_areas(bsq_import_path, areaTypeImportPath)
+    bsq = create_employment_segmentation(bsq, ksEmpImportPath)
 
     # TODO: is the following a TODO?
     # if level == 'MSOA':
