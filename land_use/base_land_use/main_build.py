@@ -410,12 +410,6 @@ def CreateNtemSegmentation(bsqImportPath=_import_folder + 'Bespoke Census Query/
     return bsq
 
 
-# TODO put this explicitly in the code as len(bsq.msoaZoneID.unique())
-def CountMsoa(bsq):
-    unqMSOA = bsq.reindex(['msoaZoneID'], axis=1).drop_duplicates()
-    return (len(unqMSOA))
-
-
 # TODO review this function and switch to lower case. Include a docstring
 def CreateNtemAreas(bsqImportPath=_import_folder + '/Bespoke Census Query/formatted_long_bsq.csv',
                     areaTypeImportPath=_import_folder + '/CTripEnd/ntem_zone_area_type.csv'):
@@ -487,7 +481,7 @@ def CreateNtemAreas(bsqImportPath=_import_folder + '/Bespoke Census Query/format
     # Define a basic function to count the MSOAs in the bsq - so I don't have 
     # to write it again later.
 
-    print(CountMsoa(bsq), 'should be 8480')
+    print(len(bsq.msoaZoneID.unique()), 'should be 8480')
     # Add area types (the story of how I ultimately fixed Scotland)
     # Get an NTEM Zone for every MSOA - use the population lookup - ie. get the one
     # with the most people, not a big field
@@ -525,7 +519,7 @@ def CreateNtemAreas(bsqImportPath=_import_folder + '/Bespoke Census Query/format
     bsq = bsq.reindex(list(missingMsoa), axis=1)
     # stack bsq - full msoa bsq
     bsq = bsq.append(missingMsoa).reset_index(drop=True)
-    print(CountMsoa(bsq), 'should be 8480')
+    print(len(bsq.msoaZoneID.unique()), 'should be 8480')
     # Create and export pop_factor audit
     audit = bsq.groupby(['msoaZoneID']).sum().reindex(['pop_factor'],
                                                       axis=1)
@@ -1356,12 +1350,12 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
 
 
 # TODO: should we switch to __name__=__main here?
-def run_main_build(ABPImport=True):
+def run_main_build(abp_import=True):
     """
     Set ABPImport to True if you want to copy over the ABP files to iter folder
     """
     set_wd()
-    if ABPImport:
+    if abp_import:
         copy_addressbase_files()
     else:
         filled_properties()
