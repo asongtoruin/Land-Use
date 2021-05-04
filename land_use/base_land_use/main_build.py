@@ -1310,7 +1310,7 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
 
     Active_emp = Active_emp.drop(columns={'area_type_x', 'area_type_y'})
     Active_emp = Active_emp.merge(areatypes, on='ZoneID')
-    if (Active_emp['people'].sum() < (40.6 * 0.01)):
+    if Active_emp['people'].sum() < (40.6 * 0.01):
         print('something has gone wrong with splits')
     else:
         print('EWsplits has worked fine')
@@ -1349,7 +1349,7 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
     print(All['people'].sum())
 
 
-# TODO: should we switch to __name__=__main here?
+# TODO: should we switch to __name__=__main__ here?
 def run_main_build(abp_import=True):
     """
     Set ABPImport to True if you want to copy over the ABP files to iter folder
