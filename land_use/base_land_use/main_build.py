@@ -31,7 +31,7 @@ import pandas as pd # main module
 import geopandas as gpd
 from shapely.geometry import *
 import shutil as sh
-import nu_project as nup
+from land_use import utils
 
 # Default file paths
 # TODO: Implement taking these from the base year object. Comments below indicate relevant attributes
@@ -181,7 +181,7 @@ def PathConfig(datPath=_default_census_dat):
     
 def set_wd(homeDir = _default_home, iteration = _default_iter):
     os.chdir(homeDir)
-    nup.CreateProjectFolder(iteration)
+    utils.create_folder(iteration, ch_dir=True)
     return()
     
 def LSOACensusDataPrep(datPath, EWQS401, SQS401, EWQS402, SQS402, geography = _default_lsoaRef):
@@ -690,7 +690,7 @@ def ApplyHouseholdOccupancy(doImport=False, writeOut=True, \
         arpMsoaAudit = allResPropertyZonal.groupby('ZoneID').sum().reset_index()
         arpMsoaAudit = arpMsoaAudit.reindex(['ZoneID', 'population'],axis=1)
         hpaFolder = 'Hops Population Audits'
-        nup.CreateFolder(hpaFolder)
+        utils.create_folder(hpaFolder)
         arpMsoaAudit.to_csv(hpaFolder + '/' + level + '_population_from_2018_hops.csv', index=False)
         if writeOut:
             allResPropertyZonal.to_csv('classifiedResProperty' + level + '.csv', index = False)
@@ -756,7 +756,7 @@ def ApplyHouseholdOccupancy(doImport=False, writeOut=True, \
         arpMsoaAudit = allResPropertyZonal.groupby('ZoneID').sum().reset_index()
         arpMsoaAudit = arpMsoaAudit.reindex(['ZoneID', 'population'],axis=1)
         hpaFolder = 'Hops Population Audits'
-        nup.CreateFolder(hpaFolder)
+        utils.create_folder(hpaFolder)
         arpMsoaAudit.to_csv(hpaFolder + '/' + level + '_population_from_2018_hops.csv', index=False)
         arpMsoaAudit = arpMsoaAudit['population'].sum()
         print(arpMsoaAudit)
@@ -811,7 +811,7 @@ def ApplyNtemSegments(classifiedResPropertyImportPath = 'classifiedResPropertyMS
         # This is a good audit - all population factors by zoneID &
         # property type before the join
         segFolder = 'NTEM Segmentation Audits'
-        nup.CreateFolder(segFolder)
+        utils.create_folder(segFolder)
         audit = bsq.reindex(['msoaZoneID','property_type', 'pop_factor'],\
                         axis=1).groupby(['msoaZoneID','property_type']).\
                         sum().reset_index()
@@ -1003,7 +1003,7 @@ def join_establishments(level = _default_zone_name,
                 columns = {'people', 'hc', 'properties','census_property_type'}).rename(columns= {'newpop': 'people'})
     CommunalEstablishments['people'].sum()
     CommunalEstFolder = 'CommunalEstablishments'
-    nup.CreateFolder(CommunalEstFolder)
+    utils.create_folder(CommunalEstFolder)
     CommunalEstablishments.to_csv(CommunalEstFolder + '/' + _default_zone_name + 
                                       'CommunalEstablishments2011.csv', index=False)
     CommunalEstablishments['people'].sum()
