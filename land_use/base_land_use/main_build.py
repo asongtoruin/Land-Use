@@ -252,8 +252,8 @@ def agg_wap_factor(ksSub, newSeg):
 
 
 # TODO: review this function
-def CreateEmploymentSegmentation(bsq,
-                                 ksEmpImportPath=_import_folder + '/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
+def create_employment_segmentation(bsq,
+                                   ksEmpImportPath=_import_folder + '/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
     """
     # Synthesise in employment segmentation using 2011 data
     # TODO: Growth 2011 employment segments
@@ -316,19 +316,18 @@ def CreateEmploymentSegmentation(bsq,
     return bsq
 
 
-# TODO: switch to lower case
-def CreateNtemSegmentation(bsqImportPath=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
-                           areaTypeImportPath=_import_folder + '/CTripEnd/ntem_zone_area_type.csv',
-                           ksEmpImportPath=_import_folder + '/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
-    bsq = CreateNtemAreas(bsqImportPath)
-    bsq = CreateEmploymentSegmentation(bsq)
+def create_ntem_segmentation(bsq_import_path=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
+                             areaTypeImportPath=_import_folder + '/CTripEnd/ntem_zone_area_type.csv',
+                             ksEmpImportPath=_import_folder + '/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
+    bsq = create_ntem_areas(bsq_import_path)
+    bsq = create_employment_segmentation(bsq)
 
     return bsq
 
 
 # TODO review this function and switch to lower case. Include a docstring
-def CreateNtemAreas(bsqImportPath=_import_folder + '/Bespoke Census Query/formatted_long_bsq.csv',
-                    areaTypeImportPath=_import_folder + '/CTripEnd/ntem_zone_area_type.csv'):
+def create_ntem_areas(bsqImportPath=_import_folder + '/Bespoke Census Query/formatted_long_bsq.csv',
+                      areaTypeImportPath=_import_folder + '/CTripEnd/ntem_zone_area_type.csv'):
     # Import Bespoke Census Query - already transformed to long format in R
     print('Importing bespoke census query')
     bsq = pd.read_csv(bsqImportPath)
@@ -726,7 +725,7 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
     crp = crp.reindex(crp_cols, axis=1)
     crp['population'].sum()
 
-    bsq = CreateNtemSegmentation()
+    bsq = create_ntem_segmentation()
 
     # TODO: is the following a TODO?
     # if level == 'MSOA':
@@ -824,7 +823,7 @@ def communal_establishments_splits():
     print('Reading in Communal Establishments by type 2011 totals')
     communal_types = pd.read_csv(_default_communal_types_path)
     communal_types = communal_types.reindex(columns=['msoa11cd', 'Age', 'gender',
-                                                           'Total_people']).rename(
+                                                     'Total_people']).rename(
         columns={'msoa11cd': 'msoacd',
                  'gender': 'Gender'})
 
@@ -838,7 +837,8 @@ def communal_establishments_splits():
     # merge with 2011 census totals per Zone per gender and age
     print('Reading in census population by age and gender 2011 totals')
     # TODO: why are male and female capitalised with this replace?
-    census_population = pd.read_csv(_default_census_population).replace({'Gender': {'male': 'Male', 'female': 'Female'}})
+    census_population = pd.read_csv(_default_census_population).replace(
+        {'Gender': {'male': 'Male', 'female': 'Female'}})
     census_populationB = pd.melt(census_population, id_vars=['msoacd', 'Gender'],
                                  value_vars=['under 16', '16-74', '75 or over'
                                              ]).rename(columns={'variable': 'Age',
