@@ -145,6 +145,7 @@ class BaseYearLandUse:
         """
         # Check which parts of the process need running
         # TODO: decide how to handle the 5.2.2 read in core property data and 5.2.3 property type mapping steps
+        # TODO: we need main_build to inherit the paths/iteration number etc from this base object
         main_build.copy_addressbase_files()
         if self.state['5.2.2 read in core property data'] == 0:
             pass
