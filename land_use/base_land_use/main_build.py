@@ -30,6 +30,7 @@ sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Utilities/Python')
 import numpy as np  # Vector operations
 import pandas as pd  # main module
 import geopandas as gpd
+# TODO: check what is used in shapely (if anything) and import explicitly
 from shapely.geometry import *
 import shutil as sh
 from land_use import utils
@@ -65,7 +66,7 @@ _nssecPath = _import_folder + 'NPR Segmentation/processed data/TfN_households_ex
 _file_path_list = r"Y:\NorMITs Land Use\import\AddressBase\2018\List of ABP datasets.csv"
 
 
-# 1. Functions to read in the source data
+# 1. Get AddressBase data
 def copy_addressbase_files():
     """
     Copy the relevant ABP files from import drive
@@ -76,7 +77,7 @@ def copy_addressbase_files():
 
     Returns
     ----------
-        Copies over the specified files to _default_home_dir for use in later functions.   
+        Copies over the specified files to _default_home_dir for use in later functions.
     """
     dest = _default_home_dir
     data = pd.read_csv(_file_path_list)
@@ -90,91 +91,6 @@ def copy_addressbase_files():
         # TODO: in line with PEP 8, make this an explicit file not found error
         except:
             print("File not found")
-
-
-# TODO: this is really just pd.read_csv() so consider if this separate definition is needed
-def get_addressbase_extract(path=_default_addressbase_extract_path):
-    """
-    Import a csv of AddressBase extract (2018) already filtered out and classified.
-
-    Parameters
-    ----------
-    path:
-        Path to csv of AddressBase extract.
-
-    Returns
-    ----------
-    AddressBase extract:
-        DataFrame containing AddressBase extract.
-        
-    Copy across from Y    
-    """
-    print('Reading in AddressBase extract')
-    abp_file = pd.read_csv(path)
-    return abp_file
-
-
-# TODO: this is really just pd.read_csv() so consider if this separate definition is needed
-def get_communal_types(path=_default_communal_types_path):
-    """
-     Import a csv of Communal Establishments types.
-
-    This might point to pre-processing function or modelling folders in the future
-
-    Parameters
-    ----------
-    path:
-        Path to csv of Communal Establishments by type 2011 totals. 
-        This is Census data.
-
-    Returns
-    ----------
-    UPRN lookup:
-        DataFrame containing Communal Establishments by type 2011 totals
-    """
-    print('Reading in Communal Establishments by type 2011 totals')
-    communal_types = pd.read_csv(path)
-    return communal_types
-
-
-# TODO: this is really just pd.read_csv() so consider if this separate definition is needed
-def get_communal_employment(path=_default_communal_employment_path):
-    """
-    Import a csv of Communal Establishments by employment (fte/pte/stu).
-
-    Parameters
-    ----------
-    path:
-        Path to csv of Communal Establishments employment data.
-
-    Returns
-    ----------
-    Communal Employment Employment:
-        DataFrame containing Communal Establishments by employment
-    """
-    print('Reading in Communal Establishments by employment 2011 totals')
-    communal_employment = pd.read_csv(path)
-    return communal_employment
-
-
-# TODO: this is really just pd.read_csv() so consider if this separate definition is needed
-def get_census_population(path=_default_census_population):
-    """
-    Import a csv of Communal Establishments by age categories.
-
-    Parameters
-    ----------
-    path:
-        Path to csv of census population
-
-    Returns
-    ----------
-    Communal Employment Employment:
-        DataFrame containing population in 2011 by gender and age and zone
-    """
-    print('Reading in census population by age and gender 2011 totals')
-    census_population = pd.read_csv(path)
-    return census_population
 
 
 # 2. Main analysis functions - everything related to census and segmentation
@@ -676,7 +592,8 @@ def apply_household_occupancy(do_import=False,
     balanced_cpt_data = balanced_cpt_data.reindex(trim_cols, axis=1)
 
     # Read in all res property for the level of aggregation
-    all_res_property = get_addressbase_extract()
+    print('Reading in AddressBase extract')
+    all_res_property = pd.read_csv(_default_addressbase_extract_path)
 
     all_res_property = all_res_property.reindex(['ZoneID', 'census_property_type',
                                                  'UPRN'], axis=1)
@@ -904,7 +821,9 @@ def communal_establishments_splits():
     
     """
     # TODO: why are columns renamed?
-    communal_types = get_communal_types().reindex(columns=['msoa11cd', 'Age', 'gender',
+    print('Reading in Communal Establishments by type 2011 totals')
+    communal_types = pd.read_csv(_default_communal_types_path)
+    communal_types = communal_types.reindex(columns=['msoa11cd', 'Age', 'gender',
                                                            'Total_people']).rename(
         columns={'msoa11cd': 'msoacd',
                  'gender': 'Gender'})
@@ -916,8 +835,10 @@ def communal_establishments_splits():
                                                               )['Total_people'].transform('sum')
 
     communal_types = communal_types.drop(columns={'Total_people'}).drop_duplicates()
-    # merge with 2011 census totals per Zone per gender and age 
-    census_population = get_census_population().replace({'Gender': {'male': 'Male', 'female': 'Female'}})
+    # merge with 2011 census totals per Zone per gender and age
+    print('Reading in census population by age and gender 2011 totals')
+    # TODO: why are male and female capitalised with this replace?
+    census_population = pd.read_csv(_default_census_population).replace({'Gender': {'male': 'Male', 'female': 'Female'}})
     census_populationB = pd.melt(census_population, id_vars=['msoacd', 'Gender'],
                                  value_vars=['under 16', '16-74', '75 or over'
                                              ]).rename(columns={'variable': 'Age',
@@ -945,7 +866,8 @@ def communal_establishments_splits():
 
 
 def communal_establishments_employment():
-    communal_emp = get_communal_employment()
+    print('Reading in Communal Establishments by employment 2011 totals')
+    communal_emp = pd.read_csv(_default_communal_employment_path)
     communal_emp = pd.melt(communal_emp, id_vars=['Gender', 'Age'], value_vars=
     ['fte', 'pte', 'unm', 'stu']).rename(columns={'variable': 'employment_type',
                                                   'value': 'splits'})
@@ -1310,6 +1232,7 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
 
     Active_emp = Active_emp.drop(columns={'area_type_x', 'area_type_y'})
     Active_emp = Active_emp.merge(areatypes, on='ZoneID')
+    # TODO: hard-coded values. If correct, put them in landuse_constants?
     if Active_emp['people'].sum() < (40.6 * 0.01):
         print('something has gone wrong with splits')
     else:
