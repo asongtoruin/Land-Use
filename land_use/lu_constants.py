@@ -106,13 +106,14 @@ SOC_P = [1, 2, 12]
 
 # Property type dictionary: combines all flat types
 PROPERTY_TYPE = {
-    1: 1,
-    2: 2,
-    3: 3,
-    4: 4,
-    5: 4,
-    6: 4,
-    7: 4
+    1: 1,  # detached
+    2: 2,  # semi-detached
+    3: 3,  # terrace
+    4: 4,  # purpose-built flat
+    5: 4,  # shared flat
+    6: 4,  # flat in commercial
+    7: 4,  # mobile home
+    8: 8   # communal establishment
 }
 
 # Car availabiity reference
