@@ -974,30 +974,21 @@ def land_use_formatting(land_use_path=_default_home_dir + '/landuseOutput' + _de
 
 def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' + _default_zone_name + '_stage3.csv'):
     """
-        Parameters
-        ----------
-        nssecPath:
-            Path to Census NS-SEC table
-        Returns
-        ----------
-            NS-SEC from Census       
-            house type definition - change NS-SEC house types detached etc to 1/2/3/4
-        """
+    Parameters
+    ----------
+    nssecPath:
+        Path to Census NS-SEC table
+    Returns
+    ----------
+        NS-SEC from Census
+        house type definition - change NS-SEC house types detached etc to 1/2/3/4
+    """
 
-    # TODO: map a dictionary instead for these - define it in lu_constants?
+    # Read in NS-SeC table and map the house types and NS-SeC categories to the bespoke classes in lu_constants
     nssec = pd.read_csv(_nssecPath)
-    nssec.loc[nssec['house_type'] == 'Detached', 'property_type'] = 1
-    nssec.loc[nssec['house_type'] == 'Semi-detached', 'property_type'] = 2
-    nssec.loc[nssec['house_type'] == 'Terraced', 'property_type'] = 3
-    nssec.loc[nssec['house_type'] == 'Flat', 'property_type'] = 4
-    nssec = nssec.drop(columns={'house_type'})
-
-    nssec.loc[nssec['NS_SeC'] == 'NS-SeC 1-2', 'ns_sec'] = 1
-    nssec.loc[nssec['NS_SeC'] == 'NS-SeC 3-5', 'ns_sec'] = 2
-    nssec.loc[nssec['NS_SeC'] == 'NS-SeC 6-7', 'ns_sec'] = 3
-    nssec.loc[nssec['NS_SeC'] == 'NS-SeC 8', 'ns_sec'] = 4
-    nssec.loc[nssec['NS_SeC'] == 'NS-SeC L15', 'ns_sec'] = 5
-    nssec = nssec.drop(columns={'NS_SeC'}).rename(columns={'MSOA name': 'ZoneID'})
+    nssec['property_type'] = nssec['house_type'].map(consts.HOUSE_TYPE)
+    nssec['ns_sec'] = nssec['NS_SeC'].map(consts.NS_SEC)
+    nssec = nssec.drop(columns={'house_type', 'NS_SeC'}).rename(columns={'MSOA name': 'ZoneID'})
 
     # all economically active in one group
     nssec = nssec.rename(columns={'Economically active FT 1-3': 'FT higher',
@@ -1009,8 +1000,8 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
                                   'Economically active unemployed': 'unm',
                                   'Economically inactive': 'children',
                                   'Economically inactive retired': '75 or over',
-                                  'Full-time students': 'stu'}).drop(columns={
-        'TfN area type'})
+                                  'Full-time students': 'stu'}).drop(columns={'TfN area type'})
+
     nssec2 = nssec.copy()
     # rename columns and melt it down
     nssec = nssec.rename(columns={'msoa_name': 'ZoneID'})

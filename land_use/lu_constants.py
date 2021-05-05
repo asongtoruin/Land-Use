@@ -116,6 +116,24 @@ PROPERTY_TYPE = {
     8: 8   # communal establishment
 }
 
+# Property type description to code
+# TODO: lots of overlap with PROPERTY_TYPE, can it be a single object? (Used in main_build)
+HOUSE_TYPE = {
+    'Detached': 1,
+    'Semi-detached': 2,
+    'Terraced': 3,
+    'Flat': 4
+}
+
+# NS-SeC category mapping
+NS_SEC = {
+    'NS-SeC 1-2': 1,
+    'NS-SeC 3-5': 2,
+    'NS-SeC 6-7': 3,
+    'NS-SeC 8': 4,
+    'NS-SeC L15': 5
+}
+
 # Car availabiity reference
 CA_MODEL = pd.DataFrame({'cars': [0, 1, 2, 3],
                          'ca': [1, 2, 2, 2]})
