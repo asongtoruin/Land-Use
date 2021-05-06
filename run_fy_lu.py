@@ -4,13 +4,13 @@ import land_use.future_land_use.fy_lu as fylu
 # Full scenarios
 # scenarios = ['NTEM', 'SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
 # Full future years
-# future_years = ['2033', '2035', '2040', '2050']
+# future_years = ['2027', '2033', '2035', '2040', '2050']
 
 if __name__ == '__main__':
     scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
-    future_years = ['2040']
+    future_years = ['2027', '2040']
     pop = True
-    emp = False
+    emp = True
     export = True
     balance_demographics = True
 
