@@ -20,19 +20,13 @@ from typing import List
 import pandas as pd
 
 # Local imports
-import normits_demand as nd
-from normits_demand import constants as consts
-from normits_demand.utils import compress
-from normits_demand.utils import general as du
-
-from normits_demand.concurrency import multiprocessing as mp
-
-# Imports that need moving into here
-from normits_demand.utils.utils import create_folder
-from normits_demand.utils.general import list_files
+import land_use as lu
+from land_use import lu_constants as consts
+from land_use.concurrency import multiprocessing
+from land_use.utils import compress
 
 
-def cast_to_pathlib_path(path: nd.PathLike) -> pathlib.Path:
+def cast_to_pathlib_path(path: lu.PathLike) -> pathlib.Path:
     """
     Tries to cast path to pathlib.Path
 
@@ -52,7 +46,7 @@ def cast_to_pathlib_path(path: nd.PathLike) -> pathlib.Path:
     return pathlib.Path(path)
 
 
-def file_exists(file_path: nd.PathLike) -> bool:
+def file_exists(file_path: lu.PathLike) -> bool:
     """
     Checks if a file exists at the given path.
 
@@ -78,7 +72,7 @@ def file_exists(file_path: nd.PathLike) -> bool:
     return True
 
 
-def check_file_exists(file_path: nd.PathLike) -> None:
+def check_file_exists(file_path: lu.PathLike) -> None:
     """
     Checks if a file exists at the given path. Throws an error if not.
 
@@ -97,7 +91,7 @@ def check_file_exists(file_path: nd.PathLike) -> None:
         )
 
 
-def check_path_exists(path: nd.PathLike) -> None:
+def check_path_exists(path: lu.PathLike) -> None:
     """
     Checks if a path exists. Throws an error if not.
 
@@ -116,7 +110,7 @@ def check_path_exists(path: nd.PathLike) -> None:
         )
 
 
-def is_csv(file_path: nd.PathLike) -> bool:
+def is_csv(file_path: lu.PathLike) -> bool:
     """
     Returns True if given file path points to a csv, else False
 
@@ -141,7 +135,7 @@ def is_csv(file_path: nd.PathLike) -> bool:
     return file_extension == 'csv'
 
 
-def maybe_add_suffix(path: nd.PathLike,
+def maybe_add_suffix(path: lu.PathLike,
                      suffix: str,
                      overwrite: bool = True,
                      ) -> pathlib.Path:
@@ -208,7 +202,7 @@ def is_index_set(df: pd.DataFrame):
     return False
 
 
-def read_df(path: nd.PathLike,
+def read_df(path: lu.PathLike,
             index_col: int = None,
             find_similar: bool = False,
             **kwargs,
@@ -272,7 +266,7 @@ def read_df(path: nd.PathLike,
         )
 
 
-def write_df(df: pd.DataFrame, path: nd.PathLike, **kwargs) -> pd.DataFrame:
+def write_df(df: pd.DataFrame, path: lu.PathLike, **kwargs) -> pd.DataFrame:
     """
     Reads in the dataframe at path. Decompresses the df if needed.
 
@@ -309,7 +303,7 @@ def write_df(df: pd.DataFrame, path: nd.PathLike, **kwargs) -> pd.DataFrame:
         )
 
 
-def read_pickle(path: nd.PathLike,
+def read_pickle(path: lu.PathLike,
                 find_similar: bool = False,
                 **kwargs,
                 ) -> pd.DataFrame:
@@ -357,7 +351,7 @@ def read_pickle(path: nd.PathLike,
         )
 
 
-def write_pickle(obj: pd.DataFrame, path: nd.PathLike, **kwargs) -> pd.DataFrame:
+def write_pickle(obj: pd.DataFrame, path: lu.PathLike, **kwargs) -> pd.DataFrame:
     """
     Reads in the dataframe at path. Decompresses the df if needed.
 
@@ -394,7 +388,7 @@ def write_pickle(obj: pd.DataFrame, path: nd.PathLike, **kwargs) -> pd.DataFrame
         )
 
 
-def find_filename(path: nd.PathLike,
+def find_filename(path: lu.PathLike,
                   alt_types: List[str] = None,
                   return_full_path: bool = True,
                   ) -> pathlib.Path:
@@ -462,11 +456,11 @@ def find_filename(path: nd.PathLike,
     )
 
 
-def _copy_all_files_internal(import_dir: nd.PathLike,
-                             export_dir: nd.PathLike,
+def _copy_all_files_internal(import_dir: lu.PathLike,
+                             export_dir: lu.PathLike,
                              force_csv_out: bool,
                              index_col_out: bool,
-                             in_fname: nd.PathLike,
+                             in_fname: lu.PathLike,
                              ) -> None:
     """
     internal function of copy_all_files
@@ -491,8 +485,8 @@ def _copy_all_files_internal(import_dir: nd.PathLike,
     write_df(df, out_path, index=index_col_out)
 
 
-def copy_all_files(import_dir: nd.PathLike,
-                   export_dir: nd.PathLike,
+def copy_all_files(import_dir: lu.PathLike,
+                   export_dir: lu.PathLike,
                    force_csv_out: bool = False,
                    index_col_out: bool = True,
                    process_count: int = consts.PROCESS_COUNT,

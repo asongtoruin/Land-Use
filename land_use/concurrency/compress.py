@@ -15,9 +15,10 @@ from typing import Any
 
 
 # Local imports
-import normits_demand as nd
-from normits_demand.utils import file_ops
-import normits_demand.constants as consts
+from land_use.utils import file_ops
+import land_use.lu_constants as consts
+
+import land_use as lu
 
 """
 Test use
@@ -46,7 +47,7 @@ Out as 56mb
 
 
 def write_out(o: Any,
-              path: nd.PathLike,
+              path: lu.PathLike,
               overwrite_suffix: bool = True
               ) -> pathlib.Path:
     """
@@ -83,7 +84,7 @@ def write_out(o: Any,
     return path
 
 
-def read_in(path: nd.PathLike) -> Any:
+def read_in(path: lu.PathLike) -> Any:
     """
     Reads the data at path, decompresses, and returns the object.
 
