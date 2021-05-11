@@ -70,27 +70,17 @@ _file_path_list = r"Y:\NorMITs Land Use\import\AddressBase\2018\List of ABP data
 # 1. Get AddressBase data
 def copy_addressbase_files():
     """
-    Copy the relevant ABP files from import drive
-    Parameters
-    ----------
-    file_path_list:
-        Path to csv of AddressBase extract paths.
-
-    Returns
-    ----------
-        Copies over the specified files to _default_home_dir for use in later functions.
+    Copy the relevant ABP files from import drive to _default_home_dir for use in later functions.
+    _file_path_list: Path to csv of AddressBase extract paths.
     """
     dest = _default_home_dir
-    data = pd.read_csv(_file_path_list)
+    files = pd.read_csv(_file_path_list)
 
-    # Start at 2nd row
-    # TODO: why? What's wrong with the first entry in data?
-    for i in range(1, len(data)):
+    for file in files.FilePath:
         try:
-            sh.copy(data.FilePath[i], dest)
-            print("Copied over file into default iter folder: " + data.FilePath[i])
-        # TODO: in line with PEP 8, make this an explicit file not found error
-        except:
+            sh.copy(file, dest)
+            print("Copied over file into default iter folder: " + file)
+        except IOError:
             print("File not found")
 
 
