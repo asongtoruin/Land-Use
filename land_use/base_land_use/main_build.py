@@ -85,11 +85,6 @@ def copy_addressbase_files():
 
 
 # 2. Main analysis functions - everything related to census and segmentation
-def path_config(dat_path=_default_census_dat):
-    files = os.listdir(dat_path)
-    return dat_path, files
-
-
 def set_wd(home_dir=_default_home, iteration=_default_iter):
     """
     Makes a new folder, if needed, for the iteration as a child of the home directory.
@@ -499,9 +494,7 @@ def apply_household_occupancy(do_import=False,
         balanced_cpt_data = pd.read_csv('UKHouseHoldOccupancy2011.csv')
 
     else:
-        census_dat = path_config(_import_folder + '/Nomis Census 2011 Head & Household')
-
-        # TODO: - This was a patch to get it to work fast and it did. 
+        # TODO: patch to get it to work fast. os.listdir() previously called on _default_census_dat but unused
         # Make these a bit cleverer to reduce risk of importing the wrong thing
         EWQS401 = 'QS401UK_LSOA.csv'
         SQS401 = 'QS_401UK_DZ_2011.csv'
@@ -509,7 +502,7 @@ def apply_household_occupancy(do_import=False,
         SQS402 = 'QS402UK_DZ_2011.csv'
         # KS401 = 'KS401_UK_LSOA.csv'
 
-        cpt_data = LSOACensusDataPrep(census_dat[0], EWQS401, SQS401, EWQS402, SQS402, geography=_default_lsoaRef)
+        cpt_data = LSOACensusDataPrep(_default_census_dat, EWQS401, SQS401, EWQS402, SQS402, geography=_default_lsoaRef)
 
         # Zone up here to MSOA aggregations
         balanced_cpt_data = balance_missing_hops(cpt_data, grouping_col='msoaZoneID')
