@@ -85,15 +85,6 @@ def copy_addressbase_files():
 
 
 # 2. Main analysis functions - everything related to census and segmentation
-def set_wd(home_dir=_default_home, iteration=_default_iter):
-    """
-    Makes a new folder, if needed, for the iteration as a child of the home directory.
-    The working directory is then set as this new iteration folder.
-    """
-    os.chdir(home_dir)
-    utils.create_folder(iteration, ch_dir=True)
-
-
 # TODO: work out what this is for and what it does. Update docstring accordingly
 def LSOACensusDataPrep(dat_path, EWQS401, SQS401, EWQS402, SQS402, geography=_default_lsoaRef):
     """
@@ -1243,7 +1234,10 @@ def run_main_build(abp_import=True):
     """
     Set ABPImport to True if you want to copy over the ABP files to iter folder
     """
-    set_wd()
+    # Make a new sub folder of the home directory for the iteration, if needed, and set this as the working directory.
+    os.chdir(_default_home)
+    utils.create_folder(_default_iter, ch_dir=True)
+
     if abp_import:
         copy_addressbase_files()
     else:
