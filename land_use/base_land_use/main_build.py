@@ -85,55 +85,51 @@ def copy_addressbase_files():
 
 
 # 2. Main analysis functions - everything related to census and segmentation
-# TODO: work out what this is for and what it does. Update docstring accordingly
-def LSOACensusDataPrep(dat_path, EWQS401, SQS401, EWQS402, SQS402, geography=_default_lsoaRef):
+# TODO: need to add percentage filled by msoa to account for seasonal households
+def lsoa_census_data_prep(dat_path, population_tables, property_tables, geography=_default_lsoaRef):
     """
-    This function prepares the census data by picking fields out of the csvs:
-        
+    This function prepares the census data by picking fields out of the census csvs.
+    Computes the ratio between the population and number of properties to return the household occupancy.
+
+    dat_path: location of the census data
+    census_tables: list of the csv file names to import
+    geography: file path for geometry, defaults to LSOA
     """
-    # TODO: need to add percentage filled by msoa to account for seasonal households
-    geography = gpd.read_file(_default_lsoaRef)
+
+    def _read_census_table(census_tables, table_type):
+        imports = []
+        for census_table in census_tables:
+            table = pd.read_csv(dat_path + '/' + census_table).iloc[:, [2, 6, 7, 8, 10, 11, 12, 13]]
+            table.columns = ['geography_code', 'cpt1', 'cpt2', 'cpt3', 'cpt4', 'cpt5', 'cpt6', 'cpt7']
+            imports.append(table)
+
+        imports = pd.concat(imports, sort=True)  # combine into a single DataFrame
+        imports = pd.wide_to_long(imports,
+                                  stubnames='cpt',
+                                  i='geography_code',
+                                  j='census_property_type').reset_index().rename(columns={"cpt": table_type})
+        return imports
+
+    # Read in the population and property data
+    population_imports = _read_census_table(population_tables, "population")
+    property_imports = _read_census_table(property_tables, "properties")
+
+    # Read in the geometry
+    geography = gpd.read_file(geography)
     geography = geography.iloc[:, 0:3]
 
-    EWQS401import = pd.read_csv(dat_path + '/' + EWQS401)
-    EWQS401numbers = EWQS401import.iloc[:, [2, 6, 7, 8, 10, 11, 12, 13]]
-    del (EWQS401import)
-    EWQS401numbers.columns = ['geography_code', 'cpt1', 'cpt2', 'cpt3', 'cpt4', 'cpt5', 'cpt6', 'cpt7']
+    # Merge the population data, property data and geometry into a single DataFrame: household_occupancy
+    household_occupancy = population_imports.merge(property_imports,
+                                                   how='left',
+                                                   on=['geography_code', 'census_property_type'])
+    household_occupancy = geography.merge(household_occupancy,
+                                          how='left',
+                                          left_on='lsoa11cd',
+                                          right_on='geography_code')
 
-    ## Something
-    SQS401import = pd.read_csv(dat_path + '/' + SQS401)
-    SQS401numbers = SQS401import.iloc[:, [2, 6, 7, 8, 10, 11, 12, 13]]
-    del (SQS401import)
-    SQS401numbers.columns = ['geography_code', 'cpt1', 'cpt2', 'cpt3', 'cpt4', 'cpt5', 'cpt6', 'cpt7']
-
-    UKQS401 = pd.concat([EWQS401numbers, SQS401numbers]).copy()
-    del (EWQS401numbers, SQS401numbers)
-    UKQS401 = pd.wide_to_long(UKQS401, stubnames='cpt', i='geography_code',
-                              j='census_property_type').reset_index().rename(columns={"cpt": "population"})
-
-    EWQS402import = pd.read_csv(dat_path + '/' + EWQS402)
-    EWQS402numbers = EWQS402import.iloc[:, [2, 6, 7, 8, 10, 11, 12, 13]]
-    del (EWQS402import)
-    EWQS402numbers.columns = ['geography_code', 'cpt1', 'cpt2', 'cpt3', 'cpt4', 'cpt5', 'cpt6', 'cpt7']
-
-    SQS402import = pd.read_csv(dat_path + '/' + SQS402)
-    SQS402numbers = SQS402import.iloc[:, [2, 6, 7, 8, 10, 11, 12, 13]]
-    del (SQS402import)
-    SQS402numbers.columns = ['geography_code', 'cpt1', 'cpt2', 'cpt3', 'cpt4', 'cpt5', 'cpt6', 'cpt7']
-
-    UKQS402 = pd.concat([EWQS402numbers, SQS402numbers]).copy()
-    del (EWQS402numbers, SQS402numbers)
-    UKQS402 = pd.wide_to_long(UKQS402, stubnames='cpt', i='geography_code',
-                              j='census_property_type').reset_index().rename(columns={"cpt": "properties"})
-
-    UKHouseholdOccupancy = UKQS401.merge(UKQS402, how='left', on=['geography_code', 'census_property_type'])
-    UKHouseholdOccupancyGeo = geography.merge(UKHouseholdOccupancy, how='left', left_on='lsoa11cd',
-                                              right_on='geography_code')
-    del (UKHouseholdOccupancy)
-
-    UKHouseholdOccupancyGeo['household_occupancy'] = UKHouseholdOccupancyGeo['population'] / UKHouseholdOccupancyGeo[
-        'properties']
-    return UKHouseholdOccupancyGeo
+    # Calculate the household occupancy ratio
+    household_occupancy['household_occupancy'] = household_occupancy['population'] / household_occupancy['properties']
+    return household_occupancy
 
 
 # TODO: case when write_out=True plus update docstring
@@ -412,7 +408,7 @@ def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/fo
                                                       axis=1)
     audit.to_csv('msoa_pop_factor_audit.csv', index=False)
     land_audit = bsq.reindex(['msoaZoneID', 'Zone_Desc'],
-                            axis=1).drop_duplicates().merge(
+                             axis=1).drop_duplicates().merge(
         msoaShp, how='inner',
         left_on='msoaZoneID',
         right_on='objectid').drop(
@@ -493,7 +489,8 @@ def apply_household_occupancy(do_import=False,
         SQS402 = 'QS402UK_DZ_2011.csv'
         # KS401 = 'KS401_UK_LSOA.csv'
 
-        cpt_data = LSOACensusDataPrep(_default_census_dat, EWQS401, SQS401, EWQS402, SQS402, geography=_default_lsoaRef)
+        cpt_data = lsoa_census_data_prep(_default_census_dat, [EWQS401, SQS401], [EWQS402, SQS402],
+                                         geography=_default_lsoaRef)
 
         # Zone up here to MSOA aggregations
         balanced_cpt_data = balance_missing_hops(cpt_data, grouping_col='msoaZoneID')
