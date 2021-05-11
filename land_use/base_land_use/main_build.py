@@ -701,7 +701,6 @@ def apply_household_occupancy(do_import=False,
         print("no support for this zone")
 
 
-# TODO: are arguments 2-4 actually needed?
 def apply_ntem_segments(classified_res_property_import_path='classifiedResPropertyMSOA.csv',
                         bsq_import_path=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
                         areaTypeImportPath=_import_folder + 'CTripEnd/ntem_zone_area_type.csv',
@@ -1256,7 +1255,7 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
     print(All['people'].sum())
 
 
-# TODO: should we switch to __name__=__main__ here?
+# TODO: remove once in run_by_lu
 def run_main_build(abp_import=True):
     """
     Set ABPImport to True if you want to copy over the ABP files to iter folder
