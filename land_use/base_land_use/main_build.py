@@ -147,12 +147,12 @@ def aggregate_cpt(cpt_data, grouping_col=None, write_out=True):
         agg_data['household_occupancy'] = agg_data['population'] / agg_data['properties']
 
     # if write_out:
-    # aggData.to_csv('cptlsoa2011.csv')
+    # agg_data.to_csv('cptlsoa2011.csv')
 
     return agg_data
 
 
-def zone_up(cpt_data, hlsaName='MSOA',
+def zone_up(cpt_data,
             zone_translation_path=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
             grouping_col='msoaZoneID'):
     """
@@ -163,19 +163,19 @@ def zone_up(cpt_data, hlsaName='MSOA',
     zone_translation = pd.read_csv(zone_translation_path)
     zone_translation = zone_translation.rename(columns={'lsoa_zone_id': 'lsoaZoneID',
                                                         'msoa_zone_id': 'msoaZoneID'})
-    zone_translation = zone_translation.loc[:, ['lsoaZoneID', groupingCol]]
+    zone_translation = zone_translation[['lsoaZoneID', grouping_col]]
+
     # Audit any missing objectids
-    datLSOAs = len(cpt_data.loc[:, 'objectid'].drop_duplicates())
-    ztLSOAs = len(zone_translation.loc[:, 'lsoaZoneID'])
+    datLSOAs = len(cpt_data['objectid'].unique())
+    ztLSOAs = len(zone_translation['lsoaZoneID'].unique())
 
     if datLSOAs == ztLSOAs:
         print('zones match 1:1 - zoning up should be smooth')
     else:
-        print('some zones missing')
-        # TODO: Be more specific with your criticism - could say which or how many, export missing?
+        print('some zones missing for LSOA-MSOA zone translation:', datLSOAs - ztLSOAs)
+
     cpt_data = cpt_data.rename(columns={'lsoa11cd': 'lsoaZoneID'})
     cpt_data = cpt_data.merge(zone_translation, how='left', on='lsoaZoneID').reset_index()
-    print(cpt_data)
     cpt_data = aggregate_cpt(cpt_data, grouping_col=grouping_col)
 
     return cpt_data
@@ -188,13 +188,13 @@ def balance_missing_hops(cpt_data, grouping_col='msoaZoneID', hlsaName=_default_
     # TODO: Replace global with LAD or Country - likely to be marginal improvements
     This resolves the  msoa/lad household occupancy
     """
-    msoa_agg = zone_up(cpt_data, hlsaName='MSOA',
+    msoa_agg = zone_up(cpt_data,
                        zone_translation_path=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
                        grouping_col=grouping_col)
     msoa_agg = msoa_agg.loc[:, [grouping_col, 'census_property_type',
                                 'household_occupancy']].rename(columns={'household_occupancy': 'msoa_ho'})
 
-    global_agg = zone_up(cpt_data, hlsaName='MSOA',
+    global_agg = zone_up(cpt_data,
                          zone_translation_path=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
                          grouping_col=grouping_col)
     global_agg = aggregate_cpt(global_agg, grouping_col=None)
@@ -549,9 +549,9 @@ def apply_household_occupancy(do_import=False,
     balanced_cpt_data = balanced_cpt_data.merge(hops_growth,
                                                 how='left', left_on='lad17cd',
                                                 right_on='Area code').drop('Area code', axis=1).reset_index(drop=True)
-    # TODO: was there a reason for the multiplication by 1?
-    balanced_cpt_data['household_occupancy_18'] = balanced_cpt_data['household_occupancy'] * 1 + balanced_cpt_data[
-        '11_to_18']
+
+    balanced_cpt_data['household_occupancy_18'] = balanced_cpt_data['household_occupancy'] * \
+                                                  (1 + balanced_cpt_data['11_to_18'])
 
     trim_cols = ['msoaZoneID', 'msoa11cd', 'census_property_type',
                  'household_occupancy_18', 'ho_type']
@@ -972,7 +972,6 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
                                   'Economically inactive retired': '75 or over',
                                   'Full-time students': 'stu'}).drop(columns={'TfN area type'})
 
-    nssec2 = nssec.copy()
     # rename columns and melt it down
     nssec = nssec.rename(columns={'msoa_name': 'ZoneID'})
     nssec_melt = pd.melt(nssec, id_vars=['ZoneID', 'property_type', 'ns_sec'],
@@ -1222,6 +1221,7 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
     All = All.append(InactiveScotland).append(ActiveScotland)
     All = All.rename(columns={'newpop': 'people'})
     All['SOC_category'] = All['SOC_category'].fillna(0)
+    # TODO: hard coded 'stage4' ...desirable?
     All.to_csv(_default_home_dir + '/landuseOutput' + _default_zone_name + '_stage4.csv', index=False)
     print(All['people'].sum())
 
