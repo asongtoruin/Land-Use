@@ -418,51 +418,52 @@ def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/fo
     return bsq
 
 
-# TODO: is zone translation path needed? Improve the docstring
 def filled_properties(zone_translation_path=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
                       KS401path=_import_folder + 'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv'
                       ):
     """
-    this is a rough account for unoccupied properties
-    using KS401UK LSOA level to infer whether the properties have any occupants
+    This is a rough account for unoccupied properties using KS401UK at LSOA level to infer whether the properties
+    have any occupants.
+        zone_translation_path: correspondence between LSOAs and the zoning system (default MSOA)
+        KS401path: csv file path for the census KS401 table
     """
 
-    KS401 = pd.read_csv(KS401path)
+    # Read in the census filled property data
+    filled_properties_df = pd.read_csv(KS401path)
+    filled_properties_df = filled_properties_df.rename(columns={
+        'Dwelling Type: All categories: Household spaces; measures: Value': 'Total_Dwells',
+        'Dwelling Type: Household spaces with at least one usual resident; measures: Value': 'Filled_Dwells',
+        'geography code': 'geography_code'
+    })
+    filled_properties_df = filled_properties_df.reindex(columns=['geography_code',
+                                                                 'Total_Dwells',
+                                                                 'Filled_Dwells'])
 
-    KS401permhops = KS401.reindex(columns=['geography code',
-                                           'Dwelling Type: All categories: Household spaces; measures: Value',
-                                           'Dwelling Type: Household spaces with at least one usual resident; measures: Value'
-                                           ])
-    KS401permhops = KS401permhops.rename(columns=
-                                         {'Dwelling Type: All categories: Household spaces; measures: Value':
-                                              'Total_Dwells',
-                                          'Dwelling Type: Household spaces with at least one usual resident; measures: Value':
-                                              'Filled_Dwells',
-                                          'geography code': 'geography_code'})
+    # Calculate the probability that a property is filled
+    filled_properties_df['Prob_DwellsFilled'] = filled_properties_df['Filled_Dwells'] / filled_properties_df[
+        'Total_Dwells']
+    filled_properties_df = filled_properties_df.drop(columns={'Filled_Dwells', 'Total_Dwells'})
 
-    # KS401UKpermhops.columns = ['geography_code', 'totalhops', 'filledhops']
-    KS401permhops['Prob_DwellsFilled'] = KS401permhops['Filled_Dwells'] / KS401permhops['Total_Dwells']
+    # Read in the zone translation (default LSOA to MSOA)
+    zone_translation = pd.read_csv(zone_translation_path)
+    zone_translation = zone_translation.rename(columns={'lsoa_zone_id': 'lsoaZoneID',
+                                                        'msoa_zone_id': 'msoaZoneID'})
+    zone_translation = zone_translation[['lsoaZoneID', 'msoaZoneID']]
 
-    KS401permhops = KS401permhops.drop(columns={'Filled_Dwells', 'Total_Dwells'})
-    zoneTranslationPath = _default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv'
-    zoneTranslation = pd.read_csv(zoneTranslationPath)
-    zoneTranslation = zoneTranslation.rename(columns={'lsoa_zone_id': 'lsoaZoneID',
-                                                      'msoa_zone_id': 'msoaZoneID'})
+    # Merge and apply the zone translation onto the census data
+    # TODO: instead of the mean, could we do sum of filled dwells and total dwells and calc the probability later on?
+    filled_properties_df = filled_properties_df.rename(columns={'geography_code': 'lsoaZoneID'})
+    filled_properties_df = filled_properties_df.merge(zone_translation, on='lsoaZoneID')
+    filled_properties_df = filled_properties_df.drop(columns={'lsoaZoneID'})
+    filled_properties_df = filled_properties_df.groupby(['msoaZoneID']).mean().reset_index()
 
-    zoneTranslation = zoneTranslation.loc[:, ['lsoaZoneID', 'msoaZoneID']]
-    KS401permhops = KS401permhops.rename(columns={'geography_code': 'lsoaZoneID'})
-    filled_properties = KS401permhops.merge(zoneTranslation, on='lsoaZoneID')
-    filled_properties = filled_properties.drop(columns={'lsoaZoneID'}).groupby(['msoaZoneID']).mean().reset_index()
+    # The above filled properties probability is based on E+W so need to join back to Scottish MSOAs
+    uk_msoa = gpd.read_file(_default_msoaRef).reindex(columns={'msoa11cd'}).rename(columns={'msoa11cd': 'msoaZoneID'})
+    filled_properties_df = uk_msoa.merge(filled_properties_df, on='msoaZoneID', how='outer')
+    filled_properties_df = filled_properties_df.fillna(1)  # default to all properties being occupied
+    filled_properties_df.to_csv('ProbabilityDwellfilled.csv', index=False)
 
-    # the above filleddwellings probability is based on E+W so need to join back to Scottish MSOAs
-    # needed for later when multiplying by this factor to adjust the household occupancies
-    # TODO: why is filled_properties2 made?
-    ukMSOA = gpd.read_file(_default_msoaRef).reindex(columns={'msoa11cd'}).rename(columns={'msoa11cd': 'msoaZoneID'})
-    filled_properties2 = ukMSOA.merge(filled_properties, on='msoaZoneID', how='outer')
-    filled_properties = filled_properties2.fillna(1)
-    filled_properties.to_csv('ProbabilityDwellfilled.csv', index=False)
-
-    return filled_properties
+    return filled_properties_df
 
 
 def apply_household_occupancy(do_import=False,
