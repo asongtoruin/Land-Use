@@ -30,8 +30,6 @@ sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Utilities/Python')
 import numpy as np  # Vector operations
 import pandas as pd  # main module
 import geopandas as gpd
-# TODO: check what is used in shapely (if anything) and import explicitly
-from shapely.geometry import *
 import shutil as sh
 from land_use import utils
 import land_use.lu_constants as consts
@@ -85,7 +83,6 @@ def copy_addressbase_files():
 
 
 # 2. Main analysis functions - everything related to census and segmentation
-# TODO: need to add percentage filled by msoa to account for seasonal households
 def lsoa_census_data_prep(dat_path, population_tables, property_tables, geography=_default_lsoaRef):
     """
     This function prepares the census data by picking fields out of the census csvs.
@@ -132,8 +129,7 @@ def lsoa_census_data_prep(dat_path, population_tables, property_tables, geograph
     return household_occupancy
 
 
-# TODO: case when write_out=True plus update docstring
-def aggregate_cpt(cpt_data, grouping_col=None, write_out=True):
+def aggregate_cpt(cpt_data, grouping_col=None):
     """
     Take some census property type data and return hops totals
     """
@@ -145,9 +141,6 @@ def aggregate_cpt(cpt_data, grouping_col=None, write_out=True):
         cpt_data = cpt_data.loc[:, ['census_property_type', 'population', 'properties', grouping_col]]
         agg_data = cpt_data.groupby(['census_property_type', grouping_col]).sum().reset_index()
         agg_data['household_occupancy'] = agg_data['population'] / agg_data['properties']
-
-    # if write_out:
-    # agg_data.to_csv('cptlsoa2011.csv')
 
     return agg_data
 
@@ -185,7 +178,7 @@ def zone_up(cpt_data,
 def balance_missing_hops(cpt_data, grouping_col='msoaZoneID', hlsaName=_default_zone_name,
                          zone_translation_path=(_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv')):
     """
-    # TODO: Replace global with LAD or Country - likely to be marginal improvements
+    # TODO: Replace global with LAD or Country - likely to be marginal improvements. Currently UK-wide
     This resolves the  msoa/lad household occupancy
     """
     msoa_agg = zone_up(cpt_data,
@@ -213,7 +206,7 @@ def balance_missing_hops(cpt_data, grouping_col='msoaZoneID', hlsaName=_default_
     return cpt_data
 
 
-# TODO: what is this for exactly? Very short so it could be a candidate for using directly in another function
+# TODO: make as subfunction
 def agg_wap_factor(ksSub, newSeg):
     """
     Function to combine working age population factors to create NTEM 
@@ -482,13 +475,11 @@ def apply_household_occupancy(do_import=False,
         balanced_cpt_data = pd.read_csv('UKHouseHoldOccupancy2011.csv')
 
     else:
-        # TODO: patch to get it to work fast. os.listdir() previously called on _default_census_dat but unused
-        # Make these a bit cleverer to reduce risk of importing the wrong thing
+        # TODO: put in constants?
         EWQS401 = 'QS401UK_LSOA.csv'
         SQS401 = 'QS_401UK_DZ_2011.csv'
         EWQS402 = 'QS402UK_LSOA.csv'
         SQS402 = 'QS402UK_DZ_2011.csv'
-        # KS401 = 'KS401_UK_LSOA.csv'
 
         cpt_data = lsoa_census_data_prep(_default_census_dat, [EWQS401, SQS401], [EWQS402, SQS402],
                                          geography=_default_lsoaRef)
@@ -503,7 +494,7 @@ def apply_household_occupancy(do_import=False,
         balanced_cpt_data = balanced_cpt_data.drop(columns={'Prob_DwellsFilled'})
         balanced_cpt_data.to_csv('UKHouseHoldOccupancy2011.csv', index=False)
 
-    # TODO: consider if these are really needed. gpd.read_file is quite a heavy way to get the MSOA codes and names
+    # TODO: this section largely checks and validation, refine
     msoaCols = ['objectid', 'msoa11cd']
     ladCols = ['ladZoneID', 'msoaZoneID']
     ukMSOA = gpd.read_file(_default_msoaRef)
@@ -696,10 +687,6 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
     bsq = create_ntem_areas(bsq_import_path, areaTypeImportPath)
     bsq = create_employment_segmentation(bsq, ksEmpImportPath)
 
-    # TODO: is the following a TODO?
-    # if level == 'MSOA':
-    # Split bsq pop factors out to represent property type as well as zone
-
     factor_property_type = bsq.reindex(['msoaZoneID', 'property_type', 'pop_factor'],
                                        axis=1).groupby(['msoaZoneID',
                                                         'property_type']).sum().reset_index()
@@ -718,7 +705,6 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
 
     print('Should be near to zones x property types - ie. 8480 x 6 = 50880 :', bsq['pop_factor'].sum())
 
-    # TODO: again is there a better way to get the MSOA codes than gpd?
     msoaCols = ['objectid', 'msoa11cd']
     ukMSOA = gpd.read_file(_default_msoaRef)
     ukMSOA = ukMSOA.loc[:, msoaCols]
@@ -741,8 +727,6 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
     crp_audit = crp['population'].sum()
     print(crp_audit)
 
-    # TODO: Fix join issue.
-    # inner join crp - will lose land use bits on non-classified & communal establishments
     crp = crp.merge(bsq, how='outer', left_on=['ZoneID', 'census_property_type'],
                     right_on=['msoa11cd', 'property_type'])
     print('pop factor needs to be same as no of zones - 8480')
@@ -753,7 +737,6 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
     crp['pop_factor'].sum()
     crp_audit = crp['population'].drop_duplicates().sum()
     print(crp_audit)
-    # Still fine...
 
     # Audit bank
     print(crp['population'].sum())
@@ -782,19 +765,18 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
     return crp, bsq
 
 
+# TODO: normalise the gender/age?
 def communal_establishments_splits():
     """
     Function to establish the proportions of communal establishment population 
     across zones and gender and age
     
     """
-    # TODO: why are columns renamed?
     print('Reading in Communal Establishments by type 2011 totals')
     communal_types = pd.read_csv(_default_communal_types_path)
     communal_types = communal_types.reindex(columns=['msoa11cd', 'Age', 'gender',
-                                                     'Total_people']).rename(
-        columns={'msoa11cd': 'msoacd',
-                 'gender': 'Gender'})
+                                                     'Total_people']).rename(columns={'msoa11cd': 'msoacd',
+                                                                                      'gender': 'Gender'})
 
     communal_types = communal_types.replace({'Gender': {'male': 'Male', 'female': 'Female'}})
 
@@ -805,7 +787,7 @@ def communal_establishments_splits():
     communal_types = communal_types.drop(columns={'Total_people'}).drop_duplicates()
     # merge with 2011 census totals per Zone per gender and age
     print('Reading in census population by age and gender 2011 totals')
-    # TODO: why are male and female capitalised with this replace?
+
     census_population = pd.read_csv(_default_census_population).replace(
         {'Gender': {'male': 'Male', 'female': 'Female'}})
     census_populationB = pd.melt(census_population, id_vars=['msoacd', 'Gender'],
@@ -1187,6 +1169,7 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
     Active_emp = Active_emp.drop(columns={'area_type_x', 'area_type_y'})
     Active_emp = Active_emp.merge(areatypes, on='ZoneID')
     # TODO: hard-coded values. If correct, put them in landuse_constants?
+    # TODO: possibly total active population, check if that looks right. Most likely scrap
     if Active_emp['people'].sum() < (40.6 * 0.01):
         print('something has gone wrong with splits')
     else:
@@ -1222,8 +1205,7 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
     All = All.append(InactiveScotland).append(ActiveScotland)
     All = All.rename(columns={'newpop': 'people'})
     All['SOC_category'] = All['SOC_category'].fillna(0)
-    # TODO: hard coded 'stage4' ...desirable?
-    All.to_csv(_default_home_dir + '/landuseOutput' + _default_zone_name + '_stage4.csv', index=False)
+    All.to_csv(_default_home_dir + '/landuseOutput' + _default_zone_name + '_NS_SEC_SOC.csv', index=False)
     print(All['people'].sum())
 
 
