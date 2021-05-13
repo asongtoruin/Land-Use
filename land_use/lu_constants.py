@@ -16,6 +16,11 @@ LU_MR_ITER = 'iter3b'
 LU_IMPORTS = 'import'
 LU_REFS = 'Lookups'
 
+# Inputs
+ZONES_FOLDER = 'I:/NorMITs Synthesiser/Zone Translation/'
+ZONE_TRANSLATION_PATH = ZONES_FOLDER + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv'
+KS401_PATH = LU_FOLDER + '/' + LU_IMPORTS + '/' + 'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv'
+
 # Path to a default land use build
 RESI_LAND_USE_MSOA = os.path.join(
     LU_FOLDER,

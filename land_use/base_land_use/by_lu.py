@@ -21,6 +21,9 @@ class BaseYearLandUse:
                  iteration=consts.LU_MR_ITER,
                  import_folder=consts.LU_IMPORTS,
                  model_zoning='msoa',
+                 zones_folder=consts.ZONES_FOLDER,
+                 zone_translation_path=consts.ZONE_TRANSLATION_PATH,
+                 KS401path=consts.KS401_PATH,
                  base_land_use_path=None,
                  base_employment_path=None,
                  base_soc_mix_path=None,
@@ -41,7 +44,12 @@ class BaseYearLandUse:
         # File ops
         self.model_folder = model_folder
         self.iteration = iteration
-        self.import_folder = import_folder
+        self.import_folder = model_folder + '/' + import_folder + '/'
+
+        # Inputs
+        self.zones_folder = zones_folder
+        self.zone_translation_path = zone_translation_path
+        self.KS401path = KS401path
 
         # Basic config
         self.model_zoning = model_zoning
@@ -155,22 +163,24 @@ class BaseYearLandUse:
 
         # Steps from main build
         if self.state['5.2.4 filled property adjustment'] == 0:
-            main_build.FilledProperties()
+            main_build.filled_properties(self)
             self.state['5.2.4 filled property adjustment'] = 1
 
         if self.state['5.2.5 household occupancy adjustment'] == 0:
-            main_build.ApplyHouseholdOccupancy()
+            main_build.apply_household_occupancy(self)
             self.state['5.2.5 household occupancy adjustment'] = 1
 
         if self.state['5.2.6 NTEM segmentation'] == 0:
-            main_build.ApplyNtemSegments()
+            main_build.apply_ntem_segments(self)
             self.state['5.2.6 NTEM segmentation'] = 1
 
         if self.state['5.2.7 communal establishments'] == 0:
-            main_build.join_establishments()
+            main_build.join_establishments(self)
             self.state['5.2.7 communal establishments'] = 1
 
-        # TODO: work out what main_build.LanduseFormatting() and main_build.ApplyNSSECSOCsplits() are for
+        # TODO: main_build then runs the following two functions currently commented out, how relate to documentation?
+        # main_build.land_use_formatting()
+        # main_build.apply_ns_sec_soc_splits()
 
         # Steps from mid-year population estimate adjustment
         if self.state['5.2.8 MYPE adjustment'] == 0:

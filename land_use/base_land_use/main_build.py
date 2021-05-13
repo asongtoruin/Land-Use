@@ -41,8 +41,7 @@ _default_iter = 'iter4'  # take from self.iteration
 _default_home = 'E:/NorMITs_Export/'  # needs to be on Y drive, self.model_folder?
 _default_home_dir = _default_home + _default_iter  # perhaps this can stay as-is if the above two are in base object
 _import_folder = 'Y:/NorMITs Land Use/import/'  # self.import_folder
-_default_zone_folder = (
-    'I:/NorMITs Synthesiser/Zone Translation/')  # these are for zone translations, I think not yet in base object
+_default_zone_folder = 'I:/NorMITs Synthesiser/Zone Translation/'  # these are for zone translations, I think not yet in base object
 # Default zone names
 _default_zone_name = 'MSOA'  # MSOA or LSOA, perhaps needs to be self.model_zoning
 
@@ -409,18 +408,16 @@ def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/fo
     return bsq
 
 
-def filled_properties(zone_translation_path=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
-                      KS401path=_import_folder + 'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv'
-                      ):
+def filled_properties(by_lu_obj):
     """
     This is a rough account for unoccupied properties using KS401UK at LSOA level to infer whether the properties
     have any occupants.
-        zone_translation_path: correspondence between LSOAs and the zoning system (default MSOA)
-        KS401path: csv file path for the census KS401 table
+        by_lu_obj: base year land use object, which includes the following paths:
+            zone_translation_path: correspondence between LSOAs and the zoning system (default MSOA)
+            KS401path: csv file path for the census KS401 table
     """
-
     # Read in the census filled property data
-    filled_properties_df = pd.read_csv(KS401path)
+    filled_properties_df = pd.read_csv(by_lu_obj.KS401path)
     filled_properties_df = filled_properties_df.rename(columns={
         'Dwelling Type: All categories: Household spaces; measures: Value': 'Total_Dwells',
         'Dwelling Type: Household spaces with at least one usual resident; measures: Value': 'Filled_Dwells',
@@ -436,7 +433,7 @@ def filled_properties(zone_translation_path=_default_zone_folder + 'Export/msoa_
     filled_properties_df = filled_properties_df.drop(columns={'Filled_Dwells', 'Total_Dwells'})
 
     # Read in the zone translation (default LSOA to MSOA)
-    zone_translation = pd.read_csv(zone_translation_path)
+    zone_translation = pd.read_csv(by_lu_obj.zone_translation_path)
     zone_translation = zone_translation.rename(columns={'lsoa_zone_id': 'lsoaZoneID',
                                                         'msoa_zone_id': 'msoaZoneID'})
     zone_translation = zone_translation[['lsoaZoneID', 'msoaZoneID']]
