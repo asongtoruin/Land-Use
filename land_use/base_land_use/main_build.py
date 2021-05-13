@@ -39,7 +39,7 @@ import land_use.lu_constants as consts
 
 _default_iter = 'iter4'  # take from self.iteration
 _default_home = 'E:/NorMITs_Export/'  # needs to be on Y drive, self.model_folder?
-_default_home_dir = (_default_home + _default_iter)  # perhaps this can stay as-is if the above two are in base object
+_default_home_dir = _default_home + _default_iter  # perhaps this can stay as-is if the above two are in base object
 _import_folder = 'Y:/NorMITs Land Use/import/'  # self.import_folder
 _default_zone_folder = (
     'I:/NorMITs Synthesiser/Zone Translation/')  # these are for zone translations, I think not yet in base object
@@ -206,17 +206,6 @@ def balance_missing_hops(cpt_data, grouping_col='msoaZoneID', hlsaName=_default_
     return cpt_data
 
 
-# TODO: make as subfunction
-def agg_wap_factor(ksSub, newSeg):
-    """
-    Function to combine working age population factors to create NTEM 
-    employment categories
-    """
-    ksSub = ksSub.groupby(['msoaZoneID', 'Gender']).sum().reset_index()
-    ksSub['employment_type'] = newSeg
-    return ksSub
-
-
 # TODO: review this function
 def create_employment_segmentation(bsq,
                                    ksEmpImportPath=_import_folder + '/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
@@ -251,21 +240,30 @@ def create_employment_segmentation(bsq,
                                                   axis=1).rename(columns=
                                                                  {'objectid': 'msoaZoneID'})
 
+    def _agg_wap_factor(ks_sub, new_seg):
+        """
+        Function to combine working age population factors to create NTEM
+        employment categories
+        """
+        ks_sub = ks_sub.groupby(['msoaZoneID', 'Gender']).sum().reset_index()
+        ks_sub['employment_type'] = new_seg
+        return ks_sub
+
     # full time employment =  sum(emp_ft, emp_se)
     ksFte = ksEmp[ksEmp.employment_type.isin(['emp_ft', 'emp_se'])]
-    ksFte = agg_wap_factor(ksFte, newSeg='fte')
+    ksFte = _agg_wap_factor(ksFte, new_seg='fte')
     # part time employment = sum(emp_pt)
     ksPte = ksEmp[ksEmp.employment_type.isin(['emp_pt'])]
-    ksPte = agg_wap_factor(ksPte, newSeg='pte')
+    ksPte = _agg_wap_factor(ksPte, new_seg='pte')
     # students = sum(emp_stu)
     ksStu = ksEmp[ksEmp.employment_type.isin(['emp_stu'])]
-    ksStu = agg_wap_factor(ksStu, newSeg='stu')
+    ksStu = _agg_wap_factor(ksStu, new_seg='stu')
     # not employed/students = sum(unemp, unemp_ret, unemp_stu, unemp_care,
     # unemp_lts, unemp_other)
     ksUnm = ksEmp[ksEmp.employment_type.isin(['unemp', 'unemp_ret', 'unemp_stu',
                                               'unemp_care', 'unemp_lts',
                                               'unemp_other'])]
-    ksUnm = agg_wap_factor(ksUnm, newSeg='unm')
+    ksUnm = _agg_wap_factor(ksUnm, new_seg='unm')
 
     ksEmp = ksFte.append(ksPte).append(ksStu).append(ksUnm).reset_index(drop=True)
 
