@@ -279,22 +279,32 @@ def create_employment_segmentation(bsq,
     return bsq
 
 
-# TODO review this function and switch to lower case. Include a docstring
+# TODO review this function. Complete the docstring
 def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/formatted_long_bsq.csv',
                       area_type_import_path=_import_folder + '/CTripEnd/ntem_zone_area_type.csv'):
+    """
+    TODO: write a sentence here. Prepares the census data by picking fields out of the census csvs.
+
+    bsq_import_path: location of the bespoke census query data
+    area_type_import_path: NTEM area type classifications by zone
+    """
     # Import Bespoke Census Query - already transformed to long format in R
     print('Importing bespoke census query')
     bsq = pd.read_csv(bsq_import_path)
+
     # Import area types
+    # TODO: why isn't this used?
     area_types = pd.read_csv(area_type_import_path)
 
     # Shapes
     mlaShp = gpd.read_file(_default_mladRef).reindex(['objectid', 'cmlad11cd'], axis=1)
     msoaShp = gpd.read_file(_default_msoaRef).reindex(['objectid', 'msoa11cd'], axis=1)
+
     # Lookups
     # Bespoke census query types
     pType = pd.read_csv(_import_folder + '/Bespoke Census Query/bsq_ptypemap.csv')
     hType = pd.read_csv(_import_folder + '/Bespoke Census Query/bsq_htypemap.csv')
+
     # Zonal conversions
     mlaLookup = pd.read_csv(_default_zone_folder + 'Export/merged_la_to_msoa/merged_la_to_msoa.csv').reindex(
         ['msoaZoneID', 'merged_laZoneID'], axis=1)
@@ -302,10 +312,23 @@ def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/fo
         ['ntemZoneID', 'msoaZoneID', 'overlap_ntem_pop_split_factor'], axis=1)
 
     # Reduce age & gender categories down to NTEM requirements
-    # TODO: review whether a subfunction is necessary
-    def SegmentTweaks(bsq, asisSegments, groupingCol, aggCols, targetCol, newSegment):
-        # Take a bsq set, segments to leave untouched and a target column.
-        # Sum and reclassify all values not in the untouched segments
+    def segment_tweaks(bsq, asisSegments, groupingCol, aggCols, targetCol, newSegment):
+        """
+        Take a bsq set, segments to leave untouched and a target column.
+        Sum and reclassify all values not in the untouched segments.
+
+        Parameters
+        ----------
+        bsq: bespoke census query set
+        asisSegments: segments in the grouping column to leave as-is
+        groupingCol: the column to change
+        aggCols: columns to aggregate on. Will calculate the sum.
+        targetCol: name for new column
+        newSegment: new segment description for the segments changes (non as-is)
+
+        Returns
+        TODO: work this out. bsq set with...
+        """
         asisPot = bsq[bsq[groupingCol].isin(asisSegments)]
         changePot = bsq[~bsq[groupingCol].isin(asisSegments)]
         changePot = changePot.groupby(aggCols).sum().reset_index()
@@ -316,19 +339,20 @@ def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/fo
         return bsq
 
     # All working age population comes in one monolithic block - 16-74
-    bsq = SegmentTweaks(bsq,
-                        asisSegments=['under 16', '75 or over'],
-                        groupingCol='Age',
-                        aggCols=['LAD_code', 'LAD_Desc', 'Gender', 'Dwelltype', 'household_type'],
-                        targetCol='Age',
-                        newSegment='16-74')
+    bsq = segment_tweaks(bsq,
+                         asisSegments=['under 16', '75 or over'],
+                         groupingCol='Age',
+                         aggCols=['LAD_code', 'LAD_Desc', 'Gender', 'Dwelltype', 'household_type'],
+                         targetCol='Age',
+                         newSegment='16-74')
 
     # Children have no gender in NTEM - Aggregate & replace gender with 'Children'
-    bsq = SegmentTweaks(bsq, asisSegments=['16-74', '75 or over'],
-                        groupingCol='Age', aggCols=['LAD_code', 'LAD_Desc',
-                                                    'Age', 'Dwelltype', 'household_type'],
-                        targetCol='Gender',
-                        newSegment='Children')
+    bsq = segment_tweaks(bsq,
+                         asisSegments=['16-74', '75 or over'],
+                         groupingCol='Age', aggCols=['LAD_code', 'LAD_Desc',
+                                                     'Age', 'Dwelltype', 'household_type'],
+                         targetCol='Gender',
+                         newSegment='Children')
 
     bsq = bsq.merge(pType, how='left', left_on='Dwelltype',
                     right_on='c_type').drop(['Dwelltype', 'c_type'], axis=1)
