@@ -424,11 +424,6 @@ def filled_properties(by_lu_obj):
                                                                  'Total_Dwells',
                                                                  'Filled_Dwells'])
 
-    # Calculate the probability that a property is filled
-    filled_properties_df['Prob_DwellsFilled'] = filled_properties_df['Filled_Dwells'] / filled_properties_df[
-        'Total_Dwells']
-    filled_properties_df = filled_properties_df.drop(columns={'Filled_Dwells', 'Total_Dwells'})
-
     # Read in the zone translation (default LSOA to MSOA)
     zone_translation = pd.read_csv(by_lu_obj.zone_translation_path)
     zone_translation = zone_translation.rename(columns={'lsoa_zone_id': 'lsoaZoneID',
@@ -436,11 +431,15 @@ def filled_properties(by_lu_obj):
     zone_translation = zone_translation[['lsoaZoneID', 'msoaZoneID']]
 
     # Merge and apply the zone translation onto the census data
-    # TODO: instead of the mean, could we do sum of filled dwells and total dwells and calc the probability later on?
     filled_properties_df = filled_properties_df.rename(columns={'geography_code': 'lsoaZoneID'})
     filled_properties_df = filled_properties_df.merge(zone_translation, on='lsoaZoneID')
     filled_properties_df = filled_properties_df.drop(columns={'lsoaZoneID'})
-    filled_properties_df = filled_properties_df.groupby(['msoaZoneID']).mean().reset_index()
+    filled_properties_df = filled_properties_df.groupby(['msoaZoneID']).sum().reset_index()
+
+    # Calculate the probability that a property is filled
+    filled_properties_df['Prob_DwellsFilled'] = filled_properties_df['Filled_Dwells'] / \
+        filled_properties_df['Total_Dwells']
+    filled_properties_df = filled_properties_df.drop(columns={'Filled_Dwells', 'Total_Dwells'})
 
     # The above filled properties probability is based on E+W so need to join back to Scottish MSOAs
     uk_msoa = gpd.read_file(_default_msoaRef).reindex(columns={'msoa11cd'}).rename(columns={'msoa11cd': 'msoaZoneID'})
