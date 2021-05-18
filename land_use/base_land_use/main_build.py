@@ -279,11 +279,10 @@ def create_employment_segmentation(bsq,
     return bsq
 
 
-# TODO review this function. Complete the docstring
 def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/formatted_long_bsq.csv',
                       area_type_import_path=_import_folder + '/CTripEnd/ntem_zone_area_type.csv'):
     """
-    TODO: write a sentence here. Prepares the census data by picking fields out of the census csvs.
+    Reduce age & gender categories down to NTEM requirements and add area type for each zone.
 
     bsq_import_path: location of the bespoke census query data
     area_type_import_path: NTEM area type classifications by zone
@@ -293,7 +292,6 @@ def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/fo
     bsq = pd.read_csv(bsq_import_path)
 
     # Import area types
-    # TODO: why isn't this used?
     area_types = pd.read_csv(area_type_import_path)
 
     # Shapes
@@ -302,100 +300,84 @@ def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/fo
 
     # Lookups
     # Bespoke census query types
+    # TODO: make these a dictionary in LU constants
     pType = pd.read_csv(_import_folder + '/Bespoke Census Query/bsq_ptypemap.csv')
     hType = pd.read_csv(_import_folder + '/Bespoke Census Query/bsq_htypemap.csv')
 
     # Zonal conversions
     mlaLookup = pd.read_csv(_default_zone_folder + 'Export/merged_la_to_msoa/merged_la_to_msoa.csv').reindex(
         ['msoaZoneID', 'merged_laZoneID'], axis=1)
-    ntemToMsoa = pd.read_csv(_default_zone_folder + 'Export/ntem_to_msoa/ntem_msoa_pop_weighted_lookup.csv').reindex(
+    ntem_to_msoa = pd.read_csv(_default_zone_folder + 'Export/ntem_to_msoa/ntem_msoa_pop_weighted_lookup.csv').reindex(
         ['ntemZoneID', 'msoaZoneID', 'overlap_ntem_pop_split_factor'], axis=1)
 
     # Reduce age & gender categories down to NTEM requirements
-    def segment_tweaks(bsq, asisSegments, groupingCol, aggCols, targetCol, newSegment):
+    def _segment_tweaks(bsq, asisSegments, groupingCol, aggCols, targetCol, newSegment):
         """
         Take a bsq set, segments to leave untouched and a target column.
         Sum and reclassify all values not in the untouched segments.
-
-        Parameters
-        ----------
-        bsq: bespoke census query set
-        asisSegments: segments in the grouping column to leave as-is
-        groupingCol: the column to change
-        aggCols: columns to aggregate on. Will calculate the sum.
-        targetCol: name for new column
-        newSegment: new segment description for the segments changes (non as-is)
-
-        Returns
-        TODO: work this out. bsq set with...
         """
-        asisPot = bsq[bsq[groupingCol].isin(asisSegments)]
-        changePot = bsq[~bsq[groupingCol].isin(asisSegments)]
-        changePot = changePot.groupby(aggCols).sum().reset_index()
-        changePot[targetCol] = newSegment
-        changePot = changePot.reindex(
-            ['LAD_code', 'LAD_Desc', 'Gender', 'Age', 'Dwelltype', 'household_type', 'population'], axis=1)
-        bsq = asisPot.append(changePot).reset_index(drop=True)
+        bsq[targetCol] = np.where(bsq[groupingCol].isin(asisSegments), bsq[targetCol], newSegment)
+        aggCols += [targetCol]
+        bsq = bsq.groupby(aggCols).sum().reset_index()
+
         return bsq
 
     # All working age population comes in one monolithic block - 16-74
-    bsq = segment_tweaks(bsq,
-                         asisSegments=['under 16', '75 or over'],
-                         groupingCol='Age',
-                         aggCols=['LAD_code', 'LAD_Desc', 'Gender', 'Dwelltype', 'household_type'],
-                         targetCol='Age',
-                         newSegment='16-74')
+    bsq = _segment_tweaks(bsq,
+                          asisSegments=['under 16', '75 or over'],
+                          groupingCol='Age',
+                          aggCols=['LAD_code', 'LAD_Desc', 'Gender', 'Dwelltype', 'household_type'],
+                          targetCol='Age',
+                          newSegment='16-74')
 
     # Children have no gender in NTEM - Aggregate & replace gender with 'Children'
-    bsq = segment_tweaks(bsq,
-                         asisSegments=['16-74', '75 or over'],
-                         groupingCol='Age', aggCols=['LAD_code', 'LAD_Desc',
-                                                     'Age', 'Dwelltype', 'household_type'],
-                         targetCol='Gender',
-                         newSegment='Children')
+    bsq = _segment_tweaks(bsq,
+                          asisSegments=['16-74', '75 or over'],
+                          groupingCol='Age',
+                          aggCols=['LAD_code', 'LAD_Desc', 'Age', 'Dwelltype', 'household_type'],
+                          targetCol='Gender',
+                          newSegment='Children')
 
+    # TODO: use dictionaries to normalise these values instead
     bsq = bsq.merge(pType, how='left', left_on='Dwelltype',
                     right_on='c_type').drop(['Dwelltype', 'c_type'], axis=1)
     bsq = bsq.merge(hType, how='left', on='household_type').drop('household_type', axis=1)
-    bsq_total = bsq.reindex(['LAD_code', 'LAD_Desc', 'population'], axis=1).groupby(
-        ['LAD_code', 'LAD_Desc']).sum().reset_index().rename(columns=
-                                                             {'population': 'lad_pop'})
-    bsq = bsq.merge(bsq_total, how='left', on=['LAD_code', 'LAD_Desc'])
-    del bsq_total
-    bsq['pop_factor'] = bsq['population'] / bsq['lad_pop']
-    bsq = bsq.reindex(['LAD_code', 'LAD_Desc', 'Gender', 'Age', 'property_type',
-                       'household_composition', 'pop_factor'], axis=1)
 
-    # Append MSOA to Merged LAD lookup - will only derive English & Welsh MSOAs
+    # Calculate the total population in each LAD and the proportion of this that each segment represents
+    bsq_total = bsq.groupby(['LAD_code', 'LAD_Desc'])['population'].sum().reset_index()
+    bsq_total = bsq_total.rename(columns={'population': 'lad_pop'})
+    bsq = bsq.merge(bsq_total, how='left', on=['LAD_code', 'LAD_Desc'])
+    del bsq_total  # save some memory
+    bsq['pop_factor'] = bsq['population'] / bsq['lad_pop']
+    bsq = bsq[['LAD_code', 'LAD_Desc', 'Gender', 'Age', 'property_type', 'household_composition', 'pop_factor']]
+
+    # Merge on msoaZoneID - includes only English & Welsh MSOAs
     bsq = bsq.merge(mlaShp, how='left', left_on='LAD_code',
                     right_on='cmlad11cd').drop('cmlad11cd', axis=1)
     bsq = bsq.merge(mlaLookup, how='left', left_on='objectid',
                     right_on='merged_laZoneID').drop('objectid', axis=1)
-    # Pull out one lad worth of segements to audit
-    # testSegments = bsq[bsq.LAD_code == 'E41000001']
-    # testSegments.to_csv('testSegments.csv')
 
-    # Define a basic function to count the MSOAs in the bsq - so I don't have 
-    # to write it again later.
+    print('Number of unique MSOA zones:', len(bsq.msoaZoneID.unique()), 'should be 8480 with Scotland')
 
-    print(len(bsq.msoaZoneID.unique()), 'should be 8480')
-    # Add area types (the story of how I ultimately fixed Scotland)
-    # Get an NTEM Zone for every MSOA - use the population lookup - ie. get the one
-    # with the most people, not a big field
-    msoaToNtemOverlaps = ntemToMsoa.groupby(['msoaZoneID']).max(
-        level='overlap_ntem_pop_split_factor').reset_index()
-    # Add area types to these sketchy MSOAs (in Scotland they're sketchy,
-    # they're 1:1 in England and Wales)
-    areaTypesMsoa = msoaToNtemOverlaps.merge(areaTypes, how='left', on='ntemZoneID')
-    areaTypesMsoa = areaTypesMsoa.reindex(['msoaZoneID', 'R', 'B', 'Zone_Desc'], axis=1)
-    # TODO: This is crucial for some later stuff - retain
-    areaTypesMsoa.to_csv('areaTypesMSOA.csv', index=False)
-    # Fasten area types onto bsq
-    bsq = bsq.merge(areaTypesMsoa, how='left', on='msoaZoneID')
-    # Derive North East and North West bsq data by area type
+    # Fix Scotland and get the area types
+    # Solution for Scotland is to get an NTEM Zone for every MSOA - use the population lookup - ie. get the one
+    # with the most people. This is 1:1 in England and Wales
+    largest_ntem = ntem_to_msoa.groupby('msoaZoneID')['overlap_ntem_pop_split_factor'].max().reset_index()
+    ntem_to_msoa = ntem_to_msoa.merge(largest_ntem, on=['msoaZoneID', 'overlap_ntem_pop_split_factor'])
+    ntem_to_msoa = ntem_to_msoa.merge(area_types, how='left', on='ntemZoneID')
+    ntem_to_msoa = ntem_to_msoa[['msoaZoneID', 'R', 'B', 'Zone_Desc']]  # retain only the area type info for each zone
+
+    # Save the zone-area type lookup to a csv file for future reference
+    ntem_to_msoa.to_csv('areaTypesMSOA.csv', index=False)
+
+    # Merge area types onto bsq
+    bsq = bsq.merge(ntem_to_msoa, how='left', on='msoaZoneID')
+
+    # Derive North East and North West bsq data by area type, used to infill Scottish values
+    # TODO: review this generic north section... taking first 72 LADs makes me nervous
     unqMergedLad = bsq.reindex(['LAD_code', 'LAD_Desc'], axis=1).drop_duplicates().reset_index(drop=True)
     northUnqMergedLad = unqMergedLad.iloc[0:72]
-    del (unqMergedLad)
+    del unqMergedLad
     northMsoaBsq = bsq[bsq.LAD_code.isin(northUnqMergedLad.LAD_code)]
     genericNorthTypeBsq = northMsoaBsq.drop(['msoaZoneID',
                                              'merged_laZoneID',
@@ -404,29 +386,20 @@ def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/fo
                                                                     'property_type',
                                                                     'household_composition']).mean().reset_index()
     del northMsoaBsq
-    # TODO: Spot check that these balance to 1
-    audit = genericNorthTypeBsq.groupby('R').sum()
-    # Fix missing msoas in bsq
-    # Filter the list of msoas by area types to msoas not in the bsq list
-    missingMsoa = areaTypesMsoa[~areaTypesMsoa.msoaZoneID.isin(
-        bsq.msoaZoneID)]
-    missingMsoa = missingMsoa.merge(genericNorthTypeBsq,
-                                    how='left', on='R')
-    # reindex bsq to match the generic zones (drop reference to mLAD)
-    bsq = bsq.reindex(list(missingMsoa), axis=1)
-    # stack bsq - full msoa bsq
-    bsq = bsq.append(missingMsoa).reset_index(drop=True)
-    print(len(bsq.msoaZoneID.unique()), 'should be 8480')
-    # Create and export pop_factor audit
-    audit = bsq.groupby(['msoaZoneID']).sum().reindex(['pop_factor'],
-                                                      axis=1)
+
+    # Identify and add the missing Scottish zones to bsq
+    missing_zones = ntem_to_msoa[~ntem_to_msoa.msoaZoneID.isin(bsq.msoaZoneID)]
+    missing_zones = missing_zones.merge(genericNorthTypeBsq, how='left', on='R')
+    bsq = bsq[list(missing_zones)]
+    bsq = bsq.append(missing_zones).reset_index(drop=True)
+    print('Number of unique MSOA zones:', len(bsq.msoaZoneID.unique()), 'should be 8480 with Scotland')
+
+    # Create and export pop_factor and land audits
+    audit = bsq.groupby(['msoaZoneID']).sum().reindex(['pop_factor'], axis=1)
     audit.to_csv('msoa_pop_factor_audit.csv', index=False)
-    land_audit = bsq.reindex(['msoaZoneID', 'Zone_Desc'],
-                             axis=1).drop_duplicates().merge(
-        msoaShp, how='inner',
-        left_on='msoaZoneID',
-        right_on='objectid').drop(
-        'objectid', axis=1)
+    land_audit = bsq[['msoaZoneID', 'Zone_Desc']].drop_duplicates().merge(msoaShp, how='inner',
+                                                                          left_on='msoaZoneID',
+                                                                          right_on='objectid').drop('objectid', axis=1)
     land_audit.to_csv('landAudit.csv', index=False)
 
     return bsq
