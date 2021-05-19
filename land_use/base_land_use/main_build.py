@@ -19,18 +19,19 @@ Main Build:
 ## TODO: ApplyNtEM Segments: Scottish MSOAs show population of 0s. Need to double check what's gone wrong here
 # Audit that splits out population by England/Wales/Scotland using startswith and matching to actual population
 # Need to check it reads everything in - if error then needs reporting
+TODO: allResPropertyMSOAClassified.csv is a product of land_use_data_prep.py and not copied by copy_addressbase_files()
 """
-import os  # File operations
+import os
 import sys
 
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Demand Tool/Python/ZoneTranslation')
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/TAME shared resources/Python/')
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Utilities/Python')
 
-import numpy as np  # Vector operations
-import pandas as pd  # main module
+import numpy as np
+import pandas as pd
 import geopandas as gpd
-import shutil as sh
+import shutil
 from land_use import utils
 import land_use.lu_constants as consts
 
@@ -38,7 +39,7 @@ import land_use.lu_constants as consts
 # TODO: Implement taking these from the base year object. Comments below indicate relevant attributes
 
 _default_iter = 'iter4'  # take from self.iteration
-_default_home = 'E:/NorMITs_Export/'  # needs to be on Y drive, self.model_folder?
+_default_home = 'Y:/NorMITs Land Use/'  # needs to be on Y drive, self.model_folder?
 _default_home_dir = _default_home + _default_iter  # perhaps this can stay as-is if the above two are in base object
 _import_folder = 'Y:/NorMITs Land Use/import/'  # self.import_folder
 _default_zone_folder = 'I:/NorMITs Synthesiser/Zone Translation/'  # these are for zone translations, I think not yet in base object
@@ -61,7 +62,7 @@ _default_msoaRef = _default_zone_ref_folder + 'UK MSOA and Intermediate Zone Cli
 _default_ladRef = _default_zone_ref_folder + 'LAD GB 2017/Local_Authority_Districts_December_2017_Full_Clipped_Boundaries_in_Great_Britain.shp'
 _default_mladRef = _default_zone_ref_folder + 'Merged_LAD_December_2011_Clipped_GB/Census_Merged_Local_Authority_Districts_December_2011_Generalised_Clipped_Boundaries_in_Great_Britain.shp'
 _nssecPath = _import_folder + 'NPR Segmentation/processed data/TfN_households_export.csv'
-_file_path_list = r"Y:\NorMITs Land Use\import\AddressBase\2018\List of ABP datasets.csv"
+_file_path_list = r'Y:\NorMITs Land Use\import\AddressBase\2018\List of ABP datasets.csv'
 
 
 # 1. Get AddressBase data
@@ -75,7 +76,7 @@ def copy_addressbase_files():
 
     for file in files.FilePath:
         try:
-            sh.copy(file, dest)
+            shutil.copy(file, dest)
             print("Copied over file into default iter folder: " + file)
         except IOError:
             print("File not found")
@@ -205,76 +206,60 @@ def balance_missing_hops(cpt_data, grouping_col='msoaZoneID', hlsaName=_default_
     return cpt_data
 
 
-# TODO: review this function
 def create_employment_segmentation(bsq,
                                    ksEmpImportPath=_import_folder + '/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
     """
-    # Synthesise in employment segmentation using 2011 data
-    # TODO: Growth 2011 employment segments
-    # TODO employment category should probably be conscious of property type
-    # Get to segments:
-    # full time employment
-    # part time employment
-    # students
-    # not employed/students
+    Synthesise employment segmentation using 2011 data into:
+        full time employment
+        part time employment
+        students
+        unemployed
+    TODO: Growth 2011 employment segments
+    TODO employment category should probably be conscious of property type
     """
-    # Shapes
-    msoaShp = gpd.read_file(_default_msoaRef).reindex(['objectid', 'msoa11cd'], axis=1)
+    # Split bsq into working age and non working age parts
+    bsq_working_age = bsq[bsq.Age.isin(['16-74'])].copy()
+    bsq_non_working_age = bsq[bsq.Age.isin(['under 16', '75 or over'])].copy()
 
-    nonWa = ['under 16', '75 or over']
-    workingAgePot = bsq[~bsq.Age.isin(nonWa)]
-    nonWorkingAgePot = bsq[bsq.Age.isin(nonWa)]
     # Add non working age placeholder
-    placeholderValue = 'non_wa'
-    nonWorkingAgePot['employment_type'] = placeholderValue
-    del placeholderValue
+    bsq_non_working_age['employment_type'] = 'non_wa'
 
-    # Import UK MSOA Employment - tranformed to long in R - most segments left in for aggregation here
-    # Factors are already built in R - will aggregate to 2 per msoa 1 for Males 1 for Females
-    ksEmp = pd.read_csv(ksEmpImportPath).reindex(['msoaZoneID', 'Gender', 'employment_type', 'wap_factor'], axis=1)
+    # Import UK MSOA Employment - transformed to long in R - most segments left in for aggregation here
+    # Factors are already built in R - will aggregate to 2 per MSOA 1 for Males 1 for Females
+    ks_emp = pd.read_csv(ksEmpImportPath)[['msoaZoneID', 'Gender', 'employment_type', 'wap_factor']]
 
     # Change MSOA codes to objectids
-    ksEmp = ksEmp.merge(msoaShp, how='left', left_on='msoaZoneID',
-                        right_on='msoa11cd').drop(['msoa11cd', 'msoaZoneID'],
-                                                  axis=1).rename(columns=
-                                                                 {'objectid': 'msoaZoneID'})
+    msoa_shp = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
+    ks_emp = ks_emp.merge(msoa_shp, how='left', left_on='msoaZoneID', right_on='msoa11cd')
+    ks_emp = ks_emp.drop(['msoa11cd', 'msoaZoneID'], axis=1).rename(columns={'objectid': 'msoaZoneID'})
 
-    def _agg_wap_factor(ks_sub, new_seg):
-        """
-        Function to combine working age population factors to create NTEM
-        employment categories
-        """
-        ks_sub = ks_sub.groupby(['msoaZoneID', 'Gender']).sum().reset_index()
-        ks_sub['employment_type'] = new_seg
-        return ks_sub
+    # Classify employment type into fte/pte/unm and aggregate
+    employment_type_dict = {
+        'emp_ft': 'fte',
+        'emp_se': 'fte',
+        'emp_pt': 'pte',
+        'emp_stu': 'stu',
+        'unemp': 'unm',
+        'unemp_ret': 'unm',
+        'unemp_stu': 'unm',
+        'unemp_care': 'unm',
+        'unemp_lts': 'unm',
+        'unemp_other': 'unm'
+    }
+    ks_emp['employment_type'] = ks_emp['employment_type'].map(employment_type_dict)
+    ks_emp = ks_emp.groupby(['msoaZoneID', 'Gender', 'employment_type']).sum().reset_index()
 
-    # full time employment =  sum(emp_ft, emp_se)
-    ksFte = ksEmp[ksEmp.employment_type.isin(['emp_ft', 'emp_se'])]
-    ksFte = _agg_wap_factor(ksFte, new_seg='fte')
-    # part time employment = sum(emp_pt)
-    ksPte = ksEmp[ksEmp.employment_type.isin(['emp_pt'])]
-    ksPte = _agg_wap_factor(ksPte, new_seg='pte')
-    # students = sum(emp_stu)
-    ksStu = ksEmp[ksEmp.employment_type.isin(['emp_stu'])]
-    ksStu = _agg_wap_factor(ksStu, new_seg='stu')
-    # not employed/students = sum(unemp, unemp_ret, unemp_stu, unemp_care,
-    # unemp_lts, unemp_other)
-    ksUnm = ksEmp[ksEmp.employment_type.isin(['unemp', 'unemp_ret', 'unemp_stu',
-                                              'unemp_care', 'unemp_lts',
-                                              'unemp_other'])]
-    ksUnm = _agg_wap_factor(ksUnm, new_seg='unm')
-
-    ksEmp = ksFte.append(ksPte).append(ksStu).append(ksUnm).reset_index(drop=True)
-
-    workingAgePot = workingAgePot.merge(ksEmp, how='left', on=['msoaZoneID', 'Gender'])
-    workingAgePot['w_pop_factor'] = workingAgePot['pop_factor'] * workingAgePot['wap_factor']
-    workingAgePot = workingAgePot.drop(['pop_factor', 'wap_factor'], axis=1).rename(
+    # Merge the employment type onto the working age entries
+    bsq_working_age = bsq_working_age.merge(ks_emp, how='left', on=['msoaZoneID', 'Gender'])
+    bsq_working_age['w_pop_factor'] = bsq_working_age['pop_factor'] * bsq_working_age['wap_factor']
+    bsq_working_age = bsq_working_age.drop(['pop_factor', 'wap_factor'], axis=1).rename(
         columns={'w_pop_factor': 'pop_factor'})
 
-    bsq = workingAgePot.append(nonWorkingAgePot, sort=True)
-    bsq = bsq.reindex(['msoaZoneID', 'Age', 'Gender', 'employment_type',
-                       'household_composition', 'property_type', 'B', 'R',
-                       'Zone_Desc', 'pop_factor'], axis=1)
+    # Append the non working age entries and select the required columns
+    bsq = bsq_working_age.append(bsq_non_working_age, sort=True)
+    bsq = bsq[['msoaZoneID', 'Age', 'Gender', 'employment_type',
+               'household_composition', 'property_type', 'B', 'R',
+               'Zone_Desc', 'pop_factor']]
 
     return bsq
 
@@ -438,7 +423,7 @@ def filled_properties(by_lu_obj):
 
     # Calculate the probability that a property is filled
     filled_properties_df['Prob_DwellsFilled'] = filled_properties_df['Filled_Dwells'] / \
-        filled_properties_df['Total_Dwells']
+                                                filled_properties_df['Total_Dwells']
     filled_properties_df = filled_properties_df.drop(columns={'Filled_Dwells', 'Total_Dwells'})
 
     # The above filled properties probability is based on E+W so need to join back to Scottish MSOAs
@@ -552,7 +537,7 @@ def apply_household_occupancy(do_import=False,
 
     if level == 'MSOA':
 
-        all_res_property_zonal = all_res_property_zonal.merge(balancedCptData,
+        all_res_property_zonal = all_res_property_zonal.merge(balanced_cpt_data,
                                                               how='inner',
                                                               left_on=['ZoneID', 'census_property_type'],
                                                               right_on=['msoaZoneID', 'census_property_type'])
@@ -611,9 +596,9 @@ def apply_household_occupancy(do_import=False,
 
         zonetrans = zonetrans.rename(columns={
             "lsoa11cd": "ZoneID"})
-        allResPropertyZonal = pd.merge(allResPropertyZonal, zonetrans, on='ZoneID')
+        allResPropertyZonal = pd.merge(all_res_property_zonal, zonetrans, on='ZoneID')
 
-        allResPropertyZonal = pd.merge(allResPropertyZonal, balancedCptData, \
+        allResPropertyZonal = pd.merge(allResPropertyZonal, balanced_cpt_data, \
                                        how='inner', \
                                        left_on=['msoaZoneID', 'census_property_type'], \
                                        right_on=['msoaZoneID', 'census_property_type'])
@@ -655,6 +640,7 @@ def apply_household_occupancy(do_import=False,
         print("no support for this zone")
 
 
+# TODO: review this function and its docstring
 def apply_ntem_segments(classified_res_property_import_path='classifiedResPropertyMSOA.csv',
                         bsq_import_path=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
                         areaTypeImportPath=_import_folder + 'CTripEnd/ntem_zone_area_type.csv',
@@ -669,18 +655,15 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
     Import bespoke census query - this function creates it
     At the moment only works for MSOA
     """
-    crp = pd.read_csv(classified_res_property_import_path)
     crp_cols = ['ZoneID', 'census_property_type', 'UPRN', 'household_occupancy_18', 'population']
-    crp = crp.reindex(crp_cols, axis=1)
-    crp['population'].sum()
+    crp = pd.read_csv(classified_res_property_import_path)[crp_cols]
 
     # Read in the Bespoke Census Query and create NTEM areas and employment segmentation
     bsq = create_ntem_areas(bsq_import_path, areaTypeImportPath)
     bsq = create_employment_segmentation(bsq, ksEmpImportPath)
 
-    factor_property_type = bsq.reindex(['msoaZoneID', 'property_type', 'pop_factor'],
-                                       axis=1).groupby(['msoaZoneID',
-                                                        'property_type']).sum().reset_index()
+    factor_property_type = bsq[['msoaZoneID', 'property_type', 'pop_factor']].groupby(['msoaZoneID',
+                                                                                       'property_type']).sum().reset_index()
     factor_property_type = factor_property_type.rename(columns={'pop_factor': 'pt_pop_factor'})
     bsq = bsq.merge(factor_property_type, how='left', on=['msoaZoneID', 'property_type'])
 
@@ -689,9 +672,8 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
 
     seg_folder = 'NTEM Segmentation Audits'
     utils.create_folder(seg_folder)
-    audit = bsq.reindex(['msoaZoneID', 'property_type', 'pop_factor'],
-                        axis=1).groupby(['msoaZoneID',
-                                         'property_type']).sum().reset_index()
+    audit = bsq[['msoaZoneID', 'property_type', 'pop_factor']].groupby(['msoaZoneID',
+                                                                        'property_type']).sum().reset_index()
     audit.to_csv(seg_folder + '/Zone_PT_Factor_Pre_Join_Audit.csv', index=False)
 
     print('Should be near to zones x property types - ie. 8480 x 6 = 50880 :', bsq['pop_factor'].sum())
@@ -705,11 +687,10 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
     bsq = bsq.merge(ukMSOA, how='left', left_on='msoaZoneID', right_on='objectid')
     bsq_cols = ['msoa11cd', 'Age', 'Gender', 'employment_type', 'household_composition', 'property_type', 'R',
                 'pop_factor']
-    bsq = bsq.reindex(bsq_cols, axis=1)
+    bsq = bsq[bsq_cols]
     bsq = bsq.rename(columns={'R': 'area_type'})
 
-    audit = bsq.reindex(['msoa11cd', 'property_type', 'pop_factor'],
-                        axis=1).groupby(['msoa11cd', 'property_type']).sum().reset_index()
+    audit = bsq[['msoa11cd', 'property_type', 'pop_factor']].groupby(['msoa11cd', 'property_type']).sum().reset_index()
     audit.to_csv(seg_folder + '/Zone_PT_Factor_Audit_Inter_Join.csv', index=False)
 
     # TODO: record these audits more formally? Lots of examples of audits in the rest of this function
@@ -739,7 +720,7 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
 
     output_cols = ['ZoneID', 'area_type', 'census_property_type', 'property_type', 'UPRN',
                    'household_composition', 'Age', 'Gender', 'employment_type', 'people']
-    crp = crp.reindex(output_cols, axis=1)
+    crp = crp[output_cols]
     crp = crp.rename(columns={'UPRN': 'properties'})
 
     pop = crp['people'].sum()
@@ -750,7 +731,7 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
     crp.to_csv(_default_home_dir + '/landUseOutput' + level + '.csv', index=False)
 
     # Total MSOA Pop Audit
-    msoa_audit = crp.reindex(['ZoneID', 'people'], axis=1).groupby('ZoneID').sum()
+    msoa_audit = crp[['ZoneID', 'people']].groupby('ZoneID').sum()
     msoa_audit.to_csv(seg_folder + '/2018MSOAPopulation_OutputEnd.csv', index=False)
 
     return crp, bsq
