@@ -640,7 +640,6 @@ def apply_household_occupancy(do_import=False,
         print("no support for this zone")
 
 
-# TODO: review this function and its docstring
 def apply_ntem_segments(classified_res_property_import_path='classifiedResPropertyMSOA.csv',
                         bsq_import_path=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
                         areaTypeImportPath=_import_folder + 'CTripEnd/ntem_zone_area_type.csv',
@@ -662,77 +661,64 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
     bsq = create_ntem_areas(bsq_import_path, areaTypeImportPath)
     bsq = create_employment_segmentation(bsq, ksEmpImportPath)
 
+    # Compute property type factors
     factor_property_type = bsq[['msoaZoneID', 'property_type', 'pop_factor']].groupby(['msoaZoneID',
                                                                                        'property_type']).sum().reset_index()
     factor_property_type = factor_property_type.rename(columns={'pop_factor': 'pt_pop_factor'})
     bsq = bsq.merge(factor_property_type, how='left', on=['msoaZoneID', 'property_type'])
-
     bsq['pop_factor'] = bsq['pop_factor'] / bsq['pt_pop_factor']
     bsq = bsq.drop('pt_pop_factor', axis=1)
 
+    # Create and save an audit
     seg_folder = 'NTEM Segmentation Audits'
     utils.create_folder(seg_folder)
     audit = bsq[['msoaZoneID', 'property_type', 'pop_factor']].groupby(['msoaZoneID',
                                                                         'property_type']).sum().reset_index()
     audit.to_csv(seg_folder + '/Zone_PT_Factor_Pre_Join_Audit.csv', index=False)
-
     print('Should be near to zones x property types - ie. 8480 x 6 = 50880 :', bsq['pop_factor'].sum())
-
-    msoaCols = ['objectid', 'msoa11cd']
-    ukMSOA = gpd.read_file(_default_msoaRef)
-    ukMSOA = ukMSOA.loc[:, msoaCols]
 
     # Join in MSOA names and format matrix for further steps
     # TODO: Some handling required here for other zoning systems
-    bsq = bsq.merge(ukMSOA, how='left', left_on='msoaZoneID', right_on='objectid')
+    uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
+    bsq = bsq.merge(uk_msoa, how='left', left_on='msoaZoneID', right_on='objectid')
     bsq_cols = ['msoa11cd', 'Age', 'Gender', 'employment_type', 'household_composition', 'property_type', 'R',
                 'pop_factor']
     bsq = bsq[bsq_cols]
     bsq = bsq.rename(columns={'R': 'area_type'})
 
+    # Save out an audit of the sum of the pop_factors by zone and property type (should all be 1)
     audit = bsq[['msoa11cd', 'property_type', 'pop_factor']].groupby(['msoa11cd', 'property_type']).sum().reset_index()
     audit.to_csv(seg_folder + '/Zone_PT_Factor_Audit_Inter_Join.csv', index=False)
 
-    # TODO: record these audits more formally? Lots of examples of audits in the rest of this function
-    bsq_audit = bsq.groupby(['msoa11cd', 'property_type']).count().reset_index()
-    print(bsq_audit['pop_factor'].drop_duplicates())
+    # Print checks on the number of segments for each zone/property type and the total population
+    bsq_audit = bsq.groupby(['msoa11cd', 'property_type'])['pop_factor'].count().drop_duplicates()
+    if len(bsq_audit) == 1:
+        print('Each zone and property type has {} segments'.format(bsq_audit[0]))
+    else:
+        print('Some zones have missing segments!')
     crp_audit = crp['population'].sum()
-    print(crp_audit)
+    print('Total population (audit):', crp_audit)
 
-    crp = crp.merge(bsq, how='outer', left_on=['ZoneID', 'census_property_type'],
+    # Merge the bespoke census query data onto the classified residential properties
+    crp = crp.merge(bsq,
+                    how='outer',
+                    left_on=['ZoneID', 'census_property_type'],
                     right_on=['msoa11cd', 'property_type'])
-    print('pop factor needs to be same as no of zones - 8480')
-    print('population needs to resolve back to 60+ million once duplicates are removed')
-    crp_audit = crp['population'].drop_duplicates().sum()
-    print(crp_audit)
 
-    crp['pop_factor'].sum()
-    crp_audit = crp['population'].drop_duplicates().sum()
-    print(crp_audit)
-
-    # Audit bank
-    print(crp['population'].sum())
-    print(crp['pop_factor'].sum())
-
-    # This is where it used to fall to bits
     # Apply population factor to populations to get people by property type
     crp['people'] = crp['population'] * crp['pop_factor']
-
     output_cols = ['ZoneID', 'area_type', 'census_property_type', 'property_type', 'UPRN',
                    'household_composition', 'Age', 'Gender', 'employment_type', 'people']
     crp = crp[output_cols]
     crp = crp.rename(columns={'UPRN': 'properties'})
-
-    pop = crp['people'].sum()
-    print('Final population', pop)
-    crp = crp.dropna()
-    print('Final population after removing nans', pop)
-
-    crp.to_csv(_default_home_dir + '/landUseOutput' + level + '.csv', index=False)
+    print('Final population after factoring:', crp['people'].sum())
 
     # Total MSOA Pop Audit
     msoa_audit = crp[['ZoneID', 'people']].groupby('ZoneID').sum()
     msoa_audit.to_csv(seg_folder + '/2018MSOAPopulation_OutputEnd.csv', index=False)
+
+    # Export to file
+    crp.to_csv(_default_home_dir + '/landUseOutput' + level + '.csv', index=False)
 
     return crp, bsq
 
