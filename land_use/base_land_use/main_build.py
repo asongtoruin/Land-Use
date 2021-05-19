@@ -66,13 +66,13 @@ _file_path_list = r'Y:\NorMITs Land Use\import\AddressBase\2018\List of ABP data
 
 
 # 1. Get AddressBase data
-def copy_addressbase_files():
+def copy_addressbase_files(by_lu_obj):
     """
     Copy the relevant ABP files from import drive to _default_home_dir for use in later functions.
     _file_path_list: Path to csv of AddressBase extract paths.
     """
-    dest = _default_home_dir
-    files = pd.read_csv(_file_path_list)
+    dest = by_lu_obj.model_folder + '/' + by_lu_obj.iteration
+    files = pd.read_csv(by_lu_obj.addressbase_path_list)
 
     for file in files.FilePath:
         try:

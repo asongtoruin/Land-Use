@@ -47,6 +47,7 @@ class BaseYearLandUse:
         self.import_folder = model_folder + '/' + import_folder + '/'
 
         # Inputs
+        self.addressbase_path_list = consts.ADDRESSBASE_PATH_LIST
         self.zones_folder = zones_folder
         self.zone_translation_path = zone_translation_path
         self.KS401path = KS401path
