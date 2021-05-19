@@ -12,7 +12,7 @@ LU_FOLDER = 'Y://NorMITs Land Use'
 DATA_FOLDER = 'Y://Data Strategy//Data//'
 
 # Most recent Land Use Iteration
-LU_MR_ITER = 'iter3b'
+LU_MR_ITER = 'iter4'
 LU_IMPORTS = 'import'
 LU_REFS = 'Lookups'
 

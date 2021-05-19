@@ -23,11 +23,6 @@ TODO: allResPropertyMSOAClassified.csv is a product of land_use_data_prep.py and
 """
 import os
 import sys
-
-sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Demand Tool/Python/ZoneTranslation')
-sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/TAME shared resources/Python/')
-sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Utilities/Python')
-
 import numpy as np
 import pandas as pd
 import geopandas as gpd
@@ -35,43 +30,26 @@ import shutil
 from land_use import utils
 import land_use.lu_constants as consts
 
-# Default file paths
-# TODO: Implement taking these from the base year object. Comments below indicate relevant attributes
+# TODO: check if the following is actually required
+sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Demand Tool/Python/ZoneTranslation')
+sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/TAME shared resources/Python/')
+sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Utilities/Python')
 
-_default_iter = 'iter4'  # take from self.iteration
-_default_home = 'Y:/NorMITs Land Use/'  # needs to be on Y drive, self.model_folder?
-_default_home_dir = _default_home + _default_iter  # perhaps this can stay as-is if the above two are in base object
-_import_folder = 'Y:/NorMITs Land Use/import/'  # self.import_folder
-_default_zone_folder = 'I:/NorMITs Synthesiser/Zone Translation/'  # these are for zone translations, I think not yet in base object
-# Default zone names
-_default_zone_name = 'MSOA'  # MSOA or LSOA, perhaps needs to be self.model_zoning
-
-# As these are constructed from the above, perhaps it's ok to leave as they are but it would still be better in the constants
-_default_addressbase_extract_path = (_default_home_dir + '/allResProperty' + _default_zone_name + 'Classified.csv')
-_default_census_property_types_path = (_import_folder + 'Census_Property_Type_Maps.xlsx')
-_default_communal_types_path = (_import_folder + 'Communal Establishments 2011 QS421EW/communal_msoaoutput.csv')
-_default_communal_employment_path = (_import_folder + 'Communal Establishments 2011 QS421EW/DC6103EW_sums.csv')
-_default_census_population = (_import_folder + 'Communal Establishments 2011 QS421EW/DC11004_formatted.csv')
-_default_lad_translation = (_default_zone_folder + 'Export/lad_to_msoa/lad_to_msoa.csv')
-_default_census_dat = (_import_folder + 'Nomis Census 2011 Head & Household')
+# Shapefile locations
 _default_zone_ref_folder = 'Y:/Data Strategy/GIS Shapefiles/'
-_default_area_types = ('Y:/NorMITs Land Use/import/area_types_msoa.csv')
-
 _default_lsoaRef = _default_zone_ref_folder + 'UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz.shp'
 _default_msoaRef = _default_zone_ref_folder + 'UK MSOA and Intermediate Zone Clipped 2011/uk_ew_msoa_s_iz.shp'
 _default_ladRef = _default_zone_ref_folder + 'LAD GB 2017/Local_Authority_Districts_December_2017_Full_Clipped_Boundaries_in_Great_Britain.shp'
 _default_mladRef = _default_zone_ref_folder + 'Merged_LAD_December_2011_Clipped_GB/Census_Merged_Local_Authority_Districts_December_2011_Generalised_Clipped_Boundaries_in_Great_Britain.shp'
-_nssecPath = _import_folder + 'NPR Segmentation/processed data/TfN_households_export.csv'
-_file_path_list = r'Y:\NorMITs Land Use\import\AddressBase\2018\List of ABP datasets.csv'
 
 
 # 1. Get AddressBase data
 def copy_addressbase_files(by_lu_obj):
     """
-    Copy the relevant ABP files from import drive to _default_home_dir for use in later functions.
-    _file_path_list: Path to csv of AddressBase extract paths.
+    Copy the relevant ABP files from import drive to by_lu_obj.home_folder for use in later functions.
+    by_lu_obj: base year land use object
     """
-    dest = by_lu_obj.model_folder + '/' + by_lu_obj.iteration
+    dest = by_lu_obj.home_folder
     files = pd.read_csv(by_lu_obj.addressbase_path_list)
 
     for file in files.FilePath:
@@ -145,14 +123,13 @@ def aggregate_cpt(cpt_data, grouping_col=None):
     return agg_data
 
 
-def zone_up(cpt_data,
-            zone_translation_path=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
-            grouping_col='msoaZoneID'):
+def zone_up(by_lu_obj, cpt_data, grouping_col='msoaZoneID'):
     """
     Function to raise up a level of spatial aggregation & aggregate at that level, then bring new factors back down
     # TODO: Might be nice to have this zone up any level of zonal aggregation
     Raise LSOA to MSOA for spatial aggregation
     """
+    zone_translation_path = by_lu_obj.zones_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv'
     zone_translation = pd.read_csv(zone_translation_path)
     zone_translation = zone_translation.rename(columns={'lsoa_zone_id': 'lsoaZoneID',
                                                         'msoa_zone_id': 'msoaZoneID'})
@@ -175,21 +152,16 @@ def zone_up(cpt_data,
 
 
 # TODO: improve the docstring here
-def balance_missing_hops(cpt_data, grouping_col='msoaZoneID', hlsaName=_default_zone_name,
-                         zone_translation_path=(_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv')):
+def balance_missing_hops(by_lu_obj, cpt_data, grouping_col='msoaZoneID'):
     """
     # TODO: Replace global with LAD or Country - likely to be marginal improvements. Currently UK-wide
     This resolves the  msoa/lad household occupancy
     """
-    msoa_agg = zone_up(cpt_data,
-                       zone_translation_path=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
-                       grouping_col=grouping_col)
+    msoa_agg = zone_up(by_lu_obj, cpt_data, grouping_col=grouping_col)
     msoa_agg = msoa_agg.loc[:, [grouping_col, 'census_property_type',
                                 'household_occupancy']].rename(columns={'household_occupancy': 'msoa_ho'})
 
-    global_agg = zone_up(cpt_data,
-                         zone_translation_path=_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv',
-                         grouping_col=grouping_col)
+    global_agg = zone_up(by_lu_obj, cpt_data, grouping_col=grouping_col)
     global_agg = aggregate_cpt(global_agg, grouping_col=None)
     global_agg = global_agg.loc[:, ['census_property_type',
                                     'household_occupancy']].rename(columns={'household_occupancy': 'global_ho'})
@@ -206,8 +178,7 @@ def balance_missing_hops(cpt_data, grouping_col='msoaZoneID', hlsaName=_default_
     return cpt_data
 
 
-def create_employment_segmentation(bsq,
-                                   ksEmpImportPath=_import_folder + '/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'):
+def create_employment_segmentation(by_lu_obj, bsq):
     """
     Synthesise employment segmentation using 2011 data into:
         full time employment
@@ -226,6 +197,7 @@ def create_employment_segmentation(bsq,
 
     # Import UK MSOA Employment - transformed to long in R - most segments left in for aggregation here
     # Factors are already built in R - will aggregate to 2 per MSOA 1 for Males 1 for Females
+    ksEmpImportPath = by_lu_obj.import_folder + '/KS601-3UK/uk_msoa_ks601equ_w_gender.csv'
     ks_emp = pd.read_csv(ksEmpImportPath)[['msoaZoneID', 'Gender', 'employment_type', 'wap_factor']]
 
     # Change MSOA codes to objectids
@@ -264,8 +236,7 @@ def create_employment_segmentation(bsq,
     return bsq
 
 
-def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/formatted_long_bsq.csv',
-                      area_type_import_path=_import_folder + '/CTripEnd/ntem_zone_area_type.csv'):
+def create_ntem_areas(by_lu_obj):
     """
     Reduce age & gender categories down to NTEM requirements and add area type for each zone.
 
@@ -274,9 +245,11 @@ def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/fo
     """
     # Import Bespoke Census Query - already transformed to long format in R
     print('Importing bespoke census query')
+    bsq_import_path = by_lu_obj.import_folder + '/Bespoke Census Query/formatted_long_bsq.csv'
     bsq = pd.read_csv(bsq_import_path)
 
     # Import area types
+    area_type_import_path = by_lu_obj.import_folder + '/CTripEnd/ntem_zone_area_type.csv'
     area_types = pd.read_csv(area_type_import_path)
 
     # Shapes
@@ -286,14 +259,14 @@ def create_ntem_areas(bsq_import_path=_import_folder + '/Bespoke Census Query/fo
     # Lookups
     # Bespoke census query types
     # TODO: make these a dictionary in LU constants
-    pType = pd.read_csv(_import_folder + '/Bespoke Census Query/bsq_ptypemap.csv')
-    hType = pd.read_csv(_import_folder + '/Bespoke Census Query/bsq_htypemap.csv')
+    pType = pd.read_csv(by_lu_obj.import_folder + '/Bespoke Census Query/bsq_ptypemap.csv')
+    hType = pd.read_csv(by_lu_obj.import_folder + '/Bespoke Census Query/bsq_htypemap.csv')
 
     # Zonal conversions
-    mlaLookup = pd.read_csv(_default_zone_folder + 'Export/merged_la_to_msoa/merged_la_to_msoa.csv').reindex(
-        ['msoaZoneID', 'merged_laZoneID'], axis=1)
-    ntem_to_msoa = pd.read_csv(_default_zone_folder + 'Export/ntem_to_msoa/ntem_msoa_pop_weighted_lookup.csv').reindex(
-        ['ntemZoneID', 'msoaZoneID', 'overlap_ntem_pop_split_factor'], axis=1)
+    mlaLookup = pd.read_csv(by_lu_obj.zones_folder + 'Export/merged_la_to_msoa/merged_la_to_msoa.csv')
+    mlaLookup = mlaLookup[['msoaZoneID', 'merged_laZoneID']]
+    ntem_to_msoa = pd.read_csv(by_lu_obj.zones_folder + 'Export/ntem_to_msoa/ntem_msoa_pop_weighted_lookup.csv')
+    ntem_to_msoa = ntem_to_msoa[['ntemZoneID', 'msoaZoneID', 'overlap_ntem_pop_split_factor']]
 
     # Reduce age & gender categories down to NTEM requirements
     def _segment_tweaks(bsq, asisSegments, groupingCol, aggCols, targetCol, newSegment):
@@ -435,21 +408,14 @@ def filled_properties(by_lu_obj):
     return filled_properties_df
 
 
-def apply_household_occupancy(do_import=False,
-                              write_out=True,
-                              level=_default_zone_name,
-                              hops_path=_import_folder + '/HOPs/hops_growth_factors.csv'):
+def apply_household_occupancy(by_lu_obj, do_import=False, write_out=True):
     """
-    # Import household occupancy data and apply to property data
-    # TODO: toggles for unused 'level' parameter. Want to be able to run
-    # at LSOA level when point correspondence is done.
-    # TODO: Folders for outputs to seperate this process from the household 
-    # classification
+    Import household occupancy data and apply to property data.
+    TODO: want to be able to run at LSOA level when point correspondence is done.
+    TODO: Folders for outputs to separate this process from the household classification
     """
-
     if do_import:
         balanced_cpt_data = pd.read_csv('UKHouseHoldOccupancy2011.csv')
-
     else:
         # TODO: put in constants?
         EWQS401 = 'QS401UK_LSOA.csv'
@@ -457,63 +423,59 @@ def apply_household_occupancy(do_import=False,
         EWQS402 = 'QS402UK_LSOA.csv'
         SQS402 = 'QS402UK_DZ_2011.csv'
 
-        cpt_data = lsoa_census_data_prep(_default_census_dat, [EWQS401, SQS401], [EWQS402, SQS402],
+        # TODO: replace _default_lsoaRef with values from by_lu_obj
+        census_dat = by_lu_obj.import_folder + 'Nomis Census 2011 Head & Household'
+        cpt_data = lsoa_census_data_prep(census_dat, [EWQS401, SQS401], [EWQS402, SQS402],
                                          geography=_default_lsoaRef)
 
         # Zone up here to MSOA aggregations
-        balanced_cpt_data = balance_missing_hops(cpt_data, grouping_col='msoaZoneID')
+        balanced_cpt_data = balance_missing_hops(by_lu_obj, cpt_data, grouping_col='msoaZoneID')
         balanced_cpt_data = balanced_cpt_data.fillna(0)
-        filled_properties = pd.read_csv(_default_home_dir + '/ProbabilityDwellfilled.csv')
-        balanced_cpt_data = balanced_cpt_data.merge(filled_properties, how='outer', on='msoaZoneID')
-        balanced_cpt_data['household_occupancy'] = balanced_cpt_data['household_occupancy'] * balanced_cpt_data[
-            'Prob_DwellsFilled']
+
+        # Read the filled property adjustment back in and apply it to household occupancy
+        probability_filled = pd.read_csv(by_lu_obj.home_folder + '/ProbabilityDwellfilled.csv')
+        balanced_cpt_data = balanced_cpt_data.merge(probability_filled, how='outer', on='msoaZoneID')
+        balanced_cpt_data['household_occupancy'] = balanced_cpt_data['household_occupancy'] * \
+            balanced_cpt_data['Prob_DwellsFilled']
         balanced_cpt_data = balanced_cpt_data.drop(columns={'Prob_DwellsFilled'})
         balanced_cpt_data.to_csv('UKHouseHoldOccupancy2011.csv', index=False)
 
     # TODO: this section largely checks and validation, refine
-    msoaCols = ['objectid', 'msoa11cd']
-    ladCols = ['ladZoneID', 'msoaZoneID']
-    ukMSOA = gpd.read_file(_default_msoaRef)
-    ukMSOA = ukMSOA.loc[:, msoaCols]
+    uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
 
     # Visual spot checks - count zones, check cpt
     audit = balanced_cpt_data.groupby(['msoaZoneID']).count().reset_index()
-    print('census hops zones =', audit['msoaZoneID'].drop_duplicates().count(), 'should be', len(ukMSOA))
+    print('census hops zones =', audit['msoaZoneID'].drop_duplicates().count(), 'should be', len(uk_msoa))
     print('counts of property type by zone', audit['census_property_type'].drop_duplicates())
 
     # Join MSOA ids to balanced cptdata
-    ukMSOA = ukMSOA.rename(columns={'msoa11cd': 'msoaZoneID'})
-    balanced_cpt_data = balanced_cpt_data.merge(ukMSOA, how='left',
-                                                on='msoaZoneID').drop('objectid', axis=1)
-    # Import msoa to lad translation
-    lad_translation = pd.read_csv(_default_zone_folder + 'Export/lad_to_msoa/lad_to_msoa.csv')
-    lad_translation = lad_translation.rename(columns={'lad_zone_id': 'ladZoneID',
-                                                      'msoa_zone_id': 'msoaZoneID'}).loc[:, ladCols]
-    unqLad = lad_translation['ladZoneID'].unique()
-    balanced_cpt_data = balanced_cpt_data.merge(lad_translation, how='left',
-                                                on='msoaZoneID')
+    uk_msoa = uk_msoa.rename(columns={'msoa11cd': 'msoaZoneID'})
+    balanced_cpt_data = balanced_cpt_data.merge(uk_msoa, how='left', on='msoaZoneID').drop('objectid', axis=1)
+    # Import MSOA to lad translation
+    lad_translation = pd.read_csv(by_lu_obj.zones_folder + 'Export/lad_to_msoa/lad_to_msoa.csv')
+    lad_translation = lad_translation.rename(columns={'lad_zone_id': 'ladZoneID', 'msoa_zone_id': 'msoaZoneID'})
+    lad_translation = lad_translation[['ladZoneID', 'msoaZoneID']]
+    unq_lad = lad_translation['ladZoneID'].unique()
+    balanced_cpt_data = balanced_cpt_data.merge(lad_translation, how='left', on='msoaZoneID')
 
-    joinLad = balanced_cpt_data['ladZoneID'].unique()
+    join_lad = balanced_cpt_data['ladZoneID'].unique()
 
-    ladCols = ['objectid', 'lad17cd']
-    ukLAD = gpd.read_file(_default_ladRef)
-    ukLAD = ukLAD.loc[:, ladCols]
+    uk_lad = gpd.read_file(_default_ladRef)
+    uk_lad = uk_lad[['ladZoneID', 'msoaZoneID']]
 
-    balanced_cpt_data = balanced_cpt_data.merge(ukLAD, how='left',
-                                                left_on='ladZoneID', right_on='objectid').drop(
-        ['ladZoneID', 'objectid'],
-        axis=1)
+    balanced_cpt_data = balanced_cpt_data.merge(uk_lad, how='left', left_on='ladZoneID', right_on='objectid')
+    balanced_cpt_data = balanced_cpt_data.drop(['ladZoneID', 'objectid'], axis=1)
 
-    if len(joinLad) == len(unqLad):
+    if len(join_lad) == len(unq_lad):
         print('All LADs joined properly')
     else:
         print('Some LAD zones not accounted for')
-    del (unqLad, joinLad)
+    del unq_lad, join_lad
 
-    hops_growth = pd.read_csv(hops_path).loc[:, ['Area code', '11_to_18']]
+    hops_path = by_lu_obj.import_folder + 'HOPs/hops_growth_factors.csv'
+    hops_growth = pd.read_csv(hops_path)[['Area code', '11_to_18']]
 
     # using HOPS growth data to uplift the figures to 2018
-
     balanced_cpt_data = balanced_cpt_data.merge(hops_growth,
                                                 how='left', left_on='lad17cd',
                                                 right_on='Area code').drop('Area code', axis=1).reset_index(drop=True)
@@ -527,7 +489,8 @@ def apply_household_occupancy(do_import=False,
 
     # Read in all res property for the level of aggregation
     print('Reading in AddressBase extract')
-    all_res_property = pd.read_csv(_default_addressbase_extract_path)
+    addressbase_extract_path = by_lu_obj.home_folder + '/allResProperty' + by_lu_obj.model_zoning + 'Classified.csv'
+    all_res_property = pd.read_csv(addressbase_extract_path)
 
     all_res_property = all_res_property.reindex(['ZoneID', 'census_property_type',
                                                  'UPRN'], axis=1)
@@ -535,7 +498,7 @@ def apply_household_occupancy(do_import=False,
                                                        'census_property_type']).count().reset_index()
     del all_res_property
 
-    if level == 'MSOA':
+    if by_lu_obj.model_zoning == 'MSOA':
 
         all_res_property_zonal = all_res_property_zonal.merge(balanced_cpt_data,
                                                               how='inner',
@@ -544,7 +507,8 @@ def apply_household_occupancy(do_import=False,
         all_res_property_zonal = all_res_property_zonal.drop('msoaZoneID', axis=1)
 
         # Audit join - ensure all zones accounted for
-        if all_res_property_zonal['ZoneID'].drop_duplicates().count() != ukMSOA['msoaZoneID'].drop_duplicates().count():
+        if all_res_property_zonal['ZoneID'].drop_duplicates().count() != uk_msoa[
+            'msoaZoneID'].drop_duplicates().count():
             ValueError('Some zones dropped in Hops join')
         else:
             print('All Hops areas accounted for')
@@ -554,24 +518,25 @@ def apply_household_occupancy(do_import=False,
             'household_occupancy_18']
 
         # Create folder for exports
-        arpMsoaAudit = all_res_property_zonal.groupby('ZoneID').sum().reset_index()
-        arpMsoaAudit = arpMsoaAudit.reindex(['ZoneID', 'population'], axis=1)
-        hpaFolder = 'Hops Population Audits'
-        utils.create_folder(hpaFolder)
-        arpMsoaAudit.to_csv(hpaFolder + '/' + level + '_population_from_2018_hops.csv', index=False)
+        arp_msoa_audit = all_res_property_zonal.groupby('ZoneID').sum().reset_index()
+        arp_msoa_audit = arp_msoa_audit.reindex(['ZoneID', 'population'], axis=1)
+        hpa_folder = 'Hops Population Audits'
+        utils.create_folder(hpa_folder)
+        arp_msoa_audit.to_csv(hpa_folder + '/' + by_lu_obj.model_zoning + '_population_from_2018_hops.csv', index=False)
         if write_out:
-            all_res_property_zonal.to_csv('classifiedResProperty' + level + '.csv', index=False)
+            all_res_property_zonal.to_csv('classifiedResProperty' + by_lu_obj.model_zoning + '.csv', index=False)
 
         return all_res_property_zonal
 
-    if level == 'LSOA':
-        # here change msoa that is expected in the function above to lsoa Zone ID.
+    # TODO: review whether support for other zoning systems is in scope
+    elif by_lu_obj.model_zoning == 'LSOA':
+        # Here change MSOA that is expected in the function above to lsoa Zone ID.
         # To do that we need the zone translations and lsoa table with zoneID objectid and also msoa lookup for the objectid!
         lsoaCols = ['objectid', 'lsoa11cd']
         # TODO: change the path for translations
         lsoa_lookup = pd.read_csv(
             'Y:/Data Strategy/GIS Shapefiles/UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz_cleaned_dbf.csv')
-        LSOAzonetranslation = pd.read_csv(_default_zone_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa_pop_weighted.csv')
+        LSOAzonetranslation = pd.read_csv(by_lu_obj.zones_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa_pop_weighted.csv')
         msoa_lookup = pd.read_csv(
             'Y:/Data Strategy/GIS Shapefiles/UK MSOA and Intermediate Zone Clipped 2011/uk_ew_msoa_s_iz_dbf.csv')
 
@@ -598,9 +563,9 @@ def apply_household_occupancy(do_import=False,
             "lsoa11cd": "ZoneID"})
         allResPropertyZonal = pd.merge(all_res_property_zonal, zonetrans, on='ZoneID')
 
-        allResPropertyZonal = pd.merge(allResPropertyZonal, balanced_cpt_data, \
-                                       how='inner', \
-                                       left_on=['msoaZoneID', 'census_property_type'], \
+        allResPropertyZonal = pd.merge(allResPropertyZonal, balanced_cpt_data,
+                                       how='inner',
+                                       left_on=['msoaZoneID', 'census_property_type'],
                                        right_on=['msoaZoneID', 'census_property_type'])
         allResPropertyZonal = allResPropertyZonal.drop(columns=
                                                        {'lsoaZoneID', 'msoaZoneID',
@@ -622,13 +587,13 @@ def apply_household_occupancy(do_import=False,
 
         allResPropertyZonal['population'] = allResPropertyZonal['UPRN'] * allResPropertyZonal['household_occupancy_18']
         # Create folder for exports
-        arpMsoaAudit = allResPropertyZonal.groupby('ZoneID').sum().reset_index()
-        arpMsoaAudit = arpMsoaAudit.reindex(['ZoneID', 'population'], axis=1)
-        hpaFolder = 'Hops Population Audits'
-        utils.create_folder(hpaFolder)
-        arpMsoaAudit.to_csv(hpaFolder + '/' + level + '_population_from_2018_hops.csv', index=False)
-        arpMsoaAudit = arpMsoaAudit['population'].sum()
-        print(arpMsoaAudit)
+        arp_msoa_audit = allResPropertyZonal.groupby('ZoneID').sum().reset_index()
+        arp_msoa_audit = arp_msoa_audit.reindex(['ZoneID', 'population'], axis=1)
+        hpa_folder = 'Hops Population Audits'
+        utils.create_folder(hpa_folder)
+        arp_msoa_audit.to_csv(hpa_folder + '/' + by_lu_obj.model_zoning + '_population_from_2018_hops.csv', index=False)
+        arp_msoa_audit = arp_msoa_audit['population'].sum()
+        print(arp_msoa_audit)
 
         if write_out:
             allResPropertyZonal.to_csv('classifiedResPropertyLSOA.csv', index=False)
@@ -637,14 +602,10 @@ def apply_household_occupancy(do_import=False,
             # it has 1900 too many people
 
     else:
-        print("no support for this zone")
+        print("No support for this zoning system")
 
 
-def apply_ntem_segments(classified_res_property_import_path='classifiedResPropertyMSOA.csv',
-                        bsq_import_path=_import_folder + 'Bespoke Census Query/formatted_long_bsq.csv',
-                        areaTypeImportPath=_import_folder + 'CTripEnd/ntem_zone_area_type.csv',
-                        ksEmpImportPath=_import_folder + 'KS601-3UK/uk_msoa_ks601equ_w_gender.csv',
-                        level=_default_zone_name, writeSteps=False):
+def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifiedResPropertyMSOA.csv'):
     """
     Function to join the bespoke census query to the classified residential
     property data
@@ -658,8 +619,8 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
     crp = pd.read_csv(classified_res_property_import_path)[crp_cols]
 
     # Read in the Bespoke Census Query and create NTEM areas and employment segmentation
-    bsq = create_ntem_areas(bsq_import_path, areaTypeImportPath)
-    bsq = create_employment_segmentation(bsq, ksEmpImportPath)
+    bsq = create_ntem_areas(by_lu_obj)
+    bsq = create_employment_segmentation(by_lu_obj, bsq)
 
     # Compute property type factors
     factor_property_type = bsq[['msoaZoneID', 'property_type', 'pop_factor']].groupby(['msoaZoneID',
@@ -718,20 +679,21 @@ def apply_ntem_segments(classified_res_property_import_path='classifiedResProper
     msoa_audit.to_csv(seg_folder + '/2018MSOAPopulation_OutputEnd.csv', index=False)
 
     # Export to file
-    crp.to_csv(_default_home_dir + '/landUseOutput' + level + '.csv', index=False)
+    crp.to_csv(by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '.csv', index=False)
 
     return crp, bsq
 
 
 # TODO: normalise the gender/age?
-def communal_establishments_splits():
+def communal_establishments_splits(by_lu_obj):
     """
     Function to establish the proportions of communal establishment population 
     across zones and gender and age
     
     """
     print('Reading in Communal Establishments by type 2011 totals')
-    communal_types = pd.read_csv(_default_communal_types_path)
+    communal_types_path = by_lu_obj.import_folder + 'Communal Establishments 2011 QS421EW/communal_msoaoutput.csv'
+    communal_types = pd.read_csv(communal_types_path)
     communal_types = communal_types.reindex(columns=['msoa11cd', 'Age', 'gender',
                                                      'Total_people']).rename(columns={'msoa11cd': 'msoacd',
                                                                                       'gender': 'Gender'})
@@ -746,8 +708,8 @@ def communal_establishments_splits():
     # merge with 2011 census totals per Zone per gender and age
     print('Reading in census population by age and gender 2011 totals')
 
-    census_population = pd.read_csv(_default_census_population).replace(
-        {'Gender': {'male': 'Male', 'female': 'Female'}})
+    census_population_path = by_lu_obj.import_folder + 'Communal Establishments 2011 QS421EW/DC11004_formatted.csv'
+    census_population = pd.read_csv(census_population_path).replace({'Gender': {'male': 'Male', 'female': 'Female'}})
     census_populationB = pd.melt(census_population, id_vars=['msoacd', 'Gender'],
                                  value_vars=['under 16', '16-74', '75 or over'
                                              ]).rename(columns={'variable': 'Age',
@@ -774,9 +736,10 @@ def communal_establishments_splits():
     return communal_establishments
 
 
-def communal_establishments_employment():
+def communal_establishments_employment(by_lu_obj):
     print('Reading in Communal Establishments by employment 2011 totals')
-    communal_emp = pd.read_csv(_default_communal_employment_path)
+    communal_employment_path = by_lu_obj.import_folder + 'Communal Establishments 2011 QS421EW/DC6103EW_sums.csv'
+    communal_emp = pd.read_csv(communal_employment_path)
     communal_emp = pd.melt(communal_emp, id_vars=['Gender', 'Age'], value_vars=
     ['fte', 'pte', 'unm', 'stu']).rename(columns={'variable': 'employment_type',
                                                   'value': 'splits'})
@@ -789,14 +752,13 @@ def communal_establishments_employment():
     return communal_emp
 
 
-def join_establishments(level=_default_zone_name,
-                        landusePath=_default_home_dir + '/landuseOutput' + _default_zone_name + '.csv'):
-    areatypes = pd.read_csv(_default_area_types)
+def join_establishments(by_lu_obj):
+    areatypes = pd.read_csv(by_lu_obj.import_folder + 'area_types_msoa.csv')
     areatypes = areatypes.drop(columns={'zone_desc'})
     areatypes = areatypes.rename(columns={'msoa_zone_id': 'ZoneID'})
     # add areatypes
-    communal_establishments = communal_establishments_splits()
-    communal_emp = communal_establishments_employment()
+    communal_establishments = communal_establishments_splits(by_lu_obj)
+    communal_emp = communal_establishments_employment(by_lu_obj)
 
     # need to split out the NonWork Age to be able to sort out employment
     NonWorkAge = ['under 16', '75 or over']
@@ -824,6 +786,7 @@ def join_establishments(level=_default_zone_name,
     communal_establishments = communal_establishments.merge(areatypes, on='ZoneID')
 
     #### bring in landuse for hc ####
+    landusePath = by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '.csv'
     landuse = pd.read_csv(landusePath)
     zones = landuse["ZoneID"].drop_duplicates().dropna()
     Ezones = zones[zones.str.startswith('E')]
@@ -849,7 +812,7 @@ def join_establishments(level=_default_zone_name,
     CommunalEstablishments['people'].sum()
     CommunalEstFolder = 'CommunalEstablishments'
     utils.create_folder(CommunalEstFolder)
-    CommunalEstablishments.to_csv(CommunalEstFolder + '/' + _default_zone_name +
+    CommunalEstablishments.to_csv(CommunalEstFolder + '/' + by_lu_obj.model_zoning +
                                   'CommunalEstablishments2011.csv', index=False)
     CommunalEstablishments['people'].sum()
     cols = ['ZoneID', 'area_type', 'property_type', 'Age', 'Gender', 'employment_type',
@@ -858,32 +821,23 @@ def join_establishments(level=_default_zone_name,
     landuse = landuse.reindex(columns=cols)
     landusewComm = landuse.append(CommunalEstablishments)
     print('Joined communal communitiies. Total pop for GB is now', landusewComm['people'].sum())
-    landusewComm.to_csv(_default_home_dir + '/landuseOutput' + _default_zone_name + '_withCommunal.csv', index=False)
+    landusewComm.to_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_withCommunal.csv', index=False)
 
 
-def land_use_formatting(land_use_path=_default_home_dir + '/landuseOutput' + _default_zone_name + '_withCommunal.csv'):
+def land_use_formatting(by_lu_obj):
     """
-    Combines all flats into one category, i.e. property types = 4,5,6
-
-    Parameters
-    ----------
-    landusePath:
-        Path to Census segmented property linked landuse from Main build hh script
-    Returns
-    ----------
-    formattedLanduse:
-        DataFrame containing landuse with combined flats.
+    Combines all flats into one category, i.e. property types = 4,5,6.
     """
 
     # 1.Combine all flat types. Sort out flats on the landuse side; actually there's no 7
-    land_use = pd.read_csv(land_use_path)
+    land_use = pd.read_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_withCommunal.csv')
     land_use['property_type'] = land_use['property_type'].map(consts.PROPERTY_TYPE)
-    land_use = land_use.to_csv(_default_home_dir + '/landuseOutput' + _default_zone_name + '_stage3.csv', index=False)
+    land_use = land_use.to_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_stage3.csv', index=False)
 
     return land_use
 
 
-def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' + _default_zone_name + '_stage3.csv'):
+def apply_ns_sec_soc_splits(by_lu_obj):
     """
     Parameters
     ----------
@@ -894,9 +848,9 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
         NS-SEC from Census
         house type definition - change NS-SEC house types detached etc to 1/2/3/4
     """
-
     # Read in NS-SeC table and map the house types and NS-SeC categories to the bespoke classes in lu_constants
-    nssec = pd.read_csv(_nssecPath)
+    ns_sec_path = by_lu_obj.import_folder + 'NPR Segmentation/processed data/TfN_households_export.csv'
+    nssec = pd.read_csv(ns_sec_path)
     nssec['property_type'] = nssec['house_type'].map(consts.HOUSE_TYPE)
     nssec['ns_sec'] = nssec['NS_SeC'].map(consts.NS_SEC)
     nssec = nssec.drop(columns={'house_type', 'NS_SeC'}).rename(columns={'MSOA name': 'ZoneID'})
@@ -945,7 +899,7 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
                                                       '75 or over': 'NA',
                                                       'children': 'NA'}})
     # split the nssec into inactive and active
-    nssec_formatted = nssec_melt.to_csv(_default_home_dir + '/NSSECformatted' + _default_zone_name + '.csv',
+    nssec_formatted = nssec_melt.to_csv(by_lu_obj.home_folder + '/NSSECformatted' + by_lu_obj.model_zoning + '.csv',
                                         index=False)
     inactive = ['stu', 'non_wa']
     InactiveNSSECPot = nssec_melt[nssec_melt.employment_type.isin(inactive)].copy()
@@ -954,7 +908,7 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
     del (nssec_melt, nssec)
 
     #### Active Splits ####
-    areatypes = pd.read_csv(_default_area_types).rename(columns={
+    areatypes = pd.read_csv(by_lu_obj.import_folder + 'area_types_msoa.csv').rename(columns={
         'msoa_zone_id': 'ZoneID'}).drop(columns={'zone_desc'})
     ActiveNSSECPot = ActiveNSSECPot.merge(areatypes, on='ZoneID')
     # MSOAActiveNSSECSplits for Zones
@@ -1061,13 +1015,13 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
     # apply splits
     landuse = pd.read_csv(landusePath)
     Inactive_categs = ['stu', 'non_wa']
-    # landuse = pd.read_csv(_default_home_dir+'/landuseOutput'+_default_zone_name+'_stage3.csv')
+    # landuse = pd.read_csv(by_lu_obj.home_folder+'/landuseOutput'+by_lu_obj.model_zoning+'_stage3.csv')
     ActivePot = landuse[~landuse.employment_type.isin(Inactive_categs)].copy()
     InactivePot = landuse[landuse.employment_type.isin(Inactive_categs)].copy()
 
     # take out Scottish MSOAs from this pot - nssec/soc data is only for E+W
     # Scotland will be calculated based on area type
-    areatypes = pd.read_csv(_default_area_types).drop(columns={'zone_desc'}
+    areatypes = pd.read_csv(by_lu_obj.import_folder + 'area_types_msoa.csv').drop(columns={'zone_desc'}
                                                       ).rename(columns={'msoa_zone_id': 'ZoneID'})
     ZoneIDs = ActivePot['ZoneID'].drop_duplicates().dropna()
     Scott = ZoneIDs[ZoneIDs.str.startswith('S')]
@@ -1163,25 +1117,25 @@ def apply_ns_sec_soc_splits(land_use_path=_default_home_dir + '/landuseOutput' +
     All = All.append(InactiveScotland).append(ActiveScotland)
     All = All.rename(columns={'newpop': 'people'})
     All['SOC_category'] = All['SOC_category'].fillna(0)
-    All.to_csv(_default_home_dir + '/landuseOutput' + _default_zone_name + '_NS_SEC_SOC.csv', index=False)
+    All.to_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_NS_SEC_SOC.csv', index=False)
     print(All['people'].sum())
 
 
 # TODO: remove once in run_by_lu
-def run_main_build(abp_import=True):
+def run_main_build(by_lu_obj, abp_import=True):
     """
     Set ABPImport to True if you want to copy over the ABP files to iter folder
     """
     # Make a new sub folder of the home directory for the iteration, if needed, and set this as the working directory.
-    os.chdir(_default_home)
-    utils.create_folder(_default_iter, ch_dir=True)
+    os.chdir(by_lu_obj.model_folder)
+    utils.create_folder(by_lu_obj.iteration, ch_dir=True)
 
     if abp_import:
-        copy_addressbase_files()
+        copy_addressbase_files(by_lu_obj)
     else:
-        filled_properties()
-        apply_household_occupancy()
-        apply_ntem_segments()
-        join_establishments()
-        land_use_formatting()
-        apply_ns_sec_soc_splits()
+        filled_properties(by_lu_obj)
+        apply_household_occupancy(by_lu_obj)
+        apply_ntem_segments(by_lu_obj)
+        join_establishments(by_lu_obj)
+        land_use_formatting(by_lu_obj)
+        apply_ns_sec_soc_splits(by_lu_obj)

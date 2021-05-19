@@ -20,7 +20,7 @@ class BaseYearLandUse:
                  model_folder=consts.LU_FOLDER,
                  iteration=consts.LU_MR_ITER,
                  import_folder=consts.LU_IMPORTS,
-                 model_zoning='msoa',
+                 model_zoning='MSOA',
                  zones_folder=consts.ZONES_FOLDER,
                  zone_translation_path=consts.ZONE_TRANSLATION_PATH,
                  KS401path=consts.KS401_PATH,
@@ -44,6 +44,7 @@ class BaseYearLandUse:
         # File ops
         self.model_folder = model_folder
         self.iteration = iteration
+        self.home_folder = model_folder + '/' + iteration
         self.import_folder = model_folder + '/' + import_folder + '/'
 
         # Inputs
