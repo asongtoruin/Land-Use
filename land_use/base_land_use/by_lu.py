@@ -24,12 +24,12 @@ class BaseYearLandUse:
                  zones_folder=consts.ZONES_FOLDER,
                  zone_translation_path=consts.ZONE_TRANSLATION_PATH,
                  KS401path=consts.KS401_PATH,
-                 base_land_use_path=None,
-                 base_employment_path=None,
-                 base_soc_mix_path=None,
+                 # base_land_use_path=None,
+                 # base_employment_path=None,
+                 # base_soc_mix_path=None,
                  base_year='2018',
                  scenario_name=None,
-                 pop_segmentation_cols=None,
+                 # pop_segmentation_cols=None,
                  sub_for_defaults=False):
         """
         parse parameters from run call (file paths, requested outputs and audits)
@@ -56,31 +56,7 @@ class BaseYearLandUse:
         # Basic config
         self.model_zoning = model_zoning
         self.base_year = base_year
-        self.scenario_name = scenario_name.upper()
-
-        # If Nones passed in, set defaults
-        # This is for base datasets that don't vary between scenarios
-        if base_land_use_path is None:
-            if sub_for_defaults:
-                print('Using default Residential Land Use')
-                base_land_use_path = consts.RESI_LAND_USE_MSOA
-            else:
-                raise ValueError('No base land use provided')
-        if base_employment_path is None:
-            if sub_for_defaults:
-                print('Using default Employment Land Use')
-                base_employment_path = consts.EMPLOYMENT_MSOA
-            else:
-                raise ValueError('No base employment provided')
-        if base_soc_mix_path is None:
-            if sub_for_defaults:
-                print('Using default Employment Skill Mix')
-                base_soc_mix_path = consts.SOC_2DIGIT_SIC
-            else:
-                raise ValueError('No employment mix provided')
-
-        # Segmentation
-        self.pop_segmentation_cols = pop_segmentation_cols
+        self.scenario_name = scenario_name.upper() if scenario_name is not None else ''
 
         # Build paths
         write_folder = os.path.join(
@@ -88,18 +64,11 @@ class BaseYearLandUse:
             iteration,
             'outputs',
             'scenarios',
-            scenario_name)
+            self.scenario_name)
 
-        pop_write_name = os.path.join(
-            write_folder,
-            ('land_use_' + str(self.base_year) + '_pop.csv'))
-
-        emp_write_name = os.path.join(
-            write_folder,
-            ('land_use_' + str(self.base_year) + '_emp.csv'))
-
-        report_folder = os.path.join(write_folder,
-                                     'reports')
+        pop_write_name = os.path.join(write_folder, 'land_use_' + str(self.base_year) + '_pop.csv')
+        emp_write_name = os.path.join(write_folder, 'land_use_' + str(self.base_year) + '_emp.csv')
+        report_folder = os.path.join(write_folder, 'reports')
 
         # Build folders
         if not os.path.exists(write_folder):
@@ -108,27 +77,12 @@ class BaseYearLandUse:
             utils.create_folder(report_folder)
 
         # Set object paths
-        self.in_paths = {
-            'base_land_use': base_land_use_path,
-            'base_employment': base_employment_path,
-            'base_soc_mix': base_soc_mix_path
-        }
-
         self.out_paths = {
             'write_folder': write_folder,
             'report_folder': report_folder,
             'pop_write_path': pop_write_name,
             'emp_write_path': emp_write_name
         }
-
-        # Write init report for param audits
-        init_report = pd.DataFrame(self.in_paths.values(),
-                                   self.in_paths.keys())
-        init_report.to_csv(
-            os.path.join(self.out_paths['report_folder'],
-                         '%s_%s_run_params.csv' % (self.scenario_name,
-                                                   self.base_year))
-        )
 
         # Establish a state dictionary recording which steps have been run
         # These are aligned with the section numbers in the documentation
@@ -156,9 +110,14 @@ class BaseYearLandUse:
         # Check which parts of the process need running
         # TODO: decide how to handle the 5.2.2 read in core property data and 5.2.3 property type mapping steps
         # TODO: we need main_build to inherit the paths/iteration number etc from this base object
-        main_build.copy_addressbase_files()
+
+        # Make a new sub folder of the home directory for the iteration and set this as the working directory
+        os.chdir(self.model_folder)
+        utils.create_folder(self.iteration, ch_dir=True)
+
+        # Run through the main build process
         if self.state['5.2.2 read in core property data'] == 0:
-            pass
+            main_build.copy_addressbase_files(self)
 
         if self.state['5.2.3 property type mapping'] == 0:
             pass
@@ -166,25 +125,22 @@ class BaseYearLandUse:
         # Steps from main build
         if self.state['5.2.4 filled property adjustment'] == 0:
             main_build.filled_properties(self)
-            self.state['5.2.4 filled property adjustment'] = 1
 
         if self.state['5.2.5 household occupancy adjustment'] == 0:
             main_build.apply_household_occupancy(self)
-            self.state['5.2.5 household occupancy adjustment'] = 1
 
         if self.state['5.2.6 NTEM segmentation'] == 0:
             main_build.apply_ntem_segments(self)
-            self.state['5.2.6 NTEM segmentation'] = 1
 
         if self.state['5.2.7 communal establishments'] == 0:
             main_build.join_establishments(self)
-            self.state['5.2.7 communal establishments'] = 1
 
         # TODO: main_build then runs the following two functions currently commented out, how relate to documentation?
-        # main_build.land_use_formatting()
-        # main_build.apply_ns_sec_soc_splits()
+        # main_build.land_use_formatting(self)
+        # main_build.apply_ns_sec_soc_splits(self)
 
         # Steps from mid-year population estimate adjustment
+        """
         if self.state['5.2.8 MYPE adjustment'] == 0:
             pass
 
@@ -197,4 +153,5 @@ class BaseYearLandUse:
         # Car availability
         if self.state['5.2.11 car availability'] == 0:
             pass
+        """
 

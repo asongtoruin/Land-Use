@@ -9,6 +9,4 @@ if __name__ == '__main__':
     by.build_by_pop()
     """
 
-    by.build_by_emp(
-        export=True
-        )
+    by.build_by_pop()
