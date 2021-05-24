@@ -8,6 +8,7 @@ import pandas as pd
 
 # SUFFIXES AND SEMI-STATIC CONFIG
 COMPRESSION_SUFFIX = '.pbz2'
+PROCESS_COUNT = -2
 
 # PATHS
 # Default land use folder

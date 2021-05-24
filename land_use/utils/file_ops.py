@@ -22,9 +22,9 @@ import pandas as pd
 # Local imports
 import land_use as lu
 from land_use import lu_constants as consts
-from land_use.concurrency import multiprocessing
+from land_use.concurrency import multiprocessing as mp
 from land_use.utils import compress
-
+from land_use.utils import general as gu
 
 def cast_to_pathlib_path(path: lu.PathLike) -> pathlib.Path:
     """
@@ -431,7 +431,7 @@ def find_filename(path: lu.PathLike,
     # Make sure they all start with a dot
     temp_alt_types = list()
     for ftype in alt_types:
-        if not du.starts_with(ftype, '.'):
+        if not gu.starts_with(ftype, '.'):
             ftype = '.' + ftype
         temp_alt_types.append(ftype)
     alt_types = temp_alt_types.copy()
@@ -523,7 +523,7 @@ def copy_all_files(import_dir: lu.PathLike,
     None
     """
     # Init
-    fnames = du.list_files(import_dir)
+    fnames = gu.list_files(import_dir)
     import_dir = cast_to_pathlib_path(import_dir)
     export_dir = cast_to_pathlib_path(export_dir)
 
@@ -548,7 +548,7 @@ def copy_all_files(import_dir: lu.PathLike,
     )
 
 
-def remove_from_fname(path: nd.PathLike,
+def remove_from_fname(path: str,
                       to_remove: str,
                       ) -> pathlib.Path:
     """
@@ -576,7 +576,7 @@ def remove_from_fname(path: nd.PathLike,
     return path.parent / (new_fname + path.suffix)
 
 
-def add_to_fname(path: nd.PathLike,
+def add_to_fname(path: str,
                  to_add: str,
                  ) -> pathlib.Path:
     """
@@ -604,7 +604,7 @@ def add_to_fname(path: nd.PathLike,
     return path.parent / (new_fname + path.suffix)
 
 
-def remove_internal_suffix(path: nd.PathLike) -> pathlib.Path:
+def remove_internal_suffix(path: str) -> pathlib.Path:
     """
     Returns path without the internal suffix in it.
 
@@ -623,7 +623,7 @@ def remove_internal_suffix(path: nd.PathLike) -> pathlib.Path:
     return remove_from_fname(path, consts.INTERNAL_SUFFIX)
 
 
-def add_external_suffix(path: nd.PathLike) -> pathlib.Path:
+def add_external_suffix(path: str) -> pathlib.Path:
     """
     Returns path with the external suffix added to it
 

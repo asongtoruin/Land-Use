@@ -12,6 +12,8 @@ import numpy as np
 
 from typing import List
 
+import land_use.utils.file_ops as fo
+
 
 class SectorReporter:
     """
@@ -51,6 +53,7 @@ class SectorReporter:
         # If no model schema folder - find one
         if model_schema is None:
             home_list = os.listdir(_default_import_folder)
+            home_list = [x for x in home_list if '.csv' not in x]
             model_schema = [x for x in home_list if zone_system in x][0]
             model_schema = os.path.join(
                 _default_import_folder,
@@ -75,16 +78,22 @@ class SectorReporter:
 
         self.target_file_types = target_file_types
 
-
     def sector_report(self,
-                      sector_type: str = 'ca_sector',
                       ca_report: bool = True,
-                      three_sector_report: bool = True,
+                      three_sector_report: bool = False,
+                      ie_sector_report: bool = False,
+                      north_report: bool = False,
                       export: bool = False):
 
         """
-        sector_type: report requested - takes
-            'ca_sector', 'three_sector', 'ie_sector'
+        ca_report:
+            True: Build CA sector report - or not
+        three_sector_report:
+            False: Build North/Scotland/South report or not
+        ie_sector_report:
+            False: Build internal analytical area/external report or not
+        north_report:
+            False: Build northern political internal report or not
         export = False:
             Write to object output dir, or not
         """
@@ -108,28 +117,21 @@ class SectorReporter:
             print(tm)
             mat = fo.read_df(os.path.join(self.target_folder, tm))
 
-            mat = mat.rename(columns={list(mat)[0]: 'norms_zone_id'})
+            mat_dict = dict()
 
-            if self.input_type == 'wide_matrix':
+            if ca_report:
+                ca_r = self._vector_sector_report_join_method(
+                    mat,
+                    var_col=list(mat)[-1]
+                )
 
-                """
-                long_data = pd.melt(mat,
-                                    id_vars=list(mat)[0],
-                                    var_name='a_zone',
-                                    value_name='demand',
-                                    col_level=0)
-                                    
-                sector_report = 
-                """
+            three_sector_report: bool = False,
+            ie_sector_report: bool = False,
+            north_report
 
 
+            sector_report =
 
-            elif self.input_type == 'long_matrix':
-                # TODO: Translate to wide, do mat wide trans
-                print('Can\'t do these yet')
-            elif self.input_type == 'vector':
-                # TODO: Do simple vector trans by required subset(s)
-                print('Can\'t do these yet')
 
 
 
@@ -139,14 +141,17 @@ class SectorReporter:
 
         return sector_report
 
-    def _sectors_join_method(self,
-                             long_data):
+    def _vector_sector_report_join_method(self,
+                                          long_data: pd.DataFrame,
+                                          var_col: str=None,
+                                          retain_cols: List=None):
 
         """
-        Method for joining sectors length wise
+        Method for joining sectors length wise, on single relational vector
         Expects format 'p_zone', 'a_zone', 'demand'
 
         """
+
 
         long_data = long_data.merge(self.sectors,
                                     how='left',
