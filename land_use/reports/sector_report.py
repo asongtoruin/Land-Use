@@ -22,9 +22,8 @@ class SectorReporter:
 
     def __init__(self,
                  target_folder: str,  # PathLike
-                 output_folder: str,  # PathLike
                  zone_system: str = 'msoa',
-                 input_type: str = None,
+                 retain_cols: List = list(),
                  model_schema: str = None,  # PathLike
                  model_sectors: str = None,  # PathLike
                  target_file_types: List = ['.csv', '.bz2']
@@ -32,11 +31,11 @@ class SectorReporter:
 
         """
         target_folder: file or folder of files to do sector reports for
-        model_name: name of the model to look for
-        input_type: from 'vector', 'long_matrix', 'wide_matrix'
+        zone_system: name of the model to look for - should almost always be msoa
         model_schema: folder to look for correspondences. will search in
         default folder if nothing provided
-        model_sectors = path to .csv correspondence to sectors
+        model_sectors: path to correspondence lookup - will find if None
+        target_file_types: list of permissible file types to import
         """
 
         # Init
@@ -44,11 +43,12 @@ class SectorReporter:
 
         self.target_folder = target_folder
 
-        self.output_folder = output_folder
-
         # Pass init params to object
         self.zone_system = zone_system
         self.zone_id = '%s_zone_id' % zone_system.lower()
+
+        # Pass retain cols to object
+        self.retain_cols = retain_cols
 
         # If no model schema folder - find one
         if model_schema is None:
@@ -59,10 +59,6 @@ class SectorReporter:
                 _default_import_folder,
                 model_schema,
                 'model schema')
-
-        # Figure out input type
-        # TODO: If nothing provided, work it out
-        self.input_type = input_type
 
         # Set model schema
         self.model_schema = model_schema
@@ -82,8 +78,7 @@ class SectorReporter:
                       ca_report: bool = True,
                       three_sector_report: bool = False,
                       ie_sector_report: bool = False,
-                      north_report: bool = False,
-                      export: bool = False):
+                      north_report: bool = False):
 
         """
         ca_report:
@@ -94,8 +89,6 @@ class SectorReporter:
             False: Build internal analytical area/external report or not
         north_report:
             False: Build northern political internal report or not
-        export = False:
-            Write to object output dir, or not
         """
 
         # Index folder
@@ -105,80 +98,85 @@ class SectorReporter:
         target_mats = [x for y in self.target_file_types for x in target_mats if y in x]
 
         # Subset sectors into ie and 3 sector reports
-        ca_sectors = self.sectors  # reindex and such
-        three_sectors_2d = self.sectors
-        ie_2d = self.sectors
+        ca_sectors = self.sectors.reindex(
+            ['msoa_zone_id', 'ca_sector_2020_zone_id'], axis=1).drop_duplicates()
+        three_sectors = self.sectors.reindex(
+            ['msoa_zone_id', '3_sector_id'], axis=1).drop_duplicates()
+        ie_sectors = self.sectors.reindex(
+            ['msoa_zone_id', 'ie_id'], axis=1).drop_duplicates()
 
         # Apply translation
         mat_sector_reports = dict()
         # TODO: Assumptions galore - needs to be smarter and better integrated
         for tm in target_mats:
 
-            print(tm)
+            print('Importing land use data from %s' % tm)
             mat = fo.read_df(os.path.join(self.target_folder, tm))
 
             mat_dict = dict()
 
             if ca_report:
                 ca_r = self._vector_sector_report_join_method(
-                    mat,
+                    long_data=mat,
+                    sector_df=ca_sectors,
+                    sector_heading=list(ca_sectors)[-1],
                     var_col=list(mat)[-1]
                 )
+                mat_dict.update({'ca_report': ca_r})
 
-            three_sector_report: bool = False,
-            ie_sector_report: bool = False,
-            north_report
+            if three_sector_report:
+                ts_r = self._vector_sector_report_join_method(
+                    long_data=mat,
+                    sector_df=three_sectors,
+                    sector_heading=list(three_sectors)[-1],
+                    var_col=list(mat)[-1]
+                )
+                mat_dict.update({'three_sector_report': ts_r})
 
+            if ie_sector_report:
+                ie_r = self._vector_sector_report_join_method(
+                    long_data=mat,
+                    sector_df=ie_sectors,
+                    sector_heading=list(ie_sectors)[-1],
+                    var_col=list(mat)[-1]
+                )
+                mat_dict.update({'ie_sector_report': ie_r})
 
-            sector_report =
+            mat_sector_reports.update({tm.replace('.csv', ''): mat_dict})
 
-
-
-
-        # Export
-
-        sector_report = ''
-
-        return sector_report
+        return mat_sector_reports
 
     def _vector_sector_report_join_method(self,
                                           long_data: pd.DataFrame,
-                                          var_col: str=None,
-                                          retain_cols: List=None):
+                                          sector_df: pd.DataFrame,
+                                          sector_heading: str,
+                                          var_col: str = None):
 
         """
-        Method for joining sectors length wise, on single relational vector
-        Expects format 'p_zone', 'a_zone', 'demand'
+        Method for joining sectors length wise, on single relational table
 
+        long_data:  pd.DataFrame - long format land use data
+        sector_df: pd.DataFrame - long format sector correspondence
+        sector_heading: str - name of sectors to merge on
+        retain_cols: str - any cols from land use to retain in joining
+        var_col: str - name of variable to sum on
         """
 
-
-        long_data = long_data.merge(self.sectors,
+        long_data = long_data.merge(sector_df,
                                     how='left',
                                     on=self.zone_id)
 
-        long_data = long_data.reindex(
-            ['ca_sector_2020_zone_id', 'a_zone', 'demand'], axis=1)
-        long_data = long_data.groupby(['ca_sector_2020_zone_id', 'a_zone']).sum().reset_index()
+        present_retain_cols = [x for x in self.retain_cols if x in list(long_data)]
 
-        long_data = long_data.rename(columns={'ca_sector_2020_zone_id': 'sector_p',
-                                              'a_zone': self.zone_id})
-        long_data['norms_zone_id'] = long_data[self.zone_id].astype(int)
+        # Build reindex and group cols
+        group_cols = [sector_heading]
+        [group_cols.append(x) for x in present_retain_cols]
+        ri_cols = group_cols.copy()
+        ri_cols.append(var_col)
 
-        left_only = long_data.copy()
-        left_only_sum = left_only.reindex(
-            ['sector_p', 'demand'], axis=1).groupby('sector_p').sum().reset_index()
+        # Apply reindex and group cols
+        long_data = long_data.reindex(ri_cols, axis=1)
+        long_data = long_data.groupby(group_cols).sum().reset_index()
+        long_data = long_data.sort_values(group_cols).reset_index(drop=True)
 
-        long_data = long_data.merge(self.sectors,
-                                    how='left',
-                                    on=self.zone_id)
-
-        long_data = long_data.reindex(
-            ['sector_p', 'ca_sector_2020_zone_id', 'demand'], axis=1)
-        long_data = long_data.groupby(['sector_p', 'ca_sector_2020_zone_id']).sum().reset_index()
-
-        long_data = long_data.rename(columns={'ca_sector_2020_zone_id': 'sector_a'})
-
-        pivoted_data = pd.pivot(long_data, index='sector_p', columns='sector_a', values='demand')
-
-        return long_data, pivoted_data
+        return long_data

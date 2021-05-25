@@ -21,7 +21,24 @@ if __name__ == '__main__':
 
         print('Building sector reports for %s' % folder)
         report = sr.SectorReporter(target_folder=folder,
-                                   output_folder=out_folder)
+                                   retain_cols=['ca'])
 
-        report.sector_report(ca_report = True,
-                             three_sector_report = True,
+        out = report.sector_report(ca_report=True,
+                                   three_sector_report=False,
+                                   ie_sector_report=False,
+                                   north_report=False)
+
+        out_folder = os.path.join(folder, 'sector_reports')
+
+        for lu_out, reps in out.items():
+            print('.')
+            print('unpacking reports for %s' % lu_out)
+            for sub_r, dat in reps.items():
+                rep_out = lu_out + '_' + sub_r + '.csv'
+                print('.')
+                print('exporting %s' % rep_out)
+                out_path = os.path.join(out_folder, rep_out)
+                dat.to_csv(out_path, index=False)
+
+
+
