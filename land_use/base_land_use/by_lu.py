@@ -3,6 +3,8 @@ import pandas as pd
 import land_use.lu_constants as consts
 from land_use import utils
 from land_use.base_land_use import main_build
+import car_availability_adjustment
+import mid_year_pop_adjustments as mypa
 
 """
 1. Run base_land_use/Land Use data prep.py - this prepares the AddressBase extract and classifies the properties to prep the property data
@@ -140,18 +142,25 @@ class BaseYearLandUse:
         # main_build.apply_ns_sec_soc_splits(self)
 
         # Steps from mid-year population estimate adjustment
-        """
         if self.state['5.2.8 MYPE adjustment'] == 0:
-            pass
+            mypa.control_to_lad(self)
+            mypa.adjust_landuse_to_specific_yr(self)
+            mypa.sort_out_hops_uplift(self)
 
         if self.state['5.2.9 employment adjustment'] == 0:
-            pass
+            mypa.Country_emp_control(self)
 
         if self.state['5.2.10 SEC/SOC'] == 0:
-            pass
+            mypa.adjust_soc_gb(self)
 
         # Car availability
         if self.state['5.2.11 car availability'] == 0:
-            pass
-        """
+            # TODO: what was this function for?
+            # mypa.get_ca(self)
+
+            # First prepare the NTS data
+            car_availability_adjustment.ntsimport()
+
+            # Then apply the function from mid_year_pop_adjustments
+            mypa.adjust_car_availability(self)
 
