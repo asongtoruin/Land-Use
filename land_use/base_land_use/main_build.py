@@ -59,6 +59,8 @@ def copy_addressbase_files(by_lu_obj):
         except IOError:
             print("File not found")
 
+    by_lu_obj.state['5.2.2 read in core property data'] = 1
+
 
 # 2. Main analysis functions - everything related to census and segmentation
 def lsoa_census_data_prep(dat_path, population_tables, property_tables, geography=_default_lsoaRef):
