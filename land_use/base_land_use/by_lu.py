@@ -26,6 +26,7 @@ class BaseYearLandUse:
                  zones_folder=consts.ZONES_FOLDER,
                  zone_translation_path=consts.ZONE_TRANSLATION_PATH,
                  KS401path=consts.KS401_PATH,
+                 area_type_path=consts.LU_AREA_TYPES,
                  # base_land_use_path=None,
                  # base_employment_path=None,
                  # base_soc_mix_path=None,
@@ -54,6 +55,7 @@ class BaseYearLandUse:
         self.zones_folder = zones_folder
         self.zone_translation_path = zone_translation_path
         self.KS401path = KS401path
+        self.area_type_path = area_type_path
 
         # Basic config
         self.model_zoning = model_zoning
@@ -159,7 +161,7 @@ class BaseYearLandUse:
             # mypa.get_ca(self)
 
             # First prepare the NTS data
-            car_availability_adjustment.ntsimport()
+            car_availability_adjustment.nts_import()
 
             # Then apply the function from mid_year_pop_adjustments
             mypa.adjust_car_availability(self)
