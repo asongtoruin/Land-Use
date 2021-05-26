@@ -159,7 +159,7 @@ class BaseYearLandUse:
             # mypa.get_ca(self)
 
             # First prepare the NTS data
-            car_availability_adjustment.nts_import()
+            car_availability_adjustment.nts_import(self)
             print('NTS import completed successfully')
 
             # Then apply the function from mid_year_pop_adjustments
