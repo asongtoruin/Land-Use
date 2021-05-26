@@ -741,6 +741,8 @@ def land_use_formatting(by_lu_obj):
         by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_flats_combined.csv',
         index=False)
 
+    by_lu_obj.state['5.2.3 property type mapping'] = 1
+
     return land_use
 
 
