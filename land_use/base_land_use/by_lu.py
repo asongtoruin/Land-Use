@@ -111,9 +111,6 @@ class BaseYearLandUse:
 
         """
         # Check which parts of the process need running
-        # TODO: decide how to handle the 5.2.2 read in core property data and 5.2.3 property type mapping steps
-        # TODO: we need main_build to inherit the paths/iteration number etc from this base object
-
         # Make a new sub folder of the home directory for the iteration and set this as the working directory
         os.chdir(self.model_folder)
         utils.create_folder(self.iteration, ch_dir=True)
@@ -121,9 +118,6 @@ class BaseYearLandUse:
         # Run through the main build process
         if self.state['5.2.2 read in core property data'] == 0:
             main_build.copy_addressbase_files(self)
-
-        if self.state['5.2.3 property type mapping'] == 0:
-            pass
 
         # Steps from main build
         if self.state['5.2.4 filled property adjustment'] == 0:
@@ -138,8 +132,11 @@ class BaseYearLandUse:
         if self.state['5.2.7 communal establishments'] == 0:
             main_build.join_establishments(self)
 
-        # TODO: main_build then runs the following two functions currently commented out, how relate to documentation?
-        # main_build.land_use_formatting(self)
+        # Property type mapping is done after communal establishments are added, despite position in the documentation
+        if self.state['5.2.3 property type mapping'] == 0:
+            main_build.land_use_formatting(self)
+
+        # TODO: main_build then runs the following function currently commented out, how relate to documentation?
         # main_build.apply_ns_sec_soc_splits(self)
 
         # Steps from mid-year population estimate adjustment
