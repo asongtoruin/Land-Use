@@ -737,8 +737,9 @@ def land_use_formatting(by_lu_obj):
     # 1.Combine all flat types. Sort out flats on the landuse side; actually there's no 7
     land_use = pd.read_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_withCommunal.csv')
     land_use['property_type'] = land_use['property_type'].map(consts.PROPERTY_TYPE)
-    land_use = land_use.to_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_stage3.csv',
-                               index=False)
+    land_use = land_use.to_csv(
+        by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_flats_combined.csv',
+        index=False)
 
     return land_use
 
@@ -914,7 +915,7 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     InactiveSplits = InactiveSplits.drop(columns={'msoa_splits', 'global_splits'})
 
     # England and Wales - apply splits for inactive people
-    land_use = pd.read_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_stage3.csv')
+    land_use = pd.read_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_flats_combined.csv')
     ActivePot = land_use[~land_use.employment_type.isin(['stu', 'non_wa'])].copy()
     InactivePot = land_use[land_use.employment_type.isin(['stu', 'non_wa'])].copy()
 
