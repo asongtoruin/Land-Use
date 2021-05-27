@@ -120,8 +120,8 @@ def format_english_mype(mype_m = _mype_males,
 
 
 def format_scottish_mype( # might need changing
-                         scot_f = _mypeScot_females,
-                         scot_m = _mypeScot_males):
+                         scot_f=_mypeScot_females,
+                         scot_m=_mypeScot_males):
     """
     getting Scottish MYPE into the right format - 'melt' to get columns as rows, then rename them
     This should be a standard from any MYPE in the future segmented into females and males.
@@ -137,9 +137,9 @@ def format_scottish_mype( # might need changing
     Scot_adjust- one formatted DataFrame of new Scottish MYPE including population
     split by age and gender by MSOA
     """
-    landusesegments = pd.read_csv(_landuse_segments)
+    land_use_segments = pd.read_csv(_landuse_segments)
     # this has the translation from LAD to MSOAs
-    LadTranslation = pd.read_csv(_default_lad_translation).rename(columns={'lad_zone_id':'ladZoneID'})
+    LadTranslation = pd.read_csv(_default_lad_translation).rename(columns={'lad_zone_id': 'ladZoneID'})
     ladCols = ['objectid','lad17cd']
     ukLAD = gpd.read_file(_default_ladRef)
     ukLAD = ukLAD.loc[:,ladCols]
@@ -148,8 +148,7 @@ def format_scottish_mype( # might need changing
     Scot_males = pd.read_csv(_mypeScot_males)
     Scot_mype = Scot_males.append(Scot_females)
     Scot_mype = Scot_mype.rename(columns = {'Area code':'lad17cd'})
-    Scot_mype = pd.melt(Scot_mype, id_vars = ['lad17cd','Gender'], value_vars = 
-                        ['under 16', '16-74', '75 or over'])
+    Scot_mype = pd.melt(Scot_mype, id_vars = ['lad17cd','Gender'], value_vars=['under 16', '16-74', '75 or over'])
     Scot_mype = Scot_mype.rename(columns= {'variable':'Age', 'value':'2018pop'})
     Scot_mype.loc[Scot_mype['Age'] == 'under 16', 'Gender'] = 'Children'
     Scot_mype['2018pop'].sum()
@@ -163,7 +162,7 @@ def format_scottish_mype( # might need changing
     ScotMSOA = ScotMSOA.drop(columns={'overlap_type', 'lad_to_msoa', 'msoa_to_lad',
                                      '2018pop', 'lad17cd', 'ladZoneID'}).rename(columns={'msoa_zone_id':'ZoneID'})
    
-    Scotlanduse = landusesegments[landusesegments.ZoneID.str.startswith('S')]
+    Scotlanduse = land_use_segments[land_use_segments.ZoneID.str.startswith('S')]
 
     Scotlandusegrouped  = Scotlanduse.groupby(
             by=['ZoneID', 'Age', 'Gender'],
@@ -271,7 +270,6 @@ def sort_communal_uplift(midyear = True):
     EWlanduse = censusoutput[~censusoutput.ZoneID.isin(Scott)]
         
     if midyear:
-
         # group to ZoneID, Gender, Age to match info from MYPE
         ew_land_use_group = EWlanduse.groupby(by=['ZoneID', 'Gender', 'Age'],
                                        as_index = False).sum()[['ZoneID', 'Gender', 'Age', 'people']]
@@ -602,11 +600,9 @@ def adjust_car_availability(
         
         
 def adjust_soc_gb():
-                   # might need changing):
     """
     To apply before the MYPE
     adjusts SOC values to gb levels for 2018
-    
     """
     
     ladref = gpd.read_file(_default_ladRef).iloc[:,0:2]
@@ -1112,13 +1108,11 @@ def country_emp_control():
     
     AdjustedGBlanduse = Inactive3.append(NowaAll).append(ActiveAdj)
     AdjustedGBlanduse.to_csv(_default_home_dir + 'AdjustedGBlanduse_emp.csv') 
-    AdjustedGBlandsue['people'].sum()
-    #final check 
-    check = AdjustedGBlanduse.groupby(by=['ZoneID'], as_index = False).sum()
+
     
 def run_mype(midyear = True):
     # normalise_landuse()
-    adjust_landuse_to_specific_year()
+    adjust_landuse_to_specific_yr()
     control_to_lad_employment_ag()
     country_emp_control()
     adjust_soc_gb()
