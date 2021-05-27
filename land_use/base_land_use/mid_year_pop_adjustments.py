@@ -676,9 +676,9 @@ def adjust_soc_gb():
     gb_soc_totals['splits'] = gb_soc_totals['value']/gb_soc_totals['total']
     
     ########################## CALCULATE COUNTRY SPLITS FROM LANDUSE ########
-    landusesegments = pd.read_csv(_landuse_segments)
-    Emp = ['fte', 'pte']
-    Employed = landusesegments[landusesegments.employment_type.isin(Emp)]
+    landusesegments = pd.read_csv(_default_home_dir+ '/GBlanduseControlled.csv')
+    Emp = [1, 2]
+    Employed = landusesegments[landusesegments.emp.isin(Emp)]
     Employed = Employed.merge(LadTranslation, on = 'ZoneID')
     zones = landusesegments["ZoneID"].drop_duplicates().dropna()
     Employed['Country']= 'England and Wales number'
@@ -718,8 +718,8 @@ def adjust_soc_gb():
     print(Soc_adjusted['people'].sum())
     Soc_adjusted = Soc_adjusted.drop(columns={'factor'})
                     
-    NPRSegments = ['ZoneID', 'area_type', 'property_type', 'employment_type', 
-                   'Age', 'Gender', 'household_composition',
+    NPRSegments = ['ZoneID', 'area_type', 'property_type', 'emp', 
+                   'age_code', 'gender', 'household_composition',
                    'ns_sec', 'SOC_category', 'newpop'] 
 
     Soc_adjusted = Soc_adjusted.reindex(columns=NPRSegments)
@@ -727,7 +727,7 @@ def adjust_soc_gb():
     Soc_adjusted = Soc_adjusted.rename(columns={'newpop':'people'})
     # join to the rest
     
-    NotEmployed = landusesegments[~landusesegments.employment_type.isin(Emp)]
+    NotEmployed = landusesegments[~landusesegments.emp.isin(Emp)]
     NPRSegmentation = NotEmployed.append(Soc_adjusted)
     NPRSegmentation['people'].sum()
     
@@ -861,6 +861,7 @@ def adjust_soc_lad ():
     nonwa = ['non_wa']
     Nonwa = All[All.employment_type.isin(nonwa)]
     All['SOC_category'] = All['SOC_category'].fillna('NA')
+    return All
     
 def control_to_lad_employment_ag():
     """
@@ -1060,15 +1061,13 @@ def control_to_lad_employment_ag():
     GBlanduseControlled.to_csv(_default_home_dir + 'GBlanduseControlled.csv')
     return(GBlanduseControlled)
     
-def country_emp_control(_country_control,
-                   GBlanduseControlled #might need changing
-                   ):
+def country_emp_control():
     """
     this function is to make sure we have the right amount of people in work 
     Based on APS extract (as of 2018)
     
     """
-    ############## Cuontry control #################
+    # Country employment control
     CountryControl = pd.read_csv(_country_control)
     CountryEmp = CountryControl.rename(columns={
             'T01:7 (All aged 16 & over - In employment : All People )':'Emp'
@@ -1077,13 +1076,13 @@ def country_emp_control(_country_control,
     
     Rows = ['England and Wales number', 'Scotland number']
     CountryEmpControl = CountryEmp[CountryEmp.Country.isin(Rows)]
-    
-    landuse = ControltoLADEmploymentGender()
-    emp = ['fte', 'pte']
-    zones = landuse["ZoneID"].drop_duplicates().dropna()
+
+    landuse = pd.read_csv(_default_home_dir + 'AdjustedGBlanduse.csv') 
+    Employed = [1,2]
+    zones = landuse['ZoneID'].drop_duplicates()
     Scott = zones[zones.str.startswith('S')]
 
-    Active = landuse[landuse.employment_type.isin(emp)]
+    Active = landuse[landuse.emp.isin(Employed)]
     ScottActive = Active[Active.ZoneID.isin(Scott)]
     ScottActive['Country'] = 'Scotland number'
     ScottActiveTotal = ScottActive.groupby(by=['Country'], as_index = False).sum().reindex(columns=['Country', 'people'])
@@ -1105,6 +1104,10 @@ def country_emp_control(_country_control,
     EngActive['newpop']= EngActive['people']*EngActive['factor']
     EngActive = EngActive.drop(columns={'people', 'factor', 'Country'})
     EngActive['newpop'].sum()
+    
+    GBcols2 = ['ZoneID', 'Age', 'employment_type', 'area_type', 'property_type',
+              'household_composition', 'Gender', 'objectid', 'lad17cd',
+              'people']
 
     ActiveAdj = EngActive.append(ScottActive)
     ActiveAdj = ActiveAdj.rename(columns={'newpop':'people'})
@@ -1113,15 +1116,15 @@ def country_emp_control(_country_control,
     ActiveNewTotal = ActiveAdj.groupby('ZoneID',as_index = False).sum().reindex(columns={'ZoneID', 'people'})
     ActiveNewTotal = ActiveNewTotal.rename(columns={'people':'employed'})
         
-    GBTotals = landuse[landuse.employment_type != 'non_wa']
+    GBTotals = landuse[landuse.emp != 5]
     GBTotals['people'].sum()
     GBTotals = GBTotals.groupby('ZoneID', as_index = False).sum().reindex(columns={'ZoneID', 'people'})
     GBTotals = GBTotals.merge(ActiveNewTotal, on = 'ZoneID')
     GBTotals['inactive'] = GBTotals['people']- GBTotals['employed']
     GBTotals = GBTotals.drop(columns={'people', 'employed'})
     
-    Inact = ['unm', 'stu']
-    Inactive = WAAll[WAAll.employment_type.isin(Inact)]
+    Inact = [3,4]
+    Inactive = landuse[landuse.emp.isin(Inact)]
     Inactive2 = Inactive.groupby(by=['ZoneID'],as_index = False).sum().reindex(columns=['ZoneID', 'people'])
     Inactive2 = Inactive2.merge(GBTotals, on = 'ZoneID')
     Inactive2['factor']= Inactive2['inactive']/Inactive2['people']
@@ -1134,29 +1137,20 @@ def country_emp_control(_country_control,
     Inactive3 = Inactive3.rename(columns={'newpop':'people'})
     Inactive3 = Inactive3.reindex(columns=GBcols2)
     
-    GBcols2 = ['ZoneID', 'Age', 'employment_type', 'area_type', 'property_type',
-              'household_composition', 'Gender', 'objectid', 'lad17cd',
-              'people']
-    NowaAll = NowaAll.rename(columns={'newpop':'people'})
-    NowaAll = NowaAll.reindex(columns=GBcols2)
-    NowaAll['people'].sum()
-
-
     AdjustedGBlanduse = Inactive3.append(NowaAll).append(ActiveAdj)
-    AdjustedGBlanduse.to_csv(_default_home_dir + 'AdjustedGBlanduse.csv') 
+    AdjustedGBlanduse.to_csv(_default_home_dir + 'AdjustedGBlanduse_emp.csv') 
     AdjustedGBlandsue['people'].sum()
+    #final check 
     check = AdjustedGBlanduse.groupby(by=['ZoneID'], as_index = False).sum()
-
-    
     
 def run_mype(midyear = True):
     # normalise_landuse()
     adjust_landuse_to_specific_year()
     control_to_lad_employment_ag()
     country_emp_control()
-    adjust_soc_lad()
     adjust_soc_gb()
-    sort_out_hops_uplift()
+    adjust_soc_lad()
+    sort_out_hops_uplift() # order doesn't matter for this one
     get_ca()
     adjust_car_availability()
 
