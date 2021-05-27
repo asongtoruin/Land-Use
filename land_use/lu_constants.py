@@ -6,15 +6,26 @@ import os
 
 import pandas as pd
 
+# SUFFIXES AND SEMI-STATIC CONFIG
+COMPRESSION_SUFFIX = '.pbz2'
+PROCESS_COUNT = -2
+
 # PATHS
 # Default land use folder
 LU_FOLDER = 'Y://NorMITs Land Use'
 DATA_FOLDER = 'Y://Data Strategy//Data//'
 
 # Most recent Land Use Iteration
-LU_MR_ITER = 'iter3b'
+LU_MR_ITER = 'iter4'
 LU_IMPORTS = 'import'
 LU_REFS = 'Lookups'
+
+# Inputs
+ZONE_NAME = 'MSOA'
+ZONES_FOLDER = 'I:/NorMITs Synthesiser/Zone Translation/'
+ZONE_TRANSLATION_PATH = ZONES_FOLDER + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv'
+ADDRESSBASE_PATH_LIST = LU_FOLDER + '/allResProperty' + ZONE_NAME + 'Classified.csv'
+KS401_PATH = LU_FOLDER + '/' + LU_IMPORTS + '/' + 'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv'
 
 # Path to a default land use build
 RESI_LAND_USE_MSOA = os.path.join(
@@ -103,6 +114,36 @@ SOC_2DIGIT_SIC = os.path.join(
 # REFERENCES
 # purposes to apply soc split to
 SOC_P = [1, 2, 12]
+
+# Property type dictionary: combines all flat types
+PROPERTY_TYPE = {
+    1: 1,  # detached
+    2: 2,  # semi-detached
+    3: 3,  # terrace
+    4: 4,  # purpose-built flat
+    5: 4,  # shared flat
+    6: 4,  # flat in commercial
+    7: 4,  # mobile home
+    8: 8   # communal establishment
+}
+
+# Property type description to code
+# TODO: lots of overlap with PROPERTY_TYPE, can it be a single object? (Used in main_build)
+HOUSE_TYPE = {
+    'Detached': 1,
+    'Semi-detached': 2,
+    'Terraced': 3,
+    'Flat': 4
+}
+
+# NS-SeC category mapping
+NS_SEC = {
+    'NS-SeC 1-2': 1,
+    'NS-SeC 3-5': 2,
+    'NS-SeC 6-7': 3,
+    'NS-SeC 8': 4,
+    'NS-SeC L15': 5
+}
 
 # Car availabiity reference
 CA_MODEL = pd.DataFrame({'cars': [0, 1, 2, 3],
