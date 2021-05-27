@@ -439,7 +439,6 @@ def adjust_landuse_to_specific_yr(writeOut = True,
         
         landuse = pd.merge(landuse_simple, mypepops, how = 'inner', on = ['ZoneID', 'gender', 'age_code'])
         landuse['adj_pop'] = landuse['people']*landuse['pop_factor'] # adjusted 2018 population
-        # drop pop
         
         # Merge adj factors onto main land use build
         landuse = pd.merge(landusese_nocom, mypepops, how = 'inner', on = ['ZoneID', 'gender', 'age_code'])
@@ -452,13 +451,11 @@ def adjust_landuse_to_specific_yr(writeOut = True,
         # Check new total == mype total
         landuse['people'].sum()
         mype_gb['pop'].sum()
-        
-        # landuse.to_csv('Y:/NorMITs Land Use/test/landuse_mype.csv')
-        
-        # Get the communal establishments out of the data
+                
+        # COMMUNAL ESTABLISHMENTS
+        # Get the communal establishments 
         landuse_com = landusesegments[landusesegments.property_type == 8]
 
-        ##### COMMUNAL ######
         com = sort_communal_uplift()
         com['gender'] = com['Gender'].map(gender_nt)
         com['age_code'] = com['Age'].map(age_nt)
@@ -480,12 +477,11 @@ def adjust_landuse_to_specific_yr(writeOut = True,
         communal_pop= communal_pop.drop(columns={'people', 'pop_factor'}).rename(columns={'newpop':'people'}) 
         communal_pop = communal_pop.reindex(columns=landuse_cols)
     # need to retain the missing MSOAs for both population landuse outputs and HOPs  
-    # ensure communal pop or popadj columns is the same as Scottish
         GB_adjusted = landuse.append(communal_pop)
         
         # a few checks: 
     
-        print(isnull_any(GB_adjusted))
+        print('checking for null values:', isnull_any(GB_adjusted))
 
         print('Full population for 2018 is now =', 
               GB_adjusted['people'].sum())
@@ -500,8 +496,7 @@ def adjust_landuse_to_specific_yr(writeOut = True,
                                                                'household_composition'
                                                                ], as_index = False).sum()
         GB_adjusted.to_csv(_default_home_dir + '/landUseOutputMSOA_2018.csv', index = False)
-
-        return(fullGBadjustment)
+        print('full GB adjusted dataset should be now saved in default iter folder')
         del(communal_pop, pop_pc_comms, myepops, landuse_com, com, landusesegments, len_before, len_after)
         gc.collect()
         
@@ -509,18 +504,22 @@ def adjust_landuse_to_specific_yr(writeOut = True,
         print ('FY not set up yet')
               
     
-def sort_out_hops_uplift(_default_property_count,
-                         _hops2011
-                         ):
+def sort_out_hops_uplift():
     """    
+    This provides the new household occupancy figures for each property type 
+    following MYPE adjustment.
     Parameters
     ----------
-    landuseoutput:
-        Path to csv of landuseoutput 2011 to get the splits
+    property_count
+    hope_2011
+    MYPEpop
+    msoaShp
 
     Returns
     ----------
+    Adjusted HOPs
     
+    # TODO: need a new folder for 2018 adjustments? it's getting messy with all the outputs
     """ 
     property_count = pd.read_csv(_default_property_count).groupby(by=['ZoneID', 
                                 'property_type'], as_index = False).sum().reindex(
@@ -528,7 +527,9 @@ def sort_out_hops_uplift(_default_property_count,
     hops2011 = pd.read_csv(_hops2011).rename(columns={'msoaZoneID':'ZoneID', 
                           'census_property_type':'property_type'})
                
-    MYPEpop = pd.read_csv(_default_home_dir + '/landUseOutputMSOA_2018.csv') # might need changing
+    MYPEpop = pd.read_csv(_default_home_dir + '/landUseOutputMSOA_2018.csv').groupby(
+                by=['ZoneID', 'property_type'],as_index = False).sum()
+    MYPEpop = MYPEpop.reindex(columns={'ZoneID', 'property_type', 'people'})
     
     msoaShp = gpd.read_file(_default_msoaRef).reindex(['objectid','msoa11cd'],
                            axis=1).rename(columns={
@@ -537,28 +538,29 @@ def sort_out_hops_uplift(_default_property_count,
 
     hops = hops2011.merge(property_count, on = ['ZoneID', 'property_type'])
     hops= hops.merge(MYPEpop, on = ['ZoneID', 'property_type'])
-    hops['household_occupancy_2018']=hops['people']/hops['properties']      
-    hops.to_csv('household_occupation_Comparison.csv')
-    # TODO: need a new folder for 2018 adjustments?
+    hops['household_occupancy_2018']=1+(hops['people']/hops['properties'])      
+    hops.to_csv(_default_home_dir+'/Hops Population Audits/household_occupation_comparison.csv', index = False)
     hops = hops.drop(columns = {'properties', 'household_occupancy', 
                                       'ho_type', 'people'})
     hops= hops.rename(columns = {'household_occupancy_2018': 'household_occupancy'})
-    adjhopsMSOA = hops['ZoneID'].drop_duplicates()
-    hops2011= hops2011.drop(columns={'ho_type'})
-    restofUKhops = hops2011[~hops2011.ZoneID.isin(adjhopsMSOA)]
-    fulladjHops = hops.append(restofUKhops)
-    print('check all MSOAs are present, should be 8480:', 
-          fulladjHops['ZoneID'].drop_duplicates().count())
-    fulladjHops.to_csv('2018_household_occupancy.csv')
     
+    # check all msoas are included:
+    print('check all MSOAs are present, should be 8480:', 
+              hops['ZoneID'].drop_duplicates().count())
+    hops.to_csv(_default_home_dir+'/Hops Population Audits/2018_household_occupancy.csv', index = False)
     
 def adjust_car_availability(
                      ntsimportPath = _default_home_dir+'/nts_splits.csv',
                      midyear = True
-                    # year = '2017'):
+                     ):
     """
     applies nts extract to landuse
+    Parameters
+    ----------
+    Returns
+    ----------
     """
+    ntsimportPath = _default_home_dir+'/nts_splits.csv'
     if midyear:
         landuse = pd.read_csv(_landuse_segments)
     elif fy:
@@ -1070,7 +1072,6 @@ def country_emp_control(_country_control,
     Based on APS extract (as of 2018)
     
     """
-    
     ############## Cuontry control #################
     CountryControl = pd.read_csv(_country_control)
     CountryEmp = CountryControl.rename(columns={
@@ -1156,10 +1157,10 @@ def run_mype(midyear = True):
     # normalise_landuse()
     adjust_landuse_to_specific_year()
     control_to_lad_employment_ag()
-    sort_out_hops_uplift()
     country_emp_control()
     adjust_soc_lad()
     adjust_soc_gb()
+    sort_out_hops_uplift()
     get_ca()
     adjust_car_availability()
 
