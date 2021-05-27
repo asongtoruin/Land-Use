@@ -59,6 +59,8 @@ def copy_addressbase_files(by_lu_obj):
         except IOError:
             print("File not found")
 
+    by_lu_obj.state['5.2.2 read in core property data'] = 1
+
 
 # 2. Main analysis functions - everything related to census and segmentation
 def lsoa_census_data_prep(dat_path, population_tables, property_tables, geography=_default_lsoaRef):
@@ -402,6 +404,7 @@ def filled_properties(by_lu_obj):
     filled_properties_df = filled_properties_df.fillna(1)  # default to all Scottish properties being occupied
     filled_properties_df.to_csv('ProbabilityDwellfilled.csv', index=False)
 
+    by_lu_obj.state['5.2.4 filled property adjustment'] = 1  # record that this process has been run
     return filled_properties_df
 
 
@@ -420,7 +423,6 @@ def apply_household_occupancy(by_lu_obj, do_import=False, write_out=True):
         EWQS402 = 'QS402UK_LSOA.csv'
         SQS402 = 'QS402UK_DZ_2011.csv'
 
-        # TODO: replace _default_lsoaRef with values from by_lu_obj
         census_dat = by_lu_obj.import_folder + 'Nomis Census 2011 Head & Household'
         cpt_data = lsoa_census_data_prep(census_dat, [EWQS401, SQS401], [EWQS402, SQS402],
                                          geography=_default_lsoaRef)
@@ -433,167 +435,89 @@ def apply_household_occupancy(by_lu_obj, do_import=False, write_out=True):
         probability_filled = pd.read_csv(by_lu_obj.home_folder + '/ProbabilityDwellfilled.csv')
         balanced_cpt_data = balanced_cpt_data.merge(probability_filled, how='outer', on='msoaZoneID')
         balanced_cpt_data['household_occupancy'] = balanced_cpt_data['household_occupancy'] * \
-            balanced_cpt_data['Prob_DwellsFilled']
+                                                   balanced_cpt_data['Prob_DwellsFilled']
         balanced_cpt_data = balanced_cpt_data.drop(columns={'Prob_DwellsFilled'})
         balanced_cpt_data.to_csv('UKHouseHoldOccupancy2011.csv', index=False)
 
-    # TODO: this section largely checks and validation, refine
-    uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
-
     # Visual spot checks - count zones, check cpt
     audit = balanced_cpt_data.groupby(['msoaZoneID']).count().reset_index()
+    uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
     print('census hops zones =', audit['msoaZoneID'].drop_duplicates().count(), 'should be', len(uk_msoa))
     print('counts of property type by zone', audit['census_property_type'].drop_duplicates())
 
     # Join MSOA ids to balanced cptdata
     uk_msoa = uk_msoa.rename(columns={'msoa11cd': 'msoaZoneID'})
     balanced_cpt_data = balanced_cpt_data.merge(uk_msoa, how='left', on='msoaZoneID').drop('objectid', axis=1)
-    # Import MSOA to lad translation
+
+    # Join MSOA to lad translation
     lad_translation = pd.read_csv(by_lu_obj.zones_folder + 'Export/lad_to_msoa/lad_to_msoa.csv')
     lad_translation = lad_translation.rename(columns={'lad_zone_id': 'ladZoneID', 'msoa_zone_id': 'msoaZoneID'})
     lad_translation = lad_translation[['ladZoneID', 'msoaZoneID']]
-    unq_lad = lad_translation['ladZoneID'].unique()
     balanced_cpt_data = balanced_cpt_data.merge(lad_translation, how='left', on='msoaZoneID')
 
-    join_lad = balanced_cpt_data['ladZoneID'].unique()
-
-    uk_lad = gpd.read_file(_default_ladRef)
-    uk_lad = uk_lad[['ladZoneID', 'msoaZoneID']]
-
+    # Join LAD code
+    uk_lad = gpd.read_file(_default_ladRef)[['objectid', 'lad17cd']]
     balanced_cpt_data = balanced_cpt_data.merge(uk_lad, how='left', left_on='ladZoneID', right_on='objectid')
-    balanced_cpt_data = balanced_cpt_data.drop(['ladZoneID', 'objectid'], axis=1)
 
-    if len(join_lad) == len(unq_lad):
+    # Check the join
+    if len(balanced_cpt_data['ladZoneID'].unique()) == len(lad_translation['ladZoneID'].unique()):
         print('All LADs joined properly')
     else:
         print('Some LAD zones not accounted for')
-    del unq_lad, join_lad
 
+    # Read in HOPS growth data
+    balanced_cpt_data = balanced_cpt_data.drop(['ladZoneID', 'objectid'], axis=1)
     hops_path = by_lu_obj.import_folder + 'HOPs/hops_growth_factors.csv'
     hops_growth = pd.read_csv(hops_path)[['Area code', '11_to_18']]
 
-    # using HOPS growth data to uplift the figures to 2018
+    # Uplift the figures to 2018
     balanced_cpt_data = balanced_cpt_data.merge(hops_growth,
                                                 how='left', left_on='lad17cd',
                                                 right_on='Area code').drop('Area code', axis=1).reset_index(drop=True)
 
     balanced_cpt_data['household_occupancy_18'] = balanced_cpt_data['household_occupancy'] * \
                                                   (1 + balanced_cpt_data['11_to_18'])
-
-    trim_cols = ['msoaZoneID', 'msoa11cd', 'census_property_type',
-                 'household_occupancy_18', 'ho_type']
+    trim_cols = ['msoaZoneID', 'census_property_type', 'household_occupancy_18', 'ho_type']
     balanced_cpt_data = balanced_cpt_data[trim_cols]
 
     # Read in all res property for the level of aggregation
     print('Reading in AddressBase extract')
     addressbase_extract_path = by_lu_obj.home_folder + '/allResProperty' + by_lu_obj.model_zoning + 'Classified.csv'
     all_res_property = pd.read_csv(addressbase_extract_path)[['ZoneID', 'census_property_type', 'UPRN']]
-    all_res_property_zonal = all_res_property.groupby(['ZoneID', 'census_property_type']).count().reset_index()
-    del all_res_property
+    all_res_property = all_res_property.groupby(['ZoneID', 'census_property_type']).count().reset_index()
 
     if by_lu_obj.model_zoning == 'MSOA':
-        all_res_property_zonal = all_res_property_zonal.merge(balanced_cpt_data,
-                                                              how='inner',
-                                                              left_on=['ZoneID', 'census_property_type'],
-                                                              right_on=['msoaZoneID', 'census_property_type'])
-        all_res_property_zonal = all_res_property_zonal.drop('msoaZoneID', axis=1)
+        all_res_property = all_res_property.merge(balanced_cpt_data,
+                                                  how='inner',
+                                                  left_on=['ZoneID', 'census_property_type'],
+                                                  right_on=['msoaZoneID', 'census_property_type'])
+        all_res_property = all_res_property.drop('msoaZoneID', axis=1)
 
         # Audit join - ensure all zones accounted for
-        if all_res_property_zonal['ZoneID'].drop_duplicates().count() != uk_msoa[
-            'msoaZoneID'].drop_duplicates().count():
+        if all_res_property['ZoneID'].drop_duplicates().count() != uk_msoa[
+            'msoaZoneID'
+        ].drop_duplicates().count():
             ValueError('Some zones dropped in Hops join')
         else:
             print('All Hops areas accounted for')
 
         # allResPropertyZonal.merge(filled_properties, on = 'ZoneID')
-        all_res_property_zonal['population'] = all_res_property_zonal['UPRN'] * all_res_property_zonal[
+        all_res_property['population'] = all_res_property['UPRN'] * all_res_property[
             'household_occupancy_18']
 
         # Create folder for exports
-        arp_msoa_audit = all_res_property_zonal.groupby('ZoneID')['population'].sum().reset_index()
+        arp_msoa_audit = all_res_property.groupby('ZoneID')['population'].sum().reset_index()
         hpa_folder = 'Hops Population Audits'
         utils.create_folder(hpa_folder)
         arp_msoa_audit.to_csv(hpa_folder + '/' + by_lu_obj.model_zoning + '_population_from_2018_hops.csv', index=False)
         if write_out:
-            all_res_property_zonal.to_csv('classifiedResProperty' + by_lu_obj.model_zoning + '.csv', index=False)
+            all_res_property.to_csv('classifiedResProperty' + by_lu_obj.model_zoning + '.csv', index=False)
 
-        return all_res_property_zonal
-
-    # TODO: review whether support for other zoning systems is in scope
-    elif by_lu_obj.model_zoning == 'LSOA':
-        # Here change MSOA that is expected in the function above to lsoa Zone ID.
-        # To do that we need the zone translations and lsoa table with zoneID objectid and also msoa lookup for the objectid!
-        lsoaCols = ['objectid', 'lsoa11cd']
-        # TODO: change the path for translations
-        lsoa_lookup = pd.read_csv(
-            'Y:/Data Strategy/GIS Shapefiles/UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz_cleaned_dbf.csv')
-        LSOAzonetranslation = pd.read_csv(by_lu_obj.zones_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa_pop_weighted.csv')
-        msoa_lookup = pd.read_csv(
-            'Y:/Data Strategy/GIS Shapefiles/UK MSOA and Intermediate Zone Clipped 2011/uk_ew_msoa_s_iz_dbf.csv')
-
-        lsoa_lookup = lsoa_lookup.rename(
-            columns={
-                "objectid": "lsoaZoneID"
-            })
-
-        msoa_lookup = msoa_lookup.rename(
-            columns={
-                "objectid": "msoaZoneID"})
-
-        zonetrans = pd.merge(LSOAzonetranslation, lsoa_lookup, how="outer", on='lsoaZoneID')
-        zonetrans = zonetrans.merge(msoa_lookup, how="outer", on='msoaZoneID')
-
-        zonetrans = zonetrans.drop(columns={'lsoa_var', 'msoa_var',
-                                            'overlap_lsoa_split_factor',
-                                            'overlap_type', 'overlap_var',
-                                            'lsoa11nm', 'lsoa11nmw', 'st_areasha_x',
-                                            'st_lengths_x', 'msoa11nm', 'msoa11nmw',
-                                            'st_areasha_y', 'st_lengths_y'})
-
-        zonetrans = zonetrans.rename(columns={
-            "lsoa11cd": "ZoneID"})
-        allResPropertyZonal = pd.merge(all_res_property_zonal, zonetrans, on='ZoneID')
-
-        allResPropertyZonal = pd.merge(allResPropertyZonal, balanced_cpt_data,
-                                       how='inner',
-                                       left_on=['msoaZoneID', 'census_property_type'],
-                                       right_on=['msoaZoneID', 'census_property_type'])
-        allResPropertyZonal = allResPropertyZonal.drop(columns=
-                                                       {'lsoaZoneID', 'msoaZoneID',
-                                                        'overlap_msoa_split_factor'}
-                                                       )
-        # TODO need to introduce lsoa cols for this below to work
-
-        # TODO: Insert some logic here to make it work for LSOA and OA level#
-        # Going to look something like assigning areas their MSOA,
-        # joining on correspondence and dropping thee MSOA again.
-        # Audit join - ensure all zones accounted for
-        ukLSOA = gpd.read_file(_default_lsoaRef)
-        ukLSOA = ukLSOA.loc[:, lsoaCols]
-
-        if allResPropertyZonal['ZoneID'].drop_duplicates().count() != ukLSOA['lsoa11cd'].drop_duplicates().count():
-            ValueError('Some zones dropped in Hops join')
-        else:
-            print('All Hops areas accounted for')
-
-        allResPropertyZonal['population'] = allResPropertyZonal['UPRN'] * allResPropertyZonal['household_occupancy_18']
-
-        # Create folder for exports
-        arp_msoa_audit = allResPropertyZonal.groupby('ZoneID')['population'].sum().reset_index()
-        hpa_folder = 'Hops Population Audits'
-        utils.create_folder(hpa_folder)
-        arp_msoa_audit.to_csv(hpa_folder + '/' + by_lu_obj.model_zoning + '_population_from_2018_hops.csv', index=False)
-        arp_msoa_audit = arp_msoa_audit['population'].sum()
-        print(arp_msoa_audit)
-
-        if write_out:
-            allResPropertyZonal.to_csv('classifiedResPropertyLSOA.csv', index=False)
-
-            # TODO: put checks for the following comment into the code eg print warning?
-            # it has 1900 too many people
+        by_lu_obj.state['5.2.5 household occupancy adjustment'] = 1  # record that this process has been run
+        return all_res_property
 
     else:
-        print("No support for this zoning system")
+        print("No support for this zoning system")  # only the MSOA zoning system is supported at the moment
 
 
 def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifiedResPropertyMSOA.csv'):
@@ -669,6 +593,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     # Export to file
     crp.to_csv(by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '.csv', index=False)
 
+    by_lu_obj.state['5.2.6 NTEM segmentation'] = 1  # record that this process has been run
     return crp, bsq
 
 
@@ -804,6 +729,8 @@ def join_establishments(by_lu_obj):
     landusewComm.to_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_withCommunal.csv',
                         index=False)
 
+    by_lu_obj.state['5.2.7 communal establishments'] = 1  # record that this process has been run
+
 
 def land_use_formatting(by_lu_obj):
     """
@@ -812,8 +739,11 @@ def land_use_formatting(by_lu_obj):
     # 1.Combine all flat types. Sort out flats on the landuse side; actually there's no 7
     land_use = pd.read_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_withCommunal.csv')
     land_use['property_type'] = land_use['property_type'].map(consts.PROPERTY_TYPE)
-    land_use = land_use.to_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_stage3.csv',
-                               index=False)
+    land_use = land_use.to_csv(
+        by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_flats_combined.csv',
+        index=False)
+
+    by_lu_obj.state['5.2.3 property type mapping'] = 1
 
     return land_use
 
@@ -989,14 +919,15 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     InactiveSplits = InactiveSplits.drop(columns={'msoa_splits', 'global_splits'})
 
     # England and Wales - apply splits for inactive people
-    land_use = pd.read_csv(by_lu_obj.home_folder+'/landuseOutput'+by_lu_obj.model_zoning+'_stage3.csv')
+    land_use = pd.read_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_flats_combined.csv')
     ActivePot = land_use[~land_use.employment_type.isin(['stu', 'non_wa'])].copy()
     InactivePot = land_use[land_use.employment_type.isin(['stu', 'non_wa'])].copy()
 
     # take out Scottish MSOAs from this pot - nssec/soc data is only for E+W
     # Scotland will be calculated based on area type
     areatypes = pd.read_csv(by_lu_obj.import_folder + 'area_types_msoa.csv').drop(columns={'zone_desc'}
-                                                      ).rename(columns={'msoa_zone_id': 'ZoneID'})
+                                                                                  ).rename(
+        columns={'msoa_zone_id': 'ZoneID'})
     ZoneIDs = ActivePot['ZoneID'].drop_duplicates().dropna()
     Scott = ZoneIDs[ZoneIDs.str.startswith('S')]
     ActiveScot = ActivePot[ActivePot.ZoneID.isin(Scott)].copy()
