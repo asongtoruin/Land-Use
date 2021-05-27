@@ -508,41 +508,37 @@ def sort_out_hops_uplift():
     """    
     This provides the new household occupancy figures for each property type 
     following MYPE adjustment.
+    Get the filledproperties percentage.
     Parameters
     ----------
-    property_count
-    hope_2011
-    MYPEpop
-    msoaShp
+    allResPropertyZonal calculated from main build
+    MYPE population
 
     Returns
     ----------
     Adjusted HOPs
     
-    # TODO: need a new folder for 2018 adjustments? it's getting messy with all the outputs
     """ 
-    property_count = pd.read_csv(_default_property_count).groupby(by=['ZoneID', 
-                                'property_type'], as_index = False).sum().reindex(
-                                columns={'ZoneID', 'property_type', 'properties'})
-    hops2011 = pd.read_csv(_hops2011).rename(columns={'msoaZoneID':'ZoneID', 
-                          'census_property_type':'property_type'})
-               
+    allResPropertyZonal = pd.read_csv(_default_home_dir+'/classifiedResPropertyMSOA.csv')    
+    allResPropertyZonal['new_prop_type'] = allResPropertyZonal['census_property_type']
+    allResPropertyZonal.loc[allResPropertyZonal['census_property_type']==5, 'new_prop_type'] = 4
+    allResPropertyZonal.loc[allResPropertyZonal['census_property_type']==6, 'new_prop_type'] = 4
+    allResPropertyZonal.loc[allResPropertyZonal['census_property_type']==7, 'new_prop_type'] = 4
+    allResPropertyZonal = allResPropertyZonal.drop(columns = 'census_property_type').rename(columns = {'new_prop_type':'property_type'})
+    allResPropertyZonal = allResPropertyZonal.groupby(by=['ZoneID', 'property_type'], as_index = False).sum().drop(columns={'msoa11cd'})
+    allResPropertyZonal['household_occupancy_18'] = allResPropertyZonal['population']/allResPropertyZonal['UPRN']
+        
     MYPEpop = pd.read_csv(_default_home_dir + '/landUseOutputMSOA_2018.csv').groupby(
                 by=['ZoneID', 'property_type'],as_index = False).sum()
     MYPEpop = MYPEpop.reindex(columns={'ZoneID', 'property_type', 'people'})
     
-    msoaShp = gpd.read_file(_default_msoaRef).reindex(['objectid','msoa11cd'],
-                           axis=1).rename(columns={
-                                   'msoa11cd':'ZoneID'})
-    hops2011 = hops2011.merge(msoaShp, on = 'ZoneID')
-
-    hops = hops2011.merge(property_count, on = ['ZoneID', 'property_type'])
-    hops= hops.merge(MYPEpop, on = ['ZoneID', 'property_type'])
-    hops['household_occupancy_2018']=1+(hops['people']/hops['properties'])      
+    hops = allResPropertyZonal.merge(MYPEpop, on = ['ZoneID', 'property_type'])
+    hops['household_occupancy_2018_mype']= hops['people']/hops['UPRN']
+    
     hops.to_csv(_default_home_dir+'/Hops Population Audits/household_occupation_comparison.csv', index = False)
-    hops = hops.drop(columns = {'properties', 'household_occupancy', 
-                                      'ho_type', 'people'})
-    hops= hops.rename(columns = {'household_occupancy_2018': 'household_occupancy'})
+    hops = hops.drop(columns = {'UPRN', 'household_occupancy_18', 'population', 'people'
+                                     })
+    hops= hops.rename(columns = {'household_occupancy_2018_mype': 'household_occupancy'})
     
     # check all msoas are included:
     print('check all MSOAs are present, should be 8480:', 
