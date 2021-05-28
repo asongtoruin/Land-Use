@@ -26,6 +26,23 @@ from land_use.concurrency import multiprocessing as mp
 from land_use.utils import compress
 from land_use.utils import general as gu
 
+
+def create_folder(folder, ch_dir=False, verbose=True):
+    """
+    """
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+        if ch_dir:
+            os.chdir(folder)
+        if verbose:
+            print("New project folder created in " + folder)
+    else:
+        if ch_dir:
+            os.chdir(folder)
+        if verbose:
+            print('Folder already exists')
+
+
 def cast_to_pathlib_path(path: lu.PathLike) -> pathlib.Path:
     """
     Tries to cast path to pathlib.Path

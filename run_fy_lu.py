@@ -8,7 +8,7 @@ import land_use.future_land_use.fy_lu as fylu
 
 if __name__ == '__main__':
     scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
-    future_years = ['2027', '2040']
+    future_years = ['2027', '2033', '2035', '2040', '2050']
     pop = True
     emp = True
     export = True
@@ -20,6 +20,7 @@ if __name__ == '__main__':
             fym = fylu.FutureYearLandUse(
                 future_year=fy,
                 scenario_name=scenario,
+                iteration='iter3c',
                 sub_for_defaults=True)  # Naughty - should be explicit
 
             # Define run preferences
