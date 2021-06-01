@@ -205,7 +205,7 @@ def get_fy_population():
     placeholder, potentially to import code developed by Chris/Liz
     """
 
-
+# TODO: include block commenting
 def sort_communal_uplift(midyear=True):
     """
     Imports a csv of Communal Establishments 2011 and uses MYPE to uplift to MYPE (2018 for now)
@@ -223,11 +223,11 @@ def sort_communal_uplift(midyear=True):
     Parameters
     ----------
     midyear
+    Communal:
+        Path to csv of Communal Establishments 2011 sorted accordingly to age and gender and by zone.
     ----------
     Returns
     ----------
-    Communal:
-        Path to csv of Communal Establishments 2011 sorted accordingly to age and gender and by zone.
     Uplifted Communal:
         DataFrame containing Communal Establishments according to the MYPE (2018).
     """
@@ -271,6 +271,7 @@ def sort_communal_uplift(midyear=True):
         print('Communal establishments total for fy is ', fype_adjust['communal_mype'].sum())
 
 
+# TODO: include block commenting
 def adjust_landuse_to_specific_yr(writeOut=True):
 
     """    
@@ -304,8 +305,8 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         landuse_segments = landuse_segments.groupby(by=['ZoneID', 'age_code', 'emp', 'gender', 'SOC_category',
                                                         'ns_sec','area_type', 'property_type', 'household_composition'],
                                                     as_index = False).sum()
+
         # change to int8 to reduce table size
-        
         landuse_segments['age_code'] = landuse_segments['age_code'].astype(np.int8)
         landuse_segments['emp'] = landuse_segments['emp'].astype(np.int8)
         landuse_segments['gender'] = landuse_segments['gender'].astype(np.int8)
@@ -317,12 +318,12 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         
         # Get the communal establishments removed
         landusese_nocom = landuse_segments[landuse_segments.property_type != 8]
-        
+        # group by age and gender columns and sum people
         pop_pc_totals = landusese_nocom.groupby(by=['ZoneID', 'age_code', 'gender'],
                                                 as_index=False).sum()[['ZoneID', 'age_code', 'gender', 'people']]
 
-
         # LU SIMPLIFICATION
+        # Build simplified land use for building adjustment factors
         len_before = len(landusese_nocom)
         lu_index = list(landusese_nocom)
         lu_groups = lu_index.copy()
@@ -332,11 +333,9 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         # TODO: logging to file rather than console
         print('LU length %d before %d after' % (len_before, len_after))
 
-        # Build simplified land use for building adjustment factors
         # Get Scottish Population
         scot_mype = format_scottish_mype()
         scot_adjust = scot_mype[['ZoneID', 'Gender', 'Age', 'pop']]
-
         print('Reading in new Scot population data')
 
         mype_communal = sort_communal_uplift()
@@ -413,16 +412,18 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         # need to retain the missing MSOAs for both population landuse outputs and HOPs  
         gb_adjusted = landuse.append(communal_pop)
         
-        # a few checks: 
+        # checks:
         # TODO: put these checks into logging file rather than console
         print('checking for null values:', gb_adjusted.isnull().any())
         print('Full population for 2018 is now =', gb_adjusted['people'].sum())
         print('check all MSOAs are present, should be 8480:', gb_adjusted['ZoneID'].drop_duplicates().count())
-        gb_adjusted = gb_adjusted.groupby(by=['ZoneID', 'gender', 'age_code','emp',
-                                                'SOC_category', 'ns_sec', 'area_type',
-                                                'property_type', 'household_composition'], as_index=False).sum()
+        gb_adjusted = gb_adjusted.groupby(by=['ZoneID', 'gender', 'age_code','emp', 'SOC_category', 'ns_sec',
+                                              'area_type', 'property_type', 'household_composition']
+                                          , as_index=False).sum()
         gb_adjusted.to_csv(_default_home_dir + '/landUseOutputMSOA_2018.csv', index=False)
         print('full GB adjusted dataset should be now saved in default iter folder')
+
+        #reclaim memory
         del(communal_pop, pop_pc_comms, mye_pops, landuse_com, com, landuse_segments, len_before, len_after)
         gc.collect()
     else:
