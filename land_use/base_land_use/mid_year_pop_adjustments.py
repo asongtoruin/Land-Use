@@ -79,23 +79,24 @@ _lad2017 = _import_folder + 'Documentation/LAD_2017.csv'
 _ladsoc_control = _import_folder + 'NPR Segmentation/raw data and lookups/LAD labour market data/nomis_lad_SOC2018_constraints.csv'
 
 
-def format_english_mype(mype_m=_mype_males, mype_f=_mype_females):
+def format_english_mype(_mype_males, _mype_females):
 
     """
     getting MYPE into the right format - 'melt' to get columns as rows, then rename them
     This should be a standard from any MYPE in the future segmented by gender and age
     Parameters
     ----------
-    mye_males
-    mye_females
-    
+    _mype_females
+    _mype_males
+
     Returns
     ----------
-    mye_2018 - one formatted DataFrame of new MYPE including population split 
+    object
+    mye_2018 - one formatted DataFrame of new MYPE including population split
     by age and gender by MSOA
     """
-    mype_males = pd.read_csv(mype_m)
-    mype_females = pd.read_csv(mype_f)
+    mype_males = pd.read_csv(_mype_males)
+    mype_females = pd.read_csv(_mype_females)
 
     mype = mype_males.append(mype_females)
     mype = mype.rename(columns={'Area Codes': 'ZoneID'})
@@ -113,7 +114,7 @@ def format_english_mype(mype_m=_mype_males, mype_f=_mype_females):
     return mype
 
 
-def format_scottish_mype(scot_f=_mypeScot_females,scot_m=_mypeScot_males):
+def format_scottish_mype():
 
     """
     getting Scottish MYPE into the right format - 'melt' to get columns as rows, then rename them
@@ -122,9 +123,7 @@ def format_scottish_mype(scot_f=_mypeScot_females,scot_m=_mypeScot_males):
     
     Parameters
     ----------
-    Scot_mypemales
-    Scot_mypefemales
-    
+
     Returns
     ----------
     Scot_adjust- one formatted DataFrame of new Scottish MYPE including population
@@ -223,11 +222,12 @@ def sort_communal_uplift(midyear=True):
     e.g. for future years
     Parameters
     ----------
-    Communal :
-        Path to csv of Communal Establishments 2011 sorted accordingly to age and gender and by zone.
-
+    midyear
+    ----------
     Returns
     ----------
+    Communal:
+        Path to csv of Communal Establishments 2011 sorted accordingly to age and gender and by zone.
     Uplifted Communal:
         DataFrame containing Communal Establishments according to the MYPE (2018).
     """
@@ -270,7 +270,8 @@ def sort_communal_uplift(midyear=True):
 
         print('Communal establishments total for fy is ', fype_adjust['communal_mype'].sum())
 
-def adjust_landuse_to_specific_yr(writeOut = True):
+
+def adjust_landuse_to_specific_yr(writeOut=True):
 
     """    
     Takes adjusted landuse (after splitting out communal establishments)
@@ -288,7 +289,6 @@ def adjust_landuse_to_specific_yr(writeOut = True):
         landuse_segments = pd.read_csv(_landuse_segments, usecols=['ZoneID', 'area_type', 'property_type', 'Age',
                                              'Gender', 'employment_type', 'ns_sec', 'household_composition',
                                              'SOC_category', 'people']).drop_duplicates()
-
 
         # TODO: put these normalisation dictionaries in lu_constants
         gender_nt = {'Male': 2, 'Females': 3, 'Children': 1}
@@ -329,7 +329,7 @@ def adjust_landuse_to_specific_yr(writeOut = True):
         lu_groups.remove('people')
         landusese_nocom = landusese_nocom[lu_index].groupby(lu_groups).sum().reset_index()
         len_after = len(landusese_nocom)
-
+        # TODO: logging to file rather than console
         print('LU length %d before %d after' % (len_before, len_after))
 
         # Build simplified land use for building adjustment factors
@@ -414,7 +414,7 @@ def adjust_landuse_to_specific_yr(writeOut = True):
         gb_adjusted = landuse.append(communal_pop)
         
         # a few checks: 
-    
+        # TODO: put these checks into logging file rather than console
         print('checking for null values:', gb_adjusted.isnull().any())
         print('Full population for 2018 is now =', gb_adjusted['people'].sum())
         print('check all MSOAs are present, should be 8480:', gb_adjusted['ZoneID'].drop_duplicates().count())
