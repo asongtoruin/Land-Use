@@ -4,13 +4,14 @@ import os
 import pandas as pd
 
 import land_use.lu_constants as consts
-from land_use import utils
+import land_use.utils.general as utils
+import land_use.utils.file_ops as fo
 
 
 class FutureYearLandUse:
     def __init__(self,
                  model_folder=consts.LU_FOLDER,
-                 iteration=consts.LU_MR_ITER,
+                 iteration=consts.FYLU_MR_ITER,
                  import_folder=consts.LU_IMPORTS,
                  model_zoning='msoa',
                  base_land_use_path=None,
@@ -109,6 +110,7 @@ class FutureYearLandUse:
         # Build paths
         write_folder = os.path.join(
             model_folder,
+            consts.FY_FOLDER,
             iteration,
             'outputs',
             'scenarios',
@@ -127,9 +129,9 @@ class FutureYearLandUse:
 
         # Build folders
         if not os.path.exists(write_folder):
-            utils.create_folder(write_folder)
+            fo.create_folder(write_folder)
         if not os.path.exists(report_folder):
-            utils.create_folder(report_folder)
+            fo.create_folder(report_folder)
 
         # Set object paths
         self.in_paths = {
