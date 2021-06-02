@@ -12,11 +12,14 @@ PROCESS_COUNT = -2
 
 # PATHS
 # Default land use folder
-LU_FOLDER = 'Y://NorMITs Land Use'
+LU_FOLDER = 'I://NorMITs Land Use//'
+BY_FOLDER = 'base_land_use'
+FY_FOLDER = 'future_land_use'
 DATA_FOLDER = 'Y://Data Strategy//Data//'
 
 # Most recent Land Use Iteration
-LU_MR_ITER = 'iter4'
+LU_MR_ITER = 'iter3b'
+FYLU_MR_ITER = 'iter3c'
 LU_IMPORTS = 'import'
 LU_REFS = 'Lookups'
 
@@ -31,6 +34,7 @@ LU_AREA_TYPES = LU_FOLDER + '/area types/TfNAreaTypesLookup.csv'
 # Path to a default land use build
 RESI_LAND_USE_MSOA = os.path.join(
     LU_FOLDER,
+    BY_FOLDER,
     LU_MR_ITER,
     'outputs',
     'land_use_output_safe_msoa.csv'
