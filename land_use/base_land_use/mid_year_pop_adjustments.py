@@ -36,8 +36,8 @@ import gc
 
 # Default file paths
 
-_default_iter = 'iter4'
-_default_home = 'E:/NorMITs_Export/'
+_default_iter = 'iter3b'
+_default_home = 'I:/NorMITs Land Use/'
 _default_home_dir = (_default_home + _default_iter)
 _import_folder = 'Y:/NorMITs Land Use/import/'
 _import_file_drive = 'Y:/'
@@ -64,7 +64,7 @@ _mype_males = _import_folder + 'MYE 2018 ONS/2018_MidyearMSOA/MYEmales_2018.csv'
 _hops2011 = _default_home_dir + '/UKHouseHoldOccupancy2011.csv'
 _mypeScot_females = _import_folder + 'MYE 2018 ONS/2018_MidyearMSOA/Females_Scotland_2018.csv'
 _mypeScot_males = _import_folder + 'MYE 2018 ONS/2018_MidyearMSOA/Males_Scotland_2018.csv'
-_landuse_segments = _default_home_dir + '/landuseOutput' + _default_zone_name + '_stage4.csv'
+_landuse_segments = _default_home_dir + '/landuseOutput' + _default_zone_name + '_NS_SEC_SOC.csv'
 _ward_to_msoa = _default_zone_folder + 'uk_ward_msoa_pop_weighted_lookup.csv'
 _nts_path = 'Y:/NTS/import/tfn_unclassified_build.csv'
 _country_control = _import_folder + 'NPR Segmentation/processed data/Country Control 2018/nomis_CountryControl.csv'
@@ -809,7 +809,7 @@ def control_to_lad_employment_ag():
 
     # Compute the total for the 16-74 working age population
     wa_all = land_use[land_use.emp != 5]
-    total_wa_pop = wa_all.groupby(by=['lad17cd', 'gender'], as_index=False).sum()\
+    total_wa_pop = wa_all.groupby(by=['lad17cd', 'gender'], as_index=False).sum()
     total_wa_pop = total_wa_pop.drop(columns={'household_composition', 'area_type',
                                               'property_type', 'objectid', 'SOC_category',
                                               'ns_sec', 'age_code'})

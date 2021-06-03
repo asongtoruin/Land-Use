@@ -574,7 +574,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
 
     # Merge the bespoke census query data onto the classified residential properties
     crp = crp.merge(bsq,
-                    how='outer',
+                    how='inner',
                     left_on=['ZoneID', 'census_property_type'],
                     right_on=['msoa11cd', 'property_type'])
 
@@ -725,7 +725,7 @@ def join_establishments(by_lu_obj):
     CommunalEstablishments = CommunalEstablishments[cols]
     landuse = landuse[cols]
     landusewComm = landuse.append(CommunalEstablishments)
-    print('Joined communal communitiies. Total pop for GB is now', landusewComm['people'].sum())
+    print('Joined communal communities. Total pop for GB is now', landusewComm['people'].sum())
     landusewComm.to_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_withCommunal.csv',
                         index=False)
 

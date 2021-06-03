@@ -136,8 +136,8 @@ class BaseYearLandUse:
         if self.state['5.2.3 property type mapping'] == 0:
             main_build.land_use_formatting(self)
 
-        # TODO: main_build then runs the following function currently commented out, how relate to documentation?
-        # main_build.apply_ns_sec_soc_splits(self)
+        # TODO: main_build then runs the following function, how relate to documentation?
+        main_build.apply_ns_sec_soc_splits(self)
 
         # Steps from mid-year population estimate adjustment
         """
