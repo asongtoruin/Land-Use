@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import land_use.lu_constants as consts
-from land_use import utils
+from land_use.utils import file_ops as utils
 from land_use.base_land_use import main_build, car_availability_adjustment
 # from land_use.base_land_use import mid_year_pop_adjustments as mypa
 

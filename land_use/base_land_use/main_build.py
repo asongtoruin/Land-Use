@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import shutil
-from land_use import utils
+from land_use.utils import file_ops as utils
 import land_use.lu_constants as consts
 
 # TODO: check if the following is actually required
