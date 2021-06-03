@@ -530,6 +530,13 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     crp_cols = ['ZoneID', 'census_property_type', 'UPRN', 'household_occupancy_18', 'population']
     crp = pd.read_csv(classified_res_property_import_path)[crp_cols]
 
+    # Reclassify property type 7 (mobile homes) in crp as type 6, in line with the bespoke census query
+    crp['census_property_type'] = np.where(crp['census_property_type'] == 7, 6, crp['census_property_type'])
+    crp['popXocc'] = crp['population'] * crp['household_occupancy_18']
+    crp = crp.groupby(['ZoneID', 'census_property_type']).sum().reset_index()
+    crp['household_occupancy_18'] = crp['popXocc'] / crp['population']  # compute the weighted average occupancy
+    crp = crp.drop('popXocc', axis=1)
+
     # Read in the Bespoke Census Query and create NTEM areas and employment segmentation
     bsq = create_ntem_areas(by_lu_obj)
     bsq = create_employment_segmentation(by_lu_obj, bsq)
@@ -826,6 +833,7 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     MSOAActiveNSSECSplits = ActiveNSSECPot.copy()
     MSOAActiveNSSECSplits['totals'] = MSOAActiveNSSECSplits.groupby(['ZoneID', 'property_type',
                                                                      'employment_type'])['numbers'].transform('sum')
+    # TODO: set 0/0 to 0, perhaps with np.where
     MSOAActiveNSSECSplits['empsplits'] = MSOAActiveNSSECSplits['numbers'] / MSOAActiveNSSECSplits['totals']
     # For Scotland
     GlobalActiveNSSECSplits = ActiveNSSECPot.copy()
