@@ -79,15 +79,11 @@ _lad2017 = _import_folder + 'Documentation/LAD_2017.csv'
 _ladsoc_control = _import_folder + 'NPR Segmentation/raw data and lookups/LAD labour market data/nomis_lad_SOC2018_constraints.csv'
 
 
-def format_english_mype(_mype_males, _mype_females):
+def format_english_mype():
 
     """
     getting MYPE into the right format - 'melt' to get columns as rows, then rename them
     This should be a standard from any MYPE in the future segmented by gender and age
-    Parameters
-    ----------
-    _mype_females
-    _mype_males
 
     Returns
     ----------
