@@ -769,11 +769,10 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     # Read in NS-SeC table and map the house types and NS-SeC categories to the bespoke classes in lu_constants
     ns_sec_path = by_lu_obj.import_folder + 'NPR Segmentation/processed data/TfN_households_export.csv'
     nssec = pd.read_csv(ns_sec_path)
+
+    # Map house type and SeC categories to those set in constants and rename the columns
     nssec['property_type'] = nssec['house_type'].map(consts.HOUSE_TYPE)
     nssec['ns_sec'] = nssec['NS_SeC'].map(consts.NS_SEC)
-    nssec = nssec.drop(columns={'house_type', 'NS_SeC'}).rename(columns={'MSOA name': 'ZoneID'})
-
-    # all economically active in one group
     nssec = nssec.rename(columns={'Economically active FT 1-3': 'FT higher',
                                   'Economically active FT 4-7': 'FT medium',
                                   'Economically active FT 8-9': 'FT skilled',
@@ -785,146 +784,128 @@ def apply_ns_sec_soc_splits(by_lu_obj):
                                   'Economically inactive retired': '75 or over',
                                   'Full-time students': 'stu'}).drop(columns={'TfN area type'})
 
-    # rename columns and melt it down
+    # Melt it down
     nssec = nssec.rename(columns={'msoa_name': 'ZoneID'})
-    nssec_melt = pd.melt(nssec, id_vars=['ZoneID', 'property_type', 'ns_sec'],
-                         value_vars=['FT higher', 'FT medium', 'FT skilled',
-                                     'PT medium', 'PT skilled',
-                                     'PT higher', 'unm', 'children', '75 or over', 'stu'])
-    nssec_melt = nssec_melt.rename(columns={'variable': 'employment_type',
-                                            'value': 'numbers'})
-    # map out categories to match the landuse format
-    nssec_melt['SOC_category'] = nssec_melt['employment_type']
-    nssec_melt['Age'] = '16-74'
-    nssec_melt.loc[nssec_melt['employment_type'] == 'children', 'Age'] = 'under 16'
-    nssec_melt.loc[nssec_melt['employment_type'] == '75 or over', 'Age'] = '75 or over'
-    nssec_melt = nssec_melt.replace({'employment_type': {'FT higher': 'fte',
-                                                         'FT medium': 'fte',
-                                                         'FT skilled': 'fte',
-                                                         'PT higher': 'pte',
-                                                         'PT skilled': 'pte',
-                                                         'PT medium': 'pte',
-                                                         'children': 'non_wa',
-                                                         '75 or over': 'non_wa'
-                                                         }})
-    nssec_melt = nssec_melt.replace({'SOC_category': {'FT higher': '1',
-                                                      'FT medium': '2',
-                                                      'FT skilled': '3',
-                                                      'PT higher': '1',
-                                                      'PT medium': '2',
-                                                      'PT skilled': '3',
-                                                      'unm': 'NA',
-                                                      '75 or over': 'NA',
-                                                      'children': 'NA'}})
-    # split the nssec into inactive and active
-    nssec_formatted = nssec_melt.to_csv(by_lu_obj.home_folder + '/NSSECformatted' + by_lu_obj.model_zoning + '.csv',
-                                        index=False)
-    inactive = ['stu', 'non_wa']
-    InactiveNSSECPot = nssec_melt[nssec_melt.employment_type.isin(inactive)].copy()
-    ActiveNSSECPot = nssec_melt[~nssec_melt.employment_type.isin(inactive)].copy()
+    nssec = pd.melt(nssec,
+                    id_vars=['ZoneID', 'property_type', 'ns_sec'],
+                    value_vars=['FT higher', 'FT medium', 'FT skilled',
+                                'PT medium', 'PT skilled', 'PT higher',
+                                'unm', 'children', '75 or over', 'stu'])
+    nssec = nssec.rename(columns={'variable': 'employment_type', 'value': 'numbers'})
 
-    del (nssec_melt, nssec)
+    # Map out categories to match the landuse format
+    nssec['SOC_category'] = nssec['employment_type']
+    nssec['Age'] = np.where(nssec['employment_type'] == 'children', 'under 16',
+                            np.where(nssec['employment_type'] == '75 or over', '75 or over',
+                                     '16-74'))
+    nssec = nssec.replace({'employment_type': {'FT higher': 'fte',
+                                               'FT medium': 'fte',
+                                               'FT skilled': 'fte',
+                                               'PT higher': 'pte',
+                                               'PT skilled': 'pte',
+                                               'PT medium': 'pte',
+                                               'children': 'non_wa',
+                                               '75 or over': 'non_wa'
+                                               }})
+    nssec = nssec.replace({'SOC_category': {'FT higher': '1',
+                                            'FT medium': '2',
+                                            'FT skilled': '3',
+                                            'PT higher': '1',
+                                            'PT medium': '2',
+                                            'PT skilled': '3',
+                                            'unm': 'NA',
+                                            '75 or over': 'NA',
+                                            'children': 'NA'}})
 
-    #### Active Splits ####
-    areatypes = pd.read_csv(by_lu_obj.import_folder + 'area_types_msoa.csv').rename(columns={
+    nssec.to_csv(by_lu_obj.home_folder + '/NSSECformatted' + by_lu_obj.model_zoning + '.csv', index=False)
+
+    # Split nssec into inactive and active and merge on the area types
+    inactive = nssec[nssec.employment_type.isin(['stu', 'non_wa'])].copy()
+    active = nssec[~nssec.employment_type.isin(['stu', 'non_wa'])].copy()
+    del nssec
+    area_types = pd.read_csv(by_lu_obj.import_folder + 'area_types_msoa.csv').rename(columns={
         'msoa_zone_id': 'ZoneID'}).drop(columns={'zone_desc'})
-    ActiveNSSECPot = ActiveNSSECPot.merge(areatypes, on='ZoneID')
-    # MSOAActiveNSSECSplits for Zones
-    MSOAActiveNSSECSplits = ActiveNSSECPot.copy()
-    MSOAActiveNSSECSplits['totals'] = MSOAActiveNSSECSplits.groupby(['ZoneID', 'property_type',
-                                                                     'employment_type'])['numbers'].transform('sum')
-    # TODO: set 0/0 to 0, perhaps with np.where
-    MSOAActiveNSSECSplits['empsplits'] = MSOAActiveNSSECSplits['numbers'] / MSOAActiveNSSECSplits['totals']
-    # For Scotland
-    GlobalActiveNSSECSplits = ActiveNSSECPot.copy()
-    GlobalActiveNSSECSplits = ActiveNSSECPot.groupby(['area_type', 'property_type',
-                                                      'employment_type', 'Age',
-                                                      'ns_sec', 'SOC_category'],
-                                                     as_index=False).sum()
-    GlobalActiveNSSECSplits['totals'] = GlobalActiveNSSECSplits.groupby(['area_type', 'property_type',
-                                                                         'Age', 'employment_type'])[
+    active = active.merge(area_types, on='ZoneID')
+    inactive = inactive.merge(area_types, on='ZoneID')
+
+    # Compute the active splits by MSOA
+    msoa_active_splits = active.copy()
+    msoa_active_splits['totals'] = msoa_active_splits.groupby(['ZoneID', 'property_type',
+                                                               'employment_type'])['numbers'].transform('sum')
+    msoa_active_splits['empsplits'] = np.where(msoa_active_splits['numbers'] == 0,
+                                               0,  # make 0/0 return 0 instead of NaN
+                                               msoa_active_splits['numbers'] / msoa_active_splits['totals'])
+
+    # For Scotland, calculate average active splits across the whole data set
+    global_active_splits = active.groupby(['area_type', 'property_type', 'employment_type',
+                                           'Age', 'ns_sec', 'SOC_category'], as_index=False).sum()
+    global_active_splits['totals'] = global_active_splits.groupby(['area_type', 'property_type',
+                                                                   'Age', 'employment_type'])[
         'numbers'].transform('sum')
-    GlobalActiveNSSECSplits['global_splits'] = GlobalActiveNSSECSplits['numbers'] / GlobalActiveNSSECSplits['totals']
+    global_active_splits['global_splits'] = global_active_splits['numbers'] / global_active_splits['totals']
+    global_active_splits = global_active_splits.drop(columns={'numbers', 'totals'})
 
-    GlobalActiveNSSECSplits = GlobalActiveNSSECSplits.drop(columns={'numbers', 'totals'})
-    # for communal establishments
-    AverageActiveNSSECSplits = ActiveNSSECPot.copy()
+    # For communal establishments, also aggregate on all SOC categories and property types
+    communal_active_splits = active.groupby(by=['area_type', 'employment_type', 'Age', 'ns_sec'], as_index=False).sum()
+    communal_active_splits['totals2'] = communal_active_splits.groupby(['area_type', 'Age', 'employment_type'])[
+        'numbers'].transform('sum')
+    communal_active_splits['average_splits'] = communal_active_splits['numbers'] / communal_active_splits[
+        'totals2']
+    communal_active_splits['SOC_category'] = 'NA'
+    communal_active_splits = communal_active_splits.drop(columns={'totals2', 'numbers', 'property_type'})
 
-    AverageActiveNSSECSplits = AverageActiveNSSECSplits.groupby(by=['area_type',
-                                                                    'employment_type',
-                                                                    'Age', 'ns_sec'],
+    # Compute the inactive splits by MSOA
+    msoa_inactive_splits = inactive.copy()
+    msoa_inactive_splits['totals'] = inactive.groupby(['ZoneID', 'property_type', 'Age', 'employment_type'])[
+        'numbers'].transform('sum')
+    msoa_inactive_splits['msoa_splits'] = np.where(msoa_inactive_splits['numbers'] == 0,
+                                                   0,  # make 0/0 return 0 instead of NaN
+                                                   msoa_inactive_splits['numbers'] / msoa_inactive_splits['totals'])
+    msoa_inactive_splits['SOC_category'] = 'NA'
+    msoa_inactive_splits = msoa_inactive_splits.drop(columns={'totals', 'numbers'})
+    msoa_inactive_splits['SOC_category'] = 'NA'
+
+    # For Scotland
+    global_inactive_splits = inactive.groupby(by=['area_type', 'property_type', 'employment_type', 'Age', 'ns_sec'],
+                                              as_index=False).sum()
+    global_inactive_splits['totals2'] = global_inactive_splits.groupby(['area_type', 'property_type',
+                                                                        'Age', 'employment_type'])[
+        'numbers'].transform('sum')
+    global_inactive_splits['global_splits'] = global_inactive_splits['numbers'] / global_inactive_splits[
+        'totals2']
+    global_inactive_splits['SOC_category'] = 'NA'
+    global_inactive_splits = global_inactive_splits.drop(columns={'totals2', 'numbers'})
+
+    # For communal establishments
+    communal_inactive_splits = inactive.copy()
+    communal_inactive_splits = communal_inactive_splits.groupby(by=['area_type', 'employment_type', 'Age', 'ns_sec'],
                                                                 as_index=False).sum()
-    AverageActiveNSSECSplits['totals2'] = AverageActiveNSSECSplits.groupby(['area_type',
-                                                                            'Age', 'employment_type'])[
+    communal_inactive_splits['totals2'] = communal_inactive_splits.groupby(['area_type', 'Age', 'employment_type'])[
         'numbers'].transform('sum')
-    AverageActiveNSSECSplits['average_splits'] = AverageActiveNSSECSplits['numbers'] / AverageActiveNSSECSplits[
+    communal_inactive_splits['average_splits'] = communal_inactive_splits['numbers'] / communal_inactive_splits[
         'totals2']
-    AverageActiveNSSECSplits['SOC_category'] = 'NA'
-    AverageActiveNSSECSplits = AverageActiveNSSECSplits.drop(columns={'totals2', 'numbers', 'property_type'})
+    communal_inactive_splits['SOC_category'] = 'NA'
+    communal_inactive_splits = communal_inactive_splits.drop(columns={'totals2', 'numbers', 'property_type'})
 
-    #### InactiveSplits ####
-    """
-        There is 17m in this category
-        Sorts out the Inactive splits   
-        CommunalEstablishment segments won't have splits so use Area types for 'globalsplits'
-        
-        """
-    InactiveNSSECPot = InactiveNSSECPot.merge(areatypes, on='ZoneID')
-    # Zone splits
-    MSOAInactiveNSSECSplits = InactiveNSSECPot.copy()
-    MSOAInactiveNSSECSplits['totals'] = MSOAInactiveNSSECSplits.groupby(['ZoneID', 'property_type',
-                                                                         'Age', 'employment_type'])[
-        'numbers'].transform('sum')
-    MSOAInactiveNSSECSplits['msoa_splits'] = MSOAInactiveNSSECSplits['numbers'] / MSOAInactiveNSSECSplits['totals']
-    MSOAInactiveNSSECSplits['SOC_category'] = 'NA'
-    MSOAInactiveNSSECSplits = MSOAInactiveNSSECSplits.drop(columns={'totals', 'numbers'})
-    MSOAInactiveNSSECSplits['SOC_category'] = 'NA'
-    # For Scotland
-    GlobalInactiveNSSECSplits = InactiveNSSECPot.copy()
-    GlobalInactiveNSSECSplits = GlobalInactiveNSSECSplits.groupby(by=['area_type',
-                                                                      'property_type',
-                                                                      'employment_type',
-                                                                      'Age', 'ns_sec'],
-                                                                  as_index=False).sum()
-    GlobalInactiveNSSECSplits['totals2'] = GlobalInactiveNSSECSplits.groupby(['area_type', 'property_type',
-                                                                              'Age', 'employment_type'])[
-        'numbers'].transform('sum')
-    GlobalInactiveNSSECSplits['global_splits'] = GlobalInactiveNSSECSplits['numbers'] / GlobalInactiveNSSECSplits[
-        'totals2']
-    GlobalInactiveNSSECSplits['SOC_category'] = 'NA'
-    GlobalInactiveNSSECSplits = GlobalInactiveNSSECSplits.drop(columns={'totals2', 'numbers'})
-    # for communal establishments
-    AverageInactiveNSSECSplits = InactiveNSSECPot.copy()
-    AverageInactiveNSSECSplits = AverageInactiveNSSECSplits.groupby(by=['area_type',
-                                                                        'employment_type',
-                                                                        'Age', 'ns_sec'],
-                                                                    as_index=False).sum()
-    AverageInactiveNSSECSplits['totals2'] = AverageInactiveNSSECSplits.groupby(['area_type',
-                                                                                'Age', 'employment_type'])[
-        'numbers'].transform('sum')
-    AverageInactiveNSSECSplits['average_splits'] = AverageInactiveNSSECSplits['numbers'] / AverageInactiveNSSECSplits[
-        'totals2']
-    AverageInactiveNSSECSplits['SOC_category'] = 'NA'
-    AverageInactiveNSSECSplits = AverageInactiveNSSECSplits.drop(columns={'totals2', 'numbers', 'property_type'})
+    # Make a single DataFrame containing all inactive splits
+    inactive_splits = msoa_inactive_splits.merge(global_inactive_splits,
+                                                 on=['area_type', 'property_type',
+                                                     'employment_type', 'Age',
+                                                     'SOC_category', 'ns_sec'], how='right')
+    inactive_splits = inactive_splits.merge(communal_inactive_splits,
+                                            on=['area_type', 'employment_type', 'SOC_category', 'ns_sec', 'Age'],
+                                            how='right')
 
-    InactiveSplits = MSOAInactiveNSSECSplits.merge(GlobalInactiveNSSECSplits,
-                                                   on=['area_type', 'property_type',
-                                                       'employment_type', 'Age',
-                                                       'SOC_category', 'ns_sec'], how='right')
-
-    InactiveSplits = InactiveSplits.merge(AverageInactiveNSSECSplits,
-                                          on=['area_type',
-                                              'employment_type', 'SOC_category', 'ns_sec', 'Age'
-                                              ], how='right')
     # check where there's no splitting factors, use the zone average for age?
-    InactiveNSSECPot['SOC_category'] = 'NA'
-    InactiveSplits['splits2'] = InactiveSplits['msoa_splits']
-    InactiveSplits['splits2'] = InactiveSplits['splits2'].fillna(InactiveSplits['global_splits'])
-    InactiveSplits['splits2'] = InactiveSplits['splits2'].fillna(InactiveSplits['average_splits'])
-    InactiveSplits.loc[InactiveSplits['splits2'] == InactiveSplits['msoa_splits'], 'type'] = 'msoa_splits'
-    InactiveSplits.loc[(InactiveSplits['splits2'] == InactiveSplits['global_splits']), 'type'] = 'global_splits'
-    InactiveSplits.loc[InactiveSplits['splits2'] == InactiveSplits['average_splits'], 'type'] = 'average_splits'
-    InactiveSplits = InactiveSplits.drop(columns={'msoa_splits', 'global_splits'})
+    # TODO: msoa_splits already has something for every MSOA, so does this block need to be here?
+    inactive['SOC_category'] = 'NA'
+    inactive_splits['splits2'] = inactive_splits['msoa_splits']
+    inactive_splits['splits2'] = inactive_splits['splits2'].fillna(inactive_splits['global_splits'])
+    inactive_splits['splits2'] = inactive_splits['splits2'].fillna(inactive_splits['average_splits'])
+    inactive_splits.loc[inactive_splits['splits2'] == inactive_splits['msoa_splits'], 'type'] = 'msoa_splits'
+    inactive_splits.loc[(inactive_splits['splits2'] == inactive_splits['global_splits']), 'type'] = 'global_splits'
+    inactive_splits.loc[inactive_splits['splits2'] == inactive_splits['average_splits'], 'type'] = 'average_splits'
+    inactive_splits = inactive_splits.drop(columns={'msoa_splits', 'global_splits'})
 
     # England and Wales - apply splits for inactive people
     land_use = pd.read_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_flats_combined.csv')
@@ -933,36 +914,32 @@ def apply_ns_sec_soc_splits(by_lu_obj):
 
     # take out Scottish MSOAs from this pot - nssec/soc data is only for E+W
     # Scotland will be calculated based on area type
-    areatypes = pd.read_csv(by_lu_obj.import_folder + 'area_types_msoa.csv').drop(columns={'zone_desc'}
-                                                                                  ).rename(
-        columns={'msoa_zone_id': 'ZoneID'})
     ZoneIDs = ActivePot['ZoneID'].drop_duplicates().dropna()
     Scott = ZoneIDs[ZoneIDs.str.startswith('S')]
     ActiveScot = ActivePot[ActivePot.ZoneID.isin(Scott)].copy()
     ActiveScot = ActiveScot.drop(columns={'area_type'})
-    ActiveScot = ActiveScot.merge(areatypes, on='ZoneID')
+    ActiveScot = ActiveScot.merge(area_types, on='ZoneID')
     ActiveEng = ActivePot[~ActivePot.ZoneID.isin(Scott)].copy()
     InactiveScot = InactivePot[InactivePot.ZoneID.isin(Scott)].copy()
     InactiveScot = InactiveScot.drop(columns={'area_type'})
-    InactiveScot = InactiveScot.merge(areatypes, on='ZoneID')
+    InactiveScot = InactiveScot.merge(area_types, on='ZoneID')
     InactiveEng = InactivePot[~InactivePot.ZoneID.isin(Scott)].copy()
     print("total number of economically active people in the E+W landuse" +
           "pot should be around 41m and is ", ActiveEng['people'].sum() / 1000000)
 
-    CommunalEstablishments = [8]
-    CommunalInactive = InactiveEng[InactiveEng.property_type.isin(CommunalEstablishments)].copy()
+    CommunalInactive = InactiveEng[InactiveEng.property_type.isin([8])].copy()
     CommunalInactive['people'].sum()
-    InactiveNotCommunal = InactiveEng[~InactiveEng.property_type.isin(CommunalEstablishments)].copy()
-    Inactive_Eng = InactiveSplits.merge(InactiveNotCommunal, on=['ZoneID', 'area_type',
-                                                                 'property_type',
-                                                                 'Age',
-                                                                 'employment_type'],
-                                        how='right')
+    InactiveNotCommunal = InactiveEng[~InactiveEng.property_type.isin([8])].copy()
+    Inactive_Eng = inactive_splits.merge(InactiveNotCommunal, on=['ZoneID', 'area_type',
+                                                                  'property_type',
+                                                                  'Age',
+                                                                  'employment_type'],
+                                         how='right')
     Inactive_Eng['newpop'] = Inactive_Eng['people'].values * Inactive_Eng['splits2'].values
 
-    CommunalInactive = CommunalInactive.merge(AverageInactiveNSSECSplits, on=['area_type',
-                                                                              'employment_type', 'Age'
-                                                                              ], how='left')
+    CommunalInactive = CommunalInactive.merge(communal_inactive_splits, on=['area_type',
+                                                                            'employment_type', 'Age'
+                                                                            ], how='left')
     CommunalInactive['newpop'] = CommunalInactive['people'] * CommunalInactive['average_splits']
     print("Communal Inactive should be about 600k and is ", CommunalInactive['newpop'].sum())
 
@@ -970,11 +947,11 @@ def apply_ns_sec_soc_splits(by_lu_obj):
 
     # Scotland - applies splits for inactive people
     InactiveScot['people'].sum()
-    InactiveScotland = GlobalInactiveNSSECSplits.merge(InactiveScot, on=['area_type',
-                                                                         'property_type',
-                                                                         'Age',
-                                                                         'employment_type'],
-                                                       how='right')
+    InactiveScotland = global_inactive_splits.merge(InactiveScot, on=['area_type',
+                                                                      'property_type',
+                                                                      'Age',
+                                                                      'employment_type'],
+                                                    how='right')
     InactiveScotland['newpop'] = InactiveScotland['people'].values * InactiveScotland['global_splits'].values
     InactiveScotland['newpop'].sum()
 
@@ -984,27 +961,27 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     CommunalActive = ActiveEng[ActiveEng.property_type.isin(CommunalEstablishments)].copy()
     ActiveNotCommunal = ActiveEng[~ActiveEng.property_type.isin(CommunalEstablishments)].copy()
     merge_cols = ['ZoneID', 'Age', 'property_type', 'employment_type']
-    Active_emp = ActiveNotCommunal.merge(MSOAActiveNSSECSplits, on=merge_cols, how='outer')
+    Active_emp = ActiveNotCommunal.merge(msoa_active_splits, on=merge_cols, how='outer')
     # apply the employment splits for ActivePot to work out population
     Active_emp.groupby('employment_type')
     Active_emp['newpop'] = Active_emp['people'] * Active_emp['empsplits']
 
     Active_emp = Active_emp.drop(columns={'area_type_x', 'area_type_y'})
-    Active_emp = Active_emp.merge(areatypes, on='ZoneID')
+    Active_emp = Active_emp.merge(area_types, on='ZoneID')
 
-    CommunalActive = CommunalActive.merge(AverageActiveNSSECSplits, on=['area_type',
-                                                                        'employment_type', 'Age'
-                                                                        ], how='left')
+    CommunalActive = CommunalActive.merge(communal_active_splits, on=['area_type',
+                                                                      'employment_type', 'Age'
+                                                                      ], how='left')
     CommunalActive['newpop'] = CommunalActive['people'] * CommunalActive['average_splits']
 
     # TODO: apply error catcher here if it's within 10% then accept
 
     # Apply Scottish Active splits
-    ActiveScotland = GlobalActiveNSSECSplits.merge(ActiveScot, on=['area_type',
-                                                                   'property_type',
-                                                                   'Age',
-                                                                   'employment_type'],
-                                                   how='right')
+    ActiveScotland = global_active_splits.merge(ActiveScot, on=['area_type',
+                                                                'property_type',
+                                                                'Age',
+                                                                'employment_type'],
+                                                how='right')
     ActiveScotland['newpop'] = ActiveScotland['people'].values * ActiveScotland['global_splits'].values
 
     # Concatenate all groups together
