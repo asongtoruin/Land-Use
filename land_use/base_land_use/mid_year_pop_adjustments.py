@@ -37,7 +37,7 @@ import gc
 # Default file paths
 
 _default_iter = 'iter4'
-_default_home = 'E:/NorMITs_Export/'
+_default_home = 'Y://NorMITs Land Use//'
 _default_home_dir = (_default_home + _default_iter)
 _import_folder = 'Y:/NorMITs Land Use/import/'
 _import_file_drive = 'Y:/'
@@ -64,7 +64,7 @@ _mype_males = _import_folder + 'MYE 2018 ONS/2018_MidyearMSOA/MYEmales_2018.csv'
 _hops2011 = _default_home_dir + '/UKHouseHoldOccupancy2011.csv'
 _mypeScot_females = _import_folder + 'MYE 2018 ONS/2018_MidyearMSOA/Females_Scotland_2018.csv'
 _mypeScot_males = _import_folder + 'MYE 2018 ONS/2018_MidyearMSOA/Males_Scotland_2018.csv'
-_landuse_segments = _default_home_dir + '/landuseOutput' + _default_zone_name + '_stage4.csv'
+_landuse_segments = _default_home_dir + '/landuseOutput' + _default_zone_name + '_NS_SEC_SOC.csv'
 _ward_to_msoa = _default_zone_folder + 'uk_ward_msoa_pop_weighted_lookup.csv'
 _nts_path = 'Y:/NTS/import/tfn_unclassified_build.csv'
 _country_control = _import_folder + 'NPR Segmentation/processed data/Country Control 2018/nomis_CountryControl.csv'
@@ -636,14 +636,12 @@ def adjust_soc_gb():
     npr_segmentation.to_csv(_default_home_dir + '/landuse_adjustedSOCs.csv')
 
 
+# TODO: currently does a whole load of processing but then just reads in "all" from elsewhere. Odd
 def adjust_soc_lad():
     """
-    lad translation path has changed here - needs updating
-
+    TODO: lad translation path has changed here - needs updating
     """
-    lad_ref = pd.read_csv(_default_lad_translation).iloc[:, 0:2]
-
-    # format the LAD controls data
+    # Read in the LAD controls data and pick out the totals columns
     lad_soc_control = pd.read_csv(_ladsoc_control)
     lad_soc_control = lad_soc_control.rename(columns={
         '% all in employment who are - 1: managers, directors and senior officials (SOC2010) numerator': 'SOC1',
@@ -654,11 +652,13 @@ def adjust_soc_lad():
         '% all in employment who are - 6: caring, leisure and other service occupations (SOC2010) numerator': 'SOC6',
         '% all in employment who are - 7: sales and customer service occupations (SOC2010) numerator': 'SOC7',
         '% all in employment who are - 8: process, plant and machine operatives (SOC2010) numerator': 'SOC8',
-        '% all in employment who are - 9: elementary occupations (SOC2010) numerator': 'SOC9'})
+        '% all in employment who are - 9: elementary occupations (SOC2010) numerator': 'SOC9'
+    })
     lad_cols = ['lad17cd', 'SOC1', 'SOC2', 'SOC3', 'SOC4', 'SOC5', 'SOC6', 'SOC7', 'SOC8', 'SOC9']
     lad_soc_control = lad_soc_control[lad_cols]
-    lad_soc_control = lad_soc_control.replace({'!': 0, '~': 0, '-': 0, '#': 0})
+    lad_soc_control = lad_soc_control.replace({'!': 0, '~': 0, '-': 0, '#': 0})  # these are data quality markers
 
+    # Aggregate to just three SOC categories and compute the splits for each LAD between these three
     lad_soc = pd.melt(lad_soc_control,
                       id_vars='lad17cd',
                       value_vars=['SOC1', 'SOC2', 'SOC3', 'SOC4', 'SOC5', 'SOC6', 'SOC7', 'SOC8', 'SOC9'])
@@ -669,29 +669,28 @@ def adjust_soc_lad():
     lad_soc = lad_soc.rename(columns={'variable': 'SOC_category'})
     lad_soc['total'] = lad_soc.groupby(['lad17cd'])['value'].transform('sum')
     lad_soc['splits'] = lad_soc['value'] / lad_soc['total']
-
     lad_soc = lad_soc.groupby(by=['lad17cd', 'SOC_category'], as_index=False).sum()
 
+    # Read in the MSOA-LAD correspondence and perform a cross join such that every MSOA pair within an LAD is included
+    lad_ref = pd.read_csv(_default_lad_translation).iloc[:, 0:2]
+    lad_ref = lad_ref.rename(columns={'msoa_zone_id': 'ZoneID'}).merge(lad_ref, on='lad_zone_id')
+
     # Read in the population to adjust
-    lad_translation = pd.read_csv(_default_lad_translation)
-    lad_translation = lad_translation.drop(columns={'overlap_type', 'lad_to_msoa', 'msoa_to_lad'})
-    lad_translation = lad_translation.rename(columns={'msoa_zone_id': 'ZoneID'}).merge(lad_ref, on='lad_zone_id')
-
+    # TODO: switch this to by_lu_obj.home_folder
     land_use = pd.read_csv(_default_home_dir + '/landuse_adjustedSOCs.csv')
-    employed = land_use[land_use.employment_type.isin(['fte', 'pte'])]  # fte and pte
 
+    # First handle employed
+    employed = land_use[land_use.employment_type.isin(['fte', 'pte'])]  # fte and pte
     print('Employed people in landuse: ', employed['people'].sum())
 
-    # TODO: what is this variable for?
-    soc_totals_to_lad = employed.groupby(by=['ZoneID', 'SOC_category'], as_index=False).sum().drop(
-        columns={'area_type'})
-    soc_totals_to_lad = soc_totals_to_lad.merge(lad_translation, on='ZoneID')
-    soc_totals_to_lad = soc_totals_to_lad.groupby(by=['lad_zone_id', 'SOC_category'], as_index=False).sum()
-    soc_totals_to_lad = soc_totals_to_lad[['lad_zone_id', 'SOC_category', 'people']]
+    soc_totals_lad = employed.groupby(by=['ZoneID', 'SOC_category'], as_index=False).sum().drop(columns={'area_type'})
+    soc_totals_lad = soc_totals_lad.merge(lad_ref, on='ZoneID')
+    soc_totals_lad = soc_totals_lad.groupby(by=['lad_zone_id', 'SOC_category'], as_index=False).sum()
+    soc_totals_lad = soc_totals_lad[['lad_zone_id', 'SOC_category', 'people']]
 
     # TODO: we have MSOAs and LADs in parallel here...
     soc_totals_msoa = employed.groupby(by=['ZoneID', 'SOC_category'], as_index=False).sum()
-    soc_totals_msoa = soc_totals_msoa.merge(lad_translation, on='ZoneID')
+    soc_totals_msoa = soc_totals_msoa.merge(lad_ref, on='ZoneID')
     soc_totals_msoa = soc_totals_msoa.groupby(by=['ZoneID', 'lad_zone_id'],
                                               as_index=False).sum()[['ZoneID', 'lad_zone_id', 'people']]
     """
@@ -702,7 +701,6 @@ def adjust_soc_lad():
     compare = soc_totals_msoa.merge(lad_soc, on='lad17cd')
     compare['people'] = compare['newpop'] * compare['splits']
 
-    # TODO: is this the soc_totals_to_lad variable?
     compare = soc_totals_lad.merge(lad_soc, on='lad17cd')
     compare['newvalue'] = compare['newpop'] * compare['splits']
     # TODO: is there really a column called t?
@@ -719,7 +717,7 @@ def adjust_soc_lad():
     compare = compare.drop(columns={'newpop', 'value'})
 
     # Join back to MSOA level
-    land_use_soc = employed.merge(lad_translation, on='ZoneID')
+    land_use_soc = employed.merge(lad_ref, on='ZoneID')
     # TODO: do we need to rename this variable with a '2'?
     land_use_soc2 = land_use_soc.groupby(by=['ZoneID', 'lad17cd', 'SOC_category'], as_index=False).sum()
     land_use_soc2['SOC_category'] = pd.to_numeric(land_use_soc2['SOC_category'])
@@ -756,8 +754,6 @@ def adjust_soc_lad():
     gb_land_use = pd.read_csv(_default_home_dir + 'landuseGBMYE_flatcombined.csv')
 
     all = pd.read_csv(_default_home_dir + 'NPRSegments_stage1.csv')
-    all2 = all.groupby(by=['ZoneID', 'property_type', 'Age', 'employment_type',
-                           'ns_sec', 'SOC_category'], as_index=False).sum()
     all = all.drop_duplicates()
 
     # TODO: does this need to be normalised? And used for anything?
@@ -808,7 +804,7 @@ def control_to_lad_employment_ag():
 
     # Compute the total for the 16-74 working age population
     wa_all = land_use[land_use.emp != 5]
-    total_wa_pop = wa_all.groupby(by=['lad17cd', 'gender'], as_index=False).sum()\
+    total_wa_pop = wa_all.groupby(by=['lad17cd', 'gender'], as_index=False).sum()
     total_wa_pop = total_wa_pop.drop(columns={'household_composition', 'area_type',
                                               'property_type', 'objectid', 'SOC_category',
                                               'ns_sec', 'age_code'})
