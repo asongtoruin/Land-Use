@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import land_use.lu_constants as consts
-from land_use import utils
+from land_use.utils import file_ops as utils
 from land_use.base_land_use import main_build, car_availability_adjustment
 # from land_use.base_land_use import mid_year_pop_adjustments as mypa
 
@@ -136,8 +136,8 @@ class BaseYearLandUse:
         if self.state['5.2.3 property type mapping'] == 0:
             main_build.land_use_formatting(self)
 
-        # TODO: main_build then runs the following function currently commented out, how relate to documentation?
-        # main_build.apply_ns_sec_soc_splits(self)
+        # TODO: main_build then runs the following function, how relate to documentation?
+        main_build.apply_ns_sec_soc_splits(self)
 
         # Steps from mid-year population estimate adjustment
         """

@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import shutil
-from land_use import utils
+from land_use.utils import file_ops as utils
 import land_use.lu_constants as consts
 
 # TODO: check if the following is actually required
@@ -530,6 +530,13 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     crp_cols = ['ZoneID', 'census_property_type', 'UPRN', 'household_occupancy_18', 'population']
     crp = pd.read_csv(classified_res_property_import_path)[crp_cols]
 
+    # Reclassify property type 7 (mobile homes) in crp as type 6, in line with the bespoke census query
+    crp['census_property_type'] = np.where(crp['census_property_type'] == 7, 6, crp['census_property_type'])
+    crp['popXocc'] = crp['population'] * crp['household_occupancy_18']
+    crp = crp.groupby(['ZoneID', 'census_property_type']).sum().reset_index()
+    crp['household_occupancy_18'] = crp['popXocc'] / crp['population']  # compute the weighted average occupancy
+    crp = crp.drop('popXocc', axis=1)
+
     # Read in the Bespoke Census Query and create NTEM areas and employment segmentation
     bsq = create_ntem_areas(by_lu_obj)
     bsq = create_employment_segmentation(by_lu_obj, bsq)
@@ -574,7 +581,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
 
     # Merge the bespoke census query data onto the classified residential properties
     crp = crp.merge(bsq,
-                    how='outer',
+                    how='inner',
                     left_on=['ZoneID', 'census_property_type'],
                     right_on=['msoa11cd', 'property_type'])
 
@@ -725,7 +732,7 @@ def join_establishments(by_lu_obj):
     CommunalEstablishments = CommunalEstablishments[cols]
     landuse = landuse[cols]
     landusewComm = landuse.append(CommunalEstablishments)
-    print('Joined communal communitiies. Total pop for GB is now', landusewComm['people'].sum())
+    print('Joined communal communities. Total pop for GB is now', landusewComm['people'].sum())
     landusewComm.to_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_withCommunal.csv',
                         index=False)
 
@@ -826,6 +833,7 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     MSOAActiveNSSECSplits = ActiveNSSECPot.copy()
     MSOAActiveNSSECSplits['totals'] = MSOAActiveNSSECSplits.groupby(['ZoneID', 'property_type',
                                                                      'employment_type'])['numbers'].transform('sum')
+    # TODO: set 0/0 to 0, perhaps with np.where
     MSOAActiveNSSECSplits['empsplits'] = MSOAActiveNSSECSplits['numbers'] / MSOAActiveNSSECSplits['totals']
     # For Scotland
     GlobalActiveNSSECSplits = ActiveNSSECPot.copy()
