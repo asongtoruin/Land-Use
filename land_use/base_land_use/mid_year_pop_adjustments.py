@@ -890,7 +890,9 @@ def control_to_lad_employment_ag():
     active_comp = active_comp.drop(columns={'people', 'pop'})
 
     # Join back to fte/pte land use level
-    active_land_use2 = active_land_use.merge(active_comp, on=['ZoneID', 'lad17cd', 'gender', 'emp'], how='left')
+    active_land_use2 = active_land_use.merge(active_comp,
+                                             on=['ZoneID', 'lad17cd', 'gender', 'age_code', 'emp'],
+                                             how='left')
     active_land_use2['newpop'] = active_land_use2['people'] * active_land_use2['factor']
     active_land_use2 = active_land_use2.drop(columns={'factor'})
     # TODO: is this check needed?
@@ -920,7 +922,7 @@ def control_to_lad_employment_ag():
     inactive_land_use2['newpop'] = inactive_land_use2['people'] * inactive_land_use2['factor']
 
     gb_cols = ['ZoneID', 'age_code', 'emp', 'area_type', 'property_type',
-               'household_composition', 'Gender', 'objectid', 'lad17cd',
+               'household_composition', 'gender', 'objectid', 'lad17cd',
                'SOC_category', 'ns_sec', 'newpop']
     inactive_land_use2 = inactive_land_use2[gb_cols]
     active_land_use2 = active_land_use2[gb_cols]
@@ -932,7 +934,7 @@ def control_to_lad_employment_ag():
     nowa_all = nowa_all[gb_cols]
     gb_land_use_controlled = gb_land_use_controlled.append(nowa_all)
     gb_land_use_controlled = gb_land_use_controlled.rename(columns={'newpop': 'people'})
-    gb_land_use_controlled.to_csv(_default_home_dir + 'GBlanduseControlled.csv')
+    gb_land_use_controlled.to_csv(_default_home_dir + '/GBlanduseControlled.csv')
 
     return gb_land_use_controlled
 
@@ -944,14 +946,12 @@ def country_emp_control():
     
     """
     # Country employment control
-    country_control = pd.read_csv(_country_control)
-    country_emp = country_control.rename(columns={'T01:7 (All aged 16 & over - In employment : All People )': 'Emp'})
+    country_emp = pd.read_csv(_country_control)
+    country_emp = country_emp.rename(columns={'T01:7 (All aged 16 & over - In employment : All People )': 'Emp'})
     country_emp = country_emp[['Country', 'Emp']]
+    country_emp = country_emp[country_emp.Country.isin(['England and Wales number', 'Scotland number'])]
 
-    # TODO: resolve name shadowing
-    country_emp_control = country_emp[country_emp.Country.isin(['England and Wales number', 'Scotland number'])]
-
-    land_use = pd.read_csv(_default_home_dir + 'AdjustedGBlanduse.csv')
+    land_use = pd.read_csv(_default_home_dir + '/AdjustedGBlanduse.csv')
     zones = land_use['ZoneID'].drop_duplicates()
     scott = zones[zones.str.startswith('S')]
 
@@ -960,7 +960,7 @@ def country_emp_control():
     scott_active['Country'] = 'Scotland number'
     scott_active_total = scott_active.groupby(by=['Country'], as_index=False).sum()[['Country', 'people']]
 
-    scott_active_total = scott_active_total.merge(country_emp_control, on='Country')
+    scott_active_total = scott_active_total.merge(country_emp, on='Country')
     scott_active_total['factor'] = scott_active_total['Emp'] / scott_active_total['people']
     scott_active_total = scott_active_total.drop(columns={'people', 'Emp'})
     scott_active = scott_active.merge(scott_active_total, on='Country')
@@ -970,7 +970,7 @@ def country_emp_control():
     eng_active = active[~active.ZoneID.isin(scott)]
     eng_active['Country'] = 'England and Wales number'
     eng_active_total = eng_active.groupby(by=['Country'], as_index=False).sum()[['Country', 'people']]
-    eng_active_total = eng_active_total.merge(country_emp_control, on='Country')
+    eng_active_total = eng_active_total.merge(country_emp, on='Country')
     eng_active_total['factor'] = eng_active_total['Emp'] / eng_active_total['people']
     eng_active_total = eng_active_total.drop(columns={'people', 'Emp'})
     eng_active = eng_active.merge(eng_active_total, on='Country')
@@ -1015,7 +1015,7 @@ def run_mype(midyear=True):
     # normalise_landuse()
     adjust_landuse_to_specific_yr()
     control_to_lad_employment_ag()
-    country_emp_control()
+    country_emp_control()  # TODO: this function is missing one of the csv inputs
     adjust_soc_gb()
     adjust_soc_lad()
     sort_out_hops_uplift()  # order doesn't matter for this one
