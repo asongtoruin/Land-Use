@@ -103,8 +103,8 @@ def format_english_mype():
     
     # children are a 'gender' in NTEM, so need to sum the two rows
     mype.loc[mype['Age'] == 'under 16', 'gender'] = 'Children'
-    mype['pop'] = mype.groupby(['ZoneID', 'Age', 'gender'])['2018pop'].transform('sum').drop_duplicates()
-    mype = mype.drop(columns={'2018pop'}).drop_duplicates().rename(columns={'gender': 'Gender'})
+    mype['pop'] = mype.groupby(['ZoneID', 'Age', 'gender'])['2018pop'].transform('sum')
+    mype = mype.drop_duplicates().rename(columns={'gender': 'Gender'})
     mype = mype[['ZoneID', 'Gender', 'Age', 'pop']]
 
     return mype
