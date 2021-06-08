@@ -155,7 +155,7 @@ def get_ew_population():
         DataFrame containing formatted population ready to be joined to Census segmentation and 
         into sort_communal_output function
     """
-
+    print('Reading in new EW population data')
     mype_males = pd.read_csv(_mype_males)
     mype_females = pd.read_csv(_mype_females)
 
@@ -168,12 +168,8 @@ def get_ew_population():
 
     # children are a 'gender' in NTEM, so need to sum the two rows
     mype.loc[mype['Age'] == 'under 16', 'gender'] = 'Children'
-    # mype['pop'] = mype.groupby(['ZoneID', 'Age', 'gender'])['2018pop'].transform('sum')
     mype = mype.groupby(['ZoneID', 'Age', 'gender']).sum().reset_index()
-    mype = mype.drop_duplicates().rename(columns={'gender': 'Gender', '2018pop': 'pop'})
-    mype = mype[['ZoneID', 'Gender', 'Age', 'pop']]
-
-    print('Reading in new EW population data')
+    mype = mype.rename(columns={'gender': 'Gender', '2018pop': 'pop'})
 
     return mype
 
