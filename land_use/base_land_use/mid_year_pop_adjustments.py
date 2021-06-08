@@ -21,27 +21,25 @@ once run the source data should be ready for other functions
  6. Control to NS-SEC 2018 
 """
 
-import sys 
+import sys
+import numpy as np
+import pandas as pd
+import geopandas as gpd
+import gc
 
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Demand Tool/Python/ZoneTranslation')
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/TAME shared resources/Python/')
 sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Utilities/Python')
 sys.path.append('C:/Users/ESRIAdmin/Desktop/')
 
-import numpy as np
-import pandas as pd
-import geopandas as gpd
-from shapely.geometry import *
-import gc
-
 # Default file paths
-
 _default_iter = 'iter3b'
 _default_home = 'I:/NorMITs Land Use/'
 _default_home_dir = (_default_home + _default_iter)
 _import_folder = 'Y:/NorMITs Land Use/import/'
 _import_file_drive = 'Y:/'
 _default_zone_folder = ('I:/NorMITs Synthesiser/Zone Translation/Export/')
+
 # Default zone names
 _default_zone_names = ['LSOA', 'MSOA']
 _default_zone_name = 'MSOA'  # MSOA or LSOA
@@ -77,6 +75,7 @@ _emp_lookup = _import_folder + 'Car availability/emp_type.csv'
 _adults_lookup = _import_folder + 'Car availability/adults_lookup.csv'
 _lad2017 = _import_folder + 'Documentation/LAD_2017.csv'
 _ladsoc_control = _import_folder + 'NPR Segmentation/raw data and lookups/LAD labour market data/nomis_lad_SOC2018_constraints.csv'
+
 
 def format_scottish_mype():
 
@@ -933,7 +932,7 @@ def control_to_lad_employment_ag():
           gb_land_use_controlled['people'].sum(), 'Now saving the new landuse dataset.')
     
     # audit to check population per msoa
-    check_msoa_totals(gb_land_use_controlled, function_name = 'control_to_lad')    
+    check_msoa_totals(gb_land_use_controlled, function_name='control_to_lad')
    
     gb_land_use_controlled.groupby(by=['ZoneID', 'age_code', 'emp', 'area_type', 'property_type',
                'household_composition', 'gender', 
@@ -943,6 +942,7 @@ def control_to_lad_employment_ag():
     gc.collect()
     
     return gb_land_use_controlled
+
 
 def check_msoa_totals(df, function_name):
     """
@@ -956,7 +956,8 @@ def check_msoa_totals(df, function_name):
     msoa_comparison = msoa_totals.merge(df_msoa, on = ['ZoneID'])
     msoa_comparison.to_csv(_default_home_dir +'msoa_check'+function_name+'.csv')
     print(msoa_comparison)
-    
+
+
 def country_emp_control():
     """
     this function is to make sure we have the right amount of people in work 
@@ -1054,7 +1055,7 @@ def country_emp_control():
     adjusted_gb_land_use = adjusted_gb_land_use.append(children)
     # adjusted_gb_land_use['people'].sum() # should be 64.5m
     # audit the msoa population totals
-    check_msoa_totals(adjusted_gb_land_use, function_name = 'country_control')    
+    check_msoa_totals(adjusted_gb_land_use, function_name='country_control')
     print('Saving to default folder...')
     adjusted_gb_land_use.to_csv(_default_home_dir + 'AdjustedGBlanduse_emp.csv')
 
