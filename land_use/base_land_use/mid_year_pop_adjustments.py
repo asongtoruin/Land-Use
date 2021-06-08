@@ -296,25 +296,25 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         landuse_segments['property_type'] = landuse_segments['property_type'].astype(np.int8)
         
         # Get the communal establishments removed
-        landusese_nocom = landuse_segments[landuse_segments.property_type != 8]
+        landuse_no_com = landuse_segments[landuse_segments.property_type != 8]
         # group by age and gender columns and sum people
-        pop_pc_totals = landusese_nocom.groupby(by=['ZoneID', 'age_code', 'gender'],
+        pop_pc_totals = landuse_no_com.groupby(by=['ZoneID', 'age_code', 'gender'],
                                                 as_index=False).sum()[['ZoneID', 'age_code', 'gender', 'people']]
 
         # LU SIMPLIFICATION
         # Build simplified land use for building adjustment factors
-        len_before = len(landusese_nocom)
-        lu_index = list(landusese_nocom)
+        len_before = len(landuse_no_com)
+        lu_index = list(landuse_no_com)
         lu_groups = lu_index.copy()
         lu_groups.remove('people')
-        landusese_nocom = landusese_nocom[lu_index].groupby(lu_groups).sum().reset_index()
-        len_after = len(landusese_nocom)
+        landuse_no_com = landuse_no_com[lu_index].groupby(lu_groups).sum().reset_index()
+        len_after = len(landuse_no_com)
         # TODO: logging to file rather than console
         print('LU length %d before %d after' % (len_before, len_after))
 
         # Get Scottish Population
         scot_mype = format_scottish_mype()
-        scot_adjust = scot_mype[['ZoneID', 'Gender', 'Age', 'pop']]
+        scot_mype = scot_mype[['ZoneID', 'Gender', 'Age', 'pop']]
         print('Reading in new Scot population data')
 
         mype_communal = sort_communal_uplift()
@@ -326,13 +326,13 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         ewmype['newpop'] = ewmype['pop'] - ewmype['communal_mype']
         ewmype = ewmype[['ZoneID', 'Gender', 'Age', 'newpop']].rename(columns={'newpop': 'pop'})
 
-        mype_gb = ewmype.append(scot_adjust)
+        mype_gb = ewmype.append(scot_mype)
         mype_gb['gender'] = mype_gb['Gender'].map(gender_nt).drop(columns={'Gender'})
         mype_gb['age_code'] = mype_gb['Age'].map(age_nt).drop(columns = {'Age'})
         
         mype_pops = pop_pc_totals.merge(mype_gb, on=['ZoneID', 'gender', 'age_code'])
-        del scot_adjust, ewmype
-        mype_pops['pop_factor'] = mype_pops['pop']/mype_pops['people']
+        del scot_mype, ewmype
+        mype_pops['pop_factor'] = mype_pops['pop'] / mype_pops['people']
         
         # mype simplification
         mype_before = len(mype_pops)
@@ -348,23 +348,20 @@ def adjust_landuse_to_specific_yr(writeOut=True):
 
         # 1. select relevant categories only - group by categories, sum
         landuse_simple_cols = ['ZoneID', 'gender', 'age_code', 'people']
-        landuse_simple = landusese_nocom[landuse_simple_cols].groupby(mype_groups).sum().reset_index()
+        # TODO: this is v similar to mype_pops minus the factors, so is it needed? Also gets overwritten!
+        landuse_simple = landuse_no_com[landuse_simple_cols].groupby(mype_groups).sum().reset_index()
         
         landuse = pd.merge(landuse_simple, mype_pops, how='inner', on=['ZoneID', 'gender', 'age_code'])
-        landuse['adj_pop'] = landuse['people']*landuse['pop_factor'] # adjusted 2018 population
+        landuse['adj_pop'] = landuse['people']*landuse['pop_factor']  # adjusted 2018 population
         
         # Merge adj factors onto main land use build
-        landuse = pd.merge(landusese_nocom, mype_pops, how='inner', on=['ZoneID', 'gender', 'age_code'])
+        landuse = pd.merge(landuse_no_com, mype_pops, how='inner', on=['ZoneID', 'gender', 'age_code'])
         
-        landuse['newpop'] = landuse['people']*landuse['pop_factor']
-        landuse = landuse.drop(columns={'people', 'pop_factor'}).rename(columns={'newpop': 'people'})
-        landuse_cols = ['ZoneID', 'gender', 'age_code','emp', 'SOC_category', 'ns_sec', 
-
+        landuse['people'] = landuse['people'] * landuse['pop_factor']
+        landuse = landuse.drop(columns={'pop_factor'})
+        landuse_cols = ['ZoneID', 'gender', 'age_code', 'emp', 'SOC_category', 'ns_sec',
                         'area_type', 'property_type', 'household_composition', 'people']
         landuse = landuse[landuse_cols]
-        # Check new total == mype total
-        landuse['people'].sum()
-        mype_gb['pop'].sum()
 
         # COMMUNAL ESTABLISHMENTS
         # Get the communal establishments 
