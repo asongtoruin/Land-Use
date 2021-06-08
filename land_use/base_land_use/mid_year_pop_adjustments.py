@@ -580,7 +580,7 @@ def adjust_soc_gb():
     gb_soc_totals['total'] = gb_soc_totals.groupby(['Country'])['value'].transform('sum')
     gb_soc_totals['splits'] = gb_soc_totals['value'] / gb_soc_totals['total']
 
-    land_use_segments = pd.read_csv(_default_home_dir + '/GBlanduseControlled.csv')
+    land_use_segments = pd.read_csv(_default_home_dir + '/AdjustedGBlanduse_emp.csv')
     employed = land_use_segments[land_use_segments.emp.isin([1, 2])]  # fte and pte
     employed = employed.merge(lad_translation, on='ZoneID')
     employed['Country'] = 'England and Wales number'
@@ -763,9 +763,21 @@ def adjust_soc_lad():
 
 def control_to_lad_employment_ag():
     """
-    control to employment at LAD level for age, gender and fte/pte employment
+    control to employment at LAD level for age, gender and fte/pte employment; 
+    adjusts inactive people in work accordingly
     
+    Parameters
+    ----------
+    landUseOutputMSOA_2018: as a result of the mype adjustments
+    empcontrols: APS 2018 control for working age population, including their gender
+    and the split between fte and pte
+    
+    Returns
+    ----------
+    GBlanduseControlled: number of employed people is controlled to 2018 age, gender and 
+    fte/pte patterns in employment
     """
+
     land_use = pd.read_csv(_default_home_dir + '/landUseOutputMSOA_2018.csv')
 
     lad_translation = pd.read_csv(_default_lad_translation).drop(columns={'lad_to_msoa', 'msoa_to_lad', 'overlap_type'})
@@ -887,16 +899,17 @@ def control_to_lad_employment_ag():
     # Work out fte/pte
     active_comp = active_land_use_grouped.merge(employed, on=['ZoneID', 'lad17cd', 'gender', 'emp'], how='left')
     active_comp['factor'] = active_comp['pop'] / active_comp['people']
-    active_comp = active_comp.drop(columns={'people', 'pop'})
+    active_comp = active_comp.drop(columns={'people', 'pop', 'age_code'})
 
     # Join back to fte/pte land use level
     active_land_use2 = active_land_use.merge(active_comp,
-                                             on=['ZoneID', 'lad17cd', 'gender', 'age_code', 'emp'],
+                                             on=['ZoneID', 'lad17cd', 'gender', 'emp'],
                                              how='left')
     active_land_use2['newpop'] = active_land_use2['people'] * active_land_use2['factor']
     active_land_use2 = active_land_use2.drop(columns={'factor'})
+    active_land_use2['newpop'].sum()
     # TODO: is this check needed?
-    check_active = active_land_use2.groupby('emp', as_index=False).sum()
+    #check_active = active_land_use2.groupby('emp', as_index=False).sum()
 
     # Inactive and unemployed
     land_use_lad = wa_all.groupby(by=['ZoneID', 'lad17cd', 'gender'], as_index=False).sum()
@@ -925,6 +938,7 @@ def control_to_lad_employment_ag():
                'household_composition', 'gender', 'objectid', 'lad17cd',
                'SOC_category', 'ns_sec', 'newpop']
     inactive_land_use2 = inactive_land_use2[gb_cols]
+    inactive_land_use2['newpop'].sum()
     active_land_use2 = active_land_use2[gb_cols]
     gb_land_use_controlled = inactive_land_use2.append(active_land_use2)
 
@@ -932,8 +946,11 @@ def control_to_lad_employment_ag():
 
     nowa_all = nowa_all.rename(columns={'people': 'newpop'})
     nowa_all = nowa_all[gb_cols]
+    nowa_all['newpop'].sum()
     gb_land_use_controlled = gb_land_use_controlled.append(nowa_all)
     gb_land_use_controlled = gb_land_use_controlled.rename(columns={'newpop': 'people'})
+    print('People in jobs are now adjusted. Total population should be back to ~64.5m, and is', 
+          gb_land_use_controlled['people'].sum())
     gb_land_use_controlled.to_csv(_default_home_dir + '/GBlanduseControlled.csv')
 
     return gb_land_use_controlled
@@ -951,13 +968,18 @@ def country_emp_control():
     country_emp = country_emp[['Country', 'Emp']]
     country_emp = country_emp[country_emp.Country.isin(['England and Wales number', 'Scotland number'])]
 
-    land_use = pd.read_csv(_default_home_dir + '/AdjustedGBlanduse.csv')
+    land_use = pd.read_csv(_default_home_dir + '/GBlanduseControlled.csv')
     zones = land_use['ZoneID'].drop_duplicates()
     scott = zones[zones.str.startswith('S')]
 
     active = land_use[land_use.emp.isin([1, 2])]  # fte and pte (employed)
     scott_active = active[active.ZoneID.isin(scott)]
     scott_active['Country'] = 'Scotland number'
+    scott_active['people'].sum()
+    scott_active_total = scott_active.groupby(by=['Country'], as_index = False).sum()[['Country', 'people']]
+    
+    scott_active['Country'] = 'Scotland number'
+
     scott_active_total = scott_active.groupby(by=['Country'], as_index=False).sum()[['Country', 'people']]
 
     scott_active_total = scott_active_total.merge(country_emp, on='Country')
@@ -977,8 +999,8 @@ def country_emp_control():
     eng_active['newpop'] = eng_active['people'] * eng_active['factor']
     eng_active = eng_active.drop(columns={'people', 'factor', 'Country'})
     eng_active['newpop'].sum()
-    gb_cols2 = ['ZoneID', 'Age', 'employment_type', 'area_type', 'property_type',
-                'household_composition', 'Gender', 'objectid', 'lad17cd', 'people']
+    gb_cols2 = ['ZoneID', 'age_code', 'emp', 'area_type', 'property_type',
+                'household_composition', 'gender', 'objectid', 'lad17cd', 'people']
 
     active_adj = eng_active.append(scott_active)
     active_adj = active_adj.rename(columns={'newpop': 'people'})
