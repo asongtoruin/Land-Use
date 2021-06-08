@@ -78,38 +78,6 @@ _adults_lookup = _import_folder + 'Car availability/adults_lookup.csv'
 _lad2017 = _import_folder + 'Documentation/LAD_2017.csv'
 _ladsoc_control = _import_folder + 'NPR Segmentation/raw data and lookups/LAD labour market data/nomis_lad_SOC2018_constraints.csv'
 
-
-def format_english_mype():
-
-    """
-    getting MYPE into the right format - 'melt' to get columns as rows, then rename them
-    This should be a standard from any MYPE in the future segmented by gender and age
-
-    Returns
-    ----------
-    object
-    mye_2018 - one formatted DataFrame of new MYPE including population split
-    by age and gender by MSOA
-    """
-    mype_males = pd.read_csv(_mype_males)
-    mype_females = pd.read_csv(_mype_females)
-
-    mype = mype_males.append(mype_females)
-    mype = mype.rename(columns={'Area Codes': 'ZoneID'})
-    mype = pd.melt(mype, id_vars=['ZoneID', 'gender'], value_vars=['under_16', '16-74', '75 or over'])
-    mype = mype.rename(columns={'variable': 'Age', 'value': '2018pop'})
-    mype = mype.replace({'Age': {'under_16': 'under 16'}})
-    mype = mype.replace({'gender': {'male': 'Male', 'female': 'Females'}})
-    
-    # children are a 'gender' in NTEM, so need to sum the two rows
-    mype.loc[mype['Age'] == 'under 16', 'gender'] = 'Children'
-    mype['pop'] = mype.groupby(['ZoneID', 'Age', 'gender'])['2018pop'].transform('sum')
-    mype = mype.drop_duplicates().rename(columns={'gender': 'Gender'})
-    mype = mype[['ZoneID', 'Gender', 'Age', 'pop']]
-
-    return mype
-
-
 def format_scottish_mype():
 
     """
@@ -187,7 +155,22 @@ def get_ew_population():
         DataFrame containing formatted population ready to be joined to Census segmentation and 
         into sort_communal_output function
     """
-    mype = format_english_mype()
+
+    mype_males = pd.read_csv(_mype_males)
+    mype_females = pd.read_csv(_mype_females)
+
+    mype = mype_males.append(mype_females)
+    mype = mype.rename(columns={'Area Codes': 'ZoneID'})
+    mype = pd.melt(mype, id_vars=['ZoneID', 'gender'], value_vars=['under_16', '16-74', '75 or over'])
+    mype = mype.rename(columns={'variable': 'Age', 'value': '2018pop'})
+    mype = mype.replace({'Age': {'under_16': 'under 16'}})
+    mype = mype.replace({'gender': {'male': 'Male', 'female': 'Females'}})
+
+    # children are a 'gender' in NTEM, so need to sum the two rows
+    mype.loc[mype['Age'] == 'under 16', 'gender'] = 'Children'
+    # mype['pop'] = mype.groupby(['ZoneID', 'Age', 'gender'])['2018pop'].transform('sum')
+    mype = mype.groupby(['ZoneID', 'Age', 'gender']).sum().reset_index()
+    mype = mype.drop_duplicates().rename(columns={'gender': 'Gender', '2018pop': 'pop'})
     mype = mype[['ZoneID', 'Gender', 'Age', 'pop']]
 
     print('Reading in new EW population data')
