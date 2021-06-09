@@ -427,7 +427,6 @@ def sort_out_hops_uplift():
     all_res_property_zonal = all_res_property_zonal.drop(columns='census_property_type')
     all_res_property_zonal = all_res_property_zonal.rename(columns={'new_prop_type': 'property_type'})
     all_res_property_zonal = all_res_property_zonal.groupby(by=['ZoneID', 'property_type'], as_index=False).sum()
-    all_res_property_zonal = all_res_property_zonal.drop(columns={'msoa11cd'})
     all_res_property_zonal['household_occupancy_18'] = all_res_property_zonal['population'] / \
                                                        all_res_property_zonal['UPRN']
 
@@ -1064,7 +1063,7 @@ def run_mype(midyear=True):
     # normalise_landuse()
     adjust_landuse_to_specific_yr()
     control_to_lad_employment_ag()
-    country_emp_control()  # TODO: this function is missing one of the csv inputs
+    country_emp_control()
     adjust_soc_gb()
     adjust_soc_lad()
     sort_out_hops_uplift()  # order doesn't matter for this one
