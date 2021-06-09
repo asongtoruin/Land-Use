@@ -45,7 +45,7 @@ _default_zone_names = ['LSOA', 'MSOA']
 _default_zone_name = 'MSOA'  # MSOA or LSOA
 
 _default_communal_2011 = (
-            _default_home_dir + '/CommunalEstablishments/' + _default_zone_name + 'CommunalEstablishments2011.csv')
+        _default_home_dir + '/CommunalEstablishments/' + _default_zone_name + 'CommunalEstablishments2011.csv')
 _default_landuse_2011 = (_default_home_dir + '/landuseOutput' + _default_zone_name + '_withCommunal.csv')
 _default_property_count = (_default_home_dir + '/landuseOutput' + _default_zone_name + '.csv')
 _default_lad_translation = (_default_zone_folder + 'lad_to_msoa/lad_to_msoa.csv')
@@ -78,7 +78,6 @@ _ladsoc_control = _import_folder + 'NPR Segmentation/raw data and lookups/LAD la
 
 
 def format_scottish_mype():
-
     """
     getting Scottish MYPE into the right format - 'melt' to get columns as rows, then rename them
     This should be a standard from any MYPE in the future segmented into females and males.
@@ -103,44 +102,43 @@ def format_scottish_mype():
     scot_females = pd.read_csv(_mypeScot_females)
     scot_males = pd.read_csv(_mypeScot_males)
     scot_mype = scot_males.append(scot_females)
-    scot_mype = scot_mype.rename(columns ={'Area code': 'lad17cd'})
+    scot_mype = scot_mype.rename(columns={'Area code': 'lad17cd'})
     scot_mype = pd.melt(scot_mype, id_vars=['lad17cd', 'Gender'], value_vars=['under 16', '16-74', '75 or over'])
     scot_mype = scot_mype.rename(columns={'variable': 'Age', 'value': '2018pop'})
     scot_mype.loc[scot_mype['Age'] == 'under 16', 'Gender'] = 'Children'
     scot_mype['2018pop'].sum()
-    
-    scot_lad = scot_mype.merge(uk_lad, on = 'lad17cd')
+
+    scot_lad = scot_mype.merge(uk_lad, on='lad17cd')
     scot_lad = scot_lad.rename(columns={'objectid': 'ladZoneID'})
-    scot_msoa = scot_lad.merge(lad_translation, on = 'ladZoneID')
+    scot_msoa = scot_lad.merge(lad_translation, on='ladZoneID')
 
     # final stage of the translation from LAD to MSOA for Scotland
-    scot_msoa['people2018'] = scot_msoa['2018pop']*scot_msoa['lad_to_msoa']
+    scot_msoa['people2018'] = scot_msoa['2018pop'] * scot_msoa['lad_to_msoa']
     scot_msoa = scot_msoa.drop(columns={'overlap_type', 'lad_to_msoa', 'msoa_to_lad',
-                                     '2018pop', 'lad17cd', 'ladZoneID'}).rename(columns={'msoa_zone_id': 'ZoneID'})
-   
+                                        '2018pop', 'lad17cd', 'ladZoneID'}).rename(columns={'msoa_zone_id': 'ZoneID'})
+
     scotland_use = land_use_segments[land_use_segments.ZoneID.str.startswith('S')]
 
     scotland_use_grouped = scotland_use.groupby(by=['ZoneID', 'Age', 'Gender'],
                                                 as_index=False).sum().drop(columns={'area_type',
-                                                                                      'household_composition',
-                                                                                      'property_type'})
-    
+                                                                                    'household_composition',
+                                                                                    'property_type'})
+
     scot = scotland_use_grouped.merge(scot_msoa, how='outer', on=['ZoneID', 'Gender', 'Age'])
-    scot['pop_factor'] = scot['people2018']/scot['people']
-    scot['newpop'] = scot['people']*scot['pop_factor']
+    scot['pop_factor'] = scot['people2018'] / scot['people']
+    scot['newpop'] = scot['people'] * scot['pop_factor']
     scot = scot.drop(columns={'people'})
     scottish_mype = scotland_use.merge(scot, on=['ZoneID', 'Gender', 'Age'])
-    scottish_mype['newpop'] = scottish_mype['people']*scottish_mype['pop_factor']
+    scottish_mype['newpop'] = scottish_mype['people'] * scottish_mype['pop_factor']
     scottish_mype = scottish_mype.drop(columns={'people', 'people2018', 'pop_factor'}).rename(columns={'newpop': 'pop'})
     scottish_mype = scottish_mype[['ZoneID', 'Gender', 'Age', 'pop']]
 
-    print('The adjusted MYPE/future year population for Scotland is', scottish_mype['pop'].sum()/1000000, 'M')
+    print('The adjusted MYPE/future year population for Scotland is', scottish_mype['pop'].sum() / 1000000, 'M')
 
     return scottish_mype
-    
-    
+
+
 def get_ew_population():
-    
     """
     Could be MYPE or future years population, function checks the format
     Change the path for mype if the population is for future years
@@ -179,6 +177,7 @@ def get_fy_population():
     placeholder, potentially to import code developed by Chris/Liz
     """
 
+
 # TODO: include block commenting
 def sort_communal_uplift(midyear=True):
     """
@@ -207,12 +206,12 @@ def sort_communal_uplift(midyear=True):
     """
     communal = pd.read_csv(_default_communal_2011).rename(columns={'people': 'communal'})
     census_output = pd.read_csv(_default_landuse_2011)
-          
+
     # split land use data into 2 pots: Scotland and E+W
     zones = census_output["ZoneID"].drop_duplicates().dropna()
     scott = zones[zones.str.startswith('S')]
     ew_land_use = census_output[~census_output.ZoneID.isin(scott)]
-        
+
     if midyear:
         # group to ZoneID, Gender, Age to match info from MYPE
         ew_land_use_group = ew_land_use.groupby(by=['ZoneID', 'Gender', 'Age'],
@@ -223,7 +222,7 @@ def sort_communal_uplift(midyear=True):
         com2011 = ew_land_use_group.merge(communal_group, on=['ZoneID', 'Gender', 'Age'])
         com2011['CommunalFactor'] = com2011['communal'] / com2011['people']
         com2011 = com2011.rename(columns={'people': 'Census'})
-    
+
         # uplift communal to MYPE
         mype = get_ew_population()
         mype_adjust = mype.merge(com2011, on=['ZoneID', 'Gender', 'Age'], how='outer')
@@ -231,12 +230,12 @@ def sort_communal_uplift(midyear=True):
         print('Communal establishments total for new MYPE is ', mype_adjust['communal_mype'].sum())
         mype_communal = mype_adjust[['ZoneID', 'Gender', 'Age', 'communal_mype']]
         return mype_communal
-    
+
     else:
         ew_land_use_group = ew_land_use.groupby(by=['ZoneID'], as_index=False).sum()[['ZoneID', 'people']]
         communal_group = communal.groupby(by=['ZoneID'], as_index=False).sum()[['ZoneID', 'communal']]
         com2011 = ew_land_use_group.merge(communal_group, on=['ZoneID'])
-        com2011['CommunalFactor'] = com2011['communal']/com2011['people']
+        com2011['CommunalFactor'] = com2011['communal'] / com2011['people']
         com2011 = com2011.rename(columns={'people': 'Census'})
         fy = get_fy_population()
         fype_adjust = fy.merge(com2011, on=['ZoneID'], how='left')
@@ -247,8 +246,7 @@ def sort_communal_uplift(midyear=True):
 
 # TODO: include block commenting
 def adjust_landuse_to_specific_yr(writeOut=True):
-
-    """    
+    """
     Takes adjusted landuse (after splitting out communal establishments)
     Parameters
     ----------
@@ -262,8 +260,9 @@ def adjust_landuse_to_specific_yr(writeOut=True):
     """
     if writeOut:
         landuse_segments = pd.read_csv(_landuse_segments, usecols=['ZoneID', 'area_type', 'property_type', 'Age',
-                                             'Gender', 'employment_type', 'ns_sec', 'household_composition',
-                                             'SOC_category', 'people']).drop_duplicates()
+                                                                   'Gender', 'employment_type', 'ns_sec',
+                                                                   'household_composition',
+                                                                   'SOC_category', 'people']).drop_duplicates()
 
         # TODO: put these normalisation dictionaries in lu_constants
         gender_nt = {'Male': 2, 'Females': 3, 'Children': 1}
@@ -277,8 +276,9 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         landuse_segments['emp'] = landuse_segments['employment_type'].map(emp_nt)
         landuse_segments = landuse_segments.drop(columns={'Age', 'Gender', 'employment_type'})
         landuse_segments = landuse_segments.groupby(by=['ZoneID', 'age_code', 'emp', 'gender', 'SOC_category',
-                                                        'ns_sec','area_type', 'property_type', 'household_composition'],
-                                                    as_index = False).sum()
+                                                        'ns_sec', 'area_type', 'property_type',
+                                                        'household_composition'],
+                                                    as_index=False).sum()
 
         # change to int8 to reduce table size
         landuse_segments['age_code'] = landuse_segments['age_code'].astype(np.int8)
@@ -289,12 +289,12 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         landuse_segments['area_type'] = landuse_segments['area_type'].astype(np.int8)
         landuse_segments['household_composition'] = landuse_segments['household_composition'].astype(np.int8)
         landuse_segments['property_type'] = landuse_segments['property_type'].astype(np.int8)
-        
+
         # Get the communal establishments removed
         landuse_no_com = landuse_segments[landuse_segments.property_type != 8]
         # group by age and gender columns and sum people
         pop_pc_totals = landuse_no_com.groupby(by=['ZoneID', 'age_code', 'gender'],
-                                                as_index=False).sum()[['ZoneID', 'age_code', 'gender', 'people']]
+                                               as_index=False).sum()[['ZoneID', 'age_code', 'gender', 'people']]
 
         # LU SIMPLIFICATION
         # Build simplified land use for building adjustment factors
@@ -323,15 +323,15 @@ def adjust_landuse_to_specific_yr(writeOut=True):
 
         mype_gb = ewmype.append(scot_mype)
         mype_gb['gender'] = mype_gb['Gender'].map(gender_nt).drop(columns={'Gender'})
-        mype_gb['age_code'] = mype_gb['Age'].map(age_nt).drop(columns = {'Age'})
-        
+        mype_gb['age_code'] = mype_gb['Age'].map(age_nt).drop(columns={'Age'})
+
         mype_pops = pop_pc_totals.merge(mype_gb, on=['ZoneID', 'gender', 'age_code'])
         del scot_mype, ewmype
         mype_pops['pop_factor'] = mype_pops['pop'] / mype_pops['people']
-        
+
         # mype simplification
         mype_before = len(mype_pops)
-        
+
         mype_index = ['ZoneID', 'gender', 'age_code', 'pop_factor']
         mype_groups = ['ZoneID', 'gender', 'age_code']
         mype_pops = mype_pops[mype_index].groupby(mype_groups).sum()
@@ -345,13 +345,13 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         landuse_simple_cols = ['ZoneID', 'gender', 'age_code', 'people']
         # TODO: this is v similar to mype_pops minus the factors, so is it needed? Also gets overwritten!
         landuse_simple = landuse_no_com[landuse_simple_cols].groupby(mype_groups).sum().reset_index()
-        
+
         landuse = pd.merge(landuse_simple, mype_pops, how='inner', on=['ZoneID', 'gender', 'age_code'])
-        landuse['adj_pop'] = landuse['people']*landuse['pop_factor']  # adjusted 2018 population
-        
+        landuse['adj_pop'] = landuse['people'] * landuse['pop_factor']  # adjusted 2018 population
+
         # Merge adj factors onto main land use build
         landuse = pd.merge(landuse_no_com, mype_pops, how='inner', on=['ZoneID', 'gender', 'age_code'])
-        
+
         landuse['people'] = landuse['people'] * landuse['pop_factor']
         landuse = landuse.drop(columns={'pop_factor'})
         landuse_cols = ['ZoneID', 'gender', 'age_code', 'emp', 'SOC_category', 'ns_sec',
@@ -367,35 +367,35 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         com['age_code'] = com['Age'].map(age_nt)
         com = com.drop(columns={'Age', 'Gender'})
 
-        pop_pc_comms = landuse_com.groupby(by=['ZoneID', 'age_code', 'gender'], 
-                                              as_index=False).sum()[['ZoneID', 'age_code', 'gender', 'people']]
-    
+        pop_pc_comms = landuse_com.groupby(by=['ZoneID', 'age_code', 'gender'],
+                                           as_index=False).sum()[['ZoneID', 'age_code', 'gender', 'people']]
+
         mye_pops = pop_pc_comms.merge(com, on=['ZoneID', 'gender', 'age_code'])
-        mye_pops['pop_factor'] = mye_pops['communal_mype']/mye_pops['people']
+        mye_pops['pop_factor'] = mye_pops['communal_mype'] / mye_pops['people']
         mye_pops = mye_pops.drop(columns={'communal_mype', 'people'})
-                
+
         communal_pop = landuse_com.merge(mye_pops, on=['ZoneID', 'gender', 'age_code'])
-        communal_pop['newpop'] = communal_pop['people']*communal_pop['pop_factor']
+        communal_pop['newpop'] = communal_pop['people'] * communal_pop['pop_factor']
         communal_pop['newpop'].sum()
-        
-        communal_pop= communal_pop.drop(columns={'people', 'pop_factor'}).rename(columns={'newpop': 'people'})
+
+        communal_pop = communal_pop.drop(columns={'people', 'pop_factor'}).rename(columns={'newpop': 'people'})
         communal_pop = communal_pop[landuse_cols]
         # need to retain the missing MSOAs for both population landuse outputs and HOPs  
         gb_adjusted = landuse.append(communal_pop)
-        
+
         # checks:
         # TODO: put these checks into logging file rather than console
         print('checking for null values:', gb_adjusted.isnull().any())
         print('Full population for 2018 is now =', gb_adjusted['people'].sum())
         print('check all MSOAs are present, should be 8480:', gb_adjusted['ZoneID'].drop_duplicates().count())
-        gb_adjusted = gb_adjusted.groupby(by=['ZoneID', 'gender', 'age_code','emp', 'SOC_category', 'ns_sec',
+        gb_adjusted = gb_adjusted.groupby(by=['ZoneID', 'gender', 'age_code', 'emp', 'SOC_category', 'ns_sec',
                                               'area_type', 'property_type', 'household_composition']
                                           , as_index=False).sum()
         gb_adjusted.to_csv(_default_home_dir + '/landUseOutputMSOA_2018.csv', index=False)
         print('full GB adjusted dataset should be now saved in default iter folder')
 
-        #reclaim memory
-        del(communal_pop, pop_pc_comms, mye_pops, landuse_com, com, landuse_segments, len_before, len_after)
+        # reclaim memory
+        del (communal_pop, pop_pc_comms, mye_pops, landuse_com, com, landuse_segments, len_before, len_after)
         gc.collect()
     else:
         print('FY not set up yet')
@@ -459,9 +459,10 @@ def adjust_car_availability():
     land_use = pd.read_csv(_landuse_segments)
     cars_adjust = pd.read_csv(_nts_import_path)
 
-    segments = land_use.groupby(by=['area_type', 'employment_type', 'household_composition'], as_index=False).sum()
-    segments = segments[['area_type', 'employment_type', 'household_composition', 'people']]
+    segments = land_use.groupby(by=['area_type', 'employment_type', 'household_composition'],
+                                as_index=False)['people'].sum()
 
+    # Calculate splits between each hh comp category across each area type and employment type
     segments['totals2'] = segments.groupby(['area_type', 'employment_type'])['people'].transform('sum')
     segments['splits2'] = segments['people'] / segments['totals2']
     segments['lu_total'] = segments.groupby('employment_type')['people'].transform('sum')
@@ -471,40 +472,16 @@ def adjust_car_availability():
     join['newhc'] = join['splits'] * join['totals2']
     join = join[['area_type', 'employment_type', 'household_composition', 'newhc']]
 
-    # TODO: the below might need to be re-written to simplify
-    land2 = land_use.groupby(by=['ZoneID', 'area_type', 'employment_type'], as_index=False).sum()
-    land2 = land2[['msoa_zone_id', 'area_type', 'household_composition', 'employment_type', 'people']]
-    land2 = land2.drop(columns={'household_composition'})
-    land2['total'] = land2.groupby(['area_type', 'employment_type'])['people'].transform('sum')
-    land2['factor'] = land2['people'] / land2['total']
+    # TODO: SOC category includes nulls (also hh comp and Gender), which get thrown out by the groupby
+    land = land_use.groupby(by=['ZoneID', 'area_type', 'ns_sec', 'Age', 'SOC_category',
+                                'property_type', 'Gender', 'employment_type'],
+                            as_index=False)['people'].sum()
+    land['total'] = land.groupby(['area_type', 'employment_type'])['people'].transform('sum')
+    land['factor'] = land['people'] / land['total']
 
-    all_combined2 = land2.merge(join, on=['area_type', 'employment_type'])
-    all_combined2['new'] = all_combined2['newhc'] * all_combined2['factor']
-
-    ### trying to combine all
-    land2 = land_use.groupby(by=['ZoneID', 'area_type', 'ns_sec', 'Age', 'SOC_category',
-                                 'property_type', 'Gender', 'employment_type'],
-                             as_index=False).sum()
-    land2 = land2[['ZoneID', 'area_type', 'ns_sec', 'Age', 'SOC_category',
-                   'property_type', 'Gender', 'employment_type', 'people']]
-    land2['total'] = land2.groupby(['area_type', 'employment_type'])['people'].transform('sum')
-    land2['factor'] = land2['people'] / land2['total']
-
-    all_combined2 = land2.merge(join, on=['area_type', 'employment_type'])
+    all_combined2 = land.merge(join, on=['area_type', 'employment_type'])
     all_combined2['new'] = all_combined2['newhc'] * all_combined2['factor']
     all_combined2.to_csv(_default_home_dir + 'landuse_caradj.csv', index=False)
-
-    # TODO: this land variable is unused. Should it be used?
-    land = land_use.groupby(by=['msoa_zone_id', 'ns', 'soc', 'property_type', 'gender',
-                                'area_type', 'age', 'household_composition',
-                                'employment_type'], as_index=False).sum()
-    land = land[['msoa_zone_id', 'ns', 'soc', 'property_type', 'gender',
-                 'area_type', 'age', 'household_composition',
-                 'employment_type', 'people']]
-    land['total'] = land.groupby(['area_type', 'age',
-                                  'employment_type', 'household_composition'])['people'].transform('sum')
-    land['pop_factor'] = land['people'] / land['total']
-    land = land.drop(columns={'people', 'total'})
 
     car_available = all_combined2.groupby(by=['household_composition'], as_index=False).sum()
     car_available.to_csv(_default_home_dir + '/caravailable.csv')
@@ -837,8 +814,10 @@ def control_to_lad_employment_ag():
     lad_fte_pte_controls['totals'] = lad_fte_pte_controls.groupby(['lad17cd', 'gender'])['value'].transform('sum')
     lad_fte_pte_controls['splits'] = lad_fte_pte_controls['value'] / lad_fte_pte_controls['totals']
 
-    lad_fte_pte_controls_average = lad_fte_pte_controls.groupby(by=['emp'], as_index=False).sum().drop(columns={'gender'})
-    lad_fte_pte_controls_average['av_splits'] = lad_fte_pte_controls_average['value'] / lad_fte_pte_controls_average['totals']
+    lad_fte_pte_controls_average = lad_fte_pte_controls.groupby(by=['emp'], as_index=False).sum().drop(
+        columns={'gender'})
+    lad_fte_pte_controls_average['av_splits'] = lad_fte_pte_controls_average['value'] / lad_fte_pte_controls_average[
+        'totals']
     lad_fte_pte_controls_average = lad_fte_pte_controls_average.drop(columns={'value', 'totals', 'splits'})
 
     lad_fte_pte_controls = lad_fte_pte_controls.merge(lad_fte_pte_controls_average, on='emp', how='right')
@@ -857,7 +836,7 @@ def control_to_lad_employment_ag():
 
     # Emp Active Split by fte/pte 
     employed = factored_emp.merge(lad_fte_pte_controls, on=['lad17cd', 'gender',
-                                                        'employment_cat'], how='left')
+                                                            'employment_cat'], how='left')
     employed['pop'] = employed['newpop'] * employed['splits']
     employed = employed.drop(columns={'newpop', 'splits', 'employment_cat'})
 
@@ -883,7 +862,7 @@ def control_to_lad_employment_ag():
     active_land_use2 = active_land_use2.drop(columns={'factor'})
     active_land_use2['newpop'].sum()
     # TODO: is this check needed?
-    #check_active = active_land_use2.groupby('emp', as_index=False).sum()
+    # check_active = active_land_use2.groupby('emp', as_index=False).sum()
 
     # Inactive and unemployed people adjustment
     land_use_lad = wa_all.groupby(by=['ZoneID', 'lad17cd', 'gender'], as_index=False).sum()
@@ -909,7 +888,7 @@ def control_to_lad_employment_ag():
     inactive_land_use2['newpop'] = inactive_land_use2['people'] * inactive_land_use2['factor']
 
     gb_cols = ['ZoneID', 'age_code', 'emp', 'area_type', 'property_type',
-               'household_composition', 'gender', 
+               'household_composition', 'gender',
                'SOC_category', 'ns_sec', 'newpop']
     # get all dfs into the same format for appending
     inactive_land_use2 = inactive_land_use2[gb_cols]
@@ -924,22 +903,22 @@ def control_to_lad_employment_ag():
     nowa_all = nowa_all[gb_cols]
     # check the total of children - should be about 17.6m in 2018
     print('Bring back the children, should be ~17.6m in 2018', nowa_all['newpop'].sum())
-    
+
     gb_land_use_controlled = gb_land_use_controlled.append(nowa_all)
     gb_land_use_controlled = gb_land_use_controlled.rename(columns={'newpop': 'people'})
-    print('People in jobs are now adjusted. Total population should be back to ~64.5m, and is', 
+    print('People in jobs are now adjusted. Total population should be back to ~64.5m, and is',
           gb_land_use_controlled['people'].sum(), 'Now saving the new landuse dataset.')
-    
+
     # audit to check population per msoa
     check_msoa_totals(gb_land_use_controlled, function_name='control_to_lad')
-   
+
     gb_land_use_controlled.groupby(by=['ZoneID', 'age_code', 'emp', 'area_type', 'property_type',
-               'household_composition', 'gender', 
-               'SOC_category', 'ns_sec'])
-    
-    gb_land_use_controlled.to_csv(_default_home_dir + '/GBlanduseControlled.csv', index = False)
+                                       'household_composition', 'gender',
+                                       'SOC_category', 'ns_sec'])
+
+    gb_land_use_controlled.to_csv(_default_home_dir + '/GBlanduseControlled.csv', index=False)
     gc.collect()
-    
+
     return gb_land_use_controlled
 
 
@@ -947,13 +926,14 @@ def check_msoa_totals(df, function_name):
     """
     check how the outputs compare to MYPE for audits
     """
-    df_msoa = df.groupby(by=['ZoneID'],as_index = False).sum().reindex(columns={'ZoneID', 'people'})
+    df_msoa = df.groupby(by=['ZoneID'], as_index=False).sum().reindex(columns={'ZoneID', 'people'})
     # read in mype msoa totals
     msoa_totals = get_ew_population()
-    msoa_totals = msoa_totals.groupby(by=['ZoneID'], as_index = False).sum().rename(columns={'pop':'mype'}).reindex(columns = ['ZoneID', 'mype'])
-    
-    msoa_comparison = msoa_totals.merge(df_msoa, on = ['ZoneID'])
-    msoa_comparison.to_csv(_default_home_dir +'msoa_check'+function_name+'.csv')
+    msoa_totals = msoa_totals.groupby(by=['ZoneID'], as_index=False).sum().rename(columns={'pop': 'mype'}).reindex(
+        columns=['ZoneID', 'mype'])
+
+    msoa_comparison = msoa_totals.merge(df_msoa, on=['ZoneID'])
+    msoa_comparison.to_csv(_default_home_dir + 'msoa_check' + function_name + '.csv')
     print(msoa_comparison)
 
 
@@ -990,8 +970,8 @@ def country_emp_control():
     # add this column for matching to control
     scott_active['Country'] = 'Scotland number'
     scott_active['people'].sum()
-    scott_active_total = scott_active.groupby(by=['Country'], as_index = False).sum()[['Country', 'people']]
-    #' match the control and landuse for Scotland to work out scaling factor and apply it
+    scott_active_total = scott_active.groupby(by=['Country'], as_index=False).sum()[['Country', 'people']]
+    # ' match the control and landuse for Scotland to work out scaling factor and apply it
     scott_active_total = scott_active_total.merge(country_emp, on='Country')
     scott_active_total['factor'] = scott_active_total['Emp'] / scott_active_total['people']
     scott_active_total = scott_active_total.drop(columns={'people', 'Emp'})
@@ -1010,10 +990,10 @@ def country_emp_control():
     eng_active['newpop'] = eng_active['people'] * eng_active['factor']
     eng_active = eng_active.drop(columns={'people', 'factor', 'Country'})
     # check population before
-    print('England and Wales employed population after the adjustment',  eng_active['newpop'])
-    
+    print('England and Wales employed population after the adjustment', eng_active['newpop'])
+
     gb_cols = ['ZoneID', 'age_code', 'emp', 'area_type', 'property_type',
-                'household_composition', 'gender', 'ns_sec', 'SOC_category', 'people']
+               'household_composition', 'gender', 'ns_sec', 'SOC_category', 'people']
     # append the new employed population adjusted for Scotland, England and Wales
     active_adj = eng_active.append(scott_active)
     active_adj = active_adj.rename(columns={'newpop': 'people'})
@@ -1027,7 +1007,7 @@ def country_emp_control():
     gb_totals = gb_totals.merge(active_new_total, on='ZoneID')
     gb_totals['inactive'] = gb_totals['people'] - gb_totals['employed']
     gb_totals = gb_totals.drop(columns={'people', 'employed'})
-    
+
     inactive = land_use[land_use.emp.isin([3, 4])]  # inactive employment categories
     inactive2 = inactive.groupby(by=['ZoneID'], as_index=False).sum()[['ZoneID', 'people']]
     inactive2 = inactive2.merge(gb_totals, on='ZoneID')
@@ -1046,9 +1026,9 @@ def country_emp_control():
     # inactive plus active people appending
     adjusted_gb_land_use = inactive3.append(active_adj)
     adjusted_gb_land_use['people'].sum()
-    #get the children by MSOA too
+    # get the children by MSOA too
     children = land_use[land_use.emp == 5]
-    children= children[gb_cols]
+    children = children[gb_cols]
     # children['people'].sum() # should be ~17m
     # append children
     adjusted_gb_land_use = adjusted_gb_land_use.append(children)
