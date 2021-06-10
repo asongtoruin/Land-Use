@@ -186,10 +186,17 @@ class FutureYearLandUse:
 
         # Adjust car availability mix
         if adjust_ca:
-            fy_pop = self._adjust_ca(fy_pop,
-                                     ca_growth_method=ca_growth_method)
+            fy_pop, ca_changes = self._adjust_ca(fy_pop,
+                                                 ca_growth_method=ca_growth_method)
+            if reports:
+                ca_changes.to_csv(
+                    os.path.join(
+                        self.out_paths['report_folder'],
+                        'ca_changes_%s.csv' % str(self.future_year)),
+                    index=False
+                )
 
-        # TODO: Adjust SOC mix
+        # TODO: Adjust SOC
         if adjust_soc:
             fy_pop = self._adjust_soc(fy_pop)
             
@@ -566,6 +573,8 @@ class FutureYearLandUse:
         after = fy_pop_vector[self.future_year].sum()
         ca_after = fy_pop_vector.groupby(['ca'])[self.future_year].sum()
 
+        ca_changes = pd.DataFrame(ca_after)
+
         if verbose:
             print('*' * 15)
             print('Car availability adjustment')
@@ -575,7 +584,7 @@ class FutureYearLandUse:
             print('Shares before: ' + str(ca_before.astype(int)))
             print('Shares after: ' + str(ca_after.astype(int)))
 
-        return fy_pop_vector
+        return fy_pop_vector, ca_changes
 
     def _balance_demographics(self,
                               fy_pop,
