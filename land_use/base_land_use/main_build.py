@@ -961,9 +961,8 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     CommunalActive = ActiveEng[ActiveEng.property_type.isin(CommunalEstablishments)].copy()
     ActiveNotCommunal = ActiveEng[~ActiveEng.property_type.isin(CommunalEstablishments)].copy()
     merge_cols = ['ZoneID', 'Age', 'property_type', 'employment_type']
-    Active_emp = ActiveNotCommunal.merge(msoa_active_splits, on=merge_cols, how='outer')
+    Active_emp = ActiveNotCommunal.merge(msoa_active_splits, on=merge_cols)
     # apply the employment splits for ActivePot to work out population
-    Active_emp.groupby('employment_type')
     Active_emp['newpop'] = Active_emp['people'] * Active_emp['empsplits']
 
     Active_emp = Active_emp.drop(columns={'area_type_x', 'area_type_y'})
