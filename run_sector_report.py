@@ -6,10 +6,10 @@ import land_use.reports.sector_report as sr
 if __name__ == '__main__':
 
     model_name = 'msoa'
-    iteration = 'iter3b'
-    run_folder = 'I:/NorMITs Land Use/future_land_use/%s/scenarios' % iteration
-    scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
-    out_folder = 'C:/Users/%s/Documents/sector_reports' % os.getlogin()
+    iteration = 'iter3c'
+    run_folder = 'I:/NorMITs Land Use/future_land_use/%s/outputs/scenarios' % iteration
+    scenarios = ['SC04_UZC']
+    out_folder = 'C:/Users/%s/Documents/Sector Reports' % os.getlogin()
 
     folder_list = list()
     for sc in scenarios:
