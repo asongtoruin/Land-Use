@@ -990,7 +990,6 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     NPRSegments = ['ZoneID', 'area_type', 'property_type', 'Age', 'Gender', 'employment_type',
                    'ns_sec', 'household_composition', 'SOC_category', 'newpop']
     All = All[NPRSegments].rename(columns={'newpop': 'people'})
-    All['SOC_category'] = All['SOC_category'].fillna(0)
     All.to_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_NS_SEC_SOC.csv', index=False)
     print(All['people'].sum())
 
