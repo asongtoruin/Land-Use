@@ -21,63 +21,33 @@ once run the source data should be ready for other functions
  6. Control to NS-SEC 2018 
 """
 
-import sys
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 import gc
 
-sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Demand Tool/Python/ZoneTranslation')
-sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/TAME shared resources/Python/')
-sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Utilities/Python')
-sys.path.append('C:/Users/ESRIAdmin/Desktop/')
+# Outputs from previous steps
+_default_communal_2011 = '/CommunalEstablishments/MSOACommunalEstablishments2011.csv'
+_default_landuse_2011 = '/landuseOutputMSOA_withCommunal.csv'
+_landuse_segments = '/landuseOutputMSOA_NS_SEC_SOC.csv'
 
-# Default file paths
-_default_iter = 'iter3b'
-_default_home = 'I:/NorMITs Land Use/'
-_default_home_dir = (_default_home + _default_iter)
-_import_folder = 'Y:/NorMITs Land Use/import/'
-_import_file_drive = 'Y:/'
-_default_zone_folder = ('I:/NorMITs Synthesiser/Zone Translation/Export/')
-
-# Default zone names
-_default_zone_names = ['LSOA', 'MSOA']
-_default_zone_name = 'MSOA'  # MSOA or LSOA
-
-_default_communal_2011 = (
-        _default_home_dir + '/CommunalEstablishments/' + _default_zone_name + 'CommunalEstablishments2011.csv')
-_default_landuse_2011 = (_default_home_dir + '/landuseOutput' + _default_zone_name + '_withCommunal.csv')
-_default_property_count = (_default_home_dir + '/landuseOutput' + _default_zone_name + '.csv')
-_default_lad_translation = (_default_zone_folder + 'lad_to_msoa/lad_to_msoa.csv')
-_default_census_dat = (_import_folder + 'Nomis Census 2011 Head & Household')
+# Zones and shapefiles
+_default_lad_translation = 'Export/lad_to_msoa/lad_to_msoa.csv'
 _default_zone_ref_folder = 'Y:/Data Strategy/GIS Shapefiles/'
-_default_area_types = ('Y:/NorMITs Land Use/area types/TfNAreaTypesLookup.csv')
-
-_default_lsoaRef = _default_zone_ref_folder + 'UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz.shp'
-_default_msoaRef = _default_zone_ref_folder + 'UK MSOA and Intermediate Zone Clipped 2011/uk_ew_msoa_s_iz.shp'
 _default_ladRef = _default_zone_ref_folder + 'LAD GB 2017/Local_Authority_Districts_December_2017_Full_Clipped_Boundaries_in_Great_Britain.shp'
-_default_mladRef = _default_zone_ref_folder + 'Merged_LAD_December_2011_Clipped_GB/Census_Merged_Local_Authority_Districts_December_2011_Generalised_Clipped_Boundaries_in_Great_Britain.shp'
-_mype_females = _import_folder + '/MYE 2018 ONS/2018_MidyearMSOA/MYEfemales_2018.csv'
-_mype_males = _import_folder + 'MYE 2018 ONS/2018_MidyearMSOA/MYEmales_2018.csv'
-_hops2011 = _default_home_dir + '/UKHouseHoldOccupancy2011.csv'
-_mypeScot_females = _import_folder + 'MYE 2018 ONS/2018_MidyearMSOA/Females_Scotland_2018.csv'
-_mypeScot_males = _import_folder + 'MYE 2018 ONS/2018_MidyearMSOA/Males_Scotland_2018.csv'
-_landuse_segments = _default_home_dir + '/landuseOutput' + _default_zone_name + '_NS_SEC_SOC.csv'
-_ward_to_msoa = _default_zone_folder + 'uk_ward_msoa_pop_weighted_lookup.csv'
-_nts_path = 'Y:/NTS/import/tfn_unclassified_build.csv'
-_country_control = _import_folder + 'NPR Segmentation/processed data/Country Control 2018/nomis_CountryControl.csv'
-_gb_soc_totals = _import_folder + 'NPR Segmentation/raw data and lookups/LAD labour market data/nomis_SOCGBControl.csv'
-_soc_lookup = 'Y:/NTS/lookups/soc_cat---XSOC2000_B02ID.csv'
-_LADSOCControlPath = _import_folder + 'NPR Segmentation/raw data and lookups/LAD labour market data/nomis_lad_SOC2018_constraints.csv'
-_emp_controls = _import_folder + 'NPR Segmentation/raw data and lookups/LAD labour market data/Nomis_lad_EconomicActivity3.csv'
-_hc_lookup = _import_folder + 'Car availability/household_composition.csv'
-_emp_lookup = _import_folder + 'Car availability/emp_type.csv'
-_adults_lookup = _import_folder + 'Car availability/adults_lookup.csv'
-_lad2017 = _import_folder + 'Documentation/LAD_2017.csv'
-_ladsoc_control = _import_folder + 'NPR Segmentation/raw data and lookups/LAD labour market data/nomis_lad_SOC2018_constraints.csv'
+
+# Imports
+_mype_females = '/MYE 2018 ONS/2018_MidyearMSOA/MYEfemales_2018.csv'
+_mype_males = 'MYE 2018 ONS/2018_MidyearMSOA/MYEmales_2018.csv'
+_mypeScot_females = 'MYE 2018 ONS/2018_MidyearMSOA/Females_Scotland_2018.csv'
+_mypeScot_males = 'MYE 2018 ONS/2018_MidyearMSOA/Males_Scotland_2018.csv'
+_country_control = 'NPR Segmentation/processed data/Country Control 2018/nomis_CountryControl.csv'
+_gb_soc_totals = 'NPR Segmentation/raw data and lookups/LAD labour market data/nomis_SOCGBControl.csv'
+_emp_controls = 'NPR Segmentation/raw data and lookups/LAD labour market data/Nomis_lad_EconomicActivity3.csv'
+_ladsoc_control = 'NPR Segmentation/raw data and lookups/LAD labour market data/nomis_lad_SOC2018_constraints.csv'
 
 
-def format_scottish_mype():
+def format_scottish_mype(by_lu_obj):
     """
     getting Scottish MYPE into the right format - 'melt' to get columns as rows, then rename them
     This should be a standard from any MYPE in the future segmented into females and males.
@@ -91,16 +61,17 @@ def format_scottish_mype():
     Scot_adjust- one formatted DataFrame of new Scottish MYPE including population
     split by age and gender by MSOA
     """
-    land_use_segments = pd.read_csv(_landuse_segments)
+    land_use_segments = pd.read_csv(by_lu_obj.home_folder + _landuse_segments)
 
     # Translation from LAD to MSOAs
-    lad_translation = pd.read_csv(_default_lad_translation).rename(columns={'lad_zone_id': 'ladZoneID'})
+    lad_translation = pd.read_csv(by_lu_obj.zones_folder + _default_lad_translation)
+    lad_translation = lad_translation.rename(columns={'lad_zone_id': 'ladZoneID'})
     lad_cols = ['objectid', 'lad17cd']
     uk_lad = gpd.read_file(_default_ladRef)
     uk_lad = uk_lad.loc[:, lad_cols]
 
-    scot_females = pd.read_csv(_mypeScot_females)
-    scot_males = pd.read_csv(_mypeScot_males)
+    scot_females = pd.read_csv(by_lu_obj.import_folder + _mypeScot_females)
+    scot_males = pd.read_csv(by_lu_obj.import_folder + _mypeScot_males)
     scot_mype = scot_males.append(scot_females)
     scot_mype = scot_mype.rename(columns={'Area code': 'lad17cd'})
     scot_mype = pd.melt(scot_mype, id_vars=['lad17cd', 'Gender'], value_vars=['under 16', '16-74', '75 or over'])
@@ -138,7 +109,7 @@ def format_scottish_mype():
     return scottish_mype
 
 
-def get_ew_population():
+def get_ew_population(by_lu_obj):
     """
     Could be MYPE or future years population, function checks the format
     Change the path for mype if the population is for future years
@@ -153,8 +124,8 @@ def get_ew_population():
         into sort_communal_output function
     """
     print('Reading in new EW population data')
-    mype_males = pd.read_csv(_mype_males)
-    mype_females = pd.read_csv(_mype_females)
+    mype_males = pd.read_csv(by_lu_obj.import_folder + _mype_males)
+    mype_females = pd.read_csv(by_lu_obj.import_folder + _mype_females)
 
     mype = mype_males.append(mype_females)
     mype = mype.rename(columns={'Area Codes': 'ZoneID'})
@@ -179,7 +150,7 @@ def get_fy_population():
 
 
 # TODO: include block commenting
-def sort_communal_uplift(midyear=True):
+def sort_communal_uplift(by_lu_obj, midyear=True):
     """
     Imports a csv of Communal Establishments 2011 and uses MYPE to uplift to MYPE (2018 for now)
     First this function takes the communal establishments and adjust for the people living
@@ -196,16 +167,16 @@ def sort_communal_uplift(midyear=True):
     Parameters
     ----------
     midyear
-    Communal:
-        Path to csv of Communal Establishments 2011 sorted accordingly to age and gender and by zone.
+    by_lu_obj:
+        Base year land use object.
     ----------
     Returns
     ----------
     Uplifted Communal:
         DataFrame containing Communal Establishments according to the MYPE (2018).
     """
-    communal = pd.read_csv(_default_communal_2011).rename(columns={'people': 'communal'})
-    census_output = pd.read_csv(_default_landuse_2011)
+    communal = pd.read_csv(by_lu_obj.home_folder + _default_communal_2011).rename(columns={'people': 'communal'})
+    census_output = pd.read_csv(by_lu_obj.home_folder + _default_landuse_2011)
 
     # split land use data into 2 pots: Scotland and E+W
     zones = census_output["ZoneID"].drop_duplicates().dropna()
@@ -224,7 +195,7 @@ def sort_communal_uplift(midyear=True):
         com2011 = com2011.rename(columns={'people': 'Census'})
 
         # uplift communal to MYPE
-        mype = get_ew_population()
+        mype = get_ew_population(by_lu_obj)
         mype_adjust = mype.merge(com2011, on=['ZoneID', 'Gender', 'Age'], how='outer')
         mype_adjust['communal_mype'] = mype_adjust['pop'].values * mype_adjust['CommunalFactor'].values
         print('Communal establishments total for new MYPE is ', mype_adjust['communal_mype'].sum())
@@ -232,6 +203,9 @@ def sort_communal_uplift(midyear=True):
         return mype_communal
 
     else:
+        pass
+        # TODO: set up for future year
+        '''
         ew_land_use_group = ew_land_use.groupby(by=['ZoneID'], as_index=False).sum()[['ZoneID', 'people']]
         communal_group = communal.groupby(by=['ZoneID'], as_index=False).sum()[['ZoneID', 'communal']]
         com2011 = ew_land_use_group.merge(communal_group, on=['ZoneID'])
@@ -242,10 +216,11 @@ def sort_communal_uplift(midyear=True):
         fype_adjust['communal_fype'] = fype_adjust['pop'].values * fype_adjust['CommunalFactor'].values
 
         print('Communal establishments total for fy is ', fype_adjust['communal_mype'].sum())
+        '''
 
 
 # TODO: include block commenting
-def adjust_landuse_to_specific_yr(writeOut=True):
+def adjust_landuse_to_specific_yr(by_lu_obj, writeOut=True):
     """
     Takes adjusted landuse (after splitting out communal establishments)
     Parameters
@@ -259,10 +234,11 @@ def adjust_landuse_to_specific_yr(writeOut=True):
     
     """
     if writeOut:
-        landuse_segments = pd.read_csv(_landuse_segments, usecols=['ZoneID', 'area_type', 'property_type', 'Age',
-                                                                   'Gender', 'employment_type', 'ns_sec',
-                                                                   'household_composition',
-                                                                   'SOC_category', 'people']).drop_duplicates()
+        landuse_segments = pd.read_csv(by_lu_obj.home_folder + _landuse_segments,
+                                       usecols=['ZoneID', 'area_type', 'property_type', 'Age',
+                                                'Gender', 'employment_type', 'ns_sec',
+                                                'household_composition',
+                                                'SOC_category', 'people']).drop_duplicates()
 
         # TODO: put these normalisation dictionaries in lu_constants
         gender_nt = {'Male': 2, 'Females': 3, 'Children': 1}
@@ -308,12 +284,12 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         print('LU length %d before %d after' % (len_before, len_after))
 
         # Get Scottish Population
-        scot_mype = format_scottish_mype()
+        scot_mype = format_scottish_mype(by_lu_obj)
         scot_mype = scot_mype[['ZoneID', 'Gender', 'Age', 'pop']]
         print('Reading in new Scot population data')
 
-        mype_communal = sort_communal_uplift()
-        ewmype = get_ew_population()
+        mype_communal = sort_communal_uplift(by_lu_obj)
+        ewmype = get_ew_population(by_lu_obj)
 
         # adjust mype in EW to get rid of communal
 
@@ -362,7 +338,7 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         # Get the communal establishments 
         landuse_com = landuse_segments[landuse_segments.property_type == 8]
 
-        com = sort_communal_uplift()
+        com = sort_communal_uplift(by_lu_obj)
         com['gender'] = com['Gender'].map(gender_nt)
         com['age_code'] = com['Age'].map(age_nt)
         com = com.drop(columns={'Age', 'Gender'})
@@ -391,7 +367,7 @@ def adjust_landuse_to_specific_yr(writeOut=True):
         gb_adjusted = gb_adjusted.groupby(by=['ZoneID', 'gender', 'age_code', 'emp', 'SOC_category', 'ns_sec',
                                               'area_type', 'property_type', 'household_composition']
                                           , as_index=False).sum()
-        gb_adjusted.to_csv(_default_home_dir + '/landUseOutputMSOA_2018.csv', index=False)
+        gb_adjusted.to_csv(by_lu_obj.home_folder + '/landUseOutputMSOA_2018.csv', index=False)
         print('full GB adjusted dataset should be now saved in default iter folder')
 
         # reclaim memory
@@ -403,7 +379,7 @@ def adjust_landuse_to_specific_yr(writeOut=True):
 
 # TODO: rename this function
 # TODO: include block commenting
-def sort_out_hops_uplift():
+def sort_out_hops_uplift(by_lu_obj):
     """    
     This provides the new household occupancy figures for each property type 
     following MYPE adjustment.
@@ -418,7 +394,7 @@ def sort_out_hops_uplift():
     Adjusted HOPs
     
     """
-    all_res_property_zonal = pd.read_csv(_default_home_dir + '/classifiedResPropertyMSOA.csv')
+    all_res_property_zonal = pd.read_csv(by_lu_obj.home_folder + '/classifiedResPropertyMSOA.csv')
     all_res_property_zonal['new_prop_type'] = all_res_property_zonal['census_property_type']
     # TODO: how does this relate to the landuse_formatting in main_build? Map a dictionary instead
     all_res_property_zonal.loc[all_res_property_zonal['census_property_type'] == 5, 'new_prop_type'] = 4
@@ -430,24 +406,24 @@ def sort_out_hops_uplift():
     all_res_property_zonal['household_occupancy_18'] = all_res_property_zonal['population'] / \
                                                        all_res_property_zonal['UPRN']
 
-    mype_pop = pd.read_csv(_default_home_dir + '/landUseOutputMSOA_2018.csv')
+    mype_pop = pd.read_csv(by_lu_obj.home_folder + '/landUseOutputMSOA_2018.csv')
     mype_pop = mype_pop.groupby(by=['ZoneID', 'property_type'], as_index=False).sum()
     mype_pop = mype_pop[['ZoneID', 'property_type', 'people']]
 
     hops = all_res_property_zonal.merge(mype_pop, on=['ZoneID', 'property_type'])
     hops['household_occupancy_2018_mype'] = hops['people'] / hops['UPRN']
 
-    hops.to_csv(_default_home_dir + '/Hops Population Audits/household_occupation_comparison.csv', index=False)
+    hops.to_csv(by_lu_obj.home_folder + '/Hops Population Audits/household_occupation_comparison.csv', index=False)
     hops = hops.drop(columns={'UPRN', 'household_occupancy_18', 'population', 'people'})
     hops = hops.rename(columns={'household_occupancy_2018_mype': 'household_occupancy'})
 
     # Check all msoas are included:
     print('Check all MSOAs are present, should be 8480:', hops['ZoneID'].drop_duplicates().count())
-    hops.to_csv(_default_home_dir + '/Hops Population Audits/2018_household_occupancy.csv', index=False)
+    hops.to_csv(by_lu_obj.home_folder + '/Hops Population Audits/2018_household_occupancy.csv', index=False)
 
 
 # TODO: improve block commenting
-def adjust_car_availability():
+def adjust_car_availability(by_lu_obj):
     """
     applies nts extract to landuse
     Parameters
@@ -455,8 +431,8 @@ def adjust_car_availability():
     Returns
     ----------
     """
-    _nts_import_path = _default_home_dir + '/nts_splits.csv'
-    land_use = pd.read_csv(_landuse_segments)
+    _nts_import_path = by_lu_obj.home_folder + '/nts_splits.csv'
+    land_use = pd.read_csv(by_lu_obj.home_folder + _landuse_segments)
     cars_adjust = pd.read_csv(_nts_import_path)
 
     segments = land_use.groupby(by=['area_type', 'employment_type', 'household_composition'],
@@ -481,25 +457,24 @@ def adjust_car_availability():
 
     all_combined2 = land.merge(join, on=['area_type', 'employment_type'])
     all_combined2['new'] = all_combined2['newhc'] * all_combined2['factor']
-    all_combined2.to_csv(_default_home_dir + 'landuse_caradj.csv', index=False)
+    all_combined2.to_csv(by_lu_obj.home_folder + 'landuse_caradj.csv', index=False)
 
     car_available = all_combined2.groupby(by=['household_composition'], as_index=False).sum()
-    car_available.to_csv(_default_home_dir + '/caravailable.csv')
+    car_available.to_csv(by_lu_obj.home_folder + '/caravailable.csv')
 
 
 # TODO: revise the print statements in this function. Good points to add logging maybe
 # TODO: include block commenting
-def adjust_soc_gb():
+def adjust_soc_gb(by_lu_obj):
     """
     To apply before the MYPE
     adjusts SOC values to gb levels for 2018
     """
-    gb_soc_totals = pd.read_csv(_gb_soc_totals)
+    gb_soc_totals = pd.read_csv(by_lu_obj.import_folder + _gb_soc_totals)
 
-    lad_translation = pd.read_csv(_default_lad_translation).drop(columns={'overlap_type',
-                                                                          'lad_to_msoa', 'msoa_to_lad'}).rename(
-        columns={
-            'msoa_zone_id': 'ZoneID', 'lad_zone_id': 'objectid'}
+    lad_translation = pd.read_csv(by_lu_obj.zones_folder + _default_lad_translation)
+    lad_translation = lad_translation.drop(columns={'overlap_type', 'lad_to_msoa', 'msoa_to_lad'}).rename(
+        columns={'msoa_zone_id': 'ZoneID', 'lad_zone_id': 'objectid'}
     )
 
     gb_soc_totals = gb_soc_totals.rename(columns={
@@ -531,7 +506,7 @@ def adjust_soc_gb():
     gb_soc_totals['total'] = gb_soc_totals.groupby(['Country'])['value'].transform('sum')
     gb_soc_totals['splits'] = gb_soc_totals['value'] / gb_soc_totals['total']
 
-    land_use_segments = pd.read_csv(_default_home_dir + '/AdjustedGBlanduse_emp.csv')
+    land_use_segments = pd.read_csv(by_lu_obj.home_folder + '/AdjustedGBlanduse_emp.csv')
     employed = land_use_segments[land_use_segments.emp.isin([1, 2])]  # fte and pte
     employed = employed.merge(lad_translation, on='ZoneID')
     employed['Country'] = 'England and Wales number'
@@ -550,7 +525,7 @@ def adjust_soc_gb():
                                       on=['Country', 'SOC_category'],
                                       how='left').drop(columns={'people', 'splits_land', 'value', 'total'})
 
-    emp_compare.to_csv(_default_home_dir + '/SOCsplitsComparison.csv')
+    emp_compare.to_csv(by_lu_obj.home_folder + '/SOCsplitsComparison.csv')
 
     emp_compare['pop'] = emp_compare['splits'] * emp_compare['total_land']
     print(emp_compare['pop'].sum())
@@ -581,16 +556,16 @@ def adjust_soc_gb():
     not_employed = land_use_segments[~land_use_segments.emp.isin([1, 2])]  # neither fte nor pte
     npr_segmentation = not_employed.append(soc_revised)
 
-    npr_segmentation.to_csv(_default_home_dir + '/landuse_adjustedSOCs.csv')
+    npr_segmentation.to_csv(by_lu_obj.home_folder + '/landuse_adjustedSOCs.csv')
 
 
 # TODO: currently does a whole load of processing but then just reads in "all" from elsewhere. Odd
-def adjust_soc_lad():
+def adjust_soc_lad(by_lu_obj):
     """
     TODO: lad translation path has changed here - needs updating
     """
     # Read in the LAD controls data and pick out the totals columns
-    lad_soc_control = pd.read_csv(_ladsoc_control)
+    lad_soc_control = pd.read_csv(by_lu_obj.import_folder + _ladsoc_control)
     lad_soc_control = lad_soc_control.rename(columns={
         '% all in employment who are - 1: managers, directors and senior officials (SOC2010) numerator': 'SOC1',
         '% all in employment who are - 2: professional occupations (SOC2010) numerator': 'SOC2',
@@ -620,12 +595,12 @@ def adjust_soc_lad():
     lad_soc = lad_soc.groupby(by=['lad17cd', 'SOC_category'], as_index=False).sum()
 
     # Read in the MSOA-LAD correspondence and perform a cross join such that every MSOA pair within an LAD is included
-    lad_ref = pd.read_csv(_default_lad_translation).iloc[:, 0:2]
+    lad_ref = pd.read_csv(by_lu_obj.zones_folder + _default_lad_translation).iloc[:, 0:2]
     lad_ref = lad_ref.rename(columns={'msoa_zone_id': 'ZoneID'}).merge(lad_ref, on='lad_zone_id')
 
     # Read in the population to adjust
     # TODO: switch this to by_lu_obj.home_folder
-    land_use = pd.read_csv(_default_home_dir + '/landuse_adjustedSOCs.csv')
+    land_use = pd.read_csv(by_lu_obj.home_folder + '/landuse_adjustedSOCs.csv')
 
     # First handle employed
     employed = land_use[land_use.employment_type.isin(['fte', 'pte'])]  # fte and pte
@@ -699,9 +674,9 @@ def adjust_soc_lad():
     zone_factor = socs.groupby(by=['ZoneID', 'Gender', 'Age', ''])
     soc_totals['newpop2'] = soc_totals['newpop'] * soc_totals['factor']
 
-    gb_land_use = pd.read_csv(_default_home_dir + 'landuseGBMYE_flatcombined.csv')
+    gb_land_use = pd.read_csv(by_lu_obj.home_folder + 'landuseGBMYE_flatcombined.csv')
 
-    all = pd.read_csv(_default_home_dir + 'NPRSegments_stage1.csv')
+    all = pd.read_csv(by_lu_obj.home_folder + 'NPRSegments_stage1.csv')
     all = all.drop_duplicates()
 
     # TODO: does this need to be normalised? And used for anything?
@@ -712,32 +687,31 @@ def adjust_soc_lad():
     return all
 
 
-def control_to_lad_employment_ag():
+def control_to_lad_employment_ag(by_lu_obj):
     """
     control to employment at LAD level for age, gender and fte/pte employment; 
     adjusts inactive people in work accordingly
     
     Parameters
     ----------
-    landUseOutputMSOA_2018: as a result of the mype adjustments
-    empcontrols: APS 2018 control for working age population, including their gender
-    and the split between fte and pte
+    by_lu_obj: base year land use object
     
     Returns
     ----------
-    GBlanduseControlled: number of employed people is controlled to 2018 age, gender and 
+    gb_land_use_controlled: number of employed people is controlled to 2018 age, gender and
     fte/pte patterns in employment
     """
 
-    land_use = pd.read_csv(_default_home_dir + '/landUseOutputMSOA_2018.csv')
+    land_use = pd.read_csv(by_lu_obj.home_folder + '/landUseOutputMSOA_2018.csv')
 
-    lad_translation = pd.read_csv(_default_lad_translation).drop(columns={'lad_to_msoa', 'msoa_to_lad', 'overlap_type'})
+    lad_translation = pd.read_csv(by_lu_obj.zones_folder + _default_lad_translation)
+    lad_translation = lad_translation.drop(columns={'lad_to_msoa', 'msoa_to_lad', 'overlap_type'})
     lad_translation = lad_translation.rename(columns={'msoa_zone_id': 'ZoneID', 'lad_zone_id': 'objectid'})
     lad_ref = gpd.read_file(_default_ladRef).iloc[:, 0:2]
     land_use = land_use.merge(lad_translation, on='ZoneID', how='left')
     land_use = land_use.merge(lad_ref, on='objectid')
 
-    emp_controls = pd.read_csv(_emp_controls)
+    emp_controls = pd.read_csv(by_lu_obj.import_folder + _emp_controls)
     emp_controls = emp_controls.rename(columns={
         'T08:29 (Males - Aged 16 - 64 : Full-time ) number': 'Male FTE',
         'T08:30 (Males - Aged 16 - 64 : Part-time ) number': 'Male PTE',
@@ -910,43 +884,41 @@ def control_to_lad_employment_ag():
           gb_land_use_controlled['people'].sum(), 'Now saving the new landuse dataset.')
 
     # audit to check population per msoa
-    check_msoa_totals(gb_land_use_controlled, function_name='control_to_lad')
+    check_msoa_totals(by_lu_obj, gb_land_use_controlled, function_name='control_to_lad')
 
     gb_land_use_controlled.groupby(by=['ZoneID', 'age_code', 'emp', 'area_type', 'property_type',
                                        'household_composition', 'gender',
                                        'SOC_category', 'ns_sec'])
 
-    gb_land_use_controlled.to_csv(_default_home_dir + '/GBlanduseControlled.csv', index=False)
+    gb_land_use_controlled.to_csv(by_lu_obj.home_folder + '/GBlanduseControlled.csv', index=False)
     gc.collect()
 
     return gb_land_use_controlled
 
 
-def check_msoa_totals(df, function_name):
+def check_msoa_totals(by_lu_obj, df, function_name):
     """
     check how the outputs compare to MYPE for audits
     """
     df_msoa = df.groupby(by=['ZoneID'], as_index=False).sum().reindex(columns={'ZoneID', 'people'})
     # read in mype msoa totals
-    msoa_totals = get_ew_population()
+    msoa_totals = get_ew_population(by_lu_obj)
     msoa_totals = msoa_totals.groupby(by=['ZoneID'], as_index=False).sum().rename(columns={'pop': 'mype'}).reindex(
         columns=['ZoneID', 'mype'])
 
     msoa_comparison = msoa_totals.merge(df_msoa, on=['ZoneID'])
-    msoa_comparison.to_csv(_default_home_dir + 'msoa_check' + function_name + '.csv')
+    msoa_comparison.to_csv(by_lu_obj.home_folder + 'msoa_check' + function_name + '.csv')
     print(msoa_comparison)
 
 
-def country_emp_control():
+def country_emp_control(by_lu_obj):
     """
     this function is to make sure we have the right amount of people in work 
     Based on APS extract (as of 2018)
     
     Parameters
     ----------
-    GBlanduseControlled: as a result of the control_to_lad_employment_ag function
-    country_emp: APS 2018 control for working age population to make sure the total number
-    of people in work is the same across all models in Analytical Framework
+    by_lu_obj: base year land use object
     
     Returns
     ----------
@@ -956,12 +928,12 @@ def country_emp_control():
     """
 
     # Country employment control for total numbers of people in work in EW and Scotland
-    country_emp = pd.read_csv(_country_control)
+    country_emp = pd.read_csv(by_lu_obj.import_folder + _country_control)
     country_emp = country_emp.rename(columns={'T01:7 (All aged 16 & over - In employment : All People )': 'Emp'})
     country_emp = country_emp[['Country', 'Emp']]
     country_emp = country_emp[country_emp.Country.isin(['England and Wales number', 'Scotland number'])]
     # read in landuse with some employment controls already
-    land_use = pd.read_csv(_default_home_dir + '/GBlanduseControlled.csv')
+    land_use = pd.read_csv(by_lu_obj.home_folder + '/GBlanduseControlled.csv')
     zones = land_use['ZoneID'].drop_duplicates()
     scott = zones[zones.str.startswith('S')]
     # work out how many people are employed in Scotland (from land use)
@@ -1034,18 +1006,18 @@ def country_emp_control():
     adjusted_gb_land_use = adjusted_gb_land_use.append(children)
     # adjusted_gb_land_use['people'].sum() # should be 64.5m
     # audit the msoa population totals
-    check_msoa_totals(adjusted_gb_land_use, function_name='country_control')
+    check_msoa_totals(by_lu_obj, adjusted_gb_land_use, function_name='country_control')
     print('Saving to default folder...')
-    adjusted_gb_land_use.to_csv(_default_home_dir + 'AdjustedGBlanduse_emp.csv')
+    adjusted_gb_land_use.to_csv(by_lu_obj.home_folder + 'AdjustedGBlanduse_emp.csv')
 
 
-def run_mype(midyear=True):
+def run_mype(by_lu_obj, midyear=True):
     # normalise_landuse()
-    adjust_landuse_to_specific_yr()
-    control_to_lad_employment_ag()
-    country_emp_control()
-    adjust_soc_gb()
-    adjust_soc_lad()
-    sort_out_hops_uplift()  # order doesn't matter for this one
-    get_ca()
-    adjust_car_availability()
+    adjust_landuse_to_specific_yr(by_lu_obj)
+    control_to_lad_employment_ag(by_lu_obj)
+    country_emp_control(by_lu_obj)
+    adjust_soc_gb(by_lu_obj)
+    adjust_soc_lad(by_lu_obj)
+    sort_out_hops_uplift(by_lu_obj)  # order doesn't matter for this one
+    # get_ca() TODO: find the history of this function
+    adjust_car_availability(by_lu_obj)
