@@ -462,6 +462,8 @@ def adjust_car_availability(by_lu_obj):
     car_available = all_combined2.groupby(by=['household_composition'], as_index=False).sum()
     car_available.to_csv(by_lu_obj.home_folder + '/caravailable.csv')
 
+    by_lu_obj.state['5.2.11 car availability'] = 1
+
 
 # TODO: revise the print statements in this function. Good points to add logging maybe
 # TODO: include block commenting
@@ -684,6 +686,8 @@ def adjust_soc_lad(by_lu_obj):
     # TODO: why the fillna?
     all['SOC_category'] = all['SOC_category'].fillna('NA')
 
+    by_lu_obj.state['5.2.10 SEC/SOC'] = 1  # SEC/SOC adjustments complete
+
     return all
 
 
@@ -893,6 +897,8 @@ def control_to_lad_employment_ag(by_lu_obj):
     gb_land_use_controlled.to_csv(by_lu_obj.home_folder + '/GBlanduseControlled.csv', index=False)
     gc.collect()
 
+    by_lu_obj.state['5.2.8 MYPE adjustment'] = 1  # record that the mid year adjustment is complete
+
     return gb_land_use_controlled
 
 
@@ -1009,6 +1015,8 @@ def country_emp_control(by_lu_obj):
     check_msoa_totals(by_lu_obj, adjusted_gb_land_use, function_name='country_control')
     print('Saving to default folder...')
     adjusted_gb_land_use.to_csv(by_lu_obj.home_folder + 'AdjustedGBlanduse_emp.csv')
+
+    by_lu_obj.state['5.2.9 employment adjustment'] = 1  # record step as complete in the base year land use object
 
 
 def run_mype(by_lu_obj, midyear=True):
