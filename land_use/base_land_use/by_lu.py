@@ -1,15 +1,10 @@
 import os
-import pandas as pd
 import land_use.lu_constants as consts
 from land_use.utils import file_ops as utils
 from land_use.base_land_use import main_build, car_availability_adjustment
-# from land_use.base_land_use import mid_year_pop_adjustments as mypa
+from land_use.base_land_use import mid_year_pop_adjustments as mypa
 
 """
-1. Run base_land_use/Land Use data prep.py - this prepares the AddressBase extract and classifies the properties to prep the property data
-2. Run base_land_use/main_build_hh_and_persons_census_segmentation.py - this prepares evertything to do with Census and joins to property data
-3. Run mid_year_ pop_adjustments.py - this does the uplift to 2018
-
 TODO:
 1. Inherit from a pathing object?
 2. See normits_demand.utils.compression for ways to speed up I/O
@@ -26,13 +21,8 @@ class BaseYearLandUse:
                  zone_translation_path=consts.ZONE_TRANSLATION_PATH,
                  KS401path=consts.KS401_PATH,
                  area_type_path=consts.LU_AREA_TYPES,
-                 # base_land_use_path=None,
-                 # base_employment_path=None,
-                 # base_soc_mix_path=None,
                  base_year='2018',
-                 scenario_name=None,
-                 # pop_segmentation_cols=None,
-                 sub_for_defaults=False):
+                 scenario_name=None):
         """
         parse parameters from run call (file paths, requested outputs and audits)
         area types: NTEM / TfN
@@ -140,18 +130,17 @@ class BaseYearLandUse:
         main_build.apply_ns_sec_soc_splits(self)
 
         # Steps from mid-year population estimate adjustment
-        """
         if self.state['5.2.8 MYPE adjustment'] == 0:
-            mypa.control_to_lad(self)
             mypa.adjust_landuse_to_specific_yr(self)
-            mypa.sort_out_hops_uplift(self)
+            mypa.control_to_lad_employment_ag(self)
+            mypa.sort_out_hops_uplift(self)  # for audit
 
         if self.state['5.2.9 employment adjustment'] == 0:
-            mypa.Country_emp_control(self)
+            mypa.country_emp_control(self)
 
         if self.state['5.2.10 SEC/SOC'] == 0:
             mypa.adjust_soc_gb(self)
-        """
+            # mypa.adjust_soc_lad(self)  TODO: fix this function
 
         # Car availability
         if self.state['5.2.11 car availability'] == 0:
@@ -165,4 +154,3 @@ class BaseYearLandUse:
             # Then apply the function from mid_year_pop_adjustments
             # TODO: uncomment line below once MYPE script has been fixed
             # mypa.adjust_car_availability(self)
-
