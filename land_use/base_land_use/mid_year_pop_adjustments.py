@@ -25,11 +25,12 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import gc
+from land_use.utils import compress
 
 # Outputs from previous steps
 _default_communal_2011 = '/CommunalEstablishments/MSOACommunalEstablishments2011.csv'
-_default_landuse_2011 = '/landuseOutputMSOA_withCommunal.csv'
-_landuse_segments = '/landuseOutputMSOA_NS_SEC_SOC.csv'
+_default_landuse_2011 = '/landUseOutputMSOA_withCommunal'
+_landuse_segments = '/landUseOutputMSOA_NS_SEC_SOC'
 
 # Zones and shapefiles
 _default_lad_translation = 'Export/lad_to_msoa/lad_to_msoa.csv'
@@ -61,7 +62,7 @@ def format_scottish_mype(by_lu_obj):
     Scot_adjust- one formatted DataFrame of new Scottish MYPE including population
     split by age and gender by MSOA
     """
-    land_use_segments = pd.read_csv(by_lu_obj.home_folder + _landuse_segments)
+    land_use_segments = compress.read_in(by_lu_obj.home_folder + _landuse_segments)
 
     # Translation from LAD to MSOAs
     lad_translation = pd.read_csv(by_lu_obj.zones_folder + _default_lad_translation)
@@ -176,7 +177,7 @@ def sort_communal_uplift(by_lu_obj, midyear=True):
         DataFrame containing Communal Establishments according to the MYPE (2018).
     """
     communal = pd.read_csv(by_lu_obj.home_folder + _default_communal_2011).rename(columns={'people': 'communal'})
-    census_output = pd.read_csv(by_lu_obj.home_folder + _default_landuse_2011)
+    census_output = compress.read_in(by_lu_obj.home_folder + _default_landuse_2011)
 
     # split land use data into 2 pots: Scotland and E+W
     zones = census_output["ZoneID"].drop_duplicates().dropna()
@@ -234,11 +235,11 @@ def adjust_landuse_to_specific_yr(by_lu_obj, writeOut=True):
     
     """
     if writeOut:
-        landuse_segments = pd.read_csv(by_lu_obj.home_folder + _landuse_segments,
-                                       usecols=['ZoneID', 'area_type', 'property_type', 'Age',
-                                                'Gender', 'employment_type', 'ns_sec',
-                                                'household_composition',
-                                                'SOC_category', 'people']).drop_duplicates()
+        landuse_segments = compress.read_in(by_lu_obj.home_folder + _landuse_segments)
+        landuse_segments = landuse_segments[['ZoneID', 'area_type', 'property_type', 'Age',
+                                             'Gender', 'employment_type', 'ns_sec',
+                                             'household_composition',
+                                             'SOC_category', 'people']].drop_duplicates()
 
         # TODO: put these normalisation dictionaries in lu_constants
         gender_nt = {'Male': 2, 'Females': 3, 'Children': 1}
@@ -367,7 +368,7 @@ def adjust_landuse_to_specific_yr(by_lu_obj, writeOut=True):
         gb_adjusted = gb_adjusted.groupby(by=['ZoneID', 'gender', 'age_code', 'emp', 'SOC_category', 'ns_sec',
                                               'area_type', 'property_type', 'household_composition']
                                           , as_index=False).sum()
-        gb_adjusted.to_csv(by_lu_obj.home_folder + '/landUseOutputMSOA_2018.csv', index=False)
+        compress.write_out(gb_adjusted, by_lu_obj.home_folder + '/landUseOutputMSOA_2018')
         print('full GB adjusted dataset should be now saved in default iter folder')
 
         # reclaim memory
@@ -406,7 +407,7 @@ def sort_out_hops_uplift(by_lu_obj):
     all_res_property_zonal['household_occupancy_18'] = all_res_property_zonal['population'] / \
                                                        all_res_property_zonal['UPRN']
 
-    mype_pop = pd.read_csv(by_lu_obj.home_folder + '/landUseOutputMSOA_2018.csv')
+    mype_pop = compress.read_in(by_lu_obj.home_folder + '/landUseOutputMSOA_2018')
     mype_pop = mype_pop.groupby(by=['ZoneID', 'property_type'], as_index=False).sum()
     mype_pop = mype_pop[['ZoneID', 'property_type', 'people']]
 
@@ -432,7 +433,7 @@ def adjust_car_availability(by_lu_obj):
     ----------
     """
     _nts_import_path = by_lu_obj.home_folder + '/nts_splits.csv'
-    land_use = pd.read_csv(by_lu_obj.home_folder + _landuse_segments)
+    land_use = compress.read_in(by_lu_obj.home_folder + _landuse_segments)
     cars_adjust = pd.read_csv(_nts_import_path)
 
     segments = land_use.groupby(by=['area_type', 'employment_type', 'household_composition'],
@@ -706,7 +707,7 @@ def control_to_lad_employment_ag(by_lu_obj):
     fte/pte patterns in employment
     """
 
-    land_use = pd.read_csv(by_lu_obj.home_folder + '/landUseOutputMSOA_2018.csv')
+    land_use = compress.read_in(by_lu_obj.home_folder + '/landUseOutputMSOA_2018')
 
     lad_translation = pd.read_csv(by_lu_obj.zones_folder + _default_lad_translation)
     lad_translation = lad_translation.drop(columns={'lad_to_msoa', 'msoa_to_lad', 'overlap_type'})

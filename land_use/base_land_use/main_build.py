@@ -28,6 +28,7 @@ import pandas as pd
 import geopandas as gpd
 import shutil
 from land_use.utils import file_ops as utils
+from land_use.utils import compress
 import land_use.lu_constants as consts
 
 # TODO: check if the following is actually required
@@ -598,7 +599,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     msoa_audit.to_csv(seg_folder + '/2018MSOAPopulation_OutputEnd.csv', index=False)
 
     # Export to file
-    crp.to_csv(by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '.csv', index=False)
+    compress.write_out(crp, by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning)
 
     by_lu_obj.state['5.2.6 NTEM segmentation'] = 1  # record that this process has been run
     return crp, bsq
@@ -699,8 +700,8 @@ def join_establishments(by_lu_obj):
     communal_establishments = communal_establishments.merge(areatypes, on='ZoneID')
 
     #### bring in landuse for hc ####
-    landusePath = by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '.csv'
-    landuse = pd.read_csv(landusePath)
+    landusePath = by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning
+    landuse = compress.read_in(landusePath)
     zones = landuse["ZoneID"].drop_duplicates().dropna()
     Ezones = zones[zones.str.startswith('E')]
     Elanduse = landuse[landuse.ZoneID.isin(Ezones)]
@@ -733,8 +734,8 @@ def join_establishments(by_lu_obj):
     landuse = landuse[cols]
     landusewComm = landuse.append(CommunalEstablishments)
     print('Joined communal communities. Total pop for GB is now', landusewComm['people'].sum())
-    landusewComm.to_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_withCommunal.csv',
-                        index=False)
+    compress.write_out(landusewComm,
+                       by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_withCommunal')
 
     by_lu_obj.state['5.2.7 communal establishments'] = 1  # record that this process has been run
 
@@ -744,11 +745,10 @@ def land_use_formatting(by_lu_obj):
     Combines all flats into one category, i.e. property types = 4,5,6.
     """
     # 1.Combine all flat types. Sort out flats on the landuse side; actually there's no 7
-    land_use = pd.read_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_withCommunal.csv')
+    land_use = compress.read_in(by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_withCommunal')
     land_use['property_type'] = land_use['property_type'].map(consts.PROPERTY_TYPE)
-    land_use = land_use.to_csv(
-        by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_flats_combined.csv',
-        index=False)
+    compress.write_out(land_use,
+                       by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_flats_combined')
 
     by_lu_obj.state['5.2.3 property type mapping'] = 1
 
@@ -908,7 +908,7 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     inactive_splits = inactive_splits.drop(columns={'msoa_splits', 'global_splits'})
 
     # England and Wales - apply splits for inactive people
-    land_use = pd.read_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_flats_combined.csv')
+    land_use = compress.read_in(by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_flats_combined')
     ActivePot = land_use[~land_use.employment_type.isin(['stu', 'non_wa'])].copy()
     InactivePot = land_use[land_use.employment_type.isin(['stu', 'non_wa'])].copy()
 
@@ -989,7 +989,7 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     NPRSegments = ['ZoneID', 'area_type', 'property_type', 'Age', 'Gender', 'employment_type',
                    'ns_sec', 'household_composition', 'SOC_category', 'newpop']
     All = All[NPRSegments].rename(columns={'newpop': 'people'})
-    All.to_csv(by_lu_obj.home_folder + '/landuseOutput' + by_lu_obj.model_zoning + '_NS_SEC_SOC.csv', index=False)
+    compress.write_out(All, by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_NS_SEC_SOC')
     print(All['people'].sum())
 
 
