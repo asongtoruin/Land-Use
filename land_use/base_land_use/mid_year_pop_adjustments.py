@@ -562,7 +562,6 @@ def adjust_soc_gb(by_lu_obj):
     npr_segmentation.to_csv(by_lu_obj.home_folder + '/landuse_adjustedSOCs.csv')
 
 
-# TODO: currently does a whole load of processing but then just reads in "all" from elsewhere. Odd
 def adjust_soc_lad(by_lu_obj):
     """
     TODO: lad translation path has changed here - needs updating
@@ -599,97 +598,49 @@ def adjust_soc_lad(by_lu_obj):
 
     # Read in the MSOA-LAD correspondence and perform a cross join such that every MSOA pair within an LAD is included
     lad_ref = pd.read_csv(by_lu_obj.zones_folder + _default_lad_translation).iloc[:, 0:2]
-    lad_ref = lad_ref.rename(columns={'msoa_zone_id': 'ZoneID'}).merge(lad_ref, on='lad_zone_id')
+    lad_ref = lad_ref.rename(columns={'msoa_zone_id': 'ZoneID'})
 
     # Read in the population to adjust
-    # TODO: switch this to by_lu_obj.home_folder
     land_use = pd.read_csv(by_lu_obj.home_folder + '/landuse_adjustedSOCs.csv')
 
     # First handle employed
-    employed = land_use[land_use.employment_type.isin(['fte', 'pte'])]  # fte and pte
+    employed = land_use[land_use.emp.isin([1, 2])]  # fte and pte
     print('Employed people in landuse: ', employed['people'].sum())
 
-    soc_totals_lad = employed.groupby(by=['ZoneID', 'SOC_category'], as_index=False).sum().drop(columns={'area_type'})
-    soc_totals_lad = soc_totals_lad.merge(lad_ref, on='ZoneID')
-    soc_totals_lad = soc_totals_lad.groupby(by=['lad_zone_id', 'SOC_category'], as_index=False).sum()
-    soc_totals_lad = soc_totals_lad[['lad_zone_id', 'SOC_category', 'people']]
+    ladref = gpd.read_file(_default_ladRef).iloc[:, 0:2].rename(columns={'objectid': 'lad_zone_id'})
 
-    # TODO: we have MSOAs and LADs in parallel here...
-    soc_totals_msoa = employed.groupby(by=['ZoneID', 'SOC_category'], as_index=False).sum()
+    soc_totals_msoa = employed.groupby(by=['ZoneID', 'SOC_category'], as_index=False).sum()[
+        ['ZoneID', 'SOC_category', 'people']]
     soc_totals_msoa = soc_totals_msoa.merge(lad_ref, on='ZoneID')
-    soc_totals_msoa = soc_totals_msoa.groupby(by=['ZoneID', 'lad_zone_id'],
-                                              as_index=False).sum()[['ZoneID', 'lad_zone_id', 'people']]
+    soc_totals_lad = soc_totals_msoa.groupby(by=['lad_zone_id'], as_index=False).sum()
+    soc_totals_lad = soc_totals_lad[['lad_zone_id', 'people']]
+    soc_totals_lad = soc_totals_lad.merge(ladref, on='lad_zone_id')
+
+    soc_totals_before = soc_totals_msoa.groupby(by=['lad_zone_id', 'SOC_category'], as_index=False).sum()
+
     """
         ladref = gpd.read_file(_default_ladRef).iloc[:,0:2]
         landuse = landuse.merge(LadTranslation, on = 'ZoneID', how='left')
         LADSoc = LADSoc.merge(ladref, on = 'objectid')
     """
-    compare = soc_totals_msoa.merge(lad_soc, on='lad17cd')
-    compare['people'] = compare['newpop'] * compare['splits']
+    soc_totals_after = soc_totals_lad.merge(lad_soc, on=['lad17cd'])
+    soc_totals_after['newpop'] = soc_totals_after['people'] * soc_totals_after['splits']
+    soc_totals_after['newpop'].sum()
+    soc_totals_after = soc_totals_after[['lad17cd', 'lad_zone_id', 'SOC_category', 'newpop']]
 
-    compare = soc_totals_lad.merge(lad_soc, on='lad17cd')
-    compare['newvalue'] = compare['newpop'] * compare['splits']
-    # TODO: is there really a column called t?
-    compare = compare.drop(columns={'newop', 'value', 't'})
+    # work out scaling factor
+    compare = soc_totals_before.merge(soc_totals_after, on=['lad_zone_id', 'SOC_category'])
+    compare['factor'] = compare['people'] / compare['newpop']
+    compare = compare.drop(columns={'people', 'newpop'})
 
-    grouped = employed.groupby(by=['ZoneID', 'property_type', 'Age', 'Gender',
-                                   'household_composition', 'area_type', 'ns_sec'], as_index=False).sum()
+    print('Employed people before', soc_totals_before['people'].sum(),
+          'should be equal to after', soc_totals_after['newpop'].sum())
 
-    # TODO: in a previous version, were these grouped dfs used for anything?
-    grouped = grouped.merge(compare, on=['lad17cd'], how='left')
-    lad_grouped = employed.groupby(by=['ZoneID', 'lad17cd'], as_index=False).sum()
+    # TODO: use scaling factor for msoa level - join soc_totals_msoa with the factor
 
-    compare['factor'] = compare['value'] / compare['newpop']
-    compare = compare.drop(columns={'newpop', 'value'})
-
-    # Join back to MSOA level
-    land_use_soc = employed.merge(lad_ref, on='ZoneID')
-    # TODO: do we need to rename this variable with a '2'?
-    land_use_soc2 = land_use_soc.groupby(by=['ZoneID', 'lad17cd', 'SOC_category'], as_index=False).sum()
-    land_use_soc2['SOC_category'] = pd.to_numeric(land_use_soc2['SOC_category'])
-    land_use_soc2 = land_use_soc2.merge(compare, on=['lad17cd', 'SOC_category'], how='left')
-    land_use_soc2['pop'] = land_use_soc2['newpop'] * land_use_soc2['factor']
-    land_use_soc2 = land_use_soc2.drop(columns={'property_type', 'household_composition', 'ns_sec', 'area_type',
-                                                'objectid_x', 'objectid_y', 'factor', 'newpop'})
-
-    adjusted_population = land_use_soc.groupby(by=['ZoneID', 'lad17cd', 'property_type', 'household_composition',
-                                                   'Age', 'Gender', 'employment_type', 'ns_sec', 'SOC_category'],
-                                               as_index=False).sum()
-    adjusted_population = adjusted_population.drop(columns={'SOC_category'})
-
-    adjusted_population = adjusted_population.merge(land_use_soc2, on=['lad17cd'], how='left')
-    adjusted_population['pop2'] = adjusted_population['pop'] * adjusted_population['newpop']
-
-    # TODO: resolve the SOCtotals reference
-    socs = soc_totals.merge(compare, on=['lad17cd', 'SOC_category'])
-    socs['newpop2'] = socs['newpop'] * socs['factor']
-    socs = socs.drop(columns={'newpop'})
-
-    # Join to the rest
-    # TODO: join created but unused. Fix it
-    rest = socs.groupby(by=['ZoneID', 'area_type', 'Gender', 'Age', 'household_composition', 'ns_sec'],
-                        as_index=False).sum().drop(columns={'SOC_category'})
-    join = socs2.merge(rest, on=['ZoneID', 'area_type', 'objectid'], how='left')
-    join['pop'] = join['newpop2'] * join['newpop']
-    join = join.replace(np.inf, 0)
-
-    # TODO: groupby on blank column name ''. Check
-    zone_factor = socs.groupby(by=['ZoneID', 'Gender', 'Age', ''])
-    soc_totals['newpop2'] = soc_totals['newpop'] * soc_totals['factor']
-
-    gb_land_use = pd.read_csv(by_lu_obj.home_folder + 'landuseGBMYE_flatcombined.csv')
-
-    all = pd.read_csv(by_lu_obj.home_folder + 'NPRSegments_stage1.csv')
-    all = all.drop_duplicates()
-
-    # TODO: does this need to be normalised? And used for anything?
-    non_wa = all[all.employment_type.isin(['non_wa'])]
-    # TODO: why the fillna?
-    all['SOC_category'] = all['SOC_category'].fillna('NA')
-
-    by_lu_obj.state['5.2.10 SEC/SOC'] = 1  # SEC/SOC adjustments complete
-
-    return all
+    # TODO: add in the SOC 0 (unemployed people)
+    # TODO: check totals are correct
+    # TODO: write it out as an output
 
 
 def control_to_lad_employment_ag(by_lu_obj):
