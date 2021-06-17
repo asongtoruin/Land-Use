@@ -1027,6 +1027,5 @@ def run_mype(by_lu_obj, midyear=True):
     country_emp_control(by_lu_obj)
     adjust_soc_gb(by_lu_obj)
     adjust_soc_lad(by_lu_obj)
-    sort_out_hops_uplift(by_lu_obj)  # order doesn't matter for this one
-    # get_ca() TODO: find the history of this function
-    adjust_car_availability(by_lu_obj)
+    sort_out_hops_uplift(by_lu_obj)  # audit
+    adjust_car_availability(by_lu_obj)  # TODO: replace with NTEM

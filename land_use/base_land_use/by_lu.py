@@ -126,11 +126,9 @@ class BaseYearLandUse:
         if self.state['5.2.3 property type mapping'] == 0:
             main_build.land_use_formatting(self)
 
-        # TODO: main_build then runs the following function, how relate to documentation?
-        main_build.apply_ns_sec_soc_splits(self)
-
         # Steps from mid-year population estimate adjustment
         if self.state['5.2.8 MYPE adjustment'] == 0:
+            main_build.apply_ns_sec_soc_splits(self)  # part of step 5.2.10 but required as input to 5.2.8
             mypa.adjust_landuse_to_specific_yr(self)
             mypa.control_to_lad_employment_ag(self)
             mypa.sort_out_hops_uplift(self)  # for audit
@@ -144,13 +142,10 @@ class BaseYearLandUse:
 
         # Car availability
         if self.state['5.2.11 car availability'] == 0:
-            # TODO: what was this function for?
-            # mypa.get_ca(self)
-
             # First prepare the NTS data
             car_availability_adjustment.nts_import(self)
             print('NTS import completed successfully')
 
             # Then apply the function from mid_year_pop_adjustments
-            # TODO: uncomment line below once MYPE script has been fixed
+            # TODO: uncomment line below once MYPE script has been replaced
             # mypa.adjust_car_availability(self)
