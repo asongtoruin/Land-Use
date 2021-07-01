@@ -581,11 +581,9 @@ def adjust_soc_lad(by_lu_obj):
     })
     lad_cols = ['lad17cd', 'SOC1', 'SOC2', 'SOC3', 'SOC4', 'SOC5', 'SOC6', 'SOC7', 'SOC8', 'SOC9']
     lad_soc_control = lad_soc_control[lad_cols]
-    # TODO: reconsider simply replacing missing values with zero, maybe better not to re-constrain in these cases
     lad_soc_control = lad_soc_control.replace({'!': 0, '~': 0, '-': np.nan, '#': 0})  # these are data quality markers
 
     # Aggregate to just three SOC categories and compute the splits for each LAD between these three
-    # TODO: data for LAD E06000053 (id 52, Isles of Scilly) is all missing so controlling loses 1070 employed people
     lad_soc = pd.melt(lad_soc_control,
                       id_vars='lad17cd',
                       value_vars=['SOC1', 'SOC2', 'SOC3', 'SOC4', 'SOC5', 'SOC6', 'SOC7', 'SOC8', 'SOC9'])
