@@ -582,10 +582,10 @@ def adjust_soc_lad(by_lu_obj):
     lad_cols = ['lad17cd', 'SOC1', 'SOC2', 'SOC3', 'SOC4', 'SOC5', 'SOC6', 'SOC7', 'SOC8', 'SOC9']
     lad_soc_control = lad_soc_control[lad_cols]
     # TODO: reconsider simply replacing missing values with zero, maybe better not to re-constrain in these cases
-    lad_soc_control = lad_soc_control.replace({'!': 0, '~': 0, '-': 0, '#': 0})  # these are data quality markers
+    lad_soc_control = lad_soc_control.replace({'!': 0, '~': 0, '-': np.nan, '#': 0})  # these are data quality markers
 
     # Aggregate to just three SOC categories and compute the splits for each LAD between these three
-    # TODO: data for LAD 'E06000053' (id 52) is all missing, controlling loses 1070 employed people in this authority
+    # TODO: data for LAD E06000053 (id 52, Isles of Scilly) is all missing so controlling loses 1070 employed people
     lad_soc = pd.melt(lad_soc_control,
                       id_vars='lad17cd',
                       value_vars=['SOC1', 'SOC2', 'SOC3', 'SOC4', 'SOC5', 'SOC6', 'SOC7', 'SOC8', 'SOC9'])
@@ -594,9 +594,10 @@ def adjust_soc_lad(by_lu_obj):
                                             'SOC4': 2, 'SOC5': 2, 'SOC6': 2,
                                             'SOC7': 2, 'SOC8': 3, 'SOC9': 3}})
     lad_soc = lad_soc.rename(columns={'variable': 'SOC_category'})
-    lad_soc['total'] = lad_soc.groupby(['lad17cd'])['value'].transform('sum')
+    lad_soc['total'] = lad_soc.groupby('lad17cd')['value'].transform('sum')
     lad_soc['splits'] = lad_soc['value'] / lad_soc['total']
-    lad_soc = lad_soc.groupby(by=['lad17cd', 'SOC_category'], as_index=False).sum()
+    lad_soc = lad_soc.groupby(by=['lad17cd', 'SOC_category'])[['value', 'total', 'splits']].apply(
+        lambda x: x.sum(min_count=1, skipna=False)).reset_index()  # sum where np.nan is retained
 
     # Read in the MSOA-LAD correspondence and perform a cross join such that every MSOA pair within an LAD is included
     lad_ref = pd.read_csv(by_lu_obj.zones_folder + _default_lad_translation).iloc[:, 0:2]
@@ -629,9 +630,6 @@ def adjust_soc_lad(by_lu_obj):
     compare = soc_totals_before.merge(soc_totals_after, on=['lad_zone_id', 'SOC_category'])
     compare['factor'] = compare['newpop'] / compare['people']
     compare = compare.drop(columns={'lad17cd', 'people', 'newpop'})
-
-    print('Employed people before', soc_totals_before['people'].sum(),
-          'should be equal to after', soc_totals_after['newpop'].sum())
 
     # Apply the scaling factors to the main land use DataFrame
     land_use = land_use[~(land_use.emp.isin([1, 2]) & (land_use.SOC_category == 0))]  # exclude employed rows with SOC 0
