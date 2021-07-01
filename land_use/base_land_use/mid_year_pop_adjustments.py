@@ -458,7 +458,7 @@ def adjust_car_availability(by_lu_obj):
 
     all_combined2 = land.merge(join, on=['area_type', 'employment_type'])
     all_combined2['new'] = all_combined2['newhc'] * all_combined2['factor']
-    all_combined2.to_csv(by_lu_obj.home_folder + 'landuse_caradj.csv', index=False)
+    all_combined2.to_csv(by_lu_obj.home_folder + '/landuse_caradj.csv', index=False)
 
     car_available = all_combined2.groupby(by=['household_composition'], as_index=False).sum()
     car_available.to_csv(by_lu_obj.home_folder + '/caravailable.csv')
@@ -509,7 +509,7 @@ def adjust_soc_gb(by_lu_obj):
     gb_soc_totals['total'] = gb_soc_totals.groupby(['Country'])['value'].transform('sum')
     gb_soc_totals['splits'] = gb_soc_totals['value'] / gb_soc_totals['total']
 
-    land_use_segments = pd.read_csv(by_lu_obj.home_folder + '/AdjustedGBlanduse_emp.csv')
+    land_use_segments = compress.read_in(by_lu_obj.home_folder + '/AdjustedGBlanduse_emp')
     employed = land_use_segments[land_use_segments.emp.isin([1, 2])]  # fte and pte
     employed = employed.merge(lad_translation, on='ZoneID')
     employed['Country'] = 'England and Wales number'
@@ -559,7 +559,7 @@ def adjust_soc_gb(by_lu_obj):
     not_employed = land_use_segments[~land_use_segments.emp.isin([1, 2])]  # neither fte nor pte
     npr_segmentation = not_employed.append(soc_revised)
 
-    npr_segmentation.to_csv(by_lu_obj.home_folder + '/landuse_adjustedSOCs.csv')
+    compress.write_out(npr_segmentation, by_lu_obj.home_folder + '/landuse_adjustedSOCs')
 
 
 def adjust_soc_lad(by_lu_obj):
@@ -581,9 +581,11 @@ def adjust_soc_lad(by_lu_obj):
     })
     lad_cols = ['lad17cd', 'SOC1', 'SOC2', 'SOC3', 'SOC4', 'SOC5', 'SOC6', 'SOC7', 'SOC8', 'SOC9']
     lad_soc_control = lad_soc_control[lad_cols]
+    # TODO: reconsider simply replacing missing values with zero, maybe better not to re-constrain in these cases
     lad_soc_control = lad_soc_control.replace({'!': 0, '~': 0, '-': 0, '#': 0})  # these are data quality markers
 
     # Aggregate to just three SOC categories and compute the splits for each LAD between these three
+    # TODO: data for LAD 'E06000053' (id 52) is all missing, controlling loses 1070 employed people in this authority
     lad_soc = pd.melt(lad_soc_control,
                       id_vars='lad17cd',
                       value_vars=['SOC1', 'SOC2', 'SOC3', 'SOC4', 'SOC5', 'SOC6', 'SOC7', 'SOC8', 'SOC9'])
@@ -601,7 +603,7 @@ def adjust_soc_lad(by_lu_obj):
     lad_ref = lad_ref.rename(columns={'msoa_zone_id': 'ZoneID'})
 
     # Read in the population to adjust
-    land_use = pd.read_csv(by_lu_obj.home_folder + '/landuse_adjustedSOCs.csv')
+    land_use = compress.read_in(by_lu_obj.home_folder + '/landuse_adjustedSOCs')
 
     # First handle employed
     employed = land_use[land_use.emp.isin([1, 2])]  # fte and pte
@@ -609,38 +611,42 @@ def adjust_soc_lad(by_lu_obj):
 
     ladref = gpd.read_file(_default_ladRef).iloc[:, 0:2].rename(columns={'objectid': 'lad_zone_id'})
 
+    # Compute existing totals by LAD
     soc_totals_msoa = employed.groupby(by=['ZoneID', 'SOC_category'], as_index=False).sum()[
         ['ZoneID', 'SOC_category', 'people']]
     soc_totals_msoa = soc_totals_msoa.merge(lad_ref, on='ZoneID')
     soc_totals_lad = soc_totals_msoa.groupby(by=['lad_zone_id'], as_index=False).sum()
     soc_totals_lad = soc_totals_lad[['lad_zone_id', 'people']]
     soc_totals_lad = soc_totals_lad.merge(ladref, on='lad_zone_id')
-
     soc_totals_before = soc_totals_msoa.groupby(by=['lad_zone_id', 'SOC_category'], as_index=False).sum()
 
-    """
-        ladref = gpd.read_file(_default_ladRef).iloc[:,0:2]
-        landuse = landuse.merge(LadTranslation, on = 'ZoneID', how='left')
-        LADSoc = LADSoc.merge(ladref, on = 'objectid')
-    """
+    # Compute the re-constrained totals by LAD
     soc_totals_after = soc_totals_lad.merge(lad_soc, on=['lad17cd'])
     soc_totals_after['newpop'] = soc_totals_after['people'] * soc_totals_after['splits']
-    soc_totals_after['newpop'].sum()
     soc_totals_after = soc_totals_after[['lad17cd', 'lad_zone_id', 'SOC_category', 'newpop']]
 
-    # work out scaling factor
+    # Work out scaling factors to apply to each MSOA and SOC category
     compare = soc_totals_before.merge(soc_totals_after, on=['lad_zone_id', 'SOC_category'])
-    compare['factor'] = compare['people'] / compare['newpop']
-    compare = compare.drop(columns={'people', 'newpop'})
+    compare['factor'] = compare['newpop'] / compare['people']
+    compare = compare.drop(columns={'lad17cd', 'people', 'newpop'})
 
     print('Employed people before', soc_totals_before['people'].sum(),
           'should be equal to after', soc_totals_after['newpop'].sum())
 
-    # TODO: use scaling factor for msoa level - join soc_totals_msoa with the factor
+    # Apply the scaling factors to the main land use DataFrame
+    land_use = land_use[~(land_use.emp.isin([1, 2]) & (land_use.SOC_category == 0))]  # exclude employed rows with SOC 0
+    land_use = land_use.merge(lad_ref, on='ZoneID')
+    land_use = land_use.merge(compare, how='left', on=['lad_zone_id', 'SOC_category']).fillna(1).replace([np.inf], 0)
 
-    # TODO: add in the SOC 0 (unemployed people)
-    # TODO: check totals are correct
-    # TODO: write it out as an output
+    print('Population before LAD SOC control:', land_use.people.sum())
+    land_use['people'] *= land_use['factor']
+    print('Population after LAD SOC control:', land_use.people.sum())
+
+    # Write it out as an output
+    land_use = land_use.drop(columns={'lad_zone_id', 'factor'})
+    compress.write_out(land_use, by_lu_obj.home_folder + '/final_land_use')
+
+    by_lu_obj.state['5.2.10 SEC/SOC'] = 1  # record as done, this is the final SEC/SOC adjustment
 
 
 def control_to_lad_employment_ag(by_lu_obj):
@@ -846,7 +852,7 @@ def control_to_lad_employment_ag(by_lu_obj):
                                        'household_composition', 'gender',
                                        'SOC_category', 'ns_sec'])
 
-    gb_land_use_controlled.to_csv(by_lu_obj.home_folder + '/GBlanduseControlled.csv', index=False)
+    compress.write_out(gb_land_use_controlled, by_lu_obj.home_folder + '/GBlanduseControlled')
     gc.collect()
 
     by_lu_obj.state['5.2.8 MYPE adjustment'] = 1  # record that the mid year adjustment is complete
@@ -865,7 +871,7 @@ def check_msoa_totals(by_lu_obj, df, function_name):
         columns=['ZoneID', 'mype'])
 
     msoa_comparison = msoa_totals.merge(df_msoa, on=['ZoneID'])
-    msoa_comparison.to_csv(by_lu_obj.home_folder + 'msoa_check' + function_name + '.csv')
+    msoa_comparison.to_csv(by_lu_obj.home_folder + '/msoa_check' + function_name + '.csv')
     print(msoa_comparison)
 
 
@@ -891,7 +897,7 @@ def country_emp_control(by_lu_obj):
     country_emp = country_emp[['Country', 'Emp']]
     country_emp = country_emp[country_emp.Country.isin(['England and Wales number', 'Scotland number'])]
     # read in landuse with some employment controls already
-    land_use = pd.read_csv(by_lu_obj.home_folder + '/GBlanduseControlled.csv')
+    land_use = compress.read_in(by_lu_obj.home_folder + '/GBlanduseControlled')
     zones = land_use['ZoneID'].drop_duplicates()
     scott = zones[zones.str.startswith('S')]
     # work out how many people are employed in Scotland (from land use)
@@ -966,7 +972,7 @@ def country_emp_control(by_lu_obj):
     # audit the msoa population totals
     check_msoa_totals(by_lu_obj, adjusted_gb_land_use, function_name='country_control')
     print('Saving to default folder...')
-    adjusted_gb_land_use.to_csv(by_lu_obj.home_folder + 'AdjustedGBlanduse_emp.csv')
+    compress.write_out(adjusted_gb_land_use, by_lu_obj.home_folder + '/AdjustedGBlanduse_emp')
 
     by_lu_obj.state['5.2.9 employment adjustment'] = 1  # record step as complete in the base year land use object
 

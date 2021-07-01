@@ -138,7 +138,7 @@ class BaseYearLandUse:
 
         if self.state['5.2.10 SEC/SOC'] == 0:
             mypa.adjust_soc_gb(self)
-            # mypa.adjust_soc_lad(self)  TODO: fix this function
+            mypa.adjust_soc_lad(self)  # TODO: fix this function
 
         # Car availability
         if self.state['5.2.11 car availability'] == 0:

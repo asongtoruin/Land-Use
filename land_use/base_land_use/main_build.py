@@ -813,9 +813,9 @@ def apply_ns_sec_soc_splits(by_lu_obj):
                                             'PT higher': '1',
                                             'PT medium': '2',
                                             'PT skilled': '3',
-                                            'unm': 'NA',
-                                            '75 or over': 'NA',
-                                            'children': 'NA'}})
+                                            'unm': 0,
+                                            '75 or over': 0,
+                                            'children': 0}})
 
     nssec.to_csv(by_lu_obj.home_folder + '/NSSECformatted' + by_lu_obj.model_zoning + '.csv', index=False)
 
@@ -851,7 +851,7 @@ def apply_ns_sec_soc_splits(by_lu_obj):
         'numbers'].transform('sum')
     communal_active_splits['average_splits'] = communal_active_splits['numbers'] / communal_active_splits[
         'totals2']
-    communal_active_splits['SOC_category'] = 'NA'
+    communal_active_splits['SOC_category'] = 0
     communal_active_splits = communal_active_splits.drop(columns={'totals2', 'numbers', 'property_type'})
 
     # Compute the inactive splits by MSOA
@@ -861,9 +861,9 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     msoa_inactive_splits['msoa_splits'] = np.where(msoa_inactive_splits['numbers'] == 0,
                                                    0,  # make 0/0 return 0 instead of NaN
                                                    msoa_inactive_splits['numbers'] / msoa_inactive_splits['totals'])
-    msoa_inactive_splits['SOC_category'] = 'NA'
+    msoa_inactive_splits['SOC_category'] = 0
     msoa_inactive_splits = msoa_inactive_splits.drop(columns={'totals', 'numbers'})
-    msoa_inactive_splits['SOC_category'] = 'NA'
+    msoa_inactive_splits['SOC_category'] = 0
 
     # For Scotland
     global_inactive_splits = inactive.groupby(by=['area_type', 'property_type', 'employment_type', 'Age', 'ns_sec'],
@@ -873,7 +873,7 @@ def apply_ns_sec_soc_splits(by_lu_obj):
         'numbers'].transform('sum')
     global_inactive_splits['global_splits'] = global_inactive_splits['numbers'] / global_inactive_splits[
         'totals2']
-    global_inactive_splits['SOC_category'] = 'NA'
+    global_inactive_splits['SOC_category'] = 0
     global_inactive_splits = global_inactive_splits.drop(columns={'totals2', 'numbers'})
 
     # For communal establishments
@@ -884,7 +884,7 @@ def apply_ns_sec_soc_splits(by_lu_obj):
         'numbers'].transform('sum')
     communal_inactive_splits['average_splits'] = communal_inactive_splits['numbers'] / communal_inactive_splits[
         'totals2']
-    communal_inactive_splits['SOC_category'] = 'NA'
+    communal_inactive_splits['SOC_category'] = 0
     communal_inactive_splits = communal_inactive_splits.drop(columns={'totals2', 'numbers', 'property_type'})
 
     # Make a single DataFrame containing all inactive splits
@@ -898,7 +898,7 @@ def apply_ns_sec_soc_splits(by_lu_obj):
 
     # check where there's no splitting factors, use the zone average for age?
     # TODO: msoa_splits already has something for every MSOA, so does this block need to be here?
-    inactive['SOC_category'] = 'NA'
+    inactive['SOC_category'] = 0
     inactive_splits['splits2'] = inactive_splits['msoa_splits']
     inactive_splits['splits2'] = inactive_splits['splits2'].fillna(inactive_splits['global_splits'])
     inactive_splits['splits2'] = inactive_splits['splits2'].fillna(inactive_splits['average_splits'])
