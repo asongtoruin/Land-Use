@@ -98,4 +98,5 @@ def read_in(path: lu.PathLike) -> Any:
     object:
         The object that was read in from disk.
     """
+    path = file_ops.maybe_add_suffix(path, consts.COMPRESSION_SUFFIX)  # add the default file extension to the path
     return cPickle.load(bz2.BZ2File(path, 'rb'))
