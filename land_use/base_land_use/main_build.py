@@ -31,11 +31,6 @@ from land_use.utils import file_ops as utils
 from land_use.utils import compress
 import land_use.lu_constants as consts
 
-# TODO: check if the following is actually required
-sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Demand Tool/Python/ZoneTranslation')
-sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/TAME shared resources/Python/')
-sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Utilities/Python')
-
 # Shapefile locations
 _default_zone_ref_folder = 'Y:/Data Strategy/GIS Shapefiles/'
 _default_lsoaRef = _default_zone_ref_folder + 'UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz.shp'
