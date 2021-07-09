@@ -18,7 +18,7 @@ FY_FOLDER = 'future_land_use'
 DATA_FOLDER = 'Y://Data Strategy//Data//'
 
 # Most recent Land Use Iteration
-LU_MR_ITER = 'iter3b'
+LU_MR_ITER = 'iter4a'
 FYLU_MR_ITER = 'iter3c'
 LU_IMPORTS = 'import'
 LU_REFS = 'Lookups'
@@ -30,6 +30,7 @@ ZONE_TRANSLATION_PATH = ZONES_FOLDER + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv'
 ADDRESSBASE_PATH_LIST = LU_FOLDER + '/' + LU_IMPORTS + '/AddressBase/2018/List of ABP datasets.csv'
 KS401_PATH = LU_FOLDER + '/' + LU_IMPORTS + '/' + 'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv'
 LU_AREA_TYPES = LU_FOLDER + '/area types/TfNAreaTypesLookup.csv'
+CTripEnd_Database = 'I:/Data/NTEM/NTEM 7.2 outputs for TfN/'
 
 # Path to a default land use build
 RESI_LAND_USE_MSOA = os.path.join(

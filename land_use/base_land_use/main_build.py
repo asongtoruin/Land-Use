@@ -27,6 +27,8 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import shutil
+import pyodbc
+from pandas import DataFrame
 from land_use.utils import file_ops as utils
 from land_use.utils import compress
 import land_use.lu_constants as consts
@@ -238,8 +240,148 @@ def create_employment_segmentation(by_lu_obj, bsq):
 
     return bsq
 
+def NTEM_Pop_Interpolation(by_lu_obj):
+    """
+    Process population data from NTEM CTripEnd database:
+    Interpolate population to the target year, in this case, it is for base year 2018 as databases
+    are available in 5 year interval;
+    Translate NTEM zones in Scotland into NorNITs zones; for England and Wales, NTEM zones = NorMITs zones (MSOAs)
+    """
 
-def create_ntem_areas(by_lu_obj):
+    #The year of data is set to define the upper and lower NTEM run years and interpolate as necessary between them.
+    # The base year for NTEM is 2011 and it is run in 5-year increments from 2011 to 2051.
+    # The year selected below must be between 2011 and 2051 (inclusive).
+    Year = 2018
+
+    if Year < 2011 | Year > 2051:
+        raise ValueError("Please select a valid year of data.")
+    else:
+        pass
+
+
+    Output_Folder = by_lu_obj.import_folder + 'CTripEnd/'
+    print(Output_Folder)
+    LogFile = Output_Folder + r"\\" + r"LogFile.txt"
+    Zone_path = by_lu_obj.zones_folder + 'Export/ntem_to_msoa/ntem_msoa_pop_weighted_lookup.csv'
+    Pop_Segmentation_path = by_lu_obj.import_folder + 'CTripEnd/Pop_Segmentations.csv'
+    with open(LogFile, 'w') as o:
+        o.write("Notebook run on - " + str(datetime.datetime.now()) + "\n")
+        o.write("\n")
+        o.write("Data Year - " + str(Year) + "\n")
+        o.write("\n")
+        o.write("Correspondence Lists:\n")
+        o.write("Zone Correspondence - " + Zone_Path + "\n")
+        o.write("Segmentation Correspondence - " + PopSegmentation_Path + "\n")
+        o.write("\n")
+    o.close()
+    # Data years
+    # NTEM is run in 5-year increments with a base of 2011.
+    # This section calculates the upper and lower years of data that are required
+    InterpolationYears = Year % 5
+    LowerYear = Year - ((InterpolationYears - 1) % 5)
+    UpperYear = Year + ((1 - InterpolationYears) % 5)
+
+    print("Lower Interpolation Year - " + str(LowerYear))
+    print("Upper Interpolation Year - " + str(UpperYear))
+
+    # Import Upper and Lower Year Tables
+
+    LowerNTEMDatabase = by_lu_obj.CTripEnd_Database_path + 'CTripEnd7' + str(LowerYear) + '.accdb'
+    UpperNTEMDatabase = by_lu_obj.CTripEnd_Database_path + 'CTripEnd7' + str(UpperYear) + '.accdb'
+    #UpperNTEMDatabase = by_lu_obj.CTripEnd_Database_path + r"\CTripEnd7_" + str(UpperYear) + r".accdb"
+    cnxn = pyodbc.connect('DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' + \
+                          '{};'.format(UpperNTEMDatabase))
+
+    query = r"SELECT * FROM ZoneData"
+    UZoneData = pd.read_sql(query, cnxn)
+    cnxn.close()
+
+    cnxn = pyodbc.connect('DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' + \
+                          '{};'.format(LowerNTEMDatabase))
+
+    query = r"SELECT * FROM ZoneData"
+    LZoneData = pd.read_sql(query, cnxn)
+    cnxn.close()
+
+    # Re-format Tables
+    LZonePop = LZoneData.copy()
+    UZonePop = UZoneData.copy()
+    LZonePop.drop(
+        ['E01', 'E02', 'E03', 'E04', 'E05', 'E06', 'E07', 'E08', 'E09', 'E10', 'E11', 'E12', 'E13', 'E14', 'E15', 'K01',
+         'K02', 'K03', 'K04', 'K05', 'K06', 'K07', 'K08', 'K09', 'K10', 'K11', 'K12', 'K13', 'K14', 'K15'], axis=1,
+        inplace=True)
+    UZonePop.drop(
+        ['E01', 'E02', 'E03', 'E04', 'E05', 'E06', 'E07', 'E08', 'E09', 'E10', 'E11', 'E12', 'E13', 'E14', 'E15', 'K01',
+         'K02', 'K03', 'K04', 'K05', 'K06', 'K07', 'K08', 'K09', 'K10', 'K11', 'K12', 'K13', 'K14', 'K15'], axis=1,
+        inplace=True)
+    LZonePop_long = pd.melt(LZonePop, id_vars=["I", "R", "B", "Borough", "ZoneID", "ZoneName"],
+                            var_name="LTravellerType", value_name="LPopulation")
+    UZonePop_long = pd.melt(UZonePop, id_vars=["I", "R", "B", "Borough", "ZoneID", "ZoneName"],
+                            var_name="UTravellerType", value_name="UPopulation")
+
+    LZonePop_long.rename(columns={"I": "LZoneID", "B": "LBorough", "R": "LAreaType"}, inplace=True)
+    UZonePop_long.rename(columns={"I": "UZoneID", "B": "UBorough", "R": "UAreaType"}, inplace=True)
+
+    #Join Upper and Lower Tables
+    TZonePop_DataYear = LZonePop_long.join(UZonePop_long.set_index('UIndivID'), on='LIndivID', how='right',
+                                           lsuffix='_left', rsuffix='_right')
+    TZonePop_DataYear.drop(['UZoneID', 'UBorough', 'UAreaType', 'UTravellerType'], axis=1, inplace=True)
+
+    #Interpolate Between Upper and Lower Years
+    TZonePop_DataYear['GrowthinPeriod'] = TZonePop_DataYear.eval('UPopulation - LPopulation')
+    TZonePop_DataYear['GrowthperYear'] = TZonePop_DataYear.eval('GrowthinPeriod / 5')
+    TZonePop_DataYear = TZonePop_DataYear.assign(GrowthtoYear=TZonePop_DataYear['GrowthperYear'] * (Year - LowerYear))
+    TZonePop_DataYear['Population'] = TZonePop_DataYear.eval('LPopulation + GrowthtoYear')
+
+    #Tidy up
+    TZonePop_DataYear.rename(
+        columns={"LZoneID": "ZoneID", "LBorough": "Borough", "LAreaType": "AreaType", "LTravellerType": "TravellerType",
+                 "LIndivID": "IndivID"}, inplace=True)
+    TZonePop_DataYear.drop(
+        ['GrowthinPeriod', 'GrowthperYear', 'GrowthtoYear', 'LPopulation', 'UPopulation', 'ZoneID_left', 'ZoneID_right',
+         'ZoneName_right', 'ZoneName_left', 'Borough_left', 'Borough_right', 'IndivID'], axis=1, inplace=True)
+    print(TZonePop_DataYear.Population.sum())
+
+
+    #Translating zones for those in Scotland
+    Zone_List = pd.read_csv(Zone_Path)
+    TZonePop_DataYear = TZonePop_DataYear.join(Zone_List.set_index('ntemZoneID'), on='ZoneID', how='right')
+    TZonePop_DataYear.rename(columns={'msoaZoneID': 'ModelZone'}, inplace=True)
+    TZonePop_DataYear[
+        'Population_RePropped'] = TZonePop_DataYear.Population * TZonePop_DataYear.overlap_ntem_pop_split_factor
+
+    Segmentation_List = pd.read_csv(Pop_Segmentation_Path)
+    TZonePop_DataYear = TZonePop_DataYear.join(Segmentation_List.set_index('NTEM_Traveller_Type'), on='TravellerType',
+                                               how='right')
+    TZonePop_DataYear.drop(
+        ['Population', 'ZoneID', 'AreaType', 'Borough', 'overlap_population', 'ntem_population', 'msoa_population',
+         'overlap_msoa_pop_split_factor', 'overlap_type'], axis=1, inplace=True)
+    TZonePop_DataYear.rename(columns={"Population_RePropped": "Population"}, inplace=True)
+    TZonePop_DataYear = TZonePop_DataYear.groupby(['ModelZone', 'TravellerType', 'NTEM_TT_Name','Age_code','Age',
+                                                   'Gender_code','Gender','Household_composition_code',
+                                                   'Household_size','Household_car','Employment_type_code',
+                                                   'Employment_type'])[
+        ['Population', 'overlap_ntem_pop_split_factor']].sum().reset_index()
+
+    # Export
+    Export_SummaryPop = TZonePop_DataYear.groupby(['TravellerType', 'NTEM_TT_Name']).sum()
+    Export_SummaryPop.drop(['ModelZone'], inplace=True, axis=1)
+    PopOutput = "NTEM_{}_Population.csv".format(Year)
+    #all_res_property.to_csv('classifiedResProperty' + by_lu_obj.model_zoning + '.csv', index=False)
+    with open(Output_Folder + PopOutput, "w", newline='') as f:
+        TZonePop_DataYear.to_csv(f, header=True, sep=",")
+    f.close()
+
+    with open(LogFile, "a") as o:
+        o.write("Total Population: \n")
+        Export_SummaryPop.to_csv(o, header=False, sep="-")
+        o.write("\n")
+        o.write("\n")
+    print("Export complete.")
+
+
+#def create_ntem_areas(by_lu_obj):
+def Process_bsq(by_lu_obj):
     """
     Reduce age & gender categories down to NTEM requirements and add area type for each zone.
 
@@ -541,6 +683,9 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     # Read in the Bespoke Census Query and create NTEM areas and employment segmentation
     bsq = create_ntem_areas(by_lu_obj)
     bsq = create_employment_segmentation(by_lu_obj, bsq)
+
+    # Read in NTEM 2018 population at NorMITs Zone level
+    NTEMpop = NTEM_Pop_Interpolation(by_lu_obj)
 
     # Compute property type factors
     factor_property_type = bsq[['msoaZoneID', 'property_type', 'pop_factor']]

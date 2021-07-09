@@ -21,6 +21,7 @@ class BaseYearLandUse:
                  zone_translation_path=consts.ZONE_TRANSLATION_PATH,
                  KS401path=consts.KS401_PATH,
                  area_type_path=consts.LU_AREA_TYPES,
+                 CTripEnd_Database_path=consts.CTripEnd_Database,
                  base_year='2018',
                  scenario_name=None):
         """
@@ -45,6 +46,7 @@ class BaseYearLandUse:
         self.zone_translation_path = zone_translation_path
         self.KS401path = KS401path
         self.area_type_path = area_type_path
+        self.CTripEnd_Database_path = CTripEnd_Database_path
 
         # Basic config
         self.model_zoning = model_zoning
