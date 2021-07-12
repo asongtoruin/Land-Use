@@ -367,7 +367,7 @@ def NTEM_Pop_Interpolation(by_lu_obj):
     Export_SummaryPop = TZonePop_DataYear.groupby(['TravellerType', 'NTEM_TT_Name']).sum()
     Export_SummaryPop.drop(['ModelZone'], inplace=True, axis=1)
     PopOutput = "NTEM_{}_Population.csv".format(Year)
-    #all_res_property.to_csv('classifiedResProperty' + by_lu_obj.model_zoning + '.csv', index=False)
+
     with open(Output_Folder + PopOutput, "w", newline='') as f:
         TZonePop_DataYear.to_csv(f, header=True, sep=",")
     f.close()
@@ -379,15 +379,34 @@ def NTEM_Pop_Interpolation(by_lu_obj):
         o.write("\n")
     print("Export complete.")
 
+def NTEM_Pop_Aj(by_lu_obj):
+    """
+    Make sure overall 2018 household population interpolated from NTEM are in line with
+    Dwelling type derived 2018 household population from previous step
+    """
+    Hhpop_Dt_import_path = by_lu_obj.HOME_folder + 'classifiedResPropertyMSOA.csv'
+    Hhpop_Dt = pd.read_csv(Hhpop_Dt_import_path)
+    NTEM_HHpop = TZonePop_DataYear.drop(['overlap_ntem_pop_split_factor'],axis=1,inplace=True)
+    NTEM_HHpop_Total = NTEM_HHpop.groupby(['ModelZone'])['Population'].sum().reset_index()
+    NTEM_HHpop_Total = NTEM_HHpop_Total.rename(columns={'population': 'ZoneNTEMPop'})
+    Hhpop_Dt_Total = Hhpop_Dt.groupby(['ZoneID'])['Population'].sum().reset_index()
+    Hhpop_Dt_Total = Hhpop_Dt_Total.rename(columns={'population': 'ZonePop'})
+    NTEM_HHpop = NTEM_HHpop.merge(NTEM_HHpop_Total, how='left', on=['ModelZone'])
+    NTEM_HHpop = NTEM_HHpop.merge(Hhpop_Dt_Total, how='left', left_on = ['ModelZone'],
+                                  right_on = ['ZoneID']).drop('ZoneID', axis=1)
+    NTEM_HHpop['pop_aj_factor'] = NTEM_HHpop['ZonePop'] / NTEM_HHpop['ZoneNTEMPop']
+    NTEM_HHpop['pop_aj'] = NTEM_HHpop['Population'] * NTEM_HHpop['pop_aj_factor']
+    NTEM_HHpop.to_csv('NTEM_HHpop_Aj.csv',, index = False)
+
+
+
+
+
+
 
 #def create_ntem_areas(by_lu_obj):
 def Process_bsq(by_lu_obj):
-    """
-    Reduce age & gender categories down to NTEM requirements and add area type for each zone.
 
-    bsq_import_path: location of the bespoke census query data
-    area_type_import_path: NTEM area type classifications by zone
-    """
     # Import Bespoke Census Query - already transformed to long format in R
     print('Importing bespoke census query')
     bsq_import_path = by_lu_obj.import_folder + '/Bespoke Census Query/formatted_long_bsq.csv'
@@ -411,6 +430,7 @@ def Process_bsq(by_lu_obj):
     mlaLookup = mlaLookup[['msoaZoneID', 'merged_laZoneID']]
     ntem_to_msoa = pd.read_csv(by_lu_obj.zones_folder + 'Export/ntem_to_msoa/ntem_msoa_pop_weighted_lookup.csv')
     ntem_to_msoa = ntem_to_msoa[['ntemZoneID', 'msoaZoneID', 'overlap_ntem_pop_split_factor']]
+    LAD_Region = pd.read_csv(by_lu_obj.zones_folder + 'Export/LAD_Region.csv')
 
     # Reduce age & gender categories down to NTEM requirements
     def _segment_tweaks(bsq, asisSegments, groupingCol, aggCols, targetCol, newSegment):
@@ -448,12 +468,18 @@ def Process_bsq(by_lu_obj):
     # Calculate the total population in each LAD and the proportion of this that each segment represents
     bsq_total = bsq.groupby(['LAD_code', 'LAD_Desc'])['population'].sum().reset_index()
     bsq_total = bsq_total.rename(columns={'population': 'lad_pop'})
+    bsq_dagh = bsq.groupby(['LAD_code', 'LAD_Desc', 'Age', 'Gender',
+                                'household_composition'])['population'].sum().reset_index()
+    bsq_dagh = bsq_dagh.rename(columns={'population': 'Pop_dagh'})
     bsq = bsq.merge(bsq_total, how='left', on=['LAD_code', 'LAD_Desc'])
+    bsq = bsg.merge(bsq_dagh, how='left', on=['LAD_code', 'LAD_Desc', 'Age', 'Gender', 'household_composition'])
     del bsq_total  # save some memory
     bsq['pop_factor'] = bsq['population'] / bsq['lad_pop']
-    bsq = bsq[['LAD_code', 'LAD_Desc', 'Gender', 'Age', 'property_type', 'household_composition', 'pop_factor']]
+    bsq['Dt_profile'] = bsq['population'] / bsq['Pop_dagh']
+    bsq = bsq[['LAD_code', 'LAD_Desc', 'Gender', 'Age', 'property_type', 'household_composition',
+               'pop_factor', 'Dt_profile']]
 
-    # Merge on msoaZoneID - includes only English & Welsh MSOAs
+    # Merge on msoaZoneID - includes only English & Welsh MSOAs, total 7201 zones
     bsq = bsq.merge(mlaShp, how='left', left_on='LAD_code',
                     right_on='cmlad11cd').drop('cmlad11cd', axis=1)
     bsq = bsq.merge(mlaLookup, how='left', left_on='objectid',
@@ -475,10 +501,19 @@ def Process_bsq(by_lu_obj):
     # Merge area types onto bsq
     bsq = bsq.merge(ntem_to_msoa, how='left', on='msoaZoneID')
 
+    # Merge region onto bsq
+    bsq = bsq.merge(LAD_Region, how='left', left_on='LAD_code',
+                    right_on='Cmlad11cd').drop('Cmlad11cd', 'LAD_Desc', axis=1)
+
     # Derive North East and North West bsq data by area type, used to infill Scottish values
     # TODO: review this generic north section... taking first 72 LADs makes me nervous
-    unqMergedLad = bsq[['LAD_code', 'LAD_Desc']].drop_duplicates().reset_index(drop=True)
-    northUnqMergedLad = unqMergedLad.iloc[0:72]
+    # Now have merge LADs with Regions where they reside.
+    # And created list of regions to represent missing zones in Scotland
+
+    unqMergedLad = bsq[['LAD_code', 'LAD_Desc', 'Rng17nm']].drop_duplicates().reset_index(drop=True)
+    NorthRegions = ['North East', 'North West']
+    northUnqMergedLad = unqMergedLad[unqMergedLad['Rgn17nm'].isin(NorthRegions)]
+    #northUnqMergedLad = unqMergedLad.iloc[0:72]
     del unqMergedLad
     northMsoaBsq = bsq[bsq.LAD_code.isin(northUnqMergedLad.LAD_code)]
     genericNorthTypeBsq = northMsoaBsq.drop(['msoaZoneID',
@@ -503,7 +538,7 @@ def Process_bsq(by_lu_obj):
                                                                           left_on='msoaZoneID',
                                                                           right_on='objectid').drop('objectid', axis=1)
     land_audit.to_csv('landAudit.csv', index=False)
-
+    bsq.to_csv('bsq_MSOAzones_pop_factor_profile.csv', , index=False)
     return bsq
 
 
