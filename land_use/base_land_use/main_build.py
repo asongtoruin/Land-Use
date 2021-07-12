@@ -381,8 +381,8 @@ def NTEM_Pop_Interpolation(by_lu_obj):
 
 def NTEM_Pop_Aj(by_lu_obj):
     """
-    Make sure overall 2018 household population interpolated from NTEM are in line with
-    Dwelling type derived 2018 household population from previous step
+    Make sure overall 2018 household population interpolated from NTEM per NorMITs zone are in line with
+    2018 household population derived by dwelling type from previous step
     """
     Hhpop_Dt_import_path = by_lu_obj.HOME_folder + 'classifiedResPropertyMSOA.csv'
     Hhpop_Dt = pd.read_csv(Hhpop_Dt_import_path)
@@ -396,11 +396,9 @@ def NTEM_Pop_Aj(by_lu_obj):
                                   right_on = ['ZoneID']).drop('ZoneID', axis=1)
     NTEM_HHpop['pop_aj_factor'] = NTEM_HHpop['ZonePop'] / NTEM_HHpop['ZoneNTEMPop']
     NTEM_HHpop['pop_aj'] = NTEM_HHpop['Population'] * NTEM_HHpop['pop_aj_factor']
-    NTEM_HHpop.to_csv('NTEM_HHpop_Aj.csv',, index = False)
-
-
-
-
+    print(NTEM_HHpop.Pop_aj.sum())
+    print(Hhpop_Dt.population.sum())
+    NTEM_HHpop.to_csv('NTEM_HHpop_Aj.csv', index = False)
 
 
 
