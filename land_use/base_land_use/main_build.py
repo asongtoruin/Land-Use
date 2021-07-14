@@ -346,7 +346,7 @@ def NTEM_Pop_Interpolation(by_lu_obj):
     #Translating zones for those in Scotland
     Zone_List = pd.read_csv(Zone_Path)
     TZonePop_DataYear = TZonePop_DataYear.join(Zone_List.set_index('ntemZoneID'), on='ZoneID', how='right')
-    TZonePop_DataYear.rename(columns={'msoaZoneID': 'ModelZone'}, inplace=True)
+    #TZonePop_DataYear.rename(columns={'msoaZoneID': 'ModelZone'}, inplace=True)
     TZonePop_DataYear[
         'Population_RePropped'] = TZonePop_DataYear.Population * TZonePop_DataYear.overlap_ntem_pop_split_factor
 
@@ -354,18 +354,19 @@ def NTEM_Pop_Interpolation(by_lu_obj):
     TZonePop_DataYear = TZonePop_DataYear.join(Segmentation_List.set_index('NTEM_Traveller_Type'), on='TravellerType',
                                                how='right')
     TZonePop_DataYear.drop(
-        ['Population', 'ZoneID', 'AreaType', 'Borough', 'overlap_population', 'ntem_population', 'msoa_population',
+        ['Population', 'ZoneID', 'overlap_population', 'ntem_population', 'msoa_population',
          'overlap_msoa_pop_split_factor', 'overlap_type'], axis=1, inplace=True)
     TZonePop_DataYear.rename(columns={"Population_RePropped": "Population"}, inplace=True)
-    TZonePop_DataYear = TZonePop_DataYear.groupby(['ModelZone', 'TravellerType', 'NTEM_TT_Name','Age_code','Age',
+    TZonePop_DataYear = TZonePop_DataYear.groupby(['msoaZoneID', 'AreaType', 'Borough','TravellerType',
+                                                   'NTEM_TT_Name','Age_code','Age',
                                                    'Gender_code','Gender','Household_composition_code',
                                                    'Household_size','Household_car','Employment_type_code',
                                                    'Employment_type'])[
         ['Population', 'overlap_ntem_pop_split_factor']].sum().reset_index()
-
+    NTEM_HHpop = TZonePop_DataYear.drop(['overlap_ntem_pop_split_factor'], axis=1, inplace=True)
     # Export
     Export_SummaryPop = TZonePop_DataYear.groupby(['TravellerType', 'NTEM_TT_Name']).sum()
-    Export_SummaryPop.drop(['ModelZone'], inplace=True, axis=1)
+    #Export_SummaryPop.drop(['msoaZoneID'], inplace=True, axis=1)
     PopOutput = "NTEM_{}_Population.csv".format(Year)
 
     with open(Output_Folder + PopOutput, "w", newline='') as f:
@@ -378,28 +379,7 @@ def NTEM_Pop_Interpolation(by_lu_obj):
         o.write("\n")
         o.write("\n")
     print("Export complete.")
-
-def NTEM_Pop_Aj(by_lu_obj):
-    """
-    Make sure overall 2018 household population interpolated from NTEM per NorMITs zone are in line with
-    2018 household population derived by dwelling type from previous step
-    """
-    Hhpop_Dt_import_path = by_lu_obj.HOME_folder + 'classifiedResPropertyMSOA.csv'
-    Hhpop_Dt = pd.read_csv(Hhpop_Dt_import_path)
-    NTEM_HHpop = TZonePop_DataYear.drop(['overlap_ntem_pop_split_factor'],axis=1,inplace=True)
-    NTEM_HHpop_Total = NTEM_HHpop.groupby(['ModelZone'])['Population'].sum().reset_index()
-    NTEM_HHpop_Total = NTEM_HHpop_Total.rename(columns={'population': 'ZoneNTEMPop'})
-    Hhpop_Dt_Total = Hhpop_Dt.groupby(['ZoneID'])['Population'].sum().reset_index()
-    Hhpop_Dt_Total = Hhpop_Dt_Total.rename(columns={'population': 'ZonePop'})
-    NTEM_HHpop = NTEM_HHpop.merge(NTEM_HHpop_Total, how='left', on=['ModelZone'])
-    NTEM_HHpop = NTEM_HHpop.merge(Hhpop_Dt_Total, how='left', left_on = ['ModelZone'],
-                                  right_on = ['ZoneID']).drop('ZoneID', axis=1)
-    NTEM_HHpop['pop_aj_factor'] = NTEM_HHpop['ZonePop'] / NTEM_HHpop['ZoneNTEMPop']
-    NTEM_HHpop['pop_aj'] = NTEM_HHpop['Population'] * NTEM_HHpop['pop_aj_factor']
-    print(NTEM_HHpop.Pop_aj.sum())
-    print(Hhpop_Dt.population.sum())
-    NTEM_HHpop.to_csv('NTEM_HHpop_Aj.csv', index = False)
-
+    return NTEM_HHpop
 
 
 #def create_ntem_areas(by_lu_obj):
@@ -521,7 +501,7 @@ def Process_bsq(by_lu_obj):
                                                                     'property_type',
                                                                     'household_composition']).mean().reset_index()
     del northMsoaBsq
-
+    genericNorthTypeBsq.to_csv('genericNorthTypeBsq.csv', index=False)
     # Identify and add the missing Scottish zones to bsq
     missing_zones = ntem_to_msoa[~ntem_to_msoa.msoaZoneID.isin(bsq.msoaZoneID)]
     missing_zones = missing_zones.merge(genericNorthTypeBsq, how='left', on='R')
@@ -537,6 +517,9 @@ def Process_bsq(by_lu_obj):
                                                                           right_on='objectid').drop('objectid', axis=1)
     land_audit.to_csv('landAudit.csv', index=False)
     bsq.to_csv('bsq_MSOAzones_pop_factor_profile.csv', , index=False)
+    bsq = bsq[['msoaZoneID', 'Zone_Desc', 'B', 'R', 'Age', 'Gender',
+               'household_composition', 'property_type', 'Dt_profile']]
+
     return bsq
 
 
@@ -713,12 +696,70 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     crp['household_occupancy_18'] = crp['popXocc'] / crp['population']  # compute the weighted average occupancy
     crp = crp.drop('popXocc', axis=1)
 
-    # Read in the Bespoke Census Query and create NTEM areas and employment segmentation
-    bsq = create_ntem_areas(by_lu_obj)
-    bsq = create_employment_segmentation(by_lu_obj, bsq)
+    # Car availability from NTEM
+    # Read NTEM hh pop at NorMITs Zone level and make sure the zonal total is consistent to crp
+    NTEM_HHpop = NTEM_Pop_Interpolation(by_lu_obj)
+    NTEM_HHpop_cols = ['msoaZoneID', 'AreaType', 'Borough', 'TravellerType',
+                             'NTEM_TT_Name', 'Age_code','Age', 'Gender_code','Gender',
+                             'Household_composition_code','Household_size','Household_car',
+                             'Employment_type_code','Employment_type', 'Population']
+    NTEM_HHpop = NTEM_HHpop[NTEM_HHpop_cols]
+    #Hhpop_Dt_import_path = by_lu_obj.HOME_folder + 'classifiedResPropertyMSOA.csv'
+    #Hhpop_Dt = pd.read_csv(Hhpop_Dt_import_path)
+    NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID'])['Population'].sum().reset_index()
+    NTEM_HHpop_Total = NTEM_HHpop_Total.rename(columns={'population': 'ZoneNTEMPop'})
+    Hhpop_Dt_Total = crp.groupby(['ZoneID'])['population'].sum().reset_index()
+    Hhpop_Dt_Total = Hhpop_Dt_Total.rename(columns={'population': 'ZonePop'})
+    NTEM_HHpop = NTEM_HHpop.merge(NTEM_HHpop_Total, how='left', on=['msoaZoneID'])
+    NTEM_HHpop = NTEM_HHpop.merge(Hhpop_Dt_Total, how='left', left_on = ['msoaZoneID'],
+                                  right_on = ['ZoneID']).drop('ZoneID', axis=1)
+    NTEM_HHpop['pop_aj_factor'] = NTEM_HHpop['ZonePop'] / NTEM_HHpop['ZoneNTEMPop']
+    NTEM_HHpop['pop_aj'] = NTEM_HHpop['Population'] * NTEM_HHpop['pop_aj_factor']
+    print(NTEM_HHpop.pop_aj.sum())
+    print(crp.population.sum())
+    NTEM_HHpop.to_csv('NTEM_HHpop_Aj.csv', index = False)
 
-    # Read in NTEM 2018 population at NorMITs Zone level
-    NTEMpop = NTEM_Pop_Interpolation(by_lu_obj)
+    # Read in the Bespoke Census Query
+    bsq = Process_bsq(by_lu_obj)
+    #bsq = create_employment_segmentation(by_lu_obj, bsq)
+
+    # Expand adjusted NTEM zonal population
+    # according to factors derived from 2011 bsq to get addtional dimension of dwelling type in.
+    NTEM_HHpop = NTEM_HHpop.rename(columns={'Household_composition_code': 'household_composition'})
+    NTEM_HHpop = NTEM_HHpop.merge(DT_profile,how='left',
+                                  on = ['msoaZoneID', 'Age', 'Gender', 'Household_composition_code'],)\
+        .drop('B', 'R', "Population", axis=1)
+    NTEM_HHpop= NTEM_HHpop.rename(columns={'pop_aj': 'population'})
+    NTEM_HHpop = NTEM_HHpop[['msoaZoneID', 'Zone_Desc', 'AreaType', 'Borough', 'TravellerType',
+                             'NTEM_TT_Name', 'Age_code','Age', 'Gender_code','Gender',
+                             'Household_composition','Household_size','Household_car',
+                             'Employment_type_code','Employment_type', 'property_type', 'Dt_profile','population']]
+    NTEM_HHpop['pop_withDT'] = NTEM_HHpop['population'] * NTEM_HHpop['Dt_profile']
+
+    # Further adjust detailed dimensional population according to zonal dwelling type from crp
+    Hhpop_byDt_Total = crp.groupby(['ZoneID', 'census_property_type'])['population'].sum().reset_index()
+    Hhpop_byDt_Total = Hhpop_byDt_Total.rename(columns={'population': 'crp_byDT_pop'})
+    NTEM_HHpop_byDt_Total = NTEM_HHpop.groupby(['msoaZoneID', 'property_type'])['pop_withDT'].sum().reset_index()
+    NTEM_HHpop_byDt_Total = NTEM_HHpop_byDt_Total.rename(columns={'pop_withDT': 'NTEM_byDT_pop'})
+    Hhpop = NTEM_HHpop.merge(NTEM_HHpop_byDt_Total, how='left', on=['msoaZoneID', 'property_type'])
+    Hhpop = Hhpop.merge(Hhpop_byDt_Total, how='left', left_on = ['msoaZoneID', 'property_type'],
+                                  right_on = ['ZoneID', 'census_property_type']).drop('ZoneID',
+                                                                                      'census_property_type', axis=1)
+    Hhpop['pop_withDT_aj_factor'] = Hhpop[crp_byDT_pop] / Hhpop[NTEM_byDT_pop]
+    Hhpop['pop_withDT_aj'] = Hhpop['pop_withDT'] * Hhpop['pop_withDT_aj_factor']
+
+    print(HHpop.pop_withDT_aj.sum())
+    print(crp.population.sum())
+    Hhpop = Hhpop.rename(columns={'pop_withDT': 'NTEM_pop' , 'pop_withDT_aj': 'NorMITS_pop'})
+    Hhpop = Hhpop[['msoaZoneID', 'Zone_Desc', 'AreaType', 'Borough', 'TravellerType',
+                             'NTEM_TT_Name', 'Age_code','Age', 'Gender_code','Gender',
+                             'Household_composition','Household_size','Household_car',
+                             'Employment_type_code','Employment_type', 'property_type',
+                   'Dt_profile','NTEM_pop', 'NorMITS_pop']]
+
+    # Check process
+
+
 
     # Compute property type factors
     factor_property_type = bsq[['msoaZoneID', 'property_type', 'pop_factor']]
