@@ -737,13 +737,13 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     NTEM_HHpop['pop_withDT'] = NTEM_HHpop['population'] * NTEM_HHpop['Dt_profile']
 
     # Further adjust detailed dimensional population according to zonal dwelling type from crp
-    Hhpop_byDt_Total = crp.groupby(['ZoneID', 'census_property_type'])['population'].sum().reset_index()
-    Hhpop_byDt_Total = Hhpop_byDt_Total.rename(columns={'population': 'crp_byDT_pop'})
+    Hhpop_byDt_Total = crp.groupby(['ZoneID', 'census_property_type'])['population', 'UPRN'].sum().reset_index()
+    Hhpop_byDt_Total = Hhpop_byDt_Total.rename(columns={'population': 'crp_byDT_pop', 'UPRN': "properties"})
     NTEM_HHpop_byDt_Total = NTEM_HHpop.groupby(['msoaZoneID', 'property_type'])['pop_withDT'].sum().reset_index()
     NTEM_HHpop_byDt_Total = NTEM_HHpop_byDt_Total.rename(columns={'pop_withDT': 'NTEM_byDT_pop'})
     Hhpop = NTEM_HHpop.merge(NTEM_HHpop_byDt_Total, how='left', on=['msoaZoneID', 'property_type'])
     Hhpop = Hhpop.merge(Hhpop_byDt_Total, how='left', left_on = ['msoaZoneID', 'property_type'],
-                                  right_on = ['ZoneID', 'census_property_type']).drop('ZoneID',
+                                  right_on = ['ZoneID', 'census_property_type']).drop('msoaZoneID',
                                                                                       'census_property_type', axis=1)
     Hhpop['pop_withDT_aj_factor'] = Hhpop[crp_byDT_pop] / Hhpop[NTEM_byDT_pop]
     Hhpop['pop_withDT_aj'] = Hhpop['pop_withDT'] * Hhpop['pop_withDT_aj_factor']
@@ -751,11 +751,8 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     print(HHpop.pop_withDT_aj.sum())
     print(crp.population.sum())
     Hhpop = Hhpop.rename(columns={'pop_withDT': 'NTEM_pop' , 'pop_withDT_aj': 'NorMITS_pop'})
-    Hhpop = Hhpop[['msoaZoneID', 'Zone_Desc', 'AreaType', 'Borough', 'TravellerType',
-                             'NTEM_TT_Name', 'Age_code','Age', 'Gender_code','Gender',
-                             'Household_composition','Household_size','Household_car',
-                             'Employment_type_code','Employment_type', 'property_type',
-                   'Dt_profile','NTEM_Hhpop', 'NorMITS_Hhpop']]
+    Hhpop = Hhpop[['ZoneID', 'AreaType', ''property_type', 'Household_composition',
+                    'Age', 'Gender','Employment_type', 'properties', 'NTEM_Hhpop', 'NorMITS_Hhpop']]
 
     # Check the outcome
 
