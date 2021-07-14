@@ -755,9 +755,9 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
                              'NTEM_TT_Name', 'Age_code','Age', 'Gender_code','Gender',
                              'Household_composition','Household_size','Household_car',
                              'Employment_type_code','Employment_type', 'property_type',
-                   'Dt_profile','NTEM_pop', 'NorMITS_pop']]
+                   'Dt_profile','NTEM_Hhpop', 'NorMITS_Hhpop']]
 
-    # Check process
+    # Check the outcome
 
 
 
