@@ -726,35 +726,113 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     # Expand adjusted NTEM zonal population
     # according to factors derived from 2011 bsq to get addtional dimension of dwelling type in.
     NTEM_HHpop = NTEM_HHpop.rename(columns={'Household_composition_code': 'household_composition'})
-    NTEM_HHpop = NTEM_HHpop.merge(DT_profile,how='left',
-                                  on = ['msoaZoneID', 'Age', 'Gender', 'Household_composition_code'],)\
+    NTEM_HHpop = NTEM_HHpop.merge(bsq,how='left',
+                                  on = ['msoaZoneID', 'Age', 'Gender', 'household_composition'],)\
         .drop('B', 'R', "Population", axis=1)
     NTEM_HHpop= NTEM_HHpop.rename(columns={'pop_aj': 'population'})
     NTEM_HHpop = NTEM_HHpop[['msoaZoneID', 'Zone_Desc', 'AreaType', 'Borough', 'TravellerType',
                              'NTEM_TT_Name', 'Age_code','Age', 'Gender_code','Gender',
-                             'Household_composition','Household_size','Household_car',
+                             'household_composition','Household_size','Household_car',
                              'Employment_type_code','Employment_type', 'property_type', 'Dt_profile','population']]
     NTEM_HHpop['pop_withDT'] = NTEM_HHpop['population'] * NTEM_HHpop['Dt_profile']
 
     # Further adjust detailed dimensional population according to zonal dwelling type from crp
-    Hhpop_byDt_Total = crp.groupby(['ZoneID', 'census_property_type'])['population', 'UPRN'].sum().reset_index()
-    Hhpop_byDt_Total = Hhpop_byDt_Total.rename(columns={'population': 'crp_byDT_pop', 'UPRN': "properties"})
-    NTEM_HHpop_byDt_Total = NTEM_HHpop.groupby(['msoaZoneID', 'property_type'])['pop_withDT'].sum().reset_index()
-    NTEM_HHpop_byDt_Total = NTEM_HHpop_byDt_Total.rename(columns={'pop_withDT': 'NTEM_byDT_pop'})
-    Hhpop = NTEM_HHpop.merge(NTEM_HHpop_byDt_Total, how='left', on=['msoaZoneID', 'property_type'])
-    Hhpop = Hhpop.merge(Hhpop_byDt_Total, how='left', left_on = ['msoaZoneID', 'property_type'],
+    NorMITS_HHpop_byDt = crp.rename(columns={'population': 'crp_byDT_pop', 'UPRN': "properties"})
+    NTEM_HHpop_byDt = NTEM_HHpop.groupby(['msoaZoneID', 'property_type'])['pop_withDT'].sum().reset_index()
+    NTEM_HHpop_byDt = NTEM_HHpop_byDt.rename(columns={'pop_withDT': 'NTEM_byDT_pop'})
+    HHpop = NTEM_HHpop.merge(NTEM_HHpop_byDt, how='left', on=['msoaZoneID', 'property_type'])
+    HHpop = HHpop.merge(NorMITS_HHpop_byDt, how='left', left_on = ['msoaZoneID', 'property_type'],
                                   right_on = ['ZoneID', 'census_property_type']).drop('msoaZoneID',
                                                                                       'census_property_type', axis=1)
-    Hhpop['pop_withDT_aj_factor'] = Hhpop[crp_byDT_pop] / Hhpop[NTEM_byDT_pop]
-    Hhpop['pop_withDT_aj'] = Hhpop['pop_withDT'] * Hhpop['pop_withDT_aj_factor']
+    HHpop['pop_withDT_aj_factor'] = HHpop[crp_byDT_pop] / HHpop[NTEM_byDT_pop]
+    HHpop['pop_withDT_aj'] = HHpop['pop_withDT'] * HHpop['pop_withDT_aj_factor']
 
     print(HHpop.pop_withDT_aj.sum())
     print(crp.population.sum())
-    Hhpop = Hhpop.rename(columns={'pop_withDT': 'NTEM_pop' , 'pop_withDT_aj': 'NorMITS_pop'})
-    Hhpop = Hhpop[['ZoneID', 'AreaType', ''property_type', 'Household_composition',
-                    'Age', 'Gender','Employment_type', 'properties', 'NTEM_Hhpop', 'NorMITS_Hhpop']]
+    HHpop = HHpop.rename(columns={'pop_withDT': 'NTEM_HH_pop' , 'pop_withDT_aj': 'people',
+                                  'AreaType': 'area_type', 'Employment_type': 'employment_type'})
 
-    # Check the outcome
+    # Check the outcome compare NTEM aj pop (NTEM_HH_pop) against NorMITS pop (people)
+    # adjusted according to pop by dwelling type
+    # Create and save an audit
+    seg_folder = 'NTEM Segmentation Audits'
+    utils.create_folder(seg_folder)
+
+    ZonalTot = HHpop.groupby(['ZoneID'])['people','NTEM_HH_pop'].sum().reset_index()
+    ZonalTot = ZonalTot.rename(columns={'people':'NorMITS_Zonal', 'NTEM_HH_pop':'NTEM_Zonal'})
+
+    DT = HHpop.groupby(['ZoneID', 'property_type'])['people','NTEM_HH_pop'].sum().reset_index()
+    DT_check = DT.merge(ZonalTot, how='left', on=['ZoneID'])
+    DT_check['Ab_Perdiff'] = DT_check['people'] / DT_check['NTEM_HH_pop'] - 1
+    DT_check['NorMITS_profile'] = DT_check['people'] / DT_check['NorMITS_Zonal']
+    DT_check['NTEM_profile'] = DT_check['NTEM_HH_pop'] / DT_check['NTEM_Zonal']
+    DT_check['Profile_Perdiff'] = DT_check['NorMITS_profile'] / DT_check['NTEM_profile'] - 1
+    DT_check.to_csv(seg_folder + '/Zone_check_byDT.csv', index=False)
+
+    Cars = HHpop.groupby(['ZoneID', 'Household_car'])['people','NTEM_HH_pop'].sum().reset_index()
+    Cars_check = Cars.merge(ZonalTot, how='left', on=['ZoneID'])
+    Cars_check['Ab_Perdiff'] = Cars_check['people'] / Cars_check['NTEM_HH_pop'] - 1
+    Cars_check['NorMITS_profile'] = Cars_check['people'] / Cars_check['NorMITS_Zonal']
+    Cars_check['NTEM_profile'] = Cars_check['NTEM_HH_pop'] / Cars_check['NTEM_Zonal']
+    Cars_check['Profile_Perdiff'] = Cars_check['NorMITS_profile'] / Cars_check['NTEM_profile'] - 1
+    Cars_check.to_csv(seg_folder + '/Zone_check_byCars.csv', index=False)
+
+    HHsize = HHpop.groupby(['ZoneID', 'Household_size'])['people','NTEM_HH_pop'].sum().reset_index()
+    HHsize_check = HHsize.merge(ZonalTot, how='left', on=['ZoneID'])
+    HHsize_check['Ab_Perdiff'] = HHsize_check['people'] / HHsize_check['NTEM_HH_pop'] - 1
+    HHsize_check['NorMITS_profile'] = HHsize_check['people'] / HHsize_check['NorMITS_Zonal']
+    HHsize_check['NTEM_profile'] = HHsize_check['NTEM_HH_pop'] / HHsize_check['NTEM_Zonal']
+    HHsize_check['Profile_Perdiff'] = HHsize_check['NorMITS_profile'] / HHsize_check['NTEM_profile'] - 1
+    HHsize_check.to_csv(seg_folder + '/Zone_check_byHHsize.csv', index=False)
+    
+    HH_composition = HHpop.groupby(['ZoneID', 'HH_composition'])['people','NTEM_HH_pop'].sum().reset_index()
+    HH_composition_check = HH_composition.merge(ZonalTot, how='left', on=['ZoneID'])
+    HH_composition_check['Ab_Perdiff'] = HH_composition_check['people'] / HH_composition_check['NTEM_HH_pop'] - 1
+    HH_composition_check['NorMITS_profile'] = HH_composition_check['people'] / HH_composition_check['NorMITS_Zonal']
+    HH_composition_check['NTEM_profile'] = HH_composition_check['NTEM_HH_pop'] / HH_composition_check['NTEM_Zonal']
+    HH_composition_check['Profile_Perdiff'] = HH_composition_check['NorMITS_profile'] / \
+                                              HH_composition_check['NTEM_profile'] - 1
+    HH_composition_check.to_csv(seg_folder + '/Zone_check_byHH_composition.csv', index=False)
+    
+    Age = HHpop.groupby(['ZoneID', 'Age'])['people','NTEM_HH_pop'].sum().reset_index()
+    Age_check = Age.merge(ZonalTot, how='left', on=['ZoneID'])
+    Age_check['Ab_Perdiff'] = Age_check['people'] / Age_check['NTEM_HH_pop'] - 1
+    Age_check['NorMITS_profile'] = Age_check['people'] / Age_check['NorMITS_Zonal']
+    Age_check['NTEM_profile'] = Age_check['NTEM_HH_pop'] / Age_check['NTEM_Zonal']
+    Age_check['Profile_Perdiff'] = Age_check['NorMITS_profile'] / Age_check['NTEM_profile'] - 1
+    Age_check.to_csv(seg_folder + '/Zone_check_byAge.csv', index=False)
+    
+    Gender = HHpop.groupby(['ZoneID', 'Gender'])['people','NTEM_HH_pop'].sum().reset_index()
+    Gender_check = Gender.merge(ZonalTot, how='left', on=['ZoneID'])
+    Gender_check['Ab_Perdiff'] = Gender_check['people'] / Gender_check['NTEM_HH_pop'] - 1
+    Gender_check['NorMITS_profile'] = Gender_check['people'] / Gender_check['NorMITS_Zonal']
+    Gender_check['NTEM_profile'] = Gender_check['NTEM_HH_pop'] / Gender_check['NTEM_Zonal']
+    Gender_check['Profile_Perdiff'] = Gender_check['NorMITS_profile'] / Gender_check['NTEM_profile'] - 1
+    Gender_check.to_csv(seg_folder + '/Zone_check_byGender.csv', index=False)
+    
+    Employment = HHpop.groupby(['ZoneID', 'employment_type'])['people','NTEM_HH_pop'].sum().reset_index()
+    Employment_check = Employment.merge(ZonalTot, how='left', on=['ZoneID'])
+    Employment_check['Ab_Perdiff'] = Employment_check['people'] / Employment_check['NTEM_HH_pop'] - 1
+    Employment_check['NorMITS_profile'] = Employment_check['people'] / Employment_check['NorMITS_Zonal']
+    Employment_check['NTEM_profile'] = Employment_check['NTEM_HH_pop'] / Employment_check['NTEM_Zonal']
+    Employment_check['Profile_Perdiff'] = Employment_check['NorMITS_profile'] / Employment_check['NTEM_profile'] - 1
+    Employment_check.to_csv(seg_folder + '/Zone_check_byEmployment.csv', index=False)
+
+    output_cols = ['ZoneID', 'area_type', 'property_type', 'properties', 'household_composition',
+                    'Age', 'Gender', 'employment_type', 'people']
+    crp = HHpop[output_cols]
+
+    # Total MSOA Pop Audit
+    msoa_audit = crp[['ZoneID', 'people']].groupby('ZoneID').sum()
+    msoa_audit.to_csv(seg_folder + '/2018MSOAPopulation_OutputEnd.csv', index=False)
+
+    # Export to file
+    compress.write_out(crp, by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning)
+
+    by_lu_obj.state['5.2.6 NTEM segmentation'] = 1  # record that this process has been run
+    return crp, bsq
+
+
 
 
 
@@ -810,15 +888,9 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     crp = crp.rename(columns={'UPRN': 'properties'})
     print('Final population after factoring:', crp['people'].sum())
 
-    # Total MSOA Pop Audit
-    msoa_audit = crp[['ZoneID', 'people']].groupby('ZoneID').sum()
-    msoa_audit.to_csv(seg_folder + '/2018MSOAPopulation_OutputEnd.csv', index=False)
 
-    # Export to file
-    compress.write_out(crp, by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning)
 
-    by_lu_obj.state['5.2.6 NTEM segmentation'] = 1  # record that this process has been run
-    return crp, bsq
+
 
 
 # TODO: normalise the gender/age?
