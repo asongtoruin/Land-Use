@@ -481,7 +481,7 @@ def Process_bsq(by_lu_obj):
 
     # Merge region onto bsq
     bsq = bsq.merge(LAD_Region, how='left', left_on='LAD_code',
-                    right_on='Cmlad11cd').drop('Cmlad11cd', 'LAD_Desc', axis=1)
+                    right_on='Cmlad11cd').drop('Cmlad11cd', axis=1)
 
     # Derive North East and North West bsq data by area type, used to infill Scottish values
     # TODO: review this generic north section... taking first 72 LADs makes me nervous
@@ -517,7 +517,7 @@ def Process_bsq(by_lu_obj):
                                                                           right_on='objectid').drop('objectid', axis=1)
     land_audit.to_csv('landAudit.csv', index=False)
     bsq.to_csv('bsq_MSOAzones_pop_factor_profile.csv', , index=False)
-    bsq = bsq[['msoaZoneID', 'Zone_Desc', 'B', 'R', 'Age', 'Gender',
+    bsq = bsq[['msoaZoneID', 'Zone_Desc', 'LAD_Desc','B', 'R', 'Age', 'Gender',
                'household_composition', 'property_type', 'Dt_profile']]
 
     return bsq
@@ -730,7 +730,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
                                   on = ['msoaZoneID', 'Age', 'Gender', 'household_composition'],)\
         .drop('B', 'R', "Population", axis=1)
     NTEM_HHpop= NTEM_HHpop.rename(columns={'pop_aj': 'population'})
-    NTEM_HHpop = NTEM_HHpop[['msoaZoneID', 'Zone_Desc', 'AreaType', 'Borough', 'TravellerType',
+    NTEM_HHpop = NTEM_HHpop[['msoaZoneID', 'Zone_Desc', 'LAD_Desc', 'AreaType', 'Borough', 'TravellerType',
                              'NTEM_TT_Name', 'Age_code','Age', 'Gender_code','Gender',
                              'household_composition','Household_size','Household_car',
                              'Employment_type_code','Employment_type', 'property_type', 'Dt_profile','population']]
@@ -818,7 +818,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     Employment_check['Profile_Perdiff'] = Employment_check['NorMITS_profile'] / Employment_check['NTEM_profile'] - 1
     Employment_check.to_csv(seg_folder + '/Zone_check_byEmployment.csv', index=False)
 
-    output_cols = ['ZoneID', 'area_type', 'property_type', 'properties', 'household_composition',
+    output_cols = ['ZoneID', 'LAD_Desc', 'area_type', 'property_type', 'properties', 'household_composition',
                     'Age', 'Gender', 'employment_type', 'people']
     crp = HHpop[output_cols]
 
