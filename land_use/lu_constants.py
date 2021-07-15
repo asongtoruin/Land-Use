@@ -27,9 +27,11 @@ LU_REFS = 'Lookups'
 ZONE_NAME = 'MSOA'
 ZONES_FOLDER = 'I:/NorMITs Synthesiser/Zone Translation/'
 ZONE_TRANSLATION_PATH = ZONES_FOLDER + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv'
-ADDRESSBASE_PATH_LIST = LU_FOLDER + '/' + LU_IMPORTS + '/AddressBase/2018/List of ABP datasets.csv'
+ADDRESSBASE_PATH_LIST = 'I:/Data/AddressBase/2018/List of ABP datasets.csv'
+#LU_FOLDER + '/' + LU_IMPORTS + '/AddressBase/2018/List of ABP datasets.csv'
 KS401_PATH = LU_FOLDER + '/' + LU_IMPORTS + '/' + 'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv'
 LU_AREA_TYPES = LU_FOLDER + '/area types/TfNAreaTypesLookup.csv'
+ALL_RES_PROPERTY_PATH = 'Y:/NorMITs Land Use/iter4'
 
 # Path to a default land use build
 RESI_LAND_USE_MSOA = os.path.join(
