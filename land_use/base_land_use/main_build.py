@@ -31,11 +31,6 @@ from land_use.utils import file_ops as utils
 from land_use.utils import compress
 import land_use.lu_constants as consts
 
-# TODO: check if the following is actually required
-sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Demand Tool/Python/ZoneTranslation')
-sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/TAME shared resources/Python/')
-sys.path.append('C:/Users/ESRIAdmin/Desktop/Code-Blob/NorMITs Utilities/Python')
-
 # Shapefile locations
 _default_zone_ref_folder = 'Y:/Data Strategy/GIS Shapefiles/'
 _default_lsoaRef = _default_zone_ref_folder + 'UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz.shp'
@@ -50,15 +45,16 @@ def copy_addressbase_files(by_lu_obj):
     Copy the relevant ABP files from import drive to by_lu_obj.home_folder for use in later functions.
     by_lu_obj: base year land use object
     """
-    dest = by_lu_obj.home_folder
-    files = pd.read_csv(by_lu_obj.addressbase_path_list)
+    #dest = by_lu_obj.home_folder
+    #files = pd.read_csv(by_lu_obj.addressbase_path_list)
+    print('no longer copying into default iter folder')
 
-    for file in files.FilePath:
-        try:
-            shutil.copy(file, dest)
-            print("Copied over file into default iter folder: " + file)
-        except IOError:
-            print("File not found")
+    #for file in files.FilePath:
+    #    try:
+    #        shutil.copy(file, dest)
+    #        print("Copied over file into default iter folder: " + file)
+    #    except IOError:
+    #        print("File not found")
 
     by_lu_obj.state['5.2.2 read in core property data'] = 1
 
@@ -483,7 +479,8 @@ def apply_household_occupancy(by_lu_obj, do_import=False, write_out=True):
 
     # Read in all res property for the level of aggregation
     print('Reading in AddressBase extract')
-    addressbase_extract_path = by_lu_obj.home_folder + '/allResProperty' + by_lu_obj.model_zoning + 'Classified.csv'
+    #addressbase_extract_path = by_lu_obj.home_folder + '/allResProperty' + by_lu_obj.model_zoning + 'Classified.csv'
+    addressbase_extract_path = consts.ALL_RES_PROPERTY_PATH + '/allResProperty' + by_lu_obj.model_zoning + 'Classified.csv'
     all_res_property = pd.read_csv(addressbase_extract_path)[['ZoneID', 'census_property_type', 'UPRN']]
     all_res_property = all_res_property.groupby(['ZoneID', 'census_property_type']).count().reset_index()
 

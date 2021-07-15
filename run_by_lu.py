@@ -3,10 +3,6 @@ import land_use.base_land_use.by_lu as bylu
 
 if __name__ == '__main__':
 
-    by = bylu.BaseYearLandUse()
+    lu_run = bylu.BaseYearLandUse(iteration='iter3d')
 
-    """
-    by.build_by_pop()
-    """
-
-    by.build_by_pop()
+    pop_out = lu_run.build_by_pop()

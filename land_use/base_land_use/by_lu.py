@@ -14,6 +14,7 @@ TODO:
 class BaseYearLandUse:
     def __init__(self,
                  model_folder=consts.LU_FOLDER,
+                 output_folder=consts.BY_FOLDER,
                  iteration=consts.LU_MR_ITER,
                  import_folder=consts.LU_IMPORTS,
                  model_zoning='MSOA',
@@ -34,9 +35,9 @@ class BaseYearLandUse:
         # TODO: Add versioning
 
         # File ops
-        self.model_folder = model_folder
+        self.model_folder = model_folder + '/' + output_folder
         self.iteration = iteration
-        self.home_folder = model_folder + '/' + iteration
+        self.home_folder = model_folder + '/' + output_folder + '/' + iteration
         self.import_folder = model_folder + '/' + import_folder + '/'
 
         # Inputs
@@ -54,6 +55,7 @@ class BaseYearLandUse:
         # Build paths
         write_folder = os.path.join(
             model_folder,
+            output_folder,
             iteration,
             'outputs',
             'scenarios',
@@ -104,7 +106,7 @@ class BaseYearLandUse:
         # Make a new sub folder of the home directory for the iteration and set this as the working directory
         os.chdir(self.model_folder)
         utils.create_folder(self.iteration, ch_dir=True)
-
+        # TODO: Change from copy to check imports
         # Run through the main build process
         if self.state['5.2.2 read in core property data'] == 0:
             main_build.copy_addressbase_files(self)
