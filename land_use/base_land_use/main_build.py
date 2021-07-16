@@ -502,6 +502,7 @@ def Process_bsq(by_lu_obj):
                                                                     'household_composition']).mean().reset_index()
     del northMsoaBsq
     genericNorthTypeBsq.to_csv('genericNorthTypeBsq.csv', index=False)
+
     # Identify and add the missing Scottish zones to bsq
     missing_zones = ntem_to_msoa[~ntem_to_msoa.msoaZoneID.isin(bsq.msoaZoneID)]
     missing_zones = missing_zones.merge(genericNorthTypeBsq, how='left', on='R')
@@ -516,7 +517,7 @@ def Process_bsq(by_lu_obj):
                                                                           left_on='msoaZoneID',
                                                                           right_on='objectid').drop('objectid', axis=1)
     land_audit.to_csv('landAudit.csv', index=False)
-    bsq.to_csv('bsq_MSOAzones_pop_factor_profile.csv', , index=False)
+    bsq.to_csv('bsq_MSOAzones_pop_factor_profile.csv', index=False)
     bsq = bsq[['msoaZoneID', 'Zone_Desc', 'LAD_Desc','B', 'R', 'Age', 'Gender',
                'household_composition', 'property_type', 'Dt_profile']]
 
