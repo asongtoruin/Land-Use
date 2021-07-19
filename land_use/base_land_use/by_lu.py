@@ -108,7 +108,7 @@ class BaseYearLandUse:
         # Make a new sub folder of the home directory for the iteration and set this as the working directory
         os.chdir(self.model_folder)
         utils.create_folder(self.iteration, ch_dir=True)
-
+        # TODO: Change from copy to check imports
         # Run through the main build process
         if self.state['5.2.2 read in core property data'] == 0:
             main_build.copy_addressbase_files(self)

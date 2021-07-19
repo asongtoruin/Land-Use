@@ -8,7 +8,7 @@ import land_use.future_land_use.fy_lu as fylu
 
 if __name__ == '__main__':
 
-    fy_iter = 'iter3c'
+    fy_iter = 'iter4a'
 
     scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
     future_years = ['2027', '2033', '2035', '2040', '2050']
