@@ -268,8 +268,8 @@ def NTEM_Pop_Interpolation(by_lu_obj):
         o.write("Data Year - " + str(Year) + "\n")
         o.write("\n")
         o.write("Correspondence Lists:\n")
-        o.write("Zone Correspondence - " + Zone_Path + "\n")
-        o.write("Segmentation Correspondence - " + PopSegmentation_Path + "\n")
+        o.write(Zone_Path + "\n")
+        o.write(PopSegmentation_Path + "\n")
         o.write("\n")
     o.close()
     # Data years
