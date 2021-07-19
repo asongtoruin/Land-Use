@@ -833,9 +833,8 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     by_lu_obj.state['5.2.6 NTEM segmentation'] = 1  # record that this process has been run
     return crp, bsq
 
-
-
-
+    """
+    The following scripts are from previous calculation and to be deleted once the run has been tested
 
     # Compute property type factors
     factor_property_type = bsq[['msoaZoneID', 'property_type', 'pop_factor']]
@@ -889,7 +888,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     crp = crp.rename(columns={'UPRN': 'properties'})
     print('Final population after factoring:', crp['people'].sum())
 
-
+    """
 
 
 
