@@ -713,10 +713,9 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     # Hhpop_Dt = pd.read_csv(Hhpop_Dt_import_path)
     uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
     NTEM_HHpop = NTEM_HHpop.merge(uk_msoa, how='left', left_on='msoaZoneID', right_on='objectid')
-    NTEM_HHpop_cols = ['msoaZoneID', 'msoa11cd', 'AreaType', 'Borough', 'TravellerType',
-                       'NTEM_TT_Name', 'Age_code', 'Age', 'Gender_code', 'Gender',
-                       'Household_composition_code', 'Household_size', 'Household_car',
-                       'Employment_type_code', 'Employment_type', 'Population']]
+    NTEM_HHpop_cols = ['msoaZoneID', 'msoa11cd', 'AreaType', 'Borough', 'TravellerType','NTEM_TT_Name', 'Age_code',
+                       'Age', 'Gender_code', 'Gender','Household_composition_code', 'Household_size', 'Household_car',
+                       'Employment_type_code', 'Employment_type', 'Population']
     NTEM_HHpop = NTEM_HHpop[NTEM_HHpop_cols]
     NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID'])['Population'].sum().reset_index()
     NTEM_HHpop_Total = NTEM_HHpop_Total.rename(columns={'population': 'ZoneNTEMPop'})
