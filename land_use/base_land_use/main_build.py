@@ -711,12 +711,19 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     # NTEM_HHpop = NTEM_HHpop[NTEM_HHpop_cols]
     # Hhpop_Dt_import_path = by_lu_obj.HOME_folder + 'classifiedResPropertyMSOA.csv'
     # Hhpop_Dt = pd.read_csv(Hhpop_Dt_import_path)
-    NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID'])['Population'].sum().reset_index()
+    uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
+    NTEM_HHpop = NTEM_HHpop.merge(uk_msoa, how='left', left_on='msoaZoneID', right_on='objectid')
+    NTEM_HHpop_cols = ['msoaZoneID', 'msoa11cd', 'AreaType', 'Borough', 'TravellerType',
+                       'NTEM_TT_Name', 'Age_code', 'Age', 'Gender_code', 'Gender',
+                       'Household_composition_code', 'Household_size', 'Household_car',
+                       'Employment_type_code', 'Employment_type', 'Population']]
+    NTEM_HHpop = NTEM_HHpop[NTEM_HHpop_cols]
+    NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID','msoa11cd' ])['Population'].sum().reset_index()
     NTEM_HHpop_Total = NTEM_HHpop_Total.rename(columns={'population': 'ZoneNTEMPop'})
     Hhpop_Dt_Total = crp.groupby(['ZoneID'])['population'].sum().reset_index()
     Hhpop_Dt_Total = Hhpop_Dt_Total.rename(columns={'population': 'ZonePop'})
     NTEM_HHpop = NTEM_HHpop.merge(NTEM_HHpop_Total, how='left', on=['msoaZoneID'])
-    NTEM_HHpop = NTEM_HHpop.merge(Hhpop_Dt_Total, how='left', left_on=['msoaZoneID'],
+    NTEM_HHpop = NTEM_HHpop.merge(Hhpop_Dt_Total, how='left', left_on=['msoa11cd'],
                                   right_on=['ZoneID']).drop('ZoneID', axis=1)
     NTEM_HHpop['pop_aj_factor'] = NTEM_HHpop['ZonePop'] / NTEM_HHpop['ZoneNTEMPop']
     NTEM_HHpop['pop_aj'] = NTEM_HHpop['Population'] * NTEM_HHpop['pop_aj_factor']
