@@ -718,13 +718,25 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
                        'Employment_type_code', 'Employment_type', 'Population']
     NTEM_HHpop = NTEM_HHpop[NTEM_HHpop_cols]
     NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID'])['Population'].sum().reset_index()
-    NTEM_HHpop_Total = NTEM_HHpop_Total.rename(columns={'population': 'ZoneNTEMPop'})
+    NTEM_HHpop_Total = NTEM_HHpop_Total.rename(columns={'Population': 'ZoneNTEMPop'})
+    print('Headings of NTEM_HHpop_Total')
+    print(NTEM_HHpop_Total.head(5))
     Hhpop_Dt_Total = crp.groupby(['ZoneID'])['population'].sum().reset_index()
     Hhpop_Dt_Total = Hhpop_Dt_Total.rename(columns={'population': 'ZonePop'})
+    print('Headings of Hhpop_Dt_Total')
+    print(Hhpop_Dt_Total.head(5))
     NTEM_HHpop = NTEM_HHpop.merge(NTEM_HHpop_Total, how='left', on=['msoaZoneID'])
     NTEM_HHpop = NTEM_HHpop.merge(Hhpop_Dt_Total, how='left', left_on=['msoa11cd'],
                                   right_on=['ZoneID']).drop('ZoneID', axis=1)
+    print('Headings of NTEM_HHpop')
+    print(NTEM_HHpop.head(5))
     NTEM_HHpop['pop_aj_factor'] = NTEM_HHpop['ZonePop'] / NTEM_HHpop['ZoneNTEMPop']
+
+    # factor_property_type = factor_property_type.groupby(['msoaZoneID', 'property_type']).sum().reset_index()
+    # factor_property_type = factor_property_type.rename(columns={'pop_factor': 'pt_pop_factor'})
+    # bsq = bsq.merge(factor_property_type, how='left', on=['msoaZoneID', 'property_type'])
+    # bsq['pop_factor'] = bsq['pop_factor'] / bsq['pt_pop_factor']
+
     NTEM_HHpop['pop_aj'] = NTEM_HHpop['Population'] * NTEM_HHpop['pop_aj_factor']
     print(NTEM_HHpop.pop_aj.sum())
     print(crp.population.sum())
