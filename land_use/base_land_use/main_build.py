@@ -319,6 +319,11 @@ def NTEM_Pop_Interpolation(by_lu_obj):
     LZonePop_long.rename(columns={"I": "LZoneID", "B": "LBorough", "R": "LAreaType"}, inplace=True)
     UZonePop_long.rename(columns={"I": "UZoneID", "B": "UBorough", "R": "UAreaType"}, inplace=True)
 
+    LZonePop_long['LIndivID'] = LZonePop_long.LZoneID.map(str) + "_" + LZonePop_long.LAreaType.map(
+        str) + "_" + LZonePop_long.LBorough.map(str) + "_" + LZonePop_long.LTravellerType.map(str)
+    UZonePop_long['UIndivID'] = UZonePop_long.UZoneID.map(str) + "_" + UZonePop_long.UAreaType.map(
+        str) + "_" + UZonePop_long.UBorough.map(str) + "_" + UZonePop_long.UTravellerType.map(str)
+
     # Join Upper and Lower Tables
     TZonePop_DataYear = LZonePop_long.join(UZonePop_long.set_index('UIndivID'), on='LIndivID', how='right',
                                            lsuffix='_left', rsuffix='_right')
@@ -353,6 +358,7 @@ def NTEM_Pop_Interpolation(by_lu_obj):
         ['Population', 'ZoneID', 'overlap_population', 'ntem_population', 'msoa_population',
          'overlap_msoa_pop_split_factor', 'overlap_type'], axis=1, inplace=True)
     TZonePop_DataYear.rename(columns={"Population_RePropped": "Population"}, inplace=True)
+    print(TZonePop_DataYear.Population.sum())
     TZonePop_DataYear = TZonePop_DataYear.groupby(['msoaZoneID', 'AreaType', 'Borough', 'TravellerType',
                                                    'NTEM_TT_Name', 'Age_code', 'Age',
                                                    'Gender_code', 'Gender', 'Household_composition_code',
@@ -550,7 +556,7 @@ def filled_properties(by_lu_obj):
 
     # Calculate the probability that a property is filled
     filled_properties_df['Prob_DwellsFilled'] = filled_properties_df['Filled_Dwells'] / \
-        filled_properties_df['Total_Dwells']
+                                                filled_properties_df['Total_Dwells']
     filled_properties_df = filled_properties_df.drop(columns={'Filled_Dwells', 'Total_Dwells'})
 
     # The above filled properties probability is based on E+W so need to join back to Scottish MSOAs
@@ -696,11 +702,14 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     # Car availability from NTEM
     # Read NTEM hh pop at NorMITs Zone level and make sure the zonal total is consistent to crp
     NTEM_HHpop = NTEM_Pop_Interpolation(by_lu_obj)
-    NTEM_HHpop_cols = ['msoaZoneID', 'AreaType', 'Borough', 'TravellerType',
-                       'NTEM_TT_Name', 'Age_code', 'Age', 'Gender_code', 'Gender',
-                       'Household_composition_code', 'Household_size', 'Household_car',
-                       'Employment_type_code', 'Employment_type', 'Population']
-    NTEM_HHpop = NTEM_HHpop[NTEM_HHpop_cols]
+    # NTEM_HHpop_cols = ['msoaZoneID', 'AreaType', 'Borough', 'TravellerType',
+    #                    'NTEM_TT_Name', 'Age_code', 'Age', 'Gender_code', 'Gender',
+    #                    'Household_composition_code', 'Household_size', 'Household_car',
+    #                    'Employment_type_code', 'Employment_type', 'Population']
+    NTEM_HHpop = NTEM_HHpop[['msoaZoneID', 'AreaType', 'Borough', 'TravellerType',
+                             'NTEM_TT_Name', 'Age_code', 'Age', 'Gender_code', 'Gender',
+                             'Household_composition_code', 'Household_size', 'Household_car',
+                             'Employment_type_code', 'Employment_type', 'Population']]
     # Hhpop_Dt_import_path = by_lu_obj.HOME_folder + 'classifiedResPropertyMSOA.csv'
     # Hhpop_Dt = pd.read_csv(Hhpop_Dt_import_path)
     NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID'])['Population'].sum().reset_index()
