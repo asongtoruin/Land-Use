@@ -349,7 +349,7 @@ def NTEM_Pop_Interpolation(by_lu_obj):
     TZonePop_DataYear = TZonePop_DataYear.join(Zone_List.set_index('ntemZoneID'), on='ZoneID', how='right')
     # TZonePop_DataYear.rename(columns={'msoaZoneID': 'ModelZone'}, inplace=True)
     TZonePop_DataYear[
-        'Population_RePropped'] = TZonePop_DataYear.Population * TZonePop_DataYear.overlap_ntem_pop_split_factor
+        'Population_RePropped'] = TZonePop_DataYear['Population'] * TZonePop_DataYear['overlap_ntem_pop_split_factor']
 
     Segmentation_List = pd.read_csv(Pop_Segmentation_path)
     TZonePop_DataYear = TZonePop_DataYear.join(Segmentation_List.set_index('NTEM_Traveller_Type'), on='TravellerType',
@@ -364,10 +364,11 @@ def NTEM_Pop_Interpolation(by_lu_obj):
                                                    'Gender_code', 'Gender', 'Household_composition_code',
                                                    'Household_size', 'Household_car', 'Employment_type_code',
                                                    'Employment_type'])[
-        ['Population', 'overlap_ntem_pop_split_factor']].sum().reset_index()
-    NTEM_HHpop = TZonePop_DataYear.drop(['overlap_ntem_pop_split_factor'], axis=1, inplace=True)
+        ['Population']].sum().reset_index()
+    NTEM_HHpop = TZonePop_DataYear
     # Export
     Export_SummaryPop = TZonePop_DataYear.groupby(['TravellerType', 'NTEM_TT_Name']).sum()
+    print(Export_SummaryPop.Population.sum())
     # Export_SummaryPop.drop(['msoaZoneID'], inplace=True, axis=1)
     PopOutput = "NTEM_{}_Population.csv".format(Year)
 
@@ -381,6 +382,7 @@ def NTEM_Pop_Interpolation(by_lu_obj):
         o.write("\n")
         o.write("\n")
     print("Export complete.")
+    print(NTEM_HHpop.head(5))
     return NTEM_HHpop
 
 
@@ -706,10 +708,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     #                    'NTEM_TT_Name', 'Age_code', 'Age', 'Gender_code', 'Gender',
     #                    'Household_composition_code', 'Household_size', 'Household_car',
     #                    'Employment_type_code', 'Employment_type', 'Population']
-    NTEM_HHpop = NTEM_HHpop[['msoaZoneID', 'AreaType', 'Borough', 'TravellerType',
-                             'NTEM_TT_Name', 'Age_code', 'Age', 'Gender_code', 'Gender',
-                             'Household_composition_code', 'Household_size', 'Household_car',
-                             'Employment_type_code', 'Employment_type', 'Population']]
+    # NTEM_HHpop = NTEM_HHpop[NTEM_HHpop_cols]
     # Hhpop_Dt_import_path = by_lu_obj.HOME_folder + 'classifiedResPropertyMSOA.csv'
     # Hhpop_Dt = pd.read_csv(Hhpop_Dt_import_path)
     NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID'])['Population'].sum().reset_index()
