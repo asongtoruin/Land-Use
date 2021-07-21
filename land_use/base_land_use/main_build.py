@@ -457,7 +457,7 @@ def Process_bsq(by_lu_obj):
     del bsq_total  # save some memory
     bsq['pop_factor'] = bsq['population'] / bsq['lad_pop']
     bsq['Dt_profile'] = bsq['population'] / bsq['Pop_dagh']
-    bsq = bsq[['LAD_code', 'LAD_Desc', 'Gender', 'Age', 'property_type', 'household_composition',
+    bsq = bsq[['LAD_code', 'Gender', 'Age', 'property_type', 'household_composition',
                'pop_factor', 'Dt_profile']]
 
     # Merge on msoaZoneID - includes only English & Welsh MSOAs, total 7201 zones
@@ -484,7 +484,7 @@ def Process_bsq(by_lu_obj):
 
     # Merge region onto bsq
     bsq = bsq.merge(LAD_Region, how='left', left_on='LAD_code',
-                    right_on='Cmlad11cd').drop('Cmlad11cd', 'LAD_Desc', axis=1)
+                    right_on='Cmlad11cd').drop(columns={'Cmlad11cd'})
     print('Headings of bsq')
     print(bsq.head(5))
 
@@ -493,7 +493,7 @@ def Process_bsq(by_lu_obj):
     # Now have merge LADs with Regions where they reside.
     # And created list of regions to represent missing zones in Scotland
 
-    unqMergedLad = bsq[['LAD_code', 'LAD_Desc']].drop_duplicates().reset_index(drop=True)
+    unqMergedLad = bsq[['LAD_code']].drop_duplicates().reset_index(drop=True)
     unqMergedLad = unqMergedLad.merge(LAD_Region, how='left', left_on='LAD_code',
                     right_on='Cmlad11cd').drop('Cmlad11cd', axis=1)
     NorthRegions = ['North East', 'North West']
