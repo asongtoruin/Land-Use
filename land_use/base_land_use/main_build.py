@@ -484,7 +484,9 @@ def Process_bsq(by_lu_obj):
 
     # Merge region onto bsq
     bsq = bsq.merge(LAD_Region, how='left', left_on='LAD_code',
-                    right_on='Cmlad11cd').drop('Cmlad11cd', axis=1)
+                    right_on='Cmlad11cd').drop('Cmlad11cd', 'LAD_Desc', axis=1)
+    print('Headings of bsq')
+    print(bsq.head(5))
 
     # Derive North East and North West bsq data by area type, used to infill Scottish values
     # TODO: review this generic north section... taking first 72 LADs makes me nervous
