@@ -491,7 +491,9 @@ def Process_bsq(by_lu_obj):
     # Now have merge LADs with Regions where they reside.
     # And created list of regions to represent missing zones in Scotland
 
-    unqMergedLad = bsq[['LAD_code', 'LAD_Desc', 'Rng17nm']].drop_duplicates().reset_index(drop=True)
+    unqMergedLad = bsq[['LAD_code', 'LAD_Desc']].drop_duplicates().reset_index(drop=True)
+    unqMergedLad = unqMergedLad.merge(LAD_Region, how='left', left_on='LAD_code',
+                    right_on='Cmlad11cd').drop('Cmlad11cd', axis=1)
     NorthRegions = ['North East', 'North West']
     northUnqMergedLad = unqMergedLad[unqMergedLad['Rgn17nm'].isin(NorthRegions)]
     # northUnqMergedLad = unqMergedLad.iloc[0:72]
@@ -704,13 +706,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     # Car availability from NTEM
     # Read NTEM hh pop at NorMITs Zone level and make sure the zonal total is consistent to crp
     NTEM_HHpop = NTEM_Pop_Interpolation(by_lu_obj)
-    # NTEM_HHpop_cols = ['msoaZoneID', 'AreaType', 'Borough', 'TravellerType',
-    #                    'NTEM_TT_Name', 'Age_code', 'Age', 'Gender_code', 'Gender',
-    #                    'Household_composition_code', 'Household_size', 'Household_car',
-    #                    'Employment_type_code', 'Employment_type', 'Population']
-    # NTEM_HHpop = NTEM_HHpop[NTEM_HHpop_cols]
-    # Hhpop_Dt_import_path = by_lu_obj.HOME_folder + 'classifiedResPropertyMSOA.csv'
-    # Hhpop_Dt = pd.read_csv(Hhpop_Dt_import_path)
+
     uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
     NTEM_HHpop = NTEM_HHpop.merge(uk_msoa, how='left', left_on='msoaZoneID', right_on='objectid')
     NTEM_HHpop_cols = ['msoaZoneID', 'msoa11cd', 'AreaType', 'Borough', 'TravellerType','NTEM_TT_Name', 'Age_code',
@@ -731,11 +727,6 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     print('Headings of NTEM_HHpop')
     print(NTEM_HHpop.head(5))
     NTEM_HHpop['pop_aj_factor'] = NTEM_HHpop['ZonePop'] / NTEM_HHpop['ZoneNTEMPop']
-
-    # factor_property_type = factor_property_type.groupby(['msoaZoneID', 'property_type']).sum().reset_index()
-    # factor_property_type = factor_property_type.rename(columns={'pop_factor': 'pt_pop_factor'})
-    # bsq = bsq.merge(factor_property_type, how='left', on=['msoaZoneID', 'property_type'])
-    # bsq['pop_factor'] = bsq['pop_factor'] / bsq['pt_pop_factor']
 
     NTEM_HHpop['pop_aj'] = NTEM_HHpop['Population'] * NTEM_HHpop['pop_aj_factor']
     print(NTEM_HHpop.pop_aj.sum())
