@@ -795,7 +795,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     Cars_check['Profile_Perdiff'] = Cars_check['NorMITS_profile'] / Cars_check['NTEM_profile'] - 1
     Cars_check.to_csv(seg_folder + '/Zone_check_byCars.csv', index=False)
 
-    HHsize = HHpop.groupby(['msoaZoneID', 'ZoneID', 'Household_size'])['people', 'NTEM_HH_pop'].sum().reset_index()
+    HHsize = HHpop.groupby(['ZoneID', 'Household_size'])['people', 'NTEM_HH_pop'].sum().reset_index()
     HHsize_check = HHsize.merge(ZonalTot, how='left', on=['ZoneID'])
     HHsize_check['Ab_Perdiff'] = HHsize_check['people'] / HHsize_check['NTEM_HH_pop'] - 1
     HHsize_check['NorMITS_profile'] = HHsize_check['people'] / HHsize_check['NorMITS_Zonal']
@@ -803,7 +803,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     HHsize_check['Profile_Perdiff'] = HHsize_check['NorMITS_profile'] / HHsize_check['NTEM_profile'] - 1
     HHsize_check.to_csv(seg_folder + '/Zone_check_byHHsize.csv', index=False)
 
-    HH_composition = HHpop.groupby(['ZoneID', 'HH_composition'])['people', 'NTEM_HH_pop'].sum().reset_index()
+    HH_composition = HHpop.groupby(['ZoneID', 'household_composition'])['people', 'NTEM_HH_pop'].sum().reset_index()
     HH_composition_check = HH_composition.merge(ZonalTot, how='left', on=['ZoneID'])
     HH_composition_check['Ab_Perdiff'] = HH_composition_check['people'] / HH_composition_check['NTEM_HH_pop'] - 1
     HH_composition_check['NorMITS_profile'] = HH_composition_check['people'] / HH_composition_check['NorMITS_Zonal']
