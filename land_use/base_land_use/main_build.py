@@ -748,7 +748,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
                                   on=['msoaZoneID', 'Age', 'Gender', 'household_composition'], ) \
         .drop(columns={'B', 'R', 'Population'})
     NTEM_HHpop = NTEM_HHpop.rename(columns={'pop_aj': 'population'})
-    NTEM_HHpop = NTEM_HHpop[['msoaZoneID', 'Zone_Desc', 'AreaType', 'Borough', 'TravellerType',
+    NTEM_HHpop = NTEM_HHpop[['msoaZoneID', 'msoa11cd', 'Zone_Desc', 'AreaType', 'Borough', 'TravellerType',
                              'NTEM_TT_Name', 'Age_code', 'Age', 'Gender_code', 'Gender',
                              'household_composition', 'Household_size', 'Household_car',
                              'Employment_type_code', 'Employment_type', 'property_type', 'Dt_profile', 'population']]
@@ -760,8 +760,8 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     NTEM_HHpop_byDt = NTEM_HHpop_byDt.rename(columns={'pop_withDT': 'NTEM_byDT_pop'})
     HHpop = NTEM_HHpop.merge(NTEM_HHpop_byDt, how='left', on=['msoaZoneID', 'property_type'])
     HHpop = HHpop.merge(NorMITS_HHpop_byDt, how='left', left_on=['msoa11cd', 'property_type'],
-                        right_on=['ZoneID', 'census_property_type']).drop(columns={'msoa11cd',
-                                                                          'census_property_type'})
+                        right_on=['ZoneID', 'census_property_type']).drop(columns={'msoa11cd'})
+
     HHpop['pop_withDT_aj_factor'] = HHpop['crp_byDT_pop'] / HHpop['NTEM_byDT_pop']
     HHpop['pop_withDT_aj'] = HHpop['pop_withDT'] * HHpop['pop_withDT_aj_factor']
 
