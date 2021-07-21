@@ -493,7 +493,7 @@ def Process_bsq(by_lu_obj):
     # Now have merge LADs with Regions where they reside.
     # And created list of regions to represent missing zones in Scotland
 
-    unqMergedLad = bsq[['LAD_code']].drop_duplicates().reset_index(drop=True)
+    unqMergedLad = bsq[['LAD_code', 'LAD_Desc']].drop_duplicates().reset_index(drop=True)
     unqMergedLad = unqMergedLad.merge(LAD_Region, how='left', left_on='LAD_code',
                     right_on='Cmlad11cd').drop('Cmlad11cd', axis=1)
     NorthRegions = ['North East', 'North West']
@@ -513,8 +513,10 @@ def Process_bsq(by_lu_obj):
     # Identify and add the missing Scottish zones to bsq
     missing_zones = ntem_to_msoa[~ntem_to_msoa.msoaZoneID.isin(bsq.msoaZoneID)]
     missing_zones = missing_zones.merge(genericNorthTypeBsq, how='left', on='R')
+    missing_zones.to_csv('missing_zones.csv', index=False)
     bsq = bsq[list(missing_zones)]
     bsq = bsq.append(missing_zones).reset_index(drop=True)
+    bsq.to_csv('bsq_includeScotland.csv', index=False)
     print('Number of unique MSOA zones:', len(bsq.msoaZoneID.unique()), 'should be 8480 with Scotland')
 
     # Create and export pop_factor and land audits
@@ -525,7 +527,7 @@ def Process_bsq(by_lu_obj):
                                                                           right_on='objectid').drop('objectid', axis=1)
     land_audit.to_csv('landAudit.csv', index=False)
     bsq.to_csv('bsq_MSOAzones_pop_factor_profile.csv', index=False)
-    bsq = bsq[['msoaZoneID', 'Zone_Desc', 'LAD_Desc', 'B', 'R', 'Age', 'Gender',
+    bsq = bsq[['msoaZoneID', 'Zone_Desc', 'B', 'R', 'Age', 'Gender',
                'household_composition', 'property_type', 'Dt_profile']]
 
     return bsq
