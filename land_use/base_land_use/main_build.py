@@ -740,18 +740,19 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     # Read in the Bespoke Census Query
     bsq = Process_bsq(by_lu_obj)
     # bsq = create_employment_segmentation(by_lu_obj, bsq)
-
+    # bsq = bsq[['msoaZoneID', 'Zone_Desc', 'B', 'R', 'Age', 'Gender',
+               'household_composition', 'property_type', 'Dt_profile']]
     # Expand adjusted NTEM zonal population
     # according to factors derived from 2011 bsq to get addtional dimension of dwelling type in.
     NTEM_HHpop = NTEM_HHpop.rename(columns={'Household_composition_code': 'household_composition'})
     NTEM_HHpop = NTEM_HHpop.merge(bsq, how='left',
-                                  on=['msoaZoneID', 'Age', 'Gender', 'household_composition'], ) \
-        .drop(columns={'B', 'R', 'Population'})
-    NTEM_HHpop = NTEM_HHpop.rename(columns={'pop_aj': 'population'})
+                                  on=['msoaZoneID', 'Age', 'Gender', 'household_composition'])
+
     NTEM_HHpop = NTEM_HHpop[['msoaZoneID', 'msoa11cd', 'Zone_Desc', 'AreaType', 'Borough', 'TravellerType',
                              'NTEM_TT_Name', 'Age_code', 'Age', 'Gender_code', 'Gender',
                              'household_composition', 'Household_size', 'Household_car',
-                             'Employment_type_code', 'Employment_type', 'property_type', 'Dt_profile', 'population']]
+                             'Employment_type_code', 'Employment_type', 'property_type', 'Dt_profile', 'pop_aj']]
+    NTEM_HHpop = NTEM_HHpop.rename(columns={'pop_aj': 'population'})
     NTEM_HHpop['pop_withDT'] = NTEM_HHpop['population'] * NTEM_HHpop['Dt_profile']
 
     # Further adjust detailed dimensional population according to zonal dwelling type from crp
