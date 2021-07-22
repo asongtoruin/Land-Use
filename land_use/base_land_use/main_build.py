@@ -837,7 +837,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     Employment_check['Profile_Perdiff'] = Employment_check['NorMITS_profile'] / Employment_check['NTEM_profile'] - 1
     Employment_check.to_csv(seg_folder + '/Zone_check_byEmployment.csv', index=False)
 
-    output_cols = ['ZoneID', 'area_type', 'property_type', 'properties', 'household_composition',
+    output_cols = ['ZoneID', 'area_type', 'property_type', 'census_property_type', 'properties', 'household_composition',
                    'Age', 'Gender', 'employment_type', 'people']
     crp = HHpop[output_cols]
 
