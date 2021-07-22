@@ -22,11 +22,11 @@ Main Build:
 TODO: allResPropertyMSOAClassified.csv is a product of land_use_data_prep.py and not copied by copy_addressbase_files()
 """
 import os
-import sys
+# import sys
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-import shutil
+# import shutil
 import pyodbc
 import datetime
 from land_use.utils import file_ops as utils
@@ -741,7 +741,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     bsq = Process_bsq(by_lu_obj)
     # bsq = create_employment_segmentation(by_lu_obj, bsq)
     # bsq = bsq[['msoaZoneID', 'Zone_Desc', 'B', 'R', 'Age', 'Gender',
-               'household_composition', 'property_type', 'Dt_profile']]
+    #            'household_composition', 'property_type', 'Dt_profile']]
     # Expand adjusted NTEM zonal population
     # according to factors derived from 2011 bsq to get addtional dimension of dwelling type in.
     NTEM_HHpop = NTEM_HHpop.rename(columns={'Household_composition_code': 'household_composition'})
@@ -850,63 +850,6 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
 
     by_lu_obj.state['5.2.6 NTEM segmentation'] = 1  # record that this process has been run
     return crp, bsq
-
-    """
-    The following scripts are from previous calculation and to be deleted once the run has been tested
-
-    # Compute property type factors
-    factor_property_type = bsq[['msoaZoneID', 'property_type', 'pop_factor']]
-    factor_property_type = factor_property_type.groupby(['msoaZoneID', 'property_type']).sum().reset_index()
-    factor_property_type = factor_property_type.rename(columns={'pop_factor': 'pt_pop_factor'})
-    bsq = bsq.merge(factor_property_type, how='left', on=['msoaZoneID', 'property_type'])
-    bsq['pop_factor'] = bsq['pop_factor'] / bsq['pt_pop_factor']
-    bsq = bsq.drop('pt_pop_factor', axis=1)
-
-    # Create and save an audit
-    seg_folder = 'NTEM Segmentation Audits'
-    utils.create_folder(seg_folder)
-    audit = bsq[['msoaZoneID', 'property_type', 'pop_factor']].groupby(['msoaZoneID',
-                                                                        'property_type']).sum().reset_index()
-    audit.to_csv(seg_folder + '/Zone_PT_Factor_Pre_Join_Audit.csv', index=False)
-    print('Should be near to zones x property types - ie. 8480 x 6 = 50880 :', bsq['pop_factor'].sum())
-
-    # Join in MSOA names and format matrix for further steps
-    # TODO: Some handling required here for other zoning systems
-    uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
-    bsq = bsq.merge(uk_msoa, how='left', left_on='msoaZoneID', right_on='objectid')
-    bsq_cols = ['msoa11cd', 'Age', 'Gender', 'employment_type', 'household_composition', 'property_type', 'R',
-                'pop_factor']
-    bsq = bsq[bsq_cols]
-    bsq = bsq.rename(columns={'R': 'area_type'})
-
-    # Save out an audit of the sum of the pop_factors by zone and property type (should all be 1)
-    audit = bsq[['msoa11cd', 'property_type', 'pop_factor']].groupby(['msoa11cd', 'property_type']).sum().reset_index()
-    audit.to_csv(seg_folder + '/Zone_PT_Factor_Audit_Inter_Join.csv', index=False)
-
-    # Print checks on the number of segments for each zone/property type and the total population
-    bsq_audit = bsq.groupby(['msoa11cd', 'property_type'])['pop_factor'].count().drop_duplicates()
-    if len(bsq_audit) == 1:
-        print('Each zone and property type has {} segments'.format(bsq_audit[0]))
-    else:
-        print('Some zones have missing segments!')
-    crp_audit = crp['population'].sum()
-    print('Total population (audit):', crp_audit)
-
-    # Merge the bespoke census query data onto the classified residential properties
-    crp = crp.merge(bsq,
-                    how='inner',
-                    left_on=['ZoneID', 'census_property_type'],
-                    right_on=['msoa11cd', 'property_type'])
-
-    # Apply population factor to populations to get people by property type
-    crp['people'] = crp['population'] * crp['pop_factor']
-    output_cols = ['ZoneID', 'area_type', 'census_property_type', 'property_type', 'UPRN',
-                   'household_composition', 'Age', 'Gender', 'employment_type', 'people']
-    crp = crp[output_cols]
-    crp = crp.rename(columns={'UPRN': 'properties'})
-    print('Final population after factoring:', crp['people'].sum())
-
-    """
 
 
 # TODO: normalise the gender/age?
