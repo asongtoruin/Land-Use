@@ -1,3 +1,4 @@
+import logging
 import os
 import land_use.lu_constants as consts
 from land_use.utils import file_ops as utils
@@ -108,39 +109,51 @@ class BaseYearLandUse:
         # Make a new sub folder of the home directory for the iteration and set this as the working directory
         os.chdir(self.model_folder)
         utils.create_folder(self.iteration, ch_dir=True)
+        logging.basicConfig(filename='base_year_land_use.log', level=logging.INFO, format='%(asctime)s: %(message)s')
+
         # TODO: Change from copy to check imports
         # Run through the main build process
         if self.state['5.2.2 read in core property data'] == 0:
+            logging.info('Running step 5.2.2, reading in core property data')
             main_build.copy_addressbase_files(self)
 
         # Steps from main build
         if self.state['5.2.4 filled property adjustment'] == 0:
+            logging.info('Running step 5.2.4, calculating the filled property adjustment factors')
             main_build.filled_properties(self)
 
         if self.state['5.2.5 household occupancy adjustment'] == 0:
+            logging.info('Running step 5.2.5, household occupancy adjustment')
             main_build.apply_household_occupancy(self)
 
         if self.state['5.2.6 NTEM segmentation'] == 0:
+            logging.info('Running step 5.2.6, NTEM segmentation')
             main_build.apply_ntem_segments(self)
 
         if self.state['5.2.7 communal establishments'] == 0:
+            logging.info('Running step 5.2.7, adding in communal establishments')
             main_build.join_establishments(self)
 
         # Property type mapping is done after communal establishments are added, despite position in the documentation
         if self.state['5.2.3 property type mapping'] == 0:
+            logging.info('Running step 5.2.3, combining flat types')
             main_build.land_use_formatting(self)
 
         # Steps from mid-year population estimate adjustment
         if self.state['5.2.8 MYPE adjustment'] == 0:
+            logging.info('Running first part of 5.2.10, SEC/SOC segmentation')
             main_build.apply_ns_sec_soc_splits(self)  # part of step 5.2.10 but required as input to 5.2.8
+            logging.info('Running step 5.2.8, mid-year population estimate adjustment')
             mypa.adjust_landuse_to_specific_yr(self)
             mypa.control_to_lad_employment_ag(self)
             mypa.sort_out_hops_uplift(self)  # for audit
 
         if self.state['5.2.9 employment adjustment'] == 0:
+            logging.info('Running step 5.2.9, employment adjustment')
             mypa.country_emp_control(self)
 
         if self.state['5.2.10 SEC/SOC'] == 0:
+            logging.info('Running the rest of step 5.2.10, SEC/SOC segmentation')
             mypa.adjust_soc_gb(self)
             mypa.adjust_soc_lad(self)  # TODO: fix this function
 

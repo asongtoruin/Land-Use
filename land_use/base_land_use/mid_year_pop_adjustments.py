@@ -88,7 +88,10 @@ def format_scottish_mype(by_lu_obj):
     scot_msoa['people2018'] = scot_msoa['2018pop'] * scot_msoa['lad_to_msoa']
     scot_msoa = scot_msoa.drop(columns={'overlap_type', 'lad_to_msoa', 'msoa_to_lad',
                                         '2018pop', 'lad17cd', 'ladZoneID'}).rename(columns={'msoa_zone_id': 'ZoneID'})
-
+    # TODO: TO get back log and find where has gone wrong for all the null values
+    # Temp solution to get rid of `null records- need to dig where has gone wrong to have all these null values though
+    # total is not affected
+    land_use_segments = land_use_segments.dropna()
     scotland_use = land_use_segments[land_use_segments.ZoneID.str.startswith('S')]
 
     scotland_use_grouped = scotland_use.groupby(by=['ZoneID', 'Age', 'Gender'],
