@@ -13,7 +13,6 @@ TODO: After integrations with TMS, combine with old_tms.utils.py
   to create a general utils file
 """
 
-import os
 import re
 import shutil
 import inspect
@@ -36,7 +35,6 @@ from pathlib import Path
 from math import isclose
 
 import functools
-from tqdm import tqdm
 from itertools import product
 from collections import defaultdict
 
@@ -1300,106 +1298,6 @@ def get_land_use(
                              long_var_name]).reset_index(drop=True)
 
     return lu
-
-
-def infill_traveller_types(land_use_build: pd.DataFrame,
-                           traveller_type_lookup=consts.TT_INDEX,
-                           attribute_subset=None,
-                           left_tt_col='traveller_type',
-                           right_tt_col='traveller_type'):
-
-    """
-    Function to reapply traveller type to a normalised land use build
-    where normalisation means the removal of all non-traveller type data
-
-    Parameters
-    ----------
-    land_use_build:
-        DataFrame containing a NTEM style 88 integer normalised traveller
-        type vector
-    traveller_type_lookup:
-        vector containing normalised constituent values of traveller type
-    attribute_subset:
-        List or None, which attributes do you want to retain in the lookup
-    left_tt_col:
-        Join left on
-    right_tt_col:
-        Join right on
-
-    Returns
-    -------
-    land_use_build:
-        Land use build with added normalised categories
-    references: List:
-        list of Dataframes with descriptions of normalised values
-    """
-
-    # Check traveller type column in both sides
-    if left_tt_col not in list(land_use_build):
-        raise ValueError('Traveller type not in land use')
-    if right_tt_col not in list(traveller_type_lookup):
-        raise ValueError('Traveller type not in lookup, try default')
-
-    # Subset the traveller type, if the user wants
-    tt_cols = list(traveller_type_lookup)
-    lu_cols = list(land_use_build)
-    if attribute_subset is not None:
-        if right_tt_col in attribute_subset:
-            attribute_subset.remove(right_tt_col)
-        tt_cols = [right_tt_col] + attribute_subset
-    #  Drop any cols in the lookup that are already in land use
-    # This should pick up the reindex above too.
-    # All too concise, very sorry if this fails.
-    tt_cols = ['traveller_type'] + [x for x in tt_cols if x not in lu_cols]
-    traveller_type_lookup = traveller_type_lookup.reindex(
-        tt_cols, axis=1)
-
-    # Join traveller type
-    land_use_build = land_use_build.merge(
-        traveller_type_lookup,
-        how='left',
-        left_on=left_tt_col,
-        right_on=right_tt_col
-    )
-
-    return land_use_build
-
-def normalise_attribute(attribute: pd.DataFrame,
-                        attribute_name: str,
-                        reference: pd.DataFrame,
-                        reference_desc_field=None,
-                        attribute_out_name: str = None,
-                        fuzzy_match=False):
-    """
-    Function to join a normalising index onto a descriptive variable
-
-    Parameters
-    ----------
-    attribute:
-        Dataframe with a normalisable attribute
-    attribute_name:
-        Name of the attribute to normalise
-    reference:
-        Dataframe of reference. If string should attempt to import
-    reference_desc_field:
-        Name of the column in reference to join on. If none will look for non
-        text col
-    attribute_out_name:
-        What to call the attribute if not whatever arrives. Defaults to in value
-    fuzzy_match:
-        Some tricks to make a decent match.
-        'numbers_only': reduce attribute to numbers and join
-
-    Returns
-    -------
-    attribute:
-        Attribute normalised to lookup standard
-    """
-
-    # Work out target join field
-    # Asking for trouble - must be a better way to do this
-
-    return 0
 
 
 def lu_out_report(pop: pd.DataFrame,
