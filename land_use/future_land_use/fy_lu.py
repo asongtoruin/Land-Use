@@ -4,9 +4,10 @@ import os
 import pandas as pd
 
 import land_use.lu_constants as consts
+import land_use.utils.compress as comp
 import land_use.utils.general as utils
 import land_use.utils.file_ops as fo
-
+import land_use.utils.normalise_tts as norm
 
 class FutureYearLandUse:
     def __init__(self,
@@ -49,18 +50,21 @@ class FutureYearLandUse:
             if sub_for_defaults:
                 print('Using default Residential Land Use')
                 base_land_use_path = consts.RESI_LAND_USE_MSOA
+                print(base_land_use_path)
             else:
                 raise ValueError('No base land use provided')
         if base_employment_path is None:
             if sub_for_defaults:
                 print('Using default Employment Land Use')
                 base_employment_path = consts.EMPLOYMENT_MSOA
+                print(base_employment_path)
             else:
                 raise ValueError('No base employment provided')
         if base_soc_mix_path is None:
             if sub_for_defaults:
                 print('Using default Employment Skill Mix')
                 base_soc_mix_path = consts.SOC_2DIGIT_SIC
+                print(base_soc_mix_path)
             else:
                 raise ValueError('No employment mix provided')
 
@@ -135,6 +139,11 @@ class FutureYearLandUse:
 
         # Set object paths
         self.in_paths = {
+            'iteration': iteration,
+            'model_zoning': model_zoning,
+            'base_year': base_year,
+            'future_year': future_year,
+            'scenario_name': scenario_name,
             'base_land_use': base_land_use_path,
             'base_employment': base_employment_path,
             'base_soc_mix': base_soc_mix_path,
@@ -154,13 +163,13 @@ class FutureYearLandUse:
             'emp_write_path': emp_write_name
         }
 
-        # Write init report for param audits
+        # Write init reports for param audits
         init_report = pd.DataFrame(self.in_paths.values(),
                                    self.in_paths.keys()
                                    )
         init_report.to_csv(
             os.path.join(self.out_paths['report_folder'],
-                         '%s_%s_run_params.csv' % (self.scenario_name,
+                         '%s_%s_input_params.csv' % (self.scenario_name,
                                                    self.future_year))
         )
 
@@ -170,6 +179,7 @@ class FutureYearLandUse:
                      adjust_soc=True,
                      adjust_area_type=True,
                      ca_growth_method='factor',
+                     normalise=True,
                      export=True,
                      verbose=True,
                      reports=True):
@@ -233,13 +243,17 @@ class FutureYearLandUse:
                     index=False
                 )
 
+        # Normalise to tfn tt
+        if normalise:
+            fy_pop = norm.expanded_to_normalised(fy_pop,
+                                                 var_col=self.future_year)
+
         # Export main dataset
         if export:
             if verbose:
                 print('Writing to:')
                 print(self.out_paths['pop_write_path'])
-            fy_pop.to_csv(self.out_paths['pop_write_path'],
-                          index=False)
+            comp.write_out(fy_pop, self.out_paths['pop_write_path'])
 
         return fy_pop
 
@@ -253,8 +267,7 @@ class FutureYearLandUse:
             if verbose:
                 print('Writing to:')
                 print(self.out_paths['emp_write_path'])
-            fy_emp.to_csv(self.out_paths['emp_write_path'],
-                          index=False)
+            comp.write_out(fy_emp, self.out_paths['emp_write_path'])
 
         return fy_emp
 
@@ -387,6 +400,13 @@ class FutureYearLandUse:
         merge_cols = utils.intersection(list(base_year_pop),
                                         list(population_growth))
 
+        # If merge cols is only msoa, it's a tt dataset, apply the index
+        if len(merge_cols) == 1 or 'tfn_travelller_type' in merge_cols:
+            base_year_pop = norm.normalised_to_expanded(base_year_pop,
+                                                        drop_tt=True)
+            merge_cols = utils.intersection(list(base_year_pop),
+                                            list(population_growth))
+
         population = self._grow_to_future_year(
             by_vector=base_year_pop,
             fy_vector=population_growth,
@@ -457,6 +477,10 @@ class FutureYearLandUse:
             fy_vector=employment_growth,
             merge_cols=merge_cols)
 
+        employment = employment.rename(columns={self.base_year: self.future_year})
+
+        print(list(employment))
+
         return employment
 
     def _adjust_ca(self,
@@ -482,6 +506,9 @@ class FutureYearLandUse:
         # Build base year ca totals
         # This doesn't touch the future year vector, yet
         by_ca = fy_pop_vector.copy()
+        print(list(by_ca))
+        # TODO: Check ca in cols
+
         by_ca = by_ca.reindex(
             [zone_col, 'ca', self.future_year], axis=1).groupby(
             [zone_col, 'ca']).sum().reset_index()
@@ -492,6 +519,7 @@ class FutureYearLandUse:
             index=zone_col,
             columns='ca',
             values=self.future_year).reset_index()
+
         by_ca_share['total'] = by_ca_share[1] + by_ca_share[2]
         by_ca_share[1] /= by_ca_share['total']
         by_ca_share[2] /= by_ca_share['total']
@@ -619,7 +647,7 @@ class FutureYearLandUse:
             columns={'factor': 'target_factor'})
 
         # Infill traveller types
-        fy_pop = utils.infill_traveller_types(fy_pop)
+        fy_pop = norm.infill_ntem_tt(fy_pop)
 
         # Report on all tt segments
         report_cols = list(fy_pop)
@@ -700,6 +728,11 @@ class FutureYearLandUse:
         """
         if merge_cols is None:
             merge_cols = self._define_zone_col()
+        ####
+        print(merge_cols)
+        print(by_vector[merge_cols])
+        print(fy_vector[merge_cols])
+        ###
 
         start = by_vector[self.base_year].sum()
 
@@ -888,7 +921,7 @@ class FutureYearLandUse:
         """
 
         if vector_type == 'pop':
-            dat = pd.read_csv(self.in_paths['pop_growth'], dtype={'soc': str})
+            dat = pd.read_csv(self.in_paths['pop_growth'])
         elif vector_type == 'emp':
             dat = pd.read_csv(self.in_paths['emp_growth'], dtype={'soc': str})
         ri_cols = list([self.model_zoning + '_zone_id'])

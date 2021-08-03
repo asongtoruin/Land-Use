@@ -173,3 +173,11 @@ RAW_TT_INDEX = pd.read_csv(os.path.join(REF_PATH,
 
 TT_INDEX = pd.read_csv(os.path.join(REF_PATH,
                                     'ntem_traveller_types_normalised.csv'))
+
+# TfN Traveller Type Reference
+TFN_TT_INDEX = pd.read_csv(os.path.join(REF_PATH,
+                                        'tfn_traveller_types_normalised.csv'),
+                           dtype=int)
+
+TFN_TT_DESC = pd.read_csv(os.path.join(REF_PATH,
+                                       'tfn_traveller_types_illustrated.csv'))
