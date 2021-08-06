@@ -256,9 +256,9 @@ def NTEM_Pop_Interpolation(by_lu_obj):
     else:
         pass
 
-    Output_Folder = by_lu_obj.import_folder + 'CTripEnd/'
+    Output_Folder = by_lu_obj.home_folder + '/Outputs/'
     print(Output_Folder)
-    LogFile = Output_Folder + r"\\" + r"LogFile.txt"
+    LogFile = Output_Folder + 'LogFile.txt'
     # 'I:/NorMITs Synthesiser/Zone Translation/'
     Zone_path = by_lu_obj.zones_folder + 'Export/ntem_to_msoa/ntem_msoa_pop_weighted_lookup.csv'
     Pop_Segmentation_path = by_lu_obj.import_folder + 'CTripEnd/Pop_Segmentations.csv'
@@ -719,18 +719,24 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     NTEM_HHpop_cols = ['msoaZoneID', 'msoa11cd', 'AreaType', 'Borough', 'TravellerType','NTEM_TT_Name', 'Age_code',
                        'Age', 'Gender_code', 'Gender','Household_composition_code', 'Household_size', 'Household_car',
                        'Employment_type_code', 'Employment_type', 'Population']
+    NTEM_HHpop_E02001045 = NTEM_HHpop[NTEM_HHpop['msoa11cd'] == 'E02001045']
+    NTEM_HHpop_E02001045.to_csv('NTEM_HHpop_E02001045.csv', index=False)
+
     NTEM_HHpop = NTEM_HHpop[NTEM_HHpop_cols]
-    NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID'])['Population'].sum().reset_index()
+    NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID','msoa11cd'])['Population'].sum().reset_index()
     NTEM_HHpop_Total = NTEM_HHpop_Total.rename(columns={'Population': 'ZoneNTEMPop'})
     print('Headings of NTEM_HHpop_Total')
     print(NTEM_HHpop_Total.head(5))
+    NTEM_HHpop_Total.to_csv('HHpop_NTEM_Total.csv', index=False)
+
     Hhpop_Dt_Total = crp.groupby(['ZoneID'])['population'].sum().reset_index()
     Hhpop_Dt_Total = Hhpop_Dt_Total.rename(columns={'population': 'ZonePop'})
     print('Headings of Hhpop_Dt_Total')
     print(Hhpop_Dt_Total.head(5))
+    Hhpop_Dt_Total.to_csv('Hhpop_Dt_Total.csv', index=False)
+
     NTEM_HHpop = NTEM_HHpop.merge(NTEM_HHpop_Total, how='left', on=['msoaZoneID'])
-    NTEM_HHpop = NTEM_HHpop.merge(Hhpop_Dt_Total, how='left', left_on=['msoa11cd'],
-                                  right_on=['ZoneID']).drop('ZoneID', axis=1)
+    NTEM_HHpop = NTEM_HHpop.merge(Hhpop_Dt_Total, how='left', left_on=['msoa11cd'], right_on=['ZoneID'])
     print('Headings of NTEM_HHpop')
     print(NTEM_HHpop.head(5))
     NTEM_HHpop['pop_aj_factor'] = NTEM_HHpop['ZonePop'] / NTEM_HHpop['ZoneNTEMPop']
@@ -739,8 +745,11 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     print(NTEM_HHpop.pop_aj.sum())
     print(crp.population.sum())
     NTEM_HHpop.to_csv('NTEM_HHpop_Aj.csv', index=False)
+    NTEM_HHpop_Aj_E02001045 = NTEM_HHpop[NTEM_HHpop['msoa11cd'] == 'E02001045']
+    NTEM_HHpop_Aj_E02001045.to_csv('NTEM_HHpop_Aj_E02001045.csv', index=False)
 
     # Read in the Bespoke Census Query
+
     bsq = Process_bsq(by_lu_obj)
     # bsq = create_employment_segmentation(by_lu_obj, bsq)
     # bsq = bsq[['msoaZoneID', 'Zone_Desc', 'B', 'R', 'Age', 'Gender',
@@ -757,6 +766,8 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
                              'Employment_type_code', 'Employment_type', 'property_type', 'Dt_profile', 'pop_aj']]
     NTEM_HHpop = NTEM_HHpop.rename(columns={'pop_aj': 'population'})
     NTEM_HHpop['pop_withDT'] = NTEM_HHpop['population'] * NTEM_HHpop['Dt_profile']
+    NTEM_HH_PopAj_withDT_E02001045 = NTEM_HHpop[NTEM_HHpop['msoa11cd'] == 'E02001045']
+    NTEM_HH_PopAj_withDT_E02001045.to_csv('NTEM_HH_PopAj_withDT_E02001045.csv', index=False)
 
     # Further adjust detailed dimensional population according to zonal dwelling type from crp
     NorMITS_HHpop_byDt = crp.rename(columns={'population': 'crp_byDT_pop', 'UPRN': "properties"})
@@ -768,6 +779,8 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
 
     HHpop['pop_withDT_aj_factor'] = HHpop['crp_byDT_pop'] / HHpop['NTEM_byDT_pop']
     HHpop['pop_withDT_aj'] = HHpop['pop_withDT'] * HHpop['pop_withDT_aj_factor']
+    HH_Pop_withDT_E02001045 = HHpop[HHpop['ZoneID'] == 'E02001045']
+    HH_Pop_withDT_E02001045.to_csv('HH_Pop_withDT_E02001045.csv', index=False)
 
     print(HHpop.pop_withDT_aj.sum())
     print(crp.population.sum())
