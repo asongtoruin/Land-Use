@@ -723,7 +723,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     NTEM_HHpop_E02001045.to_csv('NTEM_HHpop_E02001045.csv', index=False)
 
     NTEM_HHpop = NTEM_HHpop[NTEM_HHpop_cols]
-    NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID','msoa11cd'])['Population'].sum().reset_index()
+    NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID'])['Population'].sum().reset_index()
     NTEM_HHpop_Total = NTEM_HHpop_Total.rename(columns={'Population': 'ZoneNTEMPop'})
     print('Headings of NTEM_HHpop_Total')
     print(NTEM_HHpop_Total.head(5))
@@ -736,7 +736,8 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     Hhpop_Dt_Total.to_csv('Hhpop_Dt_Total.csv', index=False)
 
     NTEM_HHpop = NTEM_HHpop.merge(NTEM_HHpop_Total, how='left', on=['msoaZoneID'])
-    NTEM_HHpop = NTEM_HHpop.merge(Hhpop_Dt_Total, how='left', left_on=['msoa11cd'], right_on=['ZoneID'])
+    NTEM_HHpop = NTEM_HHpop.merge(Hhpop_Dt_Total, how='left', left_on=['msoa11cd'],
+                                  right_on=['ZoneID']).drop(columns={'ZoneID'})
     print('Headings of NTEM_HHpop')
     print(NTEM_HHpop.head(5))
     NTEM_HHpop['pop_aj_factor'] = NTEM_HHpop['ZonePop'] / NTEM_HHpop['ZoneNTEMPop']
@@ -773,7 +774,12 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     NorMITS_HHpop_byDt = crp.rename(columns={'population': 'crp_byDT_pop', 'UPRN': "properties"})
     NTEM_HHpop_byDt = NTEM_HHpop.groupby(['msoaZoneID', 'property_type'])['pop_withDT'].sum().reset_index()
     NTEM_HHpop_byDt = NTEM_HHpop_byDt.rename(columns={'pop_withDT': 'NTEM_byDT_pop'})
+    NTEM_HHpop_byDt.to_csv('NTEM_HHpop_byDt.csv', index=False)
+    NTEM_HHpop_byDt_total_E02001045 = NTEM_HHpop_byDt[NTEM_HHpop_byDt['msoaZoneID'] == '1013']
+    NTEM_HHpop_byDt_total_E02001045.to_csv('NTEM_HHpop_byDt_total_E02001045.csv', index=False)
+
     HHpop = NTEM_HHpop.merge(NTEM_HHpop_byDt, how='left', on=['msoaZoneID', 'property_type'])
+    # Where the problem occur:
     HHpop = HHpop.merge(NorMITS_HHpop_byDt, how='left', left_on=['msoa11cd', 'property_type'],
                         right_on=['ZoneID', 'census_property_type']).drop(columns={'msoa11cd'})
 
