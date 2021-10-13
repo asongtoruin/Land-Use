@@ -56,7 +56,7 @@ def copy_addressbase_files(by_lu_obj):
     #    except IOError:
     #        print("File not found")
 
-    by_lu_obj.state['5.2.2 read in core property data'] = 1
+    by_lu_obj.pop_state['5.2.2 read in core property data'] = 1
 
 
 # 2. Main analysis functions - everything related to census and segmentation
@@ -401,7 +401,7 @@ def filled_properties(by_lu_obj):
     filled_properties_df = filled_properties_df.fillna(1)  # default to all Scottish properties being occupied
     filled_properties_df.to_csv('ProbabilityDwellfilled.csv', index=False)
 
-    by_lu_obj.state['5.2.4 filled property adjustment'] = 1  # record that this process has been run
+    by_lu_obj.pop_state['5.2.4 filled property adjustment'] = 1  # record that this process has been run
     return filled_properties_df
 
 
@@ -511,7 +511,7 @@ def apply_household_occupancy(by_lu_obj, do_import=False, write_out=True):
         if write_out:
             all_res_property.to_csv('classifiedResProperty' + by_lu_obj.model_zoning + '.csv', index=False)
 
-        by_lu_obj.state['5.2.5 household occupancy adjustment'] = 1  # record that this process has been run
+        by_lu_obj.pop_state['5.2.5 household occupancy adjustment'] = 1  # record that this process has been run
         return all_res_property
 
     else:
@@ -598,7 +598,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     # Export to file
     compress.write_out(crp, by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning)
 
-    by_lu_obj.state['5.2.6 NTEM segmentation'] = 1  # record that this process has been run
+    by_lu_obj.pop_state['5.2.6 NTEM segmentation'] = 1  # record that this process has been run
     return crp, bsq
 
 
@@ -734,7 +734,7 @@ def join_establishments(by_lu_obj):
     compress.write_out(landusewComm,
                        by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_withCommunal')
 
-    by_lu_obj.state['5.2.7 communal establishments'] = 1  # record that this process has been run
+    by_lu_obj.pop_state['5.2.7 communal establishments'] = 1  # record that this process has been run
 
 
 def land_use_formatting(by_lu_obj):
@@ -747,7 +747,7 @@ def land_use_formatting(by_lu_obj):
     compress.write_out(land_use,
                        by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_flats_combined')
 
-    by_lu_obj.state['5.2.3 property type mapping'] = 1
+    by_lu_obj.pop_state['5.2.3 property type mapping'] = 1
 
     return land_use
 
@@ -988,23 +988,3 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     All = All[NPRSegments].rename(columns={'newpop': 'people'})
     compress.write_out(All, by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_NS_SEC_SOC')
     print(All['people'].sum())
-
-
-# TODO: remove once in run_by_lu
-def run_main_build(by_lu_obj, abp_import=True):
-    """
-    Set ABPImport to True if you want to copy over the ABP files to iter folder
-    """
-    # Make a new sub folder of the home directory for the iteration, if needed, and set this as the working directory.
-    os.chdir(by_lu_obj.model_folder)
-    utils.create_folder(by_lu_obj.iteration, ch_dir=True)
-
-    if abp_import:
-        copy_addressbase_files(by_lu_obj)
-    else:
-        filled_properties(by_lu_obj)
-        apply_household_occupancy(by_lu_obj)
-        apply_ntem_segments(by_lu_obj)
-        join_establishments(by_lu_obj)
-        land_use_formatting(by_lu_obj)
-        apply_ns_sec_soc_splits(by_lu_obj)
