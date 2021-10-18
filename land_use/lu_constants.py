@@ -42,6 +42,13 @@ RESI_LAND_USE_MSOA = os.path.join(
     'land_use_output_safe_msoa.csv'
 )
 
+NON_RESI_LAND_USE_MSOA = os.path.join(
+    LU_FOLDER,
+    BY_FOLDER,
+    LU_MR_ITER,
+    'outputs',
+    'land_use_2018_emp.csv')
+
 EMPLOYMENT_MSOA = os.path.join(
     LU_FOLDER,
     LU_IMPORTS,
