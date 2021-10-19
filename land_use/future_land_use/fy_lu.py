@@ -15,9 +15,8 @@ class FutureYearLandUse:
                  iteration=consts.FYLU_MR_ITER,
                  import_folder=consts.LU_IMPORTS,
                  model_zoning='msoa',
-                 base_land_use_path=None,
-                 base_employment_path=None,
-                 base_soc_mix_path=None,
+                 base_resi_land_use_path=None,
+                 base_non_resi_land_use_path=None,
                  fy_demographic_path=None,
                  fy_at_mix_path=None,
                  fy_soc_mix_path=None,
@@ -46,27 +45,18 @@ class FutureYearLandUse:
 
         # If Nones passed in, set defaults
         # This is for base datasets that don't vary between scenarios
-        if base_land_use_path is None:
+        if base_resi_land_use_path is None:
             if sub_for_defaults:
                 print('Using default Residential Land Use')
-                base_land_use_path = consts.RESI_LAND_USE_MSOA
-                print(base_land_use_path)
+                base_resi_land_use_path = consts.RESI_LAND_USE_MSOA
+                print(base_resi_land_use_path)
             else:
                 raise ValueError('No base land use provided')
-        if base_employment_path is None:
+        if base_non_resi_land_use_path is None:
             if sub_for_defaults:
-                print('Using default Employment Land Use')
-                base_employment_path = consts.EMPLOYMENT_MSOA
-                print(base_employment_path)
-            else:
-                raise ValueError('No base employment provided')
-        if base_soc_mix_path is None:
-            if sub_for_defaults:
-                print('Using default Employment Skill Mix')
-                base_soc_mix_path = consts.SOC_2DIGIT_SIC
-                print(base_soc_mix_path)
-            else:
-                raise ValueError('No employment mix provided')
+                print('Using default non-Residential Land Use')
+                base_non_resi_land_use_path = consts.RESI_LAND_USE_MSOA
+                print(base_resi_land_use_path)
 
         # If Nones passed in, parse paths
         # This is for datasets that change between scenarios
@@ -144,9 +134,8 @@ class FutureYearLandUse:
             'base_year': base_year,
             'future_year': future_year,
             'scenario_name': scenario_name,
-            'base_land_use': base_land_use_path,
-            'base_employment': base_employment_path,
-            'base_soc_mix': base_soc_mix_path,
+            'base_resi_land_use': base_resi_land_use_path,
+            'base_non_resi_land_use': base_non_resi_land_use_path,
             'fy_dem_mix': fy_demographic_path,
             'fy_at_mix': fy_at_mix_path,
             'fy_soc_mix': fy_soc_mix_path,
@@ -383,7 +372,7 @@ class FutureYearLandUse:
         # ## BASE YEAR POPULATION ## #
         print("Loading the base year population data...")
         base_year_pop = utils.get_land_use(
-            self.in_paths['base_land_use'],
+            self.in_paths['base_resi_land_use'],
             model_zone_col=zone_col,
             segmentation_cols=None)
         base_year_pop = base_year_pop.rename(
@@ -442,24 +431,28 @@ class FutureYearLandUse:
             'emp',
             retain_cols=['soc', 'ns'])
 
+        # Check for soc 4, infill if not there
+        employment_growth = self._add_soc_4(employment_growth,
+                                            soc_col='soc')
+
         # ## BASE YEAR EMPLOYMENT ## #
         print("Loading the base year employment data...")
         base_year_emp = utils.get_land_use(
-            path=self.in_paths['base_employment'],
+            path=self.in_paths['base_non_resi_land_use'],
             model_zone_col=zone_col,
             segmentation_cols=None,
-            add_total=True,
-            total_col_name='E01',
-            to_long=True,
-            long_var_name=emp_cat_col,
-            long_value_name=self.base_year)
+            add_total=False,
+            to_long=False)
 
         # Print employment numbers
         print(base_year_emp[base_year_emp[emp_cat_col] == 'E01'])
 
         # ## FUTURE YEAR EMPLOYMENT ## #
         print("Generating future year employment data...")
-        # If soc splits in the growth factors, we have a few extra steps
+        """
+        Pre processing for SOC, may be deprecated by importing
+        processed base year
+        
         if 'soc' in employment_growth:
             # Add Soc splits into the base year
             base_year_emp = self._split_by_soc(
@@ -468,6 +461,7 @@ class FutureYearLandUse:
                 unique_col=self.base_year,
                 split_cols=[zone_col, emp_cat_col]
             )
+        """
 
         # Merge on all possible segmentations - not years
         merge_cols = utils.intersection(list(base_year_emp), list(employment_growth))
@@ -1013,3 +1007,31 @@ class FutureYearLandUse:
             groupby(rig_cols).sum().reset_index()
 
         return age_factors
+
+    def _add_soc_4(self,
+                   employment_growth: pd.DataFrame,
+                   soc_col: str = 'soc'):
+        """
+        Takes a set of growth vectors and adds soc 4, if needed
+        """
+
+        # Check for soc 4
+        if '4' not in employment_growth[soc_col].drop_duplicates().to_list():
+            _already_in = False
+
+        out_growth = employment_growth.copy()
+        prior_emp_growth = employment_growth.copy()
+
+        if not _already_in:
+            # Build mean factor for unm
+            soc_4_growth = employment_growth.copy()
+            soc_4_growth = soc_4_growth.groupby(
+                [self.model_zoning + '_zone_id'])[self.future_year].mean()
+            soc_4_growth = soc_4_growth.reset_index()
+            soc_4_growth[soc_col] = '4'
+
+            out_growth = pd.concat([prior_emp_growth, soc_4_growth])
+            out_growth = out_growth.sort_values(
+                [self.model_zoning + '_zone_id', soc_col])
+
+        return out_growth
