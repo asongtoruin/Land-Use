@@ -463,7 +463,7 @@ def adjust_car_availability(by_lu_obj):
     car_available = all_combined2.groupby(by=['household_composition'], as_index=False).sum()
     car_available.to_csv(by_lu_obj.home_folder + '/caravailable.csv')
 
-    by_lu_obj.state['5.2.11 car availability'] = 1
+    by_lu_obj.pop_state['5.2.11 car availability'] = 1
 
 
 # TODO: revise the print statements in this function. Good points to add logging maybe
@@ -642,7 +642,7 @@ def adjust_soc_lad(by_lu_obj):
     land_use = land_use.drop(columns={'lad_zone_id', 'factor'})
     compress.write_out(land_use, by_lu_obj.home_folder + '/final_land_use')
 
-    by_lu_obj.state['5.2.10 SEC/SOC'] = 1  # record as done, this is the final SEC/SOC adjustment
+    by_lu_obj.pop_state['5.2.10 SEC/SOC'] = 1  # record as done, this is the final SEC/SOC adjustment
 
 
 def control_to_lad_employment_ag(by_lu_obj):
@@ -851,7 +851,7 @@ def control_to_lad_employment_ag(by_lu_obj):
     compress.write_out(gb_land_use_controlled, by_lu_obj.home_folder + '/GBlanduseControlled')
     gc.collect()
 
-    by_lu_obj.state['5.2.8 MYPE adjustment'] = 1  # record that the mid year adjustment is complete
+    by_lu_obj.pop_state['5.2.8 MYPE adjustment'] = 1  # record that the mid year adjustment is complete
 
     return gb_land_use_controlled
 
@@ -970,7 +970,7 @@ def country_emp_control(by_lu_obj):
     print('Saving to default folder...')
     compress.write_out(adjusted_gb_land_use, by_lu_obj.home_folder + '/AdjustedGBlanduse_emp')
 
-    by_lu_obj.state['5.2.9 employment adjustment'] = 1  # record step as complete in the base year land use object
+    by_lu_obj.pop_state['5.2.9 employment adjustment'] = 1  # record step as complete in the base year land use object
 
 
 def run_mype(by_lu_obj, midyear=True):

@@ -49,11 +49,18 @@ NON_RESI_LAND_USE_MSOA = os.path.join(
     'outputs',
     'land_use_2018_emp.csv')
 
-EMPLOYMENT_MSOA = os.path.join(
+E_CAT_DATA = os.path.join(
     LU_FOLDER,
     LU_IMPORTS,
     'HSL 2018',
     'non_freight_msoa_2018.csv'
+)
+
+UNM_DATA = os.path.join(
+    LU_FOLDER,
+    LU_IMPORTS,
+    'SOC mix',
+    'nomis_2021_10_12_165818.csv'
 )
 
 MSOA_REGION = os.path.join(
