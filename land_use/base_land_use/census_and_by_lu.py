@@ -2,7 +2,10 @@ import logging
 import os
 import land_use.lu_constants as consts
 from land_use.utils import file_ops as utils
-from land_use.base_land_use import main_build, car_availability_adjustment, census2011_population_furness
+from land_use.base_land_use import main_build,\
+    car_availability_adjustment,\
+    census2011_population_furness,\
+    BaseYear2018_population_process
 from land_use.base_land_use import mid_year_pop_adjustments as mypa
 
 """
@@ -86,10 +89,13 @@ class BaseYearLandUse:
         # These are aligned with the section numbers in the documentation
         # TODO: enable a way to init from a point part way through the process
         self.state = {
-            '5.2.2 read in core property data': 0,
-            '5.2.3 property type mapping': 0,
-            '5.2.4 filled property adjustment': 0,
-            '5.2.5 household occupancy adjustment': 0,
+            '3.1.1 derive 2011 population from NTEM and convert Scottish zones': 0,
+            '3.1.2 expand population segmentation': 0,
+            '3.1.3 data synthesis': 0,
+            '3.2.1 read in core property data': 0,
+            '3.2.2 property type mapping': 0,
+            '3.2.3 filled property adjustment': 0,
+            '3.2.4 household occupancy adjustment': 0,
             '5.2.6 NTEM segmentation': 0,
             '5.2.7 communal establishments': 0,
             '5.2.8 MYPE adjustment': 0,
@@ -112,24 +118,41 @@ class BaseYearLandUse:
         logging.basicConfig(filename='base_year_land_use.log', level=logging.INFO, format='%(asctime)s: %(message)s')
 
         # TODO: Change from copy to check imports
-        if self.state['3.1 2011 NTEM pop and zone conversion for Scotland'] == 0:
-            logging.info('Running step 3.1, 2011 NTEM pop and zone conversion for Scotland')
+        # Start by processing 2011 census year data
+        if self.state['3.1.1 derive 2011 population from NTEM and convert Scottish zones'] == 0:
+            logging.info('Running step 3.1.1 derive 2011 population from NTEM and convert Scottish zones')
             census2011_population_furness.NTEM_Pop_Interpolation(self)
 
-        # Run through the main build process
-        if self.state['5.2.2 read in core property data'] == 0:
-            logging.info('Running step 5.2.2, reading in core property data')
-            main_build.copy_addressbase_files(self)
+        if self.state['3.1.2 expand population segmentation'] == 0:
+            logging.info('Running step 3.1.2 expand population segmentation')
+            census2011_population_furness.Create_IPFN_Inputs_2011(self)
 
+        if self.state['3.1.3 data synthesis'] == 0:
+            logging.info('Running step 3.1.3 data synthesis')
+            census2011_population_furness.IPFN_Process_2011(self)
+
+        # Run through the 2018 Base Year Build process
         # Steps from main build
-        if self.state['5.2.4 filled property adjustment'] == 0:
-            logging.info('Running step 5.2.4, calculating the filled property adjustment factors')
-            main_build.filled_properties(self)
+        if self.state['3.2.1 read in core property data'] == 0:
+            logging.info('Running step 3.2.1, reading in core property data')
+            BaseYear2018_population_process.copy_addressbase_files(self)
 
-        if self.state['5.2.5 household occupancy adjustment'] == 0:
-            logging.info('Running step 5.2.5, household occupancy adjustment')
+        if self.state['3.2.3 filled property adjustment'] == 0:
+            logging.info('Running step 3.2.3, calculating the filled property adjustment factors')
+            BaseYear2018_population_process.filled_properties(self)
+
+        if self.state['3.2.4 household occupancy adjustment'] == 0:
+            logging.info('Running step 3.2.4, household occupancy adjustment')
             main_build.apply_household_occupancy(self)
 
+        # Property type mapping is done after communal establishments are added, despite position in the documentation
+        # TODO ART/YZ - Check if this location in the script is correct
+        if self.state['3.2.2 property type mapping'] == 0:
+            logging.info('Running step 3.2.2, combining flat types')
+            BaseYear2018_population_process.land_use_formatting(self)
+
+        # Remainder still in the main build process
+        # TODO ART/YZ - Replace 5.2.6 and 5.2.7 with new scripts for 3.2.5 and 3.2.6 in the new tech note respectively
         if self.state['5.2.6 NTEM segmentation'] == 0:
             logging.info('Running step 5.2.6, NTEM segmentation')
             main_build.apply_ntem_segments(self)
@@ -137,11 +160,6 @@ class BaseYearLandUse:
         if self.state['5.2.7 communal establishments'] == 0:
             logging.info('Running step 5.2.7, adding in communal establishments')
             main_build.join_establishments(self)
-
-        # Property type mapping is done after communal establishments are added, despite position in the documentation
-        if self.state['5.2.3 property type mapping'] == 0:
-            logging.info('Running step 5.2.3, combining flat types')
-            main_build.land_use_formatting(self)
 
         # Steps from mid-year population estimate adjustment
         if self.state['5.2.8 MYPE adjustment'] == 0:

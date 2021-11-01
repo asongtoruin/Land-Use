@@ -704,6 +704,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     crp = pd.read_csv(classified_res_property_import_path)[crp_cols]
 
     # Reclassify property type 7 (mobile homes) in crp as type 6, in line with the bespoke census query
+    # Adam - Combine 7 dwelling types to 4.
     crp['census_property_type'] = np.where(crp['census_property_type'] == 7, 6, crp['census_property_type'])
     crp['popXocc'] = crp['population'] * crp['household_occupancy_18']
     crp = crp.groupby(['ZoneID', 'census_property_type']).sum().reset_index()
@@ -750,6 +751,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     NTEM_HHpop_Aj_E02001045.to_csv('NTEM_HHpop_Aj_E02001045.csv', index=False)
 
     # Read in the Bespoke Census Query
+    # Adam - Replace this block with new process from 2011 output f.
 
     bsq = Process_bsq(by_lu_obj)
     # bsq = create_employment_segmentation(by_lu_obj, bsq)
@@ -769,6 +771,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     NTEM_HHpop['pop_withDT'] = NTEM_HHpop['population'] * NTEM_HHpop['Dt_profile']
     NTEM_HH_PopAj_withDT_E02001045 = NTEM_HHpop[NTEM_HHpop['msoa11cd'] == 'E02001045']
     NTEM_HH_PopAj_withDT_E02001045.to_csv('NTEM_HH_PopAj_withDT_E02001045.csv', index=False)
+    # Adam - Stop editing 2018 here.
 
     # Further adjust detailed dimensional population according to zonal dwelling type from crp
     NorMITS_HHpop_byDt = crp.rename(columns={'population': 'crp_byDT_pop', 'UPRN': "properties"})
