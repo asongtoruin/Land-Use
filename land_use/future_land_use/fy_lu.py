@@ -380,6 +380,15 @@ class FutureYearLandUse:
         by_pop_report = utils.lu_out_report(base_year_pop,
                                             pop_var=self.base_year)
 
+        # TODO: Add the traveller type join back on
+        if 'tfn_traveller_type' in list(base_year_pop):
+            base_year_pop = utils.infill_traveller_types(
+                land_use_build=base_year_pop,
+                traveller_type_lookup=consts.TFN_TT_INDEX,
+                attribute_subset=None,
+                left_tt_col='tfn_traveller_type',
+                right_tt_col='tfn_traveller_type')
+
         # Audit population numbers
         print("Base Year Population: %d" % base_year_pop[self.base_year].sum())
 
@@ -395,6 +404,13 @@ class FutureYearLandUse:
                                                         drop_tt=True)
             merge_cols = utils.intersection(list(base_year_pop),
                                             list(population_growth))
+
+        # TODO: Make this a function
+        # Control data types
+        base_year_pop['soc'] = base_year_pop['soc'].astype(float).astype(int)
+        base_year_pop['ns'] = base_year_pop['ns'].astype(float).astype(int)
+        population_growth['soc'] = population_growth['soc'].astype(float).astype(int)
+        population_growth['ns'] = population_growth['ns'].astype(float).astype(int)
 
         population = self._grow_to_future_year(
             by_vector=base_year_pop,

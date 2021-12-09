@@ -18,10 +18,14 @@ FY_FOLDER = 'future_land_use'
 DATA_FOLDER = 'Y://Data Strategy//Data//'
 
 # Most recent Land Use Iteration
-LU_MR_ITER = 'iter3b'
-FYLU_MR_ITER = 'iter3c'
+LU_MR_ITER = 'iter3d'
+FYLU_MR_ITER = 'iter3d'
 LU_IMPORTS = 'import'
 LU_REFS = 'Lookups'
+
+# TODO: Should probably lookup between iterations
+# Base year
+BASE_YEAR = '2018'
 
 # Inputs
 ZONE_NAME = 'MSOA'
@@ -39,7 +43,7 @@ RESI_LAND_USE_MSOA = os.path.join(
     BY_FOLDER,
     LU_MR_ITER,
     'outputs',
-    'land_use_output_safe_msoa.csv'
+    'land_use_output_msoa.csv'
 )
 
 NON_RESI_LAND_USE_MSOA = os.path.join(
@@ -131,7 +135,6 @@ SOC_2DIGIT_SIC = os.path.join(
 )
 
 
-
 # REFERENCES
 # purposes to apply soc split to
 SOC_P = [1, 2, 12]
@@ -195,3 +198,5 @@ TFN_TT_INDEX = pd.read_csv(os.path.join(REF_PATH,
 
 TFN_TT_DESC = pd.read_csv(os.path.join(REF_PATH,
                                        'tfn_traveller_types_illustrated.csv'))
+
+
