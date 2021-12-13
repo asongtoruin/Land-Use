@@ -43,11 +43,15 @@ census_micro = pd.read_csv(os.path.join(_census_micro_path, 'recodev12.csv'))
 
 # 2011 census queries
 QS401_raw_census = pd.read_csv(os.path.join(
-    _QS_census_queries_path, '210817_QS401UK -Dwelling type - Persons_MSOA.csv'))
+    _QS_census_queries_path, '210817_QS401UK -Dwelling type - Persons_MSOA.csv'), skiprows=7)
 QS606_raw_census = pd.read_csv(os.path.join(
-    _QS_census_queries_path, '210817_QS606UK - Occupation- ER_MSOA.csv'))
+    _QS_census_queries_path, '210817_QS606UK - Occupation- ER_MSOA.csv'), skiprows=7)
 QS609_raw_census = pd.read_csv(os.path.join(
-    _QS_census_queries_path, '210817_QS609UK - NS-SeC of HRP- Persons_MSOA.csv'))
+    _QS_census_queries_path, '210817_QS609UK - NS-SeC of HRP- Persons_MSOA.csv'), skiprows=6)
+# Trim the footers off the tables (they are always in the 2nd column, so dropna on Area (1st column))
+QS401_raw_census = QS401_raw_census.dropna(subset=['Area'])
+QS606_raw_census = QS606_raw_census.dropna(subset=['Area'])
+QS609_raw_census = QS609_raw_census.dropna(subset=['Area'])
 
 # Read in NTEM -> NorMITs lookup tables...
 lookup_ageh = pd.read_csv(os.path.join(_lookup_tables_path, 'ageh.csv'))
@@ -1090,7 +1094,7 @@ def IPFN_Process_2011(census_and_by_lu_obj):
     although this script will still produce the outputs. However, it will
     do it one at a time, so COULD TAKE UP TO A FORTNIGHT!
     The jupyter notebooks that were actually used can be found here:
-    I:\NorMITs Land Use\import\2011 Census Furness\02 Process
+    I:/NorMITs Land Use/import/2011 Census Furness/02 Process
     """
     # Set min and max districts to process
     # Note that these should be in range 1 to 313 inclusive
