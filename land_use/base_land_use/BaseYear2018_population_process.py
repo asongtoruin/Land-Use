@@ -1818,6 +1818,7 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
 
         audit_NTEM_HHpop_trim = NTEM_HHpop_trim.copy()
         audit_NTEM_HHpop_trim = audit_NTEM_HHpop_trim[['msoa11cd', 'P_aghetns']]
+        audit_NTEM_HHpop_trim = audit_NTEM_HHpop_trim.groupby(['msoa11cd'])['P_aghetns'].sum().reset_index()
         audit_3_2_6_csv = pd.merge(audit_original_hhpop, audit_NTEM_HHpop_trim,
                                    how='left', left_on='MSOA', right_on='msoa11cd')
         audit_3_2_6_csv['HH_pop_%age_diff'] = (audit_3_2_6_csv['P_aghetns'] -
@@ -1847,6 +1848,14 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
                                         'Audit_3.2.6.txt')
         with open(audit_3_2_6_path, 'w') as text_file:
             text_file.write(audit_3_2_6_content)
+
+        pop_trim_with_full_dims_filename = '_'.join(['HhPop_trim_byfullNorMITsSegs_initial',
+                                                     ModelYear,
+                                                     census_and_by_lu_obj.model_zoning])
+        pop_trim_with_full_dims_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
+                                                    pop_with_full_dims_output_dir,
+                                                    pop_trim_with_full_dims_filename)
+        compress.write_out(NTEM_HHpop_trim, pop_trim_with_full_dims_path)
 
         logging.info('Step 3.2.6 completed. Continuing running this function as Step 3.2.7.')
 
@@ -2024,7 +2033,7 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         uk_ave_hh_occ_filename = 'uk_average_hh_occupancy_by_t.csv'
 
         pop_with_full_dims_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                               pop_with_full_dims_output_dir,
+                                               pop_with_full_dims_second_output_dir,
                                                pop_with_full_dims_filename)
         uk_ave_hh_occ_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
                                           pop_with_full_dims_output_dir,
@@ -2047,7 +2056,7 @@ def subsets_worker_nonworker(census_and_by_lu_obj, function_that_called_me):
 
     # Read in output of Step 3.2.6/3.2.7 rather than calling the function and taking the output directly.
     # This prevents chain calling from 3.2.10 all the way back to 3.2.4!
-    hhpop_dir_path = pop_with_full_dims_output_dir
+    hhpop_dir_path = pop_with_full_dims_second_output_dir
     hhpop_filename = '_'.join(['HhPop_byfullNorMITsSegs_initial',
                                ModelYear,
                                census_and_by_lu_obj.model_zoning])
@@ -2102,9 +2111,11 @@ def subsets_worker_nonworker(census_and_by_lu_obj, function_that_called_me):
 
     audit_3_2_8_data = pd.merge(audit_3_2_8_data, audit_HHpop_workers_LA,
                                 how='left', on=['2021_LA_code', 'a', 'g', 'h', 'e', 't', 'n', 's'])
+    audit_3_2_8_data['people'] = audit_3_2_8_data['people'].fillna(0)
     audit_3_2_8_data = audit_3_2_8_data.rename(columns={'people': 'worker_pop'})
     audit_3_2_8_data = pd.merge(audit_3_2_8_data, audit_HHpop_non_workers_LA,
                                 how='left', on=['2021_LA_code', 'a', 'g', 'h', 'e', 't', 'n', 's'])
+    audit_3_2_8_data['people'] = audit_3_2_8_data['people'].fillna(0)
     audit_3_2_8_data = audit_3_2_8_data.rename(columns={'people': 'non_worker_pop'})
     audit_3_2_8_data['worker+non_worker_pop'] = audit_3_2_8_data['worker_pop'] + audit_3_2_8_data['non_worker_pop']
     audit_3_2_8_data['Check_pop_tots'] = (audit_3_2_8_data['worker+non_worker_pop'] -
@@ -2115,7 +2126,7 @@ def subsets_worker_nonworker(census_and_by_lu_obj, function_that_called_me):
     audit_3_2_8_data_export_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
                                                 subsets_worker_nonworker_output_dir,
                                                 'Audits',
-                                                'Audit_3.2.8_pop_vs_workers+non-workers_df_dump')
+                                                'Audit_3_2_8_pop_vs_workers_and_non-workers_df_dump')
     compress.write_out(audit_3_2_8_data, audit_3_2_8_data_export_path)
 
     audit_3_2_8_header = 'Audit for Step 3.2.8\nCreated ' + str(datetime.datetime.now())
@@ -2129,7 +2140,7 @@ def subsets_worker_nonworker(census_and_by_lu_obj, function_that_called_me):
                                   '\tMin %age difference is:' + str(audit_3_2_8_data_min * 100) + '%',
                                   '\tMean %age difference is:' + str(audit_3_2_8_data_mean * 100) + '%',
                                   'These differences should be 0 by definition.',
-                                  'A compressed full d, a, g, h, e,t, n, s breakdown is included for completeness.',
+                                  'A compressed full d, a, g, h, e, t, n, s breakdown is included for completeness.',
                                   'It is expected that a csv dump would have been too big.',
                                   'The compressed file is dumped here (plus its file extension):',
                                   audit_3_2_8_data_export_path])
@@ -2145,6 +2156,7 @@ def subsets_worker_nonworker(census_and_by_lu_obj, function_that_called_me):
     # Return variables based on function calling this step
     if function_that_called_me == 'LA_level_adjustment':
         la_2021_to_z_lookup = HHpop_workers[['2021_LA_code', 'MSOA']]
+        la_2021_to_z_lookup = la_2021_to_z_lookup.drop_duplicates()
         logging.info('Step 3.2.8 completed - Called by step 3.2.9')
         logging.info('Returning variable "seed_worker" in internal memory')
         logging.info('Returning variable "HHpop_workers_LA" in internal memory')
@@ -2434,8 +2446,8 @@ def LA_level_adjustment(census_and_by_lu_obj):
     audit_hhpop_by_dag_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
                                            la_level_adjustment_output_dir,
                                            'Audits',
-                                           'audit_' + ModelYear + '_HHpop_by_d.csv')
-    audit_hhpop_by_d.to_csv(audit_hhpop_by_d_path, index=False)
+                                           'audit_' + ModelYear + '_HHpop_by_dag.csv')
+    audit_hhpop_by_dag.to_csv(audit_hhpop_by_d_path, index=False)
 
     audit_3_2_9_header = 'Audit for Step 3.2.9\nCreated ' + str(datetime.datetime.now())
     audit_3_2_9_text = '\n'.join(['The total 2018 population is currently: ' + str(HHpop_workers_LA.total.sum() +
@@ -2458,7 +2470,7 @@ def LA_level_adjustment(census_and_by_lu_obj):
                                   audit_hhpop_by_dag_path])
     audit_3_2_9_content = '\n'.join([audit_3_2_9_header, audit_3_2_9_text])
     audit_3_2_9_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                    pop_with_full_dims_output_dir,
+                                    la_level_adjustment_output_dir,
                                     'Audits',
                                     'Audit_3.2.9.txt')
     with open(audit_3_2_9_path, 'w') as text_file:

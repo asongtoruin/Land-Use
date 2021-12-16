@@ -18,7 +18,7 @@ FY_FOLDER = 'future_land_use'
 DATA_FOLDER = 'Y://Data Strategy//Data//'
 
 # Most recent Land Use Iteration
-LU_MR_ITER = 'iter4f'
+LU_MR_ITER = 'iter4g'
 FYLU_MR_ITER = 'iter3c'
 LU_IMPORTS = 'import'
 LU_REFS = 'Lookups'
