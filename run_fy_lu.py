@@ -18,7 +18,7 @@ if __name__ == '__main__':
     future_years = list(range(2051, 2056))
     future_years = [str(x) for x in future_years]
 
-    pop = True
+    pop = False
     emp = True
     export = True
     balance_demographics = True
@@ -32,10 +32,9 @@ if __name__ == '__main__':
                 future_year=fy,
                 scenario_name=scenario,
                 iteration=fy_iter,
-                base_land_use_path=base_land_use,
-                base_employment_path=consts.EMPLOYMENT_MSOA,
-                base_soc_mix_path=consts.SOC_2DIGIT_SIC,
-                sub_for_defaults=False)  # Naughty - should be explicit
+                base_resi_land_use_path=base_land_use,
+                base_non_resi_land_use_path=consts.NON_RESI_LAND_USE_MSOA,
+                sub_for_defaults=False)
 
             print(fym.in_paths)
 
