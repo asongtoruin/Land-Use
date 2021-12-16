@@ -34,6 +34,7 @@ LU_AREA_TYPES = LU_FOLDER + '/area types/TfNAreaTypesLookup.csv'
 ALL_RES_PROPERTY_PATH = 'I:/NorMITs Land Use/import/AddressBase/2018/processed'
 CTripEnd_Database = 'I:/Data/NTEM/NTEM 7.2 outputs for TfN/'
 
+
 # Path to a default land use build
 RESI_LAND_USE_MSOA = os.path.join(
     LU_FOLDER,
@@ -43,11 +44,25 @@ RESI_LAND_USE_MSOA = os.path.join(
     'land_use_output_safe_msoa.csv'
 )
 
-EMPLOYMENT_MSOA = os.path.join(
+NON_RESI_LAND_USE_MSOA = os.path.join(
+    LU_FOLDER,
+    BY_FOLDER,
+    LU_MR_ITER,
+    'outputs',
+    'land_use_2018_emp.csv')
+
+E_CAT_DATA = os.path.join(
     LU_FOLDER,
     LU_IMPORTS,
     'HSL 2018',
     'non_freight_msoa_2018.csv'
+)
+
+UNM_DATA = os.path.join(
+    LU_FOLDER,
+    LU_IMPORTS,
+    'SOC mix',
+    'nomis_2021_10_12_165818.csv'
 )
 
 MSOA_REGION = os.path.join(
@@ -174,3 +189,11 @@ RAW_TT_INDEX = pd.read_csv(os.path.join(REF_PATH,
 
 TT_INDEX = pd.read_csv(os.path.join(REF_PATH,
                                     'ntem_traveller_types_normalised.csv'))
+
+# TfN Traveller Type Reference
+TFN_TT_INDEX = pd.read_csv(os.path.join(REF_PATH,
+                                        'tfn_traveller_types_normalised.csv'),
+                           dtype=int)
+
+TFN_TT_DESC = pd.read_csv(os.path.join(REF_PATH,
+                                       'tfn_traveller_types_illustrated.csv'))

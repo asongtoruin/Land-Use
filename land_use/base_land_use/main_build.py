@@ -62,6 +62,7 @@ def copy_addressbase_files(by_lu_obj):
     by_lu_obj.state['5.2.2 read in core property data'] = 1
     logging.info('Step 5.2.2 completed')
 
+
 # 2. Main analysis functions - everything related to census and segmentation
 def lsoa_census_data_prep(dat_path, population_tables, property_tables, geography=_default_lsoaRef):
     """
@@ -576,6 +577,7 @@ def filled_properties(by_lu_obj):
 
     by_lu_obj.state['5.2.4 filled property adjustment'] = 1  # record that this process has been run
     logging.info('Step 5.2.4 completed')
+
     return filled_properties_df
 
 
@@ -653,7 +655,9 @@ def apply_household_occupancy(by_lu_obj, do_import=False, write_out=True):
 
     # Read in all res property for the level of aggregation
     print('Reading in AddressBase extract')
+
     # addressbase_extract_path = by_lu_obj.home_folder + '/allResProperty' + by_lu_obj.model_zoning + 'Classified.csv'
+
     addressbase_extract_path = consts.ALL_RES_PROPERTY_PATH + '/allResProperty' + by_lu_obj.model_zoning + 'Classified.csv'
     all_res_property = pd.read_csv(addressbase_extract_path)[['ZoneID', 'census_property_type', 'UPRN']]
     all_res_property = all_res_property.groupby(['ZoneID', 'census_property_type']).count().reset_index()
@@ -687,6 +691,7 @@ def apply_household_occupancy(by_lu_obj, do_import=False, write_out=True):
 
         by_lu_obj.state['5.2.5 household occupancy adjustment'] = 1  # record that this process has been run
         logging.info('Step 5.2.5 completed')
+
         return all_res_property
 
     else:
@@ -877,6 +882,7 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
 
     by_lu_obj.state['5.2.6 NTEM segmentation'] = 1  # record that this process has been run
     logging.info('Step 5.2.6 completed')
+
     return crp, bsq
 
 
@@ -1271,23 +1277,3 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     logging.info('Population currently {}'.format(All.people.sum()))
     compress.write_out(All, by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_NS_SEC_SOC')
     print(All['people'].sum())
-
-
-# TODO: remove once in run_by_lu
-def run_main_build(by_lu_obj, abp_import=True):
-    """
-    Set ABPImport to True if you want to copy over the ABP files to iter folder
-    """
-    # Make a new sub folder of the home directory for the iteration, if needed, and set this as the working directory.
-    os.chdir(by_lu_obj.model_folder)
-    utils.create_folder(by_lu_obj.iteration, ch_dir=True)
-
-    if abp_import:
-        copy_addressbase_files(by_lu_obj)
-    else:
-        filled_properties(by_lu_obj)
-        apply_household_occupancy(by_lu_obj)
-        apply_ntem_segments(by_lu_obj)
-        join_establishments(by_lu_obj)
-        land_use_formatting(by_lu_obj)
-        apply_ns_sec_soc_splits(by_lu_obj)

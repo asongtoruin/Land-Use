@@ -10,10 +10,18 @@ if __name__ == '__main__':
 
     fy_iter = 'iter4a'
 
+    by_resi_lu_path = r'I:\NorMITs Land Use\base_land_use\iter3e\outputs\land_use_output_msoa.csv'
+    by_non_resi_lu_path = r'I:\NorMITs Land Use\base_land_use\iter3e\outputs\land_use_2018_emp.csv'
+
     scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
-    future_years = ['2027', '2033', '2035', '2040', '2050']
+    all_fy = range(2019, 2051)
+    future_years = list()
+    for i in all_fy:
+        future_years.append(str(i))
+    # future_years = ['2019', '2033', '2035', '2040', '2050']
+
     pop = True
-    emp = False
+    emp = True
     export = True
     balance_demographics = True
 
@@ -22,9 +30,11 @@ if __name__ == '__main__':
 
             fym = fylu.FutureYearLandUse(
                 future_year=fy,
+                base_resi_land_use_path=by_resi_lu_path,
+                base_non_resi_land_use_path=by_non_resi_lu_path,
                 scenario_name=scenario,
                 iteration=fy_iter,
-                sub_for_defaults=True)  # Naughty - should be explicit
+                sub_for_defaults=False)
 
             # Define run preferences
             if scenario == 'NTEM':
@@ -42,6 +52,7 @@ if __name__ == '__main__':
                     adjust_soc=adjust_soc,
                     adjust_area_type=adjust_area_type,
                     reports=True,
+                    normalise=True,
                     export=export
                     )
             if emp:

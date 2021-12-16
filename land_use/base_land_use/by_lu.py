@@ -3,7 +3,9 @@ import os
 import land_use.lu_constants as consts
 from land_use.utils import file_ops as utils
 from land_use.base_land_use import main_build, car_availability_adjustment, census2011_population_furness
+
 from land_use.base_land_use import mid_year_pop_adjustments as mypa
+
 
 """
 TODO:
@@ -24,6 +26,9 @@ class BaseYearLandUse:
                  KS401path=consts.KS401_PATH,
                  area_type_path=consts.LU_AREA_TYPES,
                  CTripEnd_Database_path=consts.CTripEnd_Database,
+                 emp_e_cat_data_path=consts.E_CAT_DATA,
+                 emp_soc_cat_data_path=consts.SOC_2DIGIT_SIC,
+                 emp_unm_data_path=consts.UNM_DATA,
                  base_year='2018',
                  scenario_name=None):
         """
@@ -50,6 +55,10 @@ class BaseYearLandUse:
         self.area_type_path = area_type_path
         self.CTripEnd_Database_path = CTripEnd_Database_path
 
+        self.e_cat_emp_path = emp_e_cat_data_path
+        self.soc_emp_path = emp_soc_cat_data_path
+        self.unemp_path = emp_unm_data_path
+
         # Basic config
         self.model_zoning = model_zoning
         self.base_year = base_year
@@ -60,12 +69,14 @@ class BaseYearLandUse:
             model_folder,
             output_folder,
             iteration,
-            'outputs',
-            'scenarios',
-            self.scenario_name)
+            'outputs')
 
-        pop_write_name = os.path.join(write_folder, 'land_use_' + str(self.base_year) + '_pop.csv')
-        emp_write_name = os.path.join(write_folder, 'land_use_' + str(self.base_year) + '_emp.csv')
+        pop_write_name = 'land_use_' + str(self.base_year) + '_' + model_zoning.lower() + '_pop.csv'
+        emp_write_name = 'land_use_' + str(self.base_year) + '_' + model_zoning.lower() + '_emp.csv'
+
+        pop_write_path = os.path.join(write_folder, pop_write_name)
+        emp_write_path = os.path.join(write_folder, emp_write_name)
+
         report_folder = os.path.join(write_folder, 'reports')
 
         # Build folders
@@ -78,14 +89,14 @@ class BaseYearLandUse:
         self.out_paths = {
             'write_folder': write_folder,
             'report_folder': report_folder,
-            'pop_write_path': pop_write_name,
-            'emp_write_path': emp_write_name
+            'pop_write_path': pop_write_path,
+            'emp_write_path': emp_write_path
         }
 
         # Establish a state dictionary recording which steps have been run
         # These are aligned with the section numbers in the documentation
         # TODO: enable a way to init from a point part way through the process
-        self.state = {
+        self.pop_state = {
             '5.2.2 read in core property data': 0,
             '5.2.3 property type mapping': 0,
             '5.2.4 filled property adjustment': 0,
@@ -162,7 +173,7 @@ class BaseYearLandUse:
             mypa.adjust_soc_lad(self)  # TODO: fix this function
 
         # Car availability
-        if self.state['5.2.11 car availability'] == 0:
+        if self.pop_state['5.2.11 car availability'] == 0:
             # First prepare the NTS data
             car_availability_adjustment.nts_import(self)
             print('NTS import completed successfully')
@@ -170,3 +181,18 @@ class BaseYearLandUse:
             # Then apply the function from mid_year_pop_adjustments
             # TODO: uncomment line below once MYPE script has been replaced
             # mypa.adjust_car_availability(self)
+
+    def build_by_emp(self):
+        """
+        """
+        os.chdir(self.model_folder)
+        utils.create_folder(self.iteration, ch_dir=True)
+
+        employment.get_emp_data(self)
+
+        employment.skill_weight_e_cats(self)
+
+        employment.unemp_infill(self)
+
+        self.emp_out.to_csv(self.out_paths['emp_write_path'],
+                            index=False)
