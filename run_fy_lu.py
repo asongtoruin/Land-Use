@@ -1,5 +1,6 @@
 
 import land_use.future_land_use.fy_lu as fylu
+import land_use.lu_constants as consts
 
 # Full scenarios
 # scenarios = ['NTEM', 'SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
@@ -8,19 +9,16 @@ import land_use.future_land_use.fy_lu as fylu
 
 if __name__ == '__main__':
 
-    by_resi_lu_path = r'I:\NorMITs Land Use\base_land_use\iter3e\outputs\land_use_output_msoa.csv'
-    by_non_resi_lu_path = r'I:\NorMITs Land Use\base_land_use\iter3e\outputs\land_use_2018_emp.csv'
+    fy_iter = 'iter3d'
 
-    fy_iter = 'iter3e'
+    base_land_use = 'I:/NorMITs Land Use/base_land_use/iter3d/outputs/land_use_output_msoa.csv'
 
     scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
-    all_fy = range(2019, 2051)
-    future_years = list()
-    for i in all_fy:
-        future_years.append(str(i))
-    # future_years = ['2019', '2033', '2035', '2040', '2050']
+    future_years = ['2027', '2033', '2035', '2040', '2050', '2055']
+    future_years = list(range(2051, 2056))
+    future_years = [str(x) for x in future_years]
 
-    pop = True
+    pop = False
     emp = True
     export = True
     balance_demographics = True
@@ -28,13 +26,17 @@ if __name__ == '__main__':
     for scenario in scenarios:
         for fy in future_years:
 
+            print(scenario, fy)
+
             fym = fylu.FutureYearLandUse(
                 future_year=fy,
-                base_resi_land_use_path=by_resi_lu_path,
-                base_non_resi_land_use_path=by_non_resi_lu_path,
                 scenario_name=scenario,
                 iteration=fy_iter,
+                base_resi_land_use_path=base_land_use,
+                base_non_resi_land_use_path=consts.NON_RESI_LAND_USE_MSOA,
                 sub_for_defaults=False)
+
+            print(fym.in_paths)
 
             # Define run preferences
             if scenario == 'NTEM':
