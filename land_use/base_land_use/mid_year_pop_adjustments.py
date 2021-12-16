@@ -649,11 +649,10 @@ def adjust_soc_lad(by_lu_obj):
     land_use = land_use.drop(columns={'lad_zone_id', 'factor'})
     logging.info('Population currently {}'.format(land_use.people.sum()))
     compress.write_out(land_use, by_lu_obj.home_folder + '/final_land_use')
-
     by_lu_obj.state['5.2.10 SEC/SOC'] = 1  # record as done, this is the final SEC/SOC adjustment
     logging.info('Step 5.2.10 completed')
 
-
+    
 def control_to_lad_employment_ag(by_lu_obj):
     """
     control to employment at LAD level for age, gender and fte/pte employment; 
@@ -862,6 +861,7 @@ def control_to_lad_employment_ag(by_lu_obj):
 
     by_lu_obj.state['5.2.8 MYPE adjustment'] = 1  # record that the mid year adjustment is complete
     logging.info('Step 5.2.8 completed')
+
     return gb_land_use_controlled
 
 

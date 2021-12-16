@@ -8,6 +8,7 @@ import os
 
 import pandas as pd
 
+import land_use.utils.normalise_tts
 import land_use.utils.translate as trans
 import land_use.utils.file_ops as file_ops
 import land_use.utils.general as utils
@@ -46,7 +47,7 @@ def main():
             weight_col='msoa_to_noham',
         )
 
-        trans_out = utils.infill_traveller_types(trans_out)
+        trans_out = land_use.utils.normalise_tts.infill_ntem_tt(trans_out)
         trans_out = trans_out.reindex(['noham_zone_id', 'area_types', 'traveller_type', 'age', 'people'], axis=1)
         trans_out = trans_out.groupby(['noham_zone_id', 'area_types', 'traveller_type', 'age']).sum()
         trans_out = trans_out.reset_index()
