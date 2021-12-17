@@ -5,12 +5,10 @@ import land_use.base_land_use.by_lu as by_lu
 def main():
 
     run_pop = True
-    run_emp = True
+    run_emp = False
 
-
-if __name__ == '__main__':
-    # lu_run = bylu.CensusYearLandUse(iteration='iter4g')
-    lu_run = bylu.BaseYearLandUse(iteration='iter4g')
+    # lu_run = bylu.CensusYearLandUse(iteration='iter4h')
+    lu_run = bylu.BaseYearLandUse(iteration='iter4h')
     # lu_run.state['3.2.1 read in core property data'] = 1
     # lu_run.state['3.2.2 filled property adjustment'] = 1
     # lu_run.state['3.2.3 household occupancy adjustment'] = 1
@@ -25,9 +23,12 @@ if __name__ == '__main__':
     if run_pop:
         lu_run.build_by_pop()
     if run_emp:
+        # TODO - Fix this call. It is currently trying to find build_by_emp in census_and_by_lu.py
+        #  It is actually in by_lu.py
         lu_run.build_by_emp()
 
     return 0
+
 
 if __name__ == '__main__':
     main()

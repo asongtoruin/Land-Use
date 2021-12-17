@@ -11,12 +11,13 @@ import pandas as pd
 
 starting_dir = os.getcwd()
 
-iteration = 'iter4g'
+iteration = 'iter4h'
 working_dir = os.path.join(r'I:\NorMITs Land Use\base_land_use', iteration, 'outputs')
 
+run_check_326 = True
 run_check_327 = True
+run_check_328 = False
 run_check_3210 = True
-run_check_328 = True
 run_check_3211 = True
 
 manchester_zones = ['E02001045', 'E02001046', 'E02001047', 'E02001048', 'E02001049', 'E02001050', 'E02001051',
@@ -32,13 +33,30 @@ manchester_zones = ['E02001045', 'E02001046', 'E02001047', 'E02001048', 'E020010
 manchester_la = ['E08000003']
 
 
+def check_326():
+    print('running check_326')
+    s326_testfile = os.path.join('3.2.6_expand_NTEM_pop',
+                                 'HhPop_trim_byfullNorMITsSegs_initial_2018_MSOA')
+    s326_data = compress.read_in(s326_testfile)
+    manchester_s326_data = s326_data[s326_data['msoa11cd'].isin(manchester_zones)]
+    manchester_s326_dump_path = os.path.join('3.2.6_expand_NTEM_pop',
+                                             'Audits',
+                                             'Check_against_Excel',
+                                             'Manchester_post_3.2.6_pop_trim.csv')
+    print('dumping to csv')
+    manchester_s326_data.to_csv(manchester_s326_dump_path, index=False)
+    print(manchester_s326_data)
+
+
 def check_327():
     print('running check_327')
     s327_testfile = os.path.join('3.2.7_verify_population_profile_by_dwelling_type',
                                  'HhPop_byfullNorMITsSegs_initial_2018_MSOA')
     s327_data = compress.read_in(s327_testfile)
     manchester_s327_data = s327_data[s327_data['2021_LA_code'].isin(manchester_la)]
-    manchester_s327_dump_path = os.path.join('3.2.7_verify_population_profile_by_dwelling_type', 'Check_against_Excel',
+    manchester_s327_dump_path = os.path.join('3.2.7_verify_population_profile_by_dwelling_type',
+                                             'Audits',
+                                             'Check_against_Excel',
                                              'Manchester_post_3.2.7_pop.csv')
     print('dumping to csv')
     manchester_s327_data.to_csv(manchester_s327_dump_path, index=False)
@@ -48,7 +66,8 @@ def check_327():
 def check_328():
     print('running check_328')
     pd.set_option('display.max_columns', 20)
-    s328_testfile = os.path.join('3.2.8_subsets_of_workers+nonworkers', 'Audits',
+    s328_testfile = os.path.join('3.2.8_subsets_of_workers+nonworkers',
+                                 'Audits',
                                  'Audit_3_2_8_pop_vs_workers_and_non-workers_df_dump')
     s328_data = compress.read_in(s328_testfile)
     manchester_s328_data = s328_data[s328_data['2021_LA_code'].isin(manchester_la)]
@@ -62,7 +81,9 @@ def check_3210():
     s3210_testfile = os.path.join('3.2.10_adjust_zonal_pop_with_full_dimensions', '2018_household_population_processed')
     s3210_data = compress.read_in(s3210_testfile)
     manchester_s3210_data = s3210_data[s3210_data['2021_LA_code'].isin(manchester_la)]
-    manchester_s3210_dump_path = os.path.join('3.2.10_adjust_zonal_pop_with_full_dimensions', 'Check_against_Excel',
+    manchester_s3210_dump_path = os.path.join('3.2.10_adjust_zonal_pop_with_full_dimensions',
+                                              'Audits',
+                                              'Check_against_Excel',
                                               'Manchester_post_3.2.10_HHpop.csv')
     print('dumping to csv')
     manchester_s3210_data.to_csv(manchester_s3210_dump_path, index=False)
@@ -86,6 +107,8 @@ def check_3211():
 
 os.chdir(working_dir)
 
+if run_check_326:
+    check_326()
 if run_check_327:
     check_327()
 if run_check_328:
