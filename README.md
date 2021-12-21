@@ -29,15 +29,15 @@ see [support](#sharing) for more information.
 ## [Summary](#contents)
 NorMITs Land Use breaks down into five models, each with smaller substeps.
 Specifically:
-- [Base Year Population Model](#bylu-pop) -
+- [Base Year Population Model](#base-year-population-model) -
   Synthesises a highly segmented GB population, by person in household.
-- [Base Year Employment Model](#bylu-emp) -
+- [Base Year Employment Model](#base-year-employment-model) -
   Synthesises a GB employment profile, including employment types and skill levels.
-- [Future Year Population Model](#fylu-pop) - 
+- [Future Year Population Model](#future-year-poplation-model) - 
   Forecasts a future GB population, by base segmentation.
-- [Future Year Employment Model](#fylu-emp) -
+- [Future Year Employment Model](#future-year-employment-model) -
   Forecasts a future GB employment profile, by base segmentation.
-- [Northern Car Ownership Model](#norcom) -
+- [Northern Car Ownership Model](#norther-car-ownership-model) -
   A collection of tools for manipulating matrices that underpins much of 
   the work done by TMS and EFS.
 
@@ -99,7 +99,7 @@ Future year population model is a model designed to:
 - ONS demography change
 
 #### Outputs
-- Future year population, segmented as [base] (#bylu-pop)
+- Future year population, segmented as [base](#base-year-population-model)
 
 ### [Future Year Employment Model](#contents)
 Future year employment model is a model designed to:
@@ -111,10 +111,10 @@ Future year employment model is a model designed to:
 - NPIER emp change
 
 #### Outputs
-- Future year employment, segmented as [base] (#bylu-emp)
+- Future year employment, segmented as [base] (#base-year-employment-model)
 
 ### [Northern Car Ownership Model](#contents)
-The (**NorCOM**) takes data from 2011 Census and [National Travel Survey]('https://www.gov.uk/government/collections/national-travel-survey-statistics') to build a
+The (**NorCOM**) takes data from 2011 Census and [(**National Travel Survey**)](https://www.gov.uk/government/collections/national-travel-survey-statistics) to build a
 prototypical sample of car ownership patterns for Great Britain.
 It then builds and applies models to give zonal distributions of car ownership for a given base population year
 
