@@ -114,7 +114,7 @@ Future year employment model is a model designed to:
 - Future year employment, segmented as [base] (#bylu-emp)
 
 ### [Northern Car Ownership Model](#contents)
-The (**NorCOM**) takes data from 2011 Census and [National Travel Survey] ('https://www.gov.uk/government/collections/national-travel-survey-statistics') to build a
+The (**NorCOM**) takes data from 2011 Census and [National Travel Survey]('https://www.gov.uk/government/collections/national-travel-survey-statistics') to build a
 prototypical sample of car ownership patterns for Great Britain.
 It then builds and applies models to give zonal distributions of car ownership for a given base population year
 
