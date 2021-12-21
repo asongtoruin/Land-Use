@@ -2,7 +2,7 @@ import logging
 import os
 import land_use.lu_constants as consts
 from land_use.utils import file_ops as utils
-from land_use.base_land_use import base_year_population_process
+from land_use.base_land_use import base_year_population_process, employment
 
 """
 TODO:
@@ -208,7 +208,6 @@ class BaseYearLandUse:
         #     print('\n' + '=' * 75)
         #     logging.info('Running step 3.2.11, process CER data')
         #     BaseYear2018_population_process.process_cer_data(self, hhpop_combined_from_3_2_10, la_2_z_from_3_2_10)
-
 
     def build_by_emp(self):
         """
