@@ -1,4 +1,8 @@
-# Land-Use
+![Transport for the North Logo](docs/TFN_Landscape_Colour_CMYK.png)
+
+----
+
+# NorMITS Land Use
 
 NorMITs Land Use is Transport for the North's (TfN) mainland GB population and employment model.
 it builds detailed population and employment vectors for a given base year, and can also build a range of scenario specific forecasts.
@@ -48,7 +52,7 @@ Specifically, 2011 Census data and mid-year population estimates provide the cor
 As the model has improved, we have integrated other datasets that may be harder to access; NTEM data and OS Addressbase, for example.
 
 Base year employment figures used in the model have come from Health and Safety Laboratory and are restricted to TfN and partner use.
-However, this model could easily be adapted to used freely available employment data from the University of Durham's [NoMIS data portal] ()
+However, this model could easily be adapted to used freely available employment data from the University of Durham's [NoMIS data portal] ('https://www.nomisweb.co.uk/query/select/getdatasetbytheme.asp?opt=3&theme=&subgrp=')
 
 Core forecasts come from NPIER population and employment forecasts, with ONS forecasts providing demographic detail.
 This is currently fairly flexible, improvements will be made to ensure the tool is robust whichever forecast vectors it has to deal with.
@@ -65,7 +69,7 @@ Base year population model is designed to:
 - Mid-year population estimates
 
 #### Outputs
--Base year population model provides detailed zonal populations (at [MSOA]('https://data.gov.uk/dataset/2cf1f346-2f74-4c06-bd4b-30d7e4df5ae7/middle-layer-super-output-area-msoa-boundaries')).
+- Base year population model provides detailed zonal populations (at [MSOA]('https://data.gov.uk/dataset/2cf1f346-2f74-4c06-bd4b-30d7e4df5ae7/middle-layer-super-output-area-msoa-boundaries')).
 
 Segmentation is an enhancement to the NTEM 88 Traveller Type segmentation, which adds employment skill level
 to person characteristics and a household income proxy (Ns-SeC) for the household reference person to household characteristics, giving 760 unique traveller types.
@@ -83,34 +87,51 @@ Base year employment model is simple model designed to:
 - Employment by e-category and skill level
 
 ### [Future Year Population Model](#contents)
-Future year employment model is a model designed to:
+Future year population model is a model designed to:
 - Grow (or shrink) zonal population to a given future year
 - Work flexibly with various scenarios
 - Apply variable assumptions around demography, car-ownership etc
 
 #### Inputs
 - Base year population
-- NPIER pop/emp change
+- NPIER pop change
 - NorCOM car ownership forecasts
 - ONS demography change
 
 #### Outputs
-
+- Future year population, segmented as [base] (#bylu-pop)
 
 ### [Future Year Employment Model](#contents)
-
+Future year employment model is a model designed to:
+- Grow (or shrink) zonal employment to a given future year
+- Apply various scenarios
 
 #### Inputs
-
+- Base year employment
+- NPIER emp change
 
 #### Outputs
+- Future year employment, segmented as [base] (#bylu-emp)
 
+### [Northern Car Ownership Model](#contents)
+The (**NorCOM**) takes data from 2011 Census and [National Travel Survey] ('https://www.gov.uk/government/collections/national-travel-survey-statistics') to build a
+prototypical sample of car ownership patterns for Great Britain.
+It then builds and applies models to give zonal distributions of car ownership for a given base population year
+
+#### Inputs
+- Census Car Ownership data 2011
+- National Travel Survey
+- Any year population 
+
+#### Outputs
+- Base or future year car ownership patterns
+- Household and property type counts
 
 ## [Documentation](#contents)
 Current code documentation can only be found in the codebase.
 Planned improvements include hosting this online, so it's easily
 accessible!
-Development reports and technical notes are available on request through TAME's [sharing requests] (#sharing-requests)
+Development reports and technical notes are available on request through TAME's [sharing requests] (#sharing)
 
 ## [Planned Improvements](#contents)
 This section is a work in progress and will be updated with more detail.
