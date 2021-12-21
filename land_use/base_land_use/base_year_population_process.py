@@ -202,7 +202,7 @@ def filled_properties(census_and_by_lu_obj):
     return filled_properties_df
 
 
-# Sub-function used by apply_household_occupancy. Not called directly by census_and_by_lu.py
+# Sub-function used by apply_household_occupancy. Not called directly by census_lu.py
 def lsoa_census_data_prep(dat_path, population_tables, property_tables, geography=_default_lsoaRef):
     """
     This function prepares the census data by picking fields out of the census csvs.
@@ -256,11 +256,11 @@ def lsoa_census_data_prep(dat_path, population_tables, property_tables, geograph
     return household_occupancy
 
 
-# Sub-function used by apply_household_occupancy. Not called directly by census_and_by_lu.py
+# Sub-function used by apply_household_occupancy. Not called directly by census_lu.py
 # TODO: improve the docstring here
 
 # Sub-sub-function used by apply_household_occupancy, called by balance_missing_hops.
-# Not called directly by census_and_by_lu.py
+# Not called directly by census_lu.py
 def zone_up(census_and_by_lu_obj, cpt_data, grouping_col='msoaZoneID'):
     """
     Function to raise up a level of spatial aggregation & aggregate at that level, then bring new factors back down
@@ -295,7 +295,7 @@ def zone_up(census_and_by_lu_obj, cpt_data, grouping_col='msoaZoneID'):
 
 
 # Sub-sub-(sub)-function used by apply_household_occupancy, called by balance_missing_hops (and zone_up).
-# Not called directly by census_and_by_lu.py
+# Not called directly by census_lu.py
 def aggregate_cpt(cpt_data, grouping_col=None):
     """
     Take some census property type data and return hops totals

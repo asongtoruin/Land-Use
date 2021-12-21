@@ -226,7 +226,7 @@ def NTEM_Pop_Interpolation(census_and_by_lu_obj):
 
     return NTEM_HHpop
 
-def Create_IPFN_Inputs_2011(census_and_by_lu_obj):
+def create_ipfn_inputs_2011(census_and_by_lu_obj):
     """
     Create seed and control files at district sector level for IPFN process by:
     Calling function to obtain 2011 NTEM pop data;
