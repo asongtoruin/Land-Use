@@ -44,7 +44,8 @@ import pyodbc
 import geopandas as gpd
 from land_use.utils import file_ops as utils
 from land_use.utils import compress
-import land_use.lu_constants as consts
+from land_use import lu_constants
+from land_use.base_land_use import by_lu
 import logging
 
 # Shapefile locations
@@ -104,7 +105,8 @@ cer_output_dir = '3.2.11_process_CER_data'
 
 
 # This function doesn't seem to actually do anything?
-def copy_addressbase_files(census_and_by_lu_obj):
+def copy_addressbase_files(by_lu_obj):
+    # TODO: Should this be deprecated now?
     """
     Copy the relevant ABP files from import drive to census_and_by_lu_obj.home_folder for use in later functions.
     census_and_by_lu_obj: base year land use object
@@ -126,32 +128,33 @@ def copy_addressbase_files(census_and_by_lu_obj):
     audit_3_2_1_header = 'Audit for Step 3.2.1\nCreated ' + str(datetime.datetime.now())
     audit_3_2_1_text = 'Step 3.2.1 currently does nothing, so there is nothing to audit'
     audit_3_2_1_content = '\n'.join([audit_3_2_1_header, audit_3_2_1_text])
-    audit_3_2_1_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
+    audit_3_2_1_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                     copy_address_database_output_dir,
                                     'Audits',
                                     'Audit_3.2.1.txt')
     with open(audit_3_2_1_path, 'w') as text_file:
         text_file.write(audit_3_2_1_content)
 
-    census_and_by_lu_obj.state['3.2.1 read in core property data'] = 1
+    by_lu_obj.state['3.2.1 read in core property data'] = 1
     logging.info('Step 3.2.1 completed')
     print('Step 3.2.1 completed')
 
 
-def filled_properties(census_and_by_lu_obj):
+def filled_properties(by_lu_obj):
     """
     This is a rough account for unoccupied properties using KS401UK at LSOA level to infer whether the properties
     have any occupants.
-        census_and_by_lu_obj: base year land use object, which includes the following paths:
-            zone_translation_path: correspondence between LSOAs and the zoning system (default MSOA)
-            KS401path: csv file path for the census KS401 table
+    A standalone process which builds ProbabilityDwellfilled, used in apply_household_occupancy
+    census_and_by_lu_obj: base year land use object, which includes the following paths:
+    zone_translation_path: correspondence between LSOAs and the zoning system (default MSOA)
+    KS401path: csv file path for the census KS401 table
     """
     logging.info('Running Step 3.2.2')
     print('Running Step 3.2.2')
     # Define folder name for outputs
 
     # Read in the census filled property data
-    filled_properties_df = pd.read_csv(census_and_by_lu_obj.KS401path)
+    filled_properties_df = pd.read_csv(by_lu_obj.ks401path)
     filled_properties_df = filled_properties_df.rename(columns={
         'Dwelling Type: All categories: Household spaces; measures: Value': 'Total_Dwells',
         'Dwelling Type: Household spaces with at least one usual resident; measures: Value': 'Filled_Dwells',
@@ -160,13 +163,15 @@ def filled_properties(census_and_by_lu_obj):
     filled_properties_df = filled_properties_df[['geography_code', 'Total_Dwells', 'Filled_Dwells']]
 
     # Read in the zone translation (default LSOA to MSOA)
-    zone_translation = pd.read_csv(census_and_by_lu_obj.zone_translation_path)
-    zone_translation = zone_translation.rename(columns={'lsoa_zone_id': 'lsoaZoneID',
-                                                        'msoa_zone_id': 'msoaZoneID'})
+    zone_translation = pd.read_csv(by_lu_obj.zone_translation_path)
+    zone_translation = zone_translation.rename(
+        columns={'lsoa_zone_id': 'lsoaZoneID',
+                 'msoa_zone_id': 'msoaZoneID'})
     zone_translation = zone_translation[['lsoaZoneID', 'msoaZoneID']]
 
     # Merge and apply the zone translation onto the census data
-    filled_properties_df = filled_properties_df.rename(columns={'geography_code': 'lsoaZoneID'})
+    filled_properties_df = filled_properties_df.rename(
+        columns={'geography_code': 'lsoaZoneID'})
     filled_properties_df = filled_properties_df.merge(zone_translation, on='lsoaZoneID')
     filled_properties_df = filled_properties_df.drop(columns={'lsoaZoneID'})
     filled_properties_df = filled_properties_df.groupby(['msoaZoneID']).sum().reset_index()
@@ -181,7 +186,7 @@ def filled_properties(census_and_by_lu_obj):
     filled_properties_df = uk_msoa.merge(filled_properties_df, on='msoaZoneID', how='outer')
     filled_properties_df = filled_properties_df.fillna(1)  # default to all Scottish properties being occupied
     # Adam - DONE, we need to think how to organise the structure of outputs files per step
-    filled_properties_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
+    filled_properties_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                           filled_properties_output_dir,
                                           'ProbabilityDwellfilled.csv')
     filled_properties_df.to_csv(filled_properties_path, index=False)
@@ -189,22 +194,25 @@ def filled_properties(census_and_by_lu_obj):
     audit_3_2_2_header = 'Audit for Step 3.2.2\nCreated ' + str(datetime.datetime.now())
     audit_3_2_2_text = 'Step 3.2.2 currently has no audits listed, so there is nothing to audit'
     audit_3_2_2_content = '\n'.join([audit_3_2_2_header, audit_3_2_2_text])
-    audit_3_2_2_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
+    audit_3_2_2_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                     filled_properties_output_dir,
                                     'Audits',
                                     'Audit_3.2.2.txt')
     with open(audit_3_2_2_path, 'w') as text_file:
         text_file.write(audit_3_2_2_content)
 
-    census_and_by_lu_obj.state['3.2.2 filled property adjustment'] = 1  # record that this process has been run
+    by_lu_obj.state['3.2.2 filled property adjustment'] = 1  # record that this process has been run
     logging.info('Step 3.2.2 completed')
     print('Step 3.2.2 completed')
     return filled_properties_df
 
 
 # Sub-function used by apply_household_occupancy. Not called directly by census_lu.py
-def lsoa_census_data_prep(dat_path, population_tables, property_tables, geography=_default_lsoaRef):
-    """
+def lsoa_census_data_prep(dat_path,
+                          population_tables,
+                          property_tables,
+                          geography=_default_lsoaRef):
+    """"
     This function prepares the census data by picking fields out of the census csvs.
     Computes the ratio between the population and number of properties to return the household occupancy.
     dat_path: location of the census data
@@ -276,13 +284,13 @@ def zone_up(census_and_by_lu_obj, cpt_data, grouping_col='msoaZoneID'):
     zone_translation = zone_translation[['lsoaZoneID', grouping_col]]
 
     # Audit any missing objectids
-    datLSOAs = len(cpt_data['objectid'].unique())
-    ztLSOAs = len(zone_translation['lsoaZoneID'].unique())
+    dat_lsoas = len(cpt_data['objectid'].unique())
+    zt_lsoas = len(zone_translation['lsoaZoneID'].unique())
 
-    if datLSOAs == ztLSOAs:
+    if dat_lsoas == zt_lsoas:
         print('zones match 1:1 - zoning up should be smooth')
     else:
-        print('some zones missing for LSOA-MSOA zone translation:', datLSOAs - ztLSOAs)
+        print('some zones missing for LSOA-MSOA zone translation:', dat_lsoas - zt_lsoas)
 
     cpt_data = cpt_data.rename(columns={'lsoa11cd': 'lsoaZoneID'})
     cpt_data = cpt_data.merge(zone_translation, how='left', on='lsoaZoneID').reset_index()
@@ -296,7 +304,8 @@ def zone_up(census_and_by_lu_obj, cpt_data, grouping_col='msoaZoneID'):
 
 # Sub-sub-(sub)-function used by apply_household_occupancy, called by balance_missing_hops (and zone_up).
 # Not called directly by census_lu.py
-def aggregate_cpt(cpt_data, grouping_col=None):
+def aggregate_cpt(cpt_data,
+                  grouping_col=None):
     """
     Take some census property type data and return hops totals
     """
@@ -349,9 +358,11 @@ def balance_missing_hops(census_and_by_lu_obj, cpt_data, grouping_col='msoaZoneI
 def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=True):
     """
     Import household occupancy data and apply to property data.
-    TODO: want to be able to run at LSOA level when point correspondence is done.
-    TODO: Folders for outputs to separate this process from the household classification
     """
+    #TODO: want to be able to run at LSOA level when point correspondence is done.
+    #TODO: Folders for outputs to separate this process from the household classification
+
+    #TODO: Move the 2011 process step to the census lu object
     logging.info('Running Step 3.2.3')
     print('Running Step 3.2.3')
 
@@ -360,12 +371,13 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
                                                      apply_household_occupancy_output_dir,
                                                      'UKHouseHoldOccupancy2011.csv'))
     else:
-        # TODO: put in constants?
+        # TODO: put in constants
         EWQS401 = 'QS401UK_LSOA.csv'
         SQS401 = 'QS_401UK_DZ_2011.csv'
         EWQS402 = 'QS402UK_LSOA.csv'
         SQS402 = 'QS402UK_DZ_2011.csv'
 
+        # Import census household data
         census_dat = census_and_by_lu_obj.import_folder + 'Nomis Census 2011 Head & Household'
         cpt_data = lsoa_census_data_prep(census_dat, [EWQS401, SQS401], [EWQS402, SQS402],
                                          geography=_default_lsoaRef)
@@ -431,7 +443,7 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
 
     # Read in all res property for the level of aggregation
     print('Reading in AddressBase extract')
-    addressbase_extract_path = (consts.ALL_RES_PROPERTY_PATH + '/allResProperty' +
+    addressbase_extract_path = (lu_constants.ALL_RES_PROPERTY_PATH + '/allResProperty' +
                                 census_and_by_lu_obj.model_zoning + 'Classified.csv')
     all_res_property = pd.read_csv(addressbase_extract_path)[['ZoneID', 'census_property_type', 'UPRN']]
     all_res_property = all_res_property.groupby(['ZoneID', 'census_property_type']).count().reset_index()
@@ -495,10 +507,11 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
         print("No support for this zoning system")  # only the MSOA zoning system is supported at the moment
 
 
-def land_use_formatting(census_and_by_lu_obj):
+def property_type_mapping(census_and_by_lu_obj):
     """
     Combines all flats into one category, i.e. property types = 4,5,6 and 7.
     """
+    # TODO: This is a property type refactor, should be name like that
     logging.info('Running Step 3.2.4')
     print('Running Step 3.2.4')
 
@@ -513,7 +526,7 @@ def land_use_formatting(census_and_by_lu_obj):
     # crp = crp.rename(columns={'census_property_type': 'property_type'})
     # Combine all flat types (4,5,6) and type 7.
     # Combine 4,5,6 and 7 dwelling types to 4.
-    crp['census_property_type'] = crp['census_property_type'].map(consts.PROPERTY_TYPE)
+    crp['census_property_type'] = crp['census_property_type'].map(lu_constants.PROPERTY_TYPE)
     crp['popXocc'] = crp['population'] * crp['household_occupancy_18']
     crp = crp.groupby(['ZoneID', 'census_property_type']).sum().reset_index()
     crp['household_occupancy_18'] = crp['popXocc'] / crp['population']  # compute the weighted average occupancy
@@ -582,7 +595,9 @@ def land_use_formatting(census_and_by_lu_obj):
     return crp
 
 
-def MYE_APS_process(census_and_by_lu_obj, function_that_called_me, mye_aps_process_dir):
+def mye_aps_process(census_and_by_lu_obj,
+                    function_that_called_me,
+                    mye_aps_process_dir):
     logging.info('Running MYE_APS process function')
     logging.info('This has been called by ' + function_that_called_me)
     print('Running MYE_APS process function')
@@ -1353,7 +1368,7 @@ def MYE_APS_process(census_and_by_lu_obj, function_that_called_me, mye_aps_proce
     return mye_aps_process_output
 
 
-def NTEM_Pop_Interpolation(census_and_by_lu_obj, calling_functions_output_dir):
+def ntem_pop_interpolation(census_and_by_lu_obj, calling_functions_output_dir):
     """
     Process population data from NTEM CTripEnd database:
     Interpolate population to the target year, in this case, it is for base year 2018 as databases
@@ -1510,7 +1525,7 @@ def NTEM_Pop_Interpolation(census_and_by_lu_obj, calling_functions_output_dir):
     return NTEM_HHpop
 
 
-def MYE_pop_compiled(census_and_by_lu_obj):
+def mye_pop_compiled(census_and_by_lu_obj):
     logging.info('Running Step 3.2.5')
     print('Running Step 3.2.5')
     mye_pop_compiled_name = 'MYE_pop_compiled'
@@ -1528,37 +1543,37 @@ def MYE_pop_compiled(census_and_by_lu_obj):
     _MYE_2018Pop_MSOA_path = mye_pop_compiled_output_dir
     read_2018pop_msoa_path_file = False
     if read_2018pop_msoa_path_file:
-        MYE_MSOA_pop_name = r'2018_total_pop_vs_HHR_total.csv'
-        MYE_MSOA_pop = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
+        mye_msoa_pop_name = r'2018_total_pop_vs_HHR_total.csv'
+        mye_msoa_pop = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
                                                 _MYE_2018Pop_MSOA_path,
-                                                MYE_MSOA_pop_name))
+                                                mye_msoa_pop_name))
         logging.info('Step 3.2.5 read in data processed by step the APS compiling function through an existing csv')
         logging.info('WARNING - This is not the default way of reading this data!')
         logging.info('Did you mean to do that?')
     else:
         logging.info('Step 3.2.5 is calling step the APS compiling function in order to obtain 2018 population data')
-        MYE_MSOA_pop = MYE_APS_process(census_and_by_lu_obj, mye_pop_compiled_name, _MYE_2018Pop_MSOA_path)
+        mye_msoa_pop = mye_aps_process(census_and_by_lu_obj, mye_pop_compiled_name, _MYE_2018Pop_MSOA_path)
         logging.info('Step 3.2.5 successfully read in data processed by the MYE_APS_prcoess function')
         logging.info('from internal memory')
 
-    audit_MYE_MSOA_pop = MYE_MSOA_pop.copy()
+    audit_mye_msoa_pop = mye_msoa_pop.copy()
 
     # Call Step 3.2.4 to get crp_pop
     logging.info('Step 3.2.5 is calling Step 3.2.4 to get crp_pop')
     print('Step 3.2.5 is calling Step 3.2.4 to get crp_pop')
-    crp_pop = land_use_formatting(census_and_by_lu_obj)
+    crp_pop = property_type_mapping(census_and_by_lu_obj)
     logging.info('Step 3.2.5 has called Step 3.2.4 and has obtained crp_pop')
     print('Step 3.2.5 has called Step 3.2.4 and has obtained crp_pop')
 
     # crp_pop =  pd.read_csv(Output_Folder + 'classifiedResProperty_Flatscombined_2018.csv')
-    crp_MSOA_pop = crp_pop.groupby(['ZoneID'])['population'].sum().reset_index()
-    crp_MSOA_pop = crp_MSOA_pop.merge(MYE_MSOA_pop, how='left', left_on='ZoneID', right_on='MSOA').drop(
+    crp_msoa_pop = crp_pop.groupby(['ZoneID'])['population'].sum().reset_index()
+    crp_msoa_pop = crp_msoa_pop.merge(mye_msoa_pop, how='left', left_on='ZoneID', right_on='MSOA').drop(
         columns={'MSOA'})
-    # print(crp_MSOA_pop.head(5))
-    crp_MSOA_pop['pop_aj_factor'] = crp_MSOA_pop['Total_HHR'] / crp_MSOA_pop['population']
-    crp_MSOA_pop = crp_MSOA_pop.drop(columns={'Total_HHR', 'Total_Pop', 'population'})
-    # print(crp_MSOA_pop.head(5))
-    aj_crp = crp_pop.merge(crp_MSOA_pop, how='left', on='ZoneID')
+    # print(crp_msoa_pop.head(5))
+    crp_msoa_pop['pop_aj_factor'] = crp_msoa_pop['Total_HHR'] / crp_msoa_pop['population']
+    crp_msoa_pop = crp_msoa_pop.drop(columns={'Total_HHR', 'Total_Pop', 'population'})
+    # print(crp_msoa_pop.head(5))
+    aj_crp = crp_pop.merge(crp_msoa_pop, how='left', on='ZoneID')
     aj_crp['aj_population'] = aj_crp['population'] * aj_crp['pop_aj_factor']
     aj_crp = aj_crp.drop(columns={'population'})
     aj_crp = aj_crp.rename(columns={'aj_population': 'population'})
@@ -1569,23 +1584,23 @@ def MYE_pop_compiled(census_and_by_lu_obj):
 
     # Car availability from NTEM
     # Read NTEM hh pop at NorMITs Zone level and make sure the zonal total is consistent to crp
-    NTEM_HHpop = NTEM_Pop_Interpolation(census_and_by_lu_obj, mye_pop_compiled_output_dir)
+    ntem_hh_pop = ntem_pop_interpolation(census_and_by_lu_obj, mye_pop_compiled_output_dir)
 
     uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
-    NTEM_HHpop = NTEM_HHpop.merge(uk_msoa, how='left', left_on='msoaZoneID', right_on='objectid')
-    NTEM_HHpop_cols = ['msoaZoneID', 'msoa11cd', 'Borough', 'TravellerType', 'NTEM_TT_Name', 'Age_code',
+    ntem_hh_pop = ntem_hh_pop.merge(uk_msoa, how='left', left_on='msoaZoneID', right_on='objectid')
+    ntem_hh_pop_cols = ['msoaZoneID', 'msoa11cd', 'Borough', 'TravellerType', 'NTEM_TT_Name', 'Age_code',
                        'Age', 'Gender_code', 'Gender', 'Household_composition_code', 'Household_size', 'Household_car',
                        'Employment_type_code', 'Employment_type', 'Population']
 
-    NTEM_HHpop_cols_to_groupby = NTEM_HHpop_cols[:-1]
-    NTEM_HHpop = NTEM_HHpop.groupby(NTEM_HHpop_cols_to_groupby)['Population'].sum().reset_index()
+    NTEM_HHpop_cols_to_groupby = ntem_hh_pop_cols[:-1]
+    ntem_hh_pop = ntem_hh_pop.groupby(NTEM_HHpop_cols_to_groupby)['Population'].sum().reset_index()
 
     # Testing with Manchester
-    # NTEM_HHpop_E02001045 = NTEM_HHpop[NTEM_HHpop['msoa11cd'] == 'E02001045']
+    # NTEM_HHpop_E02001045 = ntem_hh_pop[ntem_hh_pop['msoa11cd'] == 'E02001045']
     # NTEM_HHpop_E02001045.to_csv('NTEM_HHpop_E02001045.csv', index=False)
 
-    NTEM_HHpop = NTEM_HHpop[NTEM_HHpop_cols]
-    NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID'])['Population'].sum().reset_index()
+    ntem_hh_pop = ntem_hh_pop[ntem_hh_pop_cols]
+    NTEM_HHpop_Total = ntem_hh_pop.groupby(['msoaZoneID'])['Population'].sum().reset_index()
     NTEM_HHpop_Total = NTEM_HHpop_Total.rename(columns={'Population': 'ZoneNTEMPop'})
     # print('Headings of NTEM_HHpop_Total')
     # print(NTEM_HHpop_Total.head(5))
@@ -1601,24 +1616,24 @@ def MYE_pop_compiled(census_and_by_lu_obj):
                                        mye_pop_compiled_output_dir,
                                        'HHpop_Dt_Total.csv'), index=False)
 
-    NTEM_HHpop = NTEM_HHpop.merge(NTEM_HHpop_Total, how='left', on=['msoaZoneID'])
-    NTEM_HHpop = NTEM_HHpop.merge(Hhpop_Dt_Total, how='left', left_on=['msoa11cd'],
+    ntem_hh_pop = ntem_hh_pop.merge(NTEM_HHpop_Total, how='left', on=['msoaZoneID'])
+    ntem_hh_pop = ntem_hh_pop.merge(Hhpop_Dt_Total, how='left', left_on=['msoa11cd'],
                                   right_on=['ZoneID']).drop(columns={'ZoneID'})
-    # print('Headings of NTEM_HHpop')
-    # print(NTEM_HHpop.head(5))
-    NTEM_HHpop['pop_aj_factor'] = NTEM_HHpop['ZonePop'] / NTEM_HHpop['ZoneNTEMPop']
+    # print('Headings of ntem_hh_pop')
+    # print(ntem_hh_pop.head(5))
+    ntem_hh_pop['pop_aj_factor'] = ntem_hh_pop['ZonePop'] / ntem_hh_pop['ZoneNTEMPop']
 
-    NTEM_HHpop['pop_aj'] = NTEM_HHpop['Population'] * NTEM_HHpop['pop_aj_factor']
-    audit_NTEM_HHpop = NTEM_HHpop.copy()
-    # print(NTEM_HHpop.pop_aj.sum())
+    ntem_hh_pop['pop_aj'] = ntem_hh_pop['Population'] * ntem_hh_pop['pop_aj_factor']
+    audit_NTEM_HHpop = ntem_hh_pop.copy()
+    # print(ntem_hh_pop.pop_aj.sum())
     # print(aj_crp.population.sum())
 
     # End of block moved from Step 3.2.6 due to need to audit in Step 3.2.5
 
     logging.info('Total population from MYE: ')
-    logging.info(MYE_MSOA_pop.Total_Pop.sum())
+    logging.info(mye_msoa_pop.Total_Pop.sum())
     logging.info('Total household residents from MYE: ')
-    logging.info(MYE_MSOA_pop.Total_HHR.sum())
+    logging.info(mye_msoa_pop.Total_HHR.sum())
     logging.info('Total household residents from aj_crp: ')
     logging.info(aj_crp.population.sum())
     logging.info('Population currently {}'.format(aj_crp.population.sum()))
@@ -1635,9 +1650,9 @@ def MYE_pop_compiled(census_and_by_lu_obj):
     audit_NTEM_HHpop = audit_NTEM_HHpop[['msoa11cd', 'pop_aj']]
     audit_NTEM_HHpop = audit_NTEM_HHpop.groupby(['msoa11cd'])['pop_aj'].sum().reset_index()
     audit_NTEM_HHpop = audit_NTEM_HHpop.rename(columns={'pop_aj': 'NTEM_pop', 'msoa11cd': 'MSOA'})
-    audit_MYE_MSOA_pop = audit_MYE_MSOA_pop[['MSOA', 'Total_HHR']]
-    audit_MYE_MSOA_pop = audit_MYE_MSOA_pop.rename(columns={'Total_HHR': 'MYE_pop'})
-    audit_3_2_5_csv = pd.merge(audit_MYE_MSOA_pop, audit_NTEM_HHpop, how='left', on='MSOA')
+    audit_mye_msoa_pop = audit_mye_msoa_pop[['MSOA', 'Total_HHR']]
+    audit_mye_msoa_pop = audit_mye_msoa_pop.rename(columns={'Total_HHR': 'MYE_pop'})
+    audit_3_2_5_csv = pd.merge(audit_mye_msoa_pop, audit_NTEM_HHpop, how='left', on='MSOA')
     audit_3_2_5_csv = pd.merge(audit_3_2_5_csv, audit_aj_crp, how='left', on='MSOA')
     audit_3_2_5_csv['MYE_vs_NTEM'] = (audit_3_2_5_csv['MYE_pop'] -
                                       audit_3_2_5_csv['NTEM_pop']) / audit_3_2_5_csv['NTEM_pop']
@@ -1661,9 +1676,9 @@ def MYE_pop_compiled(census_and_by_lu_obj):
     audit_3_2_5_csv.to_csv(audit_3_2_5_csv_path, index=False)
 
     audit_3_2_5_header = 'Audit for Step 3.2.5\nCreated ' + str(datetime.datetime.now())
-    audit_3_2_5_text = '\n'.join(['The total 2018 population from MYPE is: ' + str(MYE_MSOA_pop.Total_Pop.sum()),
+    audit_3_2_5_text = '\n'.join(['The total 2018 population from MYPE is: ' + str(mye_msoa_pop.Total_Pop.sum()),
                                   'The total 2018 household population from MYPE is: ' + str(
-                                      MYE_MSOA_pop.Total_HHR.sum()),
+                                      mye_msoa_pop.Total_HHR.sum()),
                                   'The total 2018 household population output from Step 3.2.5 is: ',
                                   '\tBy zone, age, gender, HH composition and employment status (from NTEM): ' + str(
                                       audit_NTEM_HHpop['NTEM_pop'].sum()),
@@ -1686,7 +1701,7 @@ def MYE_pop_compiled(census_and_by_lu_obj):
     census_and_by_lu_obj.state['3.2.5 Uplifting 2018 population according to 2018 MYPE'] = 1
     logging.info('Step 3.2.5 completed')
     print('Step 3.2.5 completed')
-    return [aj_crp, NTEM_HHpop, audit_MYE_MSOA_pop]
+    return [aj_crp, ntem_hh_pop, audit_mye_msoa_pop]
 
 
 def pop_with_full_dimensions(census_and_by_lu_obj):
@@ -1719,7 +1734,7 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
     #  3_2_6 to Step 3_2_5 at the last minute!
     logging.info('Step 3.2.6 is calling Step 3.2.5')
     print('Step 3.2.6 is calling Step 3.2.5')
-    call_3_2_5 = MYE_pop_compiled(census_and_by_lu_obj)
+    call_3_2_5 = mye_pop_compiled(census_and_by_lu_obj)
     aj_crp = call_3_2_5[0]
     NTEM_HHpop = call_3_2_5[1]
     audit_original_hhpop = call_3_2_5[2]
@@ -1790,6 +1805,8 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         # n(HRP NS-SEC) and s (SOC)
         # Replace this block with new process from 2011 output f.
         # ['z', 'a', 'g', 'h', 'e', 't', 'n', 's', 'f_tns|zaghe']
+
+        # This is the 2011 Census Data coming in
         census_f_value = pd.read_csv(os.path.join(
             census_and_by_lu_obj.import_folder, _census_f_value_path, 'NorMITs_2011_post_ipfn_f_values.csv'))
         # census_f_value['z'] = census_f_value['z'].astype(int)
@@ -2190,7 +2207,7 @@ def subsets_worker_nonworker(census_and_by_lu_obj, function_that_called_me):
         return pd.DataFrame([], columns=['No data requested', 'but data saved to file'])
 
 
-def LA_level_adjustment(census_and_by_lu_obj):
+def la_level_adjustment(census_and_by_lu_obj):
     logging.info('Running Step 3.2.9')
     print('Running Step 3.2.9')
     la_level_adjustment_name = 'LA_level_adjustment'
@@ -2232,7 +2249,7 @@ def LA_level_adjustment(census_and_by_lu_obj):
         logging.info('Did you mean to do that?')
     else:
         logging.info('Step 3.2.9 is calling the MYE_APS_process function in order to obtain 2018 population data')
-        MYE_MSOA_pop = MYE_APS_process(census_and_by_lu_obj, la_level_adjustment_name, la_level_adjustment_output_dir)
+        MYE_MSOA_pop = mye_aps_process(census_and_by_lu_obj, la_level_adjustment_name, la_level_adjustment_output_dir)
         logging.info('Step 3.2.9 read in data processed by the MYE_APS_process function from internal memory')
 
         la_worker_df_import = MYE_MSOA_pop[0]

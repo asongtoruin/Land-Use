@@ -20,6 +20,12 @@ census2011_population_furness:
     - outputs f factor to be used in 2018
 ## TODO: Needs checking. Also need to ensure that the final f factors are actually produced at some point!
 ## TODO: Ensure this script gets called properly! NB - DO NOT ACTUALLY RUN IT! It would take weeks to finish!
+# Actually looks like 1 full day if the districts are consistent
+
+# CS
+# It has to run unfortunately, all of these tools need to work 3rd party
+# TODO: Optimise
+# TODO: Can this inherit write strings from the main objects - they pop out everywhere
 """
 
 import pandas as pd
@@ -31,6 +37,8 @@ import pyodbc
 from ipfn import ipfn
 import logging
 
+# TODO: These should come from a constants paths that a 3rd party user can parse
+# That includes making the pathing relative
 
 # Data input paths
 _census_micro_path = 'I:/NorMITs Land Use/import/2011 Census Microdata'
@@ -74,7 +82,7 @@ ModelName = 'NorMITs'
 Output_Folder = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs'
 
 # Define function that can be used to get 2011 NTEM data
-def NTEM_Pop_Interpolation(census_and_by_lu_obj):
+def ntem_pop_interpolation(census_and_by_lu_obj):
     """
     Process population data from NTEM CTripEnd database:
     Interpolate population to the target year, in this case, it is for base year 2011 as databases
@@ -120,6 +128,9 @@ def NTEM_Pop_Interpolation(census_and_by_lu_obj):
 
     # Import Upper and Lower Year Tables
     # 'I:/Data/NTEM/NTEM 7.2 outputs for TfN/'
+    # TODO: Strict wrappers around DB calls, very likely to shift
+    # TODO: Also need an alternative seed source to be specified upstream (e.g. TEMPro, Addressbase)
+
     LowerNTEMDatabase = census_and_by_lu_obj.CTripEnd_Database_path + 'CTripEnd7_' + str(LowerYear) + '.accdb'
     UpperNTEMDatabase = census_and_by_lu_obj.CTripEnd_Database_path + 'CTripEnd7_' + str(UpperYear) + '.accdb'
     # UpperNTEMDatabase = census_and_by_lu_obj.CTripEnd_Database_path + r"\CTripEnd7_" + str(UpperYear) + r".accdb"
@@ -239,8 +250,12 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
     than on any geographical arrangement of zones in Scotland.
     Also produces a 'checks' output file to allow the user to check that all population totals that should match do
     """
+    # TODO: This can be dramatically tidied up
+    # .loc warnings especially are a no no
+    # Location and functionality are good!
+
     # Obtain 2011 Census data
-    NTEM_pop_2011 = NTEM_Pop_Interpolation(census_and_by_lu_obj)
+    NTEM_pop_2011 = ntem_pop_interpolation(census_and_by_lu_obj)
 
     # Start processing data
     # Only the following vairiables are required from the census micro data
@@ -267,23 +282,23 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
     census_micro_hh_pop_working = pd.merge(
         census_micro_hh_pop,
         lookup_ageh[['Age', 'NorMITs_Segment Band Value']],
-        left_on = 'ageh',
-        right_on = 'Age',
-        how = 'left')
+        left_on='ageh',
+        right_on='Age',
+        how='left')
     census_micro_hh_pop_working = census_micro_hh_pop_working.rename(
-        columns = {'typaccom':'t',
-                   'la_group':'d',
-                   'NorMITs_Segment Band Value':'a'})
+        columns={'typaccom': 't',
+                 'la_group': 'd',
+                 'NorMITs_Segment Band Value': 'a'})
 
     # Process NSSEC
     census_micro_hh_pop_working = pd.merge(
         census_micro_hh_pop_working,
         lookup_nsshuk11[['HRP NSSEC','NorMITs_Segment Band Value']],
-        left_on = 'nsshuk11',
-        right_on = 'HRP NSSEC',
-        how = 'left')
+        left_on='nsshuk11',
+        right_on='HRP NSSEC',
+        how='left')
     census_micro_hh_pop_working = census_micro_hh_pop_working.rename(
-        columns = {'NorMITs_Segment Band Value':'n'}).dropna(subset = ['n'])
+        columns={'NorMITs_Segment Band Value': 'n'}).dropna(subset = ['n'])
     census_micro_hh_pop_working['n'] = census_micro_hh_pop_working['n'].astype(int)
 
     # Process HH comp - lookup adults and cars to NorMITs and then the combination
@@ -1010,6 +1025,8 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
     os.chdir(Output_Folder)
     print('Creating seed and control files')
     print('Printing every 10th district as they are written out:')
+
+    # TODO: Slow process, needs mp wrapper
     for district in range(1, district_upper_limit):
         dist_str = str(district)
         # Lookups and processing
@@ -1041,6 +1058,7 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
         DT_filename_d = ['05 DT Control Files/2011', str(ModelName), 'Ctrl_DT_d', dist_str, 'v0.1.csv']
 
         # save outputs
+        # TODO: Optimise writes, this is why it is so slow
         QS606_working_d.to_csv('_'.join(SOC_filename_d), index=False)
         QS609_working_d.to_csv('_'.join(NSSEC_filename_d), index=False)
         QS401_working_d.to_csv('_'.join(DT_filename_d), index=False)
@@ -1080,7 +1098,8 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
     census_and_by_lu_obj.state['3.1.2 expand population segmentation'] = 1
     logging.info('3.1.2 expand population segmentation completed')
 
-def IPFN_Process_2011(census_and_by_lu_obj):
+def ipfn_process_2011(census_and_by_lu_obj):
+    # TODO: Is this slow or not?
     """
     Reads in the district chunked IPFN seed and control files
     and creates a compressed file output containing final 2011 f by z, a, g, h, e, t, n, s
@@ -1119,6 +1138,9 @@ def IPFN_Process_2011(census_and_by_lu_obj):
 
     # Run through the districts specified above in a for loop
     # Note the 3 ipfn process in each iteration of the loop due to the 3 dimensions that need fitting
+    # TODO: Multi-processing
+    # TODO: Replace with native numpy ndim ipfn
+    # TODO: Psketti code
     for district in range(min_d, max_d):
         dist_str = str(district)
         print('Working on District', dist_str)
@@ -1290,6 +1312,7 @@ def IPFN_Process_2011(census_and_by_lu_obj):
     # Write out files.
     # Use the following two line to control which outputs to write out
     # Set the variables to 0 to stop write out and 1 to keep it.
+    # TODO: Optimise writes
     write_out_f = 1
     write_out_P = 1
     if write_out_f == 1:

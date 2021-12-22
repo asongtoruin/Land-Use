@@ -4,6 +4,7 @@ import land_use.lu_constants as consts
 from land_use.utils import file_ops as utils
 from land_use.base_land_use import census2011_population_furness
 
+
 class CensusYearLandUse:
     def __init__(self,
                  model_folder=consts.LU_FOLDER,
@@ -13,7 +14,7 @@ class CensusYearLandUse:
                  model_zoning='MSOA',
                  zones_folder=consts.ZONES_FOLDER,
                  zone_translation_path=consts.ZONE_TRANSLATION_PATH,
-                 KS401path=consts.KS401_PATH,
+                 ks401path=consts.KS401_PATH,
                  area_type_path=consts.LU_AREA_TYPES,
                  CTripEnd_Database_path=consts.CTripEnd_Database,
                  base_year='2011',
@@ -39,7 +40,7 @@ class CensusYearLandUse:
         self.addressbase_path_list = consts.ADDRESSBASE_PATH_LIST
         self.zones_folder = zones_folder
         self.zone_translation_path = zone_translation_path
-        self.KS401path = KS401path
+        self.KS401path = ks401path
         self.area_type_path = area_type_path
         self.CTripEnd_Database_path = CTripEnd_Database_path
 
@@ -50,33 +51,39 @@ class CensusYearLandUse:
 
         # Build paths
         print('Building Census Year paths and preparing to run')
-        write_folder = os.path.join(
-            model_folder,
-            output_folder,
-            iteration,
-            'outputs')
+        self.write_folder = os.path.join(
+                model_folder,
+                output_folder,
+                iteration,
+                'outputs')
+        run_name = 'land_use_' + str(self.base_year)
 
-        pop_write_name = os.path.join(write_folder, 'land_use_' + str(self.base_year) + '_pop.csv')
-        emp_write_name = os.path.join(write_folder, 'land_use_' + str(self.base_year) + '_emp.csv')
-        report_folder = os.path.join(write_folder, 'reports')
+        pop_write_name = os.path.join(self.write_folder, run_name + '_pop.csv')
+        emp_write_name = os.path.join(self.write_folder, run_name + '_emp.csv')
+        report_folder = os.path.join(self.write_folder, 'reports')
 
-        list_of_step_folders = [
+        # TODO: Replace with status dictionaries as follows:
+        # stat_dict = {'3.1.1': {
+        #    'desc': 'derive 2011 population from NTEM and convert Scottish zones'},
+        #    {'status': 0}}
+
+        self.step_folders = [
             '3.1.1 derive 2011 population from NTEM and convert Scottish zones',
             '3.1.2 expand population segmentation',
             '3.1.3 data synthesis']
 
         # Build folders
-        if not os.path.exists(write_folder):
-            utils.create_folder(write_folder)
+        if not os.path.exists(self.write_folder):
+            utils.create_folder(self.write_folder)
         if not os.path.exists(report_folder):
             utils.create_folder(report_folder)
-        for listed_folder in list_of_step_folders:
-            if not os.path.exists(os.path.join(write_folder, listed_folder)):
-                utils.create_folder(os.path.join(write_folder, listed_folder))
+        for listed_folder in self.step_folders:
+            if not os.path.exists(os.path.join(self.write_folder, listed_folder)):
+                utils.create_folder(os.path.join(self.write_folder, listed_folder))
 
         # Set object paths
         self.out_paths = {
-            'write_folder': write_folder,
+            'write_folder': self.write_folder,  # Duplicated
             'report_folder': report_folder,
             'pop_write_path': pop_write_name,
             'emp_write_path': emp_write_name
@@ -85,13 +92,12 @@ class CensusYearLandUse:
         # Establish a state dictionary recording which steps have been run
         # These are aligned with the section numbers in the documentation
         # TODO: enable a way to init from a point part way through the process
-        self.state = {
-            '3.1.1 derive 2011 population from NTEM and convert Scottish zones': 1,
-            '3.1.2 expand population segmentation': 1,
-            '3.1.3 data synthesis': 1,
-        }
+        self.state = self._check_state()
 
     def build_by_pop(self):
+        # TODO: Doc String
+        # TODO: Better method name, this is the same as by_lu method and a different process
+        # TODO: Simplify step references with a key
         """
 
         Returns
@@ -110,7 +116,7 @@ class CensusYearLandUse:
             logging.info('')
             print('\n' + '=' * 75)
             logging.info('Running step 3.1.1 derive 2011 population from NTEM and convert Scottish zones')
-            census2011_population_furness.NTEM_Pop_Interpolation(self)
+            census2011_population_furness.ntem_pop_interpolation(self)
 
         if self.state['3.1.2 expand population segmentation'] == 0:
             logging.info('')
@@ -122,6 +128,25 @@ class CensusYearLandUse:
             logging.info('')
             print('\n' + '=' * 75)
             logging.info('Running step 3.1.3 data synthesis')
-            census2011_population_furness.IPFN_Process_2011(self)
+            census2011_population_furness.ipfn_process_2011(self)
+
+    def _check_state(self):
+
+        """
+        Cycle through import folders and check run state.
+        Just checks for files in export format, not sophisticated.
+        """
+        # TODO: Replace with stat_dict method
+
+        state_dict = dict()
+
+        for sf in self.step_folders:
+            contents = os.listdir(os.path.join(self.write_folder, sf))
+            if len(contents) == 0:
+                state_dict.update({sf: 0})
+            else:
+                state_dict.update({sf: 1})
+
+        return state_dict
 
 

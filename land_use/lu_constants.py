@@ -197,3 +197,24 @@ TFN_TT_INDEX = pd.read_csv(os.path.join(REF_PATH,
 
 TFN_TT_DESC = pd.read_csv(os.path.join(REF_PATH,
                                        'tfn_traveller_types_illustrated.csv'))
+
+# LU Pop Build Steps
+BY_POP_BUILD_STEPS = [
+            '3.2.1', '3.2.2', '3.2.3', '3.2.4', '3.2.5',
+            '3.2.6', '3.2.7', '3.2.8', '3.2.9', '3.2.10',
+            '3.2.11'
+        ]
+
+BY_POP_BUILD_STEP_DESCS = [
+            'read in core property data',
+            'filled property adjustment',
+            'household occupancy adjustment',
+            'property type mapping',
+            '2018 MYPE uplift',
+            'expand NTEM population and verify 1',
+            'expand NTEM population and verify 2',
+            'get subsets of worker and non-worker',
+            'verify worker and non-worker',
+            'adjust pop with full dimensions',
+            'process CER data'
+        ]
