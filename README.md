@@ -52,7 +52,7 @@ Specifically, 2011 Census data and mid-year population estimates provide the cor
 As the model has improved, we have integrated other datasets that may be harder to access; NTEM data and OS Addressbase, for example.
 
 Base year employment figures used in the model have come from Health and Safety Laboratory and are restricted to TfN and partner use.
-However, this model could easily be adapted to used freely available employment data from the University of Durham's [NoMIS data portal(https://www.nomisweb.co.uk/query/select/getdatasetbytheme.asp?opt=3&theme=&subgrp=)
+However, this model could easily be adapted to used freely available employment data from the University of Durham's [NoMIS data portal](https://www.nomisweb.co.uk/query/select/getdatasetbytheme.asp?opt=3&theme=&subgrp=)
 
 Core forecasts come from NPIER population and employment forecasts, with ONS forecasts providing demographic detail.
 This is currently fairly flexible, improvements will be made to ensure the tool is robust whichever forecast vectors it has to deal with.
