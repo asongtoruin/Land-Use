@@ -544,7 +544,7 @@ def filled_properties(by_lu_obj):
             KS401path: csv file path for the census KS401 table
     """
     # Read in the census filled property data
-    filled_properties_df = pd.read_csv(by_lu_obj.KS401path)
+    filled_properties_df = pd.read_csv(by_lu_obj.ks401path)
     filled_properties_df = filled_properties_df.rename(columns={
         'Dwelling Type: All categories: Household spaces; measures: Value': 'Total_Dwells',
         'Dwelling Type: Household spaces with at least one usual resident; measures: Value': 'Filled_Dwells',

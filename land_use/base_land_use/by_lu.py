@@ -42,7 +42,7 @@ class BaseYearLandUse:
         self.addressbase_path_list = lu_constants.ADDRESSBASE_PATH_LIST
         self.zones_folder = zones_folder
         self.zone_translation_path = zone_translation_path
-        self.KS401path = ks401path
+        self.ks401path = ks401path
         self.area_type_path = area_type_path
         self.CTripEnd_Database_path = ctripend_database_path
 
