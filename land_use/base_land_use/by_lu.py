@@ -38,13 +38,18 @@ class BaseYearLandUse:
         self.home_folder = model_folder + '/' + output_folder + '/' + iteration
         self.import_folder = model_folder + '/' + import_folder + '/'
 
-        # Inputs
+        # Resi inputs
         self.addressbase_path_list = lu_constants.ADDRESSBASE_PATH_LIST
         self.zones_folder = zones_folder
         self.zone_translation_path = zone_translation_path
         self.ks401path = ks401path
         self.area_type_path = area_type_path
         self.CTripEnd_Database_path = ctripend_database_path
+
+        # Non resi inputs
+        self.e_cat_emp_path = emp_e_cat_data_path
+        self.soc_emp_path = emp_soc_cat_data_path
+        self.unemp_path = emp_unm_data_path
 
         # Basic config
         self.model_zoning = model_zoning
