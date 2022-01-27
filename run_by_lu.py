@@ -7,14 +7,17 @@ def main():
     run_pop = True
     run_emp = False
 
-    print('Building lu run...')
+    iteration = 'iter4i'
+
+    print('Building lu run, %s' % iteration)
 
     if run_census:
-        census_run = census_lu.CensusYearLandUse(iteration='iter4i')
+        census_run = census_lu.CensusYearLandUse(iteration=iteration)
         census_run.build_by_pop()
 
+    lu_run = by_lu.BaseYearLandUse(iteration=iteration)
+
     if run_pop:
-        lu_run = by_lu.BaseYearLandUse(iteration='iter4i')
         lu_run.build_by_pop()
 
     if run_emp:
