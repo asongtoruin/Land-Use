@@ -4,8 +4,8 @@ from land_use.base_land_use import census_lu, by_lu
 def main():
 
     run_census = False
-    run_pop = True
-    run_emp = False
+    run_pop = False
+    run_emp = True
 
     iteration = 'iter4i'
 

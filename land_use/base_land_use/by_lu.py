@@ -18,7 +18,7 @@ class BaseYearLandUse:
                  area_type_path=lu_constants.LU_AREA_TYPES,
                  ctripend_database_path=lu_constants.CTripEnd_Database,
                  emp_e_cat_data_path=lu_constants.E_CAT_DATA,
-                 emp_soc_cat_data_path=lu_constants.SOC_2DIGIT_SIC,
+                 emp_soc_cat_data_path=lu_constants.SOC_BY_REGION,
                  emp_unm_data_path=lu_constants.UNM_DATA,
                  base_year='2018',
                  scenario_name=None):

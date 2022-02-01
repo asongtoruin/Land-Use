@@ -132,6 +132,12 @@ SOC_2DIGIT_SIC = os.path.join(
     'soc_2_digit_sic_2018.csv'
 )
 
+SOC_BY_REGION = os.path.join(
+    LU_FOLDER,
+    LU_IMPORTS,
+    'SOC Mix',
+    'hsl_3cat_summary.csv'
+)
 
 
 # REFERENCES
