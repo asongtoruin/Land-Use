@@ -80,7 +80,7 @@ class BaseYearLandUse:
             '3.2.2_filled_property_adjustment',
             '3.2.3_apply_household_occupancy',
             '3.2.4_land_use_formatting',
-            '3.2.5_uplifting_2018_pop_2018_MYPE',
+            '3.2.5_uplifting_base_year_pop_base_year_MYPE',
             '3.2.6_expand_NTEM_pop',
             '3.2.7_verify_population_profile_by_dwelling_type',
             '3.2.8_subsets_of_workers+nonworkers',
@@ -116,7 +116,7 @@ class BaseYearLandUse:
             '3.2.2 filled property adjustment': 0,
             '3.2.3 household occupancy adjustment': 0,
             '3.2.4 property type mapping': 0,
-            '3.2.5 uplifting 2018 population according to 2018 MYPE': 0,
+            '3.2.5 Uplifting Base Year population according to Base Year MYPE': 0,
             '3.2.6 and 3.2.7 expand NTEM population to full dimensions and verify pop profile': 0,
             '3.2.8 get subsets of worker and non-worker': 0,
             '3.2.9 verify district level worker and non-worker': 0,
@@ -172,7 +172,7 @@ class BaseYearLandUse:
             logging.info('Running step 3.2.4, combining flat types')
             base_year_population_process.property_type_mapping(self)
 
-        if self.state['3.2.5 uplifting 2018 population according to 2018 MYPE'] == 0:
+        if self.state['3.2.5 Uplifting Base Year population according to Base Year MYPE'] == 0:
             logging.info('')
             logging.info('\n' + '=' * 75)
             print('\n' + '=' * 75)

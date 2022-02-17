@@ -31,7 +31,7 @@ Includes functions that were first defined in main_build.py:
 
 Updates here relative to main_build.py are:
     - Reads in f and P from 2011 Census year outputs
-    - Revised processes for uplifting 2018 population based on 20128 MYPE
+    - Revised processes for uplifting Base Year population based on Base Year MYPE
     - Revised expansion of NTEM population to full dimensions
 """
 
@@ -45,7 +45,7 @@ import geopandas as gpd
 from land_use.utils import file_ops as utils
 from land_use.utils import compress
 from land_use import lu_constants
-from land_use.base_land_use import by_lu
+# from land_use.base_land_use import by_lu
 import logging
 
 # Shapefile locations
@@ -59,43 +59,49 @@ _default_msoaRef = _default_zone_ref_folder + 'UK MSOA and Intermediate Zone Cli
 # Other paths
 _census_f_value_path = '2011 Census Furness/04 Post processing/Outputs'
 _Zone_2021LA_path = 'Lookups/MSOA_1991LA_2011LA_2021LA_LAgroups.csv'
-_MYE_folder = 'MYE 2018 ONS/2018_MYE_WP3'
 
 # Set Model Year
+# TODO - ART, 16/02/2022: Make this a variable that is set in run_by_lu
+#  Maybe ModelYear should be BaseYear or BaseModelYear too...?
 ModelYear = '2018'
 
 # Directory and file paths for the MYPE section
 
 # Directory Paths
-scottish_data_directory = r'I:\NorMITs Land Use\import\MYE 2018 ONS\2018_MidyearMSOA'
+scottish_data_directory = os.path.join('I:', 'NorMITs Land Use', 'import',
+                                       ' '.join(['MYE', ModelYear, 'ONS']),
+                                       '_'.join([ModelYear, '_MidyearMSOA']))
 la_to_msoa_directory = r'I:\NorMITs Synthesiser\Zone Translation\Export\lad_to_msoa'
-geography_directory = r'I:\NorMITs Land Use\import\2018 Population Processing lookups'
+geography_directory = r'I:\NorMITs Land Use\import\Population Processing lookups'
 lookups_directory = r'I:\NorMITs Land Use\import\2011 Census Micro lookups'  # Uses the same lookups as 2011
-inputs_directory_mye = r'I:\NorMITs Land Use\import\MYE 2018 ONS\2018_pop_process_inputs'
+inputs_directory_mye = os.path.join('I:', 'NorMITs Land Use', 'import',
+                                    ' '.join(['MYE', ModelYear, 'ONS']),
+                                    '_'.join([ModelYear, '_pop_process_inputs']))
 inputs_directory_census = r'I:\NorMITs Land Use\import\Nomis Census 2011 Head & Household'
-inputs_directory_aps = r'I:\NorMITs Land Use\import\NOMIS APS'
+inputs_directory_aps = os.path.join('I:', 'NorMITs Land Use', 'import', 'NOMIS APS', ModelYear)
 
 # File names
-nomis_mype_msoa_age_gender_path = r'NOMIS_2021_10_21_MYPE_MSOA_Age_Gender.csv'
+nomis_mype_msoa_age_gender_path = '_'.join(['nomis', ModelYear, 'MYPE_MSOA_Age_Gender.csv'])
 uk_2011_and_2021_la_path = r'UK_2011_and_2021_LA_IDs.csv'
 scottish_2011_z2la_path = r'2011_Scottish_Zones_to_LA.csv'
 lookup_geography_2011_path = r'geography.csv'
 qs101_uk_path = r'211022_QS101UK_ResidenstType_MSOA.csv'
-scottish_2018_males_path = r'Males_Scotland_2018.csv'
-scottish_2018_females_path = r'Females_Scotland_2018.csv'
+scottish_males_path = ''.join(['Males_Scotland_', ModelYear, '.csv'])
+scottish_females_path = ''.join(['Females_Scotland_', ModelYear, '.csv'])
 la_to_msoa_path = r'lad_to_msoa_normalised.csv'  # Path with manual corrections to make proportions equal 1
 # la_to_msoa_path_og = r'lad_to_msoa.csv'  # Original path, proportions don't quite add to 1
 scottish_la_changes_post_2011_path = r'ca11_ca19.csv'
-aps_ftpt_gender_2018_path = r'nomis_2021_08_24_APS_FTPT_Gender_2018_only.csv'
-nomis_2018_mye_pop_by_la_path = r'nomis_2021_10_25_MYE_2018_LA_withareacodes_total_gender.csv'
-aps_soc_path = r'nomis_2021_08_24_APS_SOC.csv'
+aps_ftpt_gender_path = '_'.join(['nomis_APS_FTPT_Gender', ModelYear, 'only.csv'])
+nomis_mye_pop_by_la_path = '_'.join(['nomis', ModelYear, 'MYE_LA_withareacodes_total_gender.csv'])
+aps_soc_path = '_'.join(['nomis_APS_SOC', ModelYear])
+nomis_mye_path = ''.join(['nomis_MYE_', ModelYear, '.csv'])
 
 # Output directory names
 copy_address_database_output_dir = '3.2.1_read_in_core_property_data'
 filled_properties_output_dir = '3.2.2_filled_property_adjustment'
 apply_household_occupancy_output_dir = '3.2.3_apply_household_occupancy'
 land_use_formatting_output_dir = '3.2.4_land_use_formatting'
-mye_pop_compiled_output_dir = '3.2.5_uplifting_2018_pop_2018_MYPE'
+mye_pop_compiled_output_dir = '3.2.5_uplifting_base_year_pop_base_year_MYPE'
 pop_with_full_dims_output_dir = '3.2.6_expand_NTEM_pop'
 pop_with_full_dims_second_output_dir = '3.2.7_verify_population_profile_by_dwelling_type'
 subsets_worker_nonworker_output_dir = '3.2.8_subsets_of_workers+nonworkers'
@@ -359,17 +365,17 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
     """
     Import household occupancy data and apply to property data.
     """
-    #TODO: want to be able to run at LSOA level when point correspondence is done.
-    #TODO: Folders for outputs to separate this process from the household classification
+    # TODO: want to be able to run at LSOA level when point correspondence is done.
+    # TODO: Folders for outputs to separate this process from the household classification
 
-    #TODO: Move the 2011 process step to the census lu object
+    # TODO: Move the 2011 process step to the census lu object
     logging.info('Running Step 3.2.3')
     print('Running Step 3.2.3')
 
     if do_import:
         balanced_cpt_data = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
                                                      apply_household_occupancy_output_dir,
-                                                     'UKHouseHoldOccupancy2011.csv'))
+                                                     'GBHouseHoldOccupancy2011.csv'))
     else:
         # TODO: put in constants
         EWQS401 = 'QS401UK_LSOA.csv'
@@ -396,7 +402,7 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
         balanced_cpt_data = balanced_cpt_data.drop(columns={'Prob_DwellsFilled'})
         balanced_cpt_data.to_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
                                               apply_household_occupancy_output_dir,
-                                              'UKHouseHoldOccupancy2011.csv'), index=False)
+                                              'GBHouseHoldOccupancy2011.csv'), index=False)
 
     # Visual spot checks - count zones, check cpt
     audit = balanced_cpt_data.groupby(['msoaZoneID']).count().reset_index()
@@ -429,15 +435,16 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
     # Read in HOPS growth data
     balanced_cpt_data = balanced_cpt_data.drop(['ladZoneID', 'objectid'], axis=1)
     hops_path = census_and_by_lu_obj.import_folder + 'HOPs/hops_growth_factors.csv'
-    hops_growth = pd.read_csv(hops_path)[['Area code', '11_to_18']]
+    hops_growth = pd.read_csv(hops_path)[['Area code', '_'.join(['11_to', ModelYear[-2:]])]]
 
-    # Uplift the figures to 2018
+    # Uplift the figures to the Base Year
+    # TODO work out if this is uplifting properly for years other than 2018
     balanced_cpt_data = balanced_cpt_data.merge(hops_growth,
                                                 how='left', left_on='lad17cd',
                                                 right_on='Area code').drop('Area code', axis=1).reset_index(drop=True)
 
     balanced_cpt_data['household_occupancy_18'] = (balanced_cpt_data['household_occupancy'] *
-                                                   (1 + balanced_cpt_data['11_to_18']))
+                                                   (1 + balanced_cpt_data['_'.join(['11_to', ModelYear[-2:]])]))
     trim_cols = ['msoaZoneID', 'census_property_type', 'household_occupancy_18', 'ho_type']
     balanced_cpt_data = balanced_cpt_data[trim_cols]
 
@@ -473,8 +480,9 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
                                   apply_household_occupancy_output_dir,
                                   'Hops Population Audits')
         utils.create_folder(hpa_folder)
-        arp_msoa_audit_path = os.path.join(hpa_folder,
-                                           census_and_by_lu_obj.model_zoning + '_population_from_2018_hops.csv')
+        arp_msoa_audit_path = os.path.join(
+            hpa_folder,
+            '_'.join([census_and_by_lu_obj.model_zoning, 'population_from', ModelYear, 'hops.csv']))
         arp_msoa_audit.to_csv(arp_msoa_audit_path, index=False)
 
         arp_msoa_audit_total = arp_msoa_audit['population'].sum()
@@ -557,6 +565,7 @@ def property_type_mapping(census_and_by_lu_obj):
     audit_land_use_formatting_filename = 'Audit_' + census_and_by_lu_obj.model_zoning + '_Zonal_Properties+Pop.csv'
     audit_land_use_formatting_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
                                                   land_use_formatting_output_dir,
+                                                  'Audits',
                                                   audit_land_use_formatting_filename)
     crp_for_audit.to_csv(audit_land_use_formatting_path, index=False)
 
@@ -610,24 +619,25 @@ def mye_aps_process(census_and_by_lu_obj,
     scottish_2011_z2la = pd.read_csv(os.path.join(geography_directory, scottish_2011_z2la_path))
     lookup_geography_2011 = pd.read_csv(os.path.join(lookups_directory, lookup_geography_2011_path))
     qs101_uk = pd.read_csv(os.path.join(inputs_directory_census, qs101_uk_path), skiprows=7).dropna()
-    scottish_2018_males = pd.read_csv(os.path.join(scottish_data_directory, scottish_2018_males_path))
-    scottish_2018_females = pd.read_csv(os.path.join(scottish_data_directory, scottish_2018_females_path))
+    scottish_base_year_males = pd.read_csv(os.path.join(scottish_data_directory, scottish_males_path))
+    scottish_base_year_females = pd.read_csv(os.path.join(scottish_data_directory, scottish_females_path))
     # la_to_msoa_uk = pd.read_csv(
     #     os.path.join(la_to_msoa_directory, la_to_msoa_path_og))  # Original path, proportions don't quite add to 1
     la_to_msoa_uk = pd.read_csv(
         os.path.join(la_to_msoa_directory, la_to_msoa_path))  # Path with manual corrections to make proportions equal 1
     scottish_la_changes_post_2011 = pd.read_csv(os.path.join(inputs_directory_mye, scottish_la_changes_post_2011_path))
-    aps_ftpt_gender_2018 = pd.read_csv(os.path.join(inputs_directory_aps, aps_ftpt_gender_2018_path), skiprows=17,
-                                       skip_blank_lines=True)
-    nomis_2018_mye_pop_by_la = pd.read_csv(os.path.join(inputs_directory_mye, nomis_2018_mye_pop_by_la_path),
-                                           skiprows=9, skip_blank_lines=True)
+    aps_ftpt_gender_base_year = pd.read_csv(os.path.join(inputs_directory_aps, aps_ftpt_gender_path),
+                                            skiprows=17,
+                                            skip_blank_lines=True)
+    nomis_base_year_mye_pop_by_la = pd.read_csv(os.path.join(inputs_directory_mye, nomis_mye_pop_by_la_path),
+                                                skiprows=9, skip_blank_lines=True)
     aps_soc = pd.read_csv(os.path.join(inputs_directory_aps, aps_soc_path), skiprows=12, skip_blank_lines=True)
 
     # Processing to fix data types or missing headers
     lookup_geography_2011_ew_only = lookup_geography_2011.dropna().copy()  # Removes Scotland and the nans
     lookup_geography_2011_ew_only['Grouped LA'] = lookup_geography_2011_ew_only['Grouped LA'].astype(int)
     qs101_uk.rename(columns={'Unnamed: 1': 'MSOA'}, inplace=True)
-    nomis_2018_mye_pop_by_la.rename(columns={'Unnamed: 1': '2021_LA'}, inplace=True)
+    nomis_base_year_mye_pop_by_la.rename(columns={'Unnamed: 1': '2021_LA'}, inplace=True)
 
     def process_age_based_pop(padp_df):
         padp_df['16-74'] = (padp_df['Aged 16 to 64'].astype(int) +
@@ -687,60 +697,63 @@ def mye_aps_process(census_and_by_lu_obj,
     recoded_scottish_lads_post_2011.rename(columns={'CA': 'New area code', 'CAName': 'Area1'}, inplace=True)
 
     # Process Scottish male and female data into a format for all_residents processing
-    lad_scottish_2018_males = scottish_2018_males.copy()
-    lad_scottish_2018_males = pd.merge(lad_scottish_2018_males,
-                                       recoded_scottish_lads_post_2011,
-                                       on='Area1',
-                                       how='left')
-    lad_scottish_2018_males['New area code'] = lad_scottish_2018_males['New area code'].fillna(0)
-    lad_scottish_2018_males['Area code'] = np.where(lad_scottish_2018_males['New area code'] == 0,
-                                                    lad_scottish_2018_males['Area code'],
-                                                    lad_scottish_2018_males['New area code'])
-    lad_scottish_2018_males.drop(columns=['New area code'], inplace=True)
-    lad_scottish_2018_males['M_Total'] = lad_scottish_2018_males.iloc[:, 3:].sum(axis=1)
-    lad_scottish_2018_males = lad_scottish_2018_males[['Area code', 'M_Total', 'under 16', '16-74', '75 or over']]
-    lad_scottish_2018_males.rename(columns={'Area code': '2011_LA',
-                                            'under 16': 'M_under_16',
-                                            '16-74': 'M_16-74',
-                                            '75 or over': 'M_75_and_over'}, inplace=True)
-    lad_scottish_2018_females = scottish_2018_females.copy()
-    lad_scottish_2018_females = pd.merge(lad_scottish_2018_females,
-                                         recoded_scottish_lads_post_2011,
-                                         on='Area1',
-                                         how='left')
-    lad_scottish_2018_females['New area code'] = lad_scottish_2018_females['New area code'].fillna(0)
-    lad_scottish_2018_females['Area code'] = np.where(lad_scottish_2018_females['New area code'] == 0,
-                                                      lad_scottish_2018_females['Area code'],
-                                                      lad_scottish_2018_females['New area code'])
-    lad_scottish_2018_females.drop(columns=['New area code'], inplace=True)
-    lad_scottish_2018_females['F_Total'] = lad_scottish_2018_females.iloc[:, 3:].sum(axis=1)
-    lad_scottish_2018_females = lad_scottish_2018_females[['Area code', 'F_Total', 'under 16', '16-74', '75 or over']]
-    lad_scottish_2018_females.rename(columns={'Area code': '2011_LA',
-                                              'under 16': 'F_under_16',
-                                              '16-74': 'F_16-74',
-                                              '75 or over': 'F_75_and_over'}, inplace=True)
-    lad_scottish_2018_all = pd.merge(lad_scottish_2018_males,
-                                     lad_scottish_2018_females,
-                                     how='outer',
-                                     on='2011_LA')
-    lad_scottish_2018_all['M_Total'] = lad_scottish_2018_all['M_Total'] + lad_scottish_2018_all['F_Total']
-    lad_scottish_2018_all.rename(columns={'M_Total': 'Total'}, inplace=True)
-    lad_scottish_2018_all.drop(columns=['F_Total'], inplace=True)
+    lad_scottish_base_year_males = scottish_base_year_males.copy()
+    lad_scottish_base_year_males = pd.merge(lad_scottish_base_year_males,
+                                            recoded_scottish_lads_post_2011,
+                                            on='Area1',
+                                            how='left')
+    lad_scottish_base_year_males['New area code'] = lad_scottish_base_year_males['New area code'].fillna(0)
+    lad_scottish_base_year_males['Area code'] = np.where(lad_scottish_base_year_males['New area code'] == 0,
+                                                         lad_scottish_base_year_males['Area code'],
+                                                         lad_scottish_base_year_males['New area code'])
+    lad_scottish_base_year_males.drop(columns=['New area code'], inplace=True)
+    lad_scottish_base_year_males['M_Total'] = lad_scottish_base_year_males.iloc[:, 3:].sum(axis=1)
+    lad_scottish_base_year_males = lad_scottish_base_year_males[
+        ['Area code', 'M_Total', 'under 16', '16-74', '75 or over']]
+    lad_scottish_base_year_males.rename(columns={'Area code': '2011_LA',
+                                                 'under 16': 'M_under_16',
+                                                 '16-74': 'M_16-74',
+                                                 '75 or over': 'M_75_and_over'}, inplace=True)
+    lad_scottish_base_year_females = scottish_base_year_females.copy()
+    lad_scottish_base_year_females = pd.merge(lad_scottish_base_year_females,
+                                              recoded_scottish_lads_post_2011,
+                                              on='Area1',
+                                              how='left')
+    lad_scottish_base_year_females['New area code'] = lad_scottish_base_year_females['New area code'].fillna(0)
+    lad_scottish_base_year_females['Area code'] = np.where(lad_scottish_base_year_females['New area code'] == 0,
+                                                           lad_scottish_base_year_females['Area code'],
+                                                           lad_scottish_base_year_females['New area code'])
+    lad_scottish_base_year_females.drop(columns=['New area code'], inplace=True)
+    lad_scottish_base_year_females['F_Total'] = lad_scottish_base_year_females.iloc[:, 3:].sum(axis=1)
+    lad_scottish_base_year_females = lad_scottish_base_year_females[
+        ['Area code', 'F_Total', 'under 16', '16-74', '75 or over']]
+    lad_scottish_base_year_females.rename(columns={'Area code': '2011_LA',
+                                                   'under 16': 'F_under_16',
+                                                   '16-74': 'F_16-74',
+                                                   '75 or over': 'F_75_and_over'}, inplace=True)
+    lad_scottish_base_year_all_pop = pd.merge(lad_scottish_base_year_males,
+                                              lad_scottish_base_year_females,
+                                              how='outer',
+                                              on='2011_LA')
+    lad_scottish_base_year_all_pop['M_Total'] = (lad_scottish_base_year_all_pop['M_Total'] +
+                                                 lad_scottish_base_year_all_pop['F_Total'])
+    lad_scottish_base_year_all_pop.rename(columns={'M_Total': 'Total'}, inplace=True)
+    lad_scottish_base_year_all_pop.drop(columns=['F_Total'], inplace=True)
     # Now check that the total is still valid
-    scottish_male_total = scottish_2018_males.iloc[:, 3:].sum(axis=1)
-    scottish_female_total = scottish_2018_females.iloc[:, 3:].sum(axis=1)
+    scottish_male_total = scottish_base_year_males.iloc[:, 3:].sum(axis=1)
+    scottish_female_total = scottish_base_year_females.iloc[:, 3:].sum(axis=1)
     scottish_pop_total = scottish_male_total.sum() + scottish_female_total.sum()
-    if scottish_pop_total == lad_scottish_2018_all['Total'].sum():
+    if scottish_pop_total == lad_scottish_base_year_all_pop['Total'].sum():
         logging.info('All ' + str(scottish_pop_total) + ' people accounted for in Scotland')
     else:
         logging.info('!!!!! WARNING !!!!!')
         logging.info('Something is wrong with the Scottish population data')
         logging.info('Expected population of ' + scottish_pop_total)
-        logging.info('Got a population of ' + lad_scottish_2018_all['Total'].sum())
+        logging.info('Got a population of ' + lad_scottish_base_year_all_pop['Total'].sum())
         print('!!!!! WARNING !!!!!')
         print('Something is wrong with the Scottish population data')
         print('Expected population of', scottish_pop_total)
-        print('Got a population of', lad_scottish_2018_all['Total'].sum())
+        print('Got a population of', lad_scottish_base_year_all_pop['Total'].sum())
 
     # Format lookup for LA to MSOA
     la_to_msoa_uk_lookup = la_to_msoa_uk.copy()
@@ -748,85 +761,91 @@ def mye_aps_process(census_and_by_lu_obj,
     la_to_msoa_uk_lookup.rename(columns={'msoa_zone_id': 'MSOA'}, inplace=True)
     la_to_msoa_uk_lookup['lad_to_msoa'].sum()
 
-    # Strip Northern Ireland from the Nomis 2018 MYPE
-    nomis_2018_mye_pop_by_la_uk = nomis_2018_mye_pop_by_la.copy()
-    nomis_2018_mye_pop_by_la_uk = nomis_2018_mye_pop_by_la_uk[~nomis_2018_mye_pop_by_la_uk['2021_LA'].str.contains('N')]
+    # Strip Northern Ireland from the Nomis Base Year MYPE
+    nomis_base_year_mye_pop_by_la_gb = nomis_base_year_mye_pop_by_la.copy()
+    nomis_base_year_mye_pop_by_la_gb = nomis_base_year_mye_pop_by_la_gb[
+        ~nomis_base_year_mye_pop_by_la_gb['2021_LA'].str.contains('N')]
 
     # Process APS data
 
     # Remove the Isles of Scilly with UK average data (as it's missing in APS data)
     # Also stip the totals row
-    aps_ftpt_gender_2018_to_use = aps_ftpt_gender_2018.copy()
-    aps_ftpt_gender_2018_to_use.dropna(inplace=True)  # Drops total column
+    aps_ftpt_gender_base_year_to_use = aps_ftpt_gender_base_year.copy()
+    aps_ftpt_gender_base_year_to_use.dropna(inplace=True)  # Drops total column
     # Following lines not required unless you wish to interrogate some of the checking dfs in more detail
-    # aps_ftpt_gender_2018_to_use_la_list = aps_ftpt_gender_2018_to_use.copy()
-    # aps_ftpt_gender_2018_to_use_la_list = aps_ftpt_gender_2018_to_use_la_list[['LAD']]
+    # aps_ftpt_gender_base_year_to_use_la_list = aps_ftpt_gender_base_year_to_use.copy()
+    # aps_ftpt_gender_base_year_to_use_la_list = aps_ftpt_gender_base_year_to_use_la_list[['LAD']]
 
     # Deal with Scilly
-    aps_ftpt_gender_2018_to_use = aps_ftpt_gender_2018_to_use.set_index(['LAD'])
-    aps_ftpt_gender_2018_scilly_pulled = aps_ftpt_gender_2018_to_use.loc[['Isles of Scilly']].reset_index()
-    aps_ftpt_gender_2018_to_use.drop(['Isles of Scilly'], inplace=True)
-    aps_ftpt_gender_2018_to_use.reset_index(inplace=True)
+    aps_ftpt_gender_base_year_to_use = aps_ftpt_gender_base_year_to_use.set_index(['LAD'])
+    aps_ftpt_gender_base_year_scilly_pulled = aps_ftpt_gender_base_year_to_use.loc[['Isles of Scilly']].reset_index()
+    aps_ftpt_gender_base_year_to_use.drop(['Isles of Scilly'], inplace=True)
+    aps_ftpt_gender_base_year_to_use.reset_index(inplace=True)
 
-    aps_ftpt_gender_2018_uk_ave_cols = list(aps_ftpt_gender_2018_to_use.columns)
-    aps_ftpt_gender_2018_uk_ave_cols = aps_ftpt_gender_2018_uk_ave_cols[2:]
-    aps_ftpt_gender_2018_to_use.replace(',', '', regex=True, inplace=True)
+    aps_ftpt_gender_base_year_uk_ave_cols = list(aps_ftpt_gender_base_year_to_use.columns)
+    aps_ftpt_gender_base_year_uk_ave_cols = aps_ftpt_gender_base_year_uk_ave_cols[2:]
+    aps_ftpt_gender_base_year_to_use.replace(',', '', regex=True, inplace=True)
     # ! indicate a small (0-2) sample size. Setting values to 0 where this occurs
-    aps_ftpt_gender_2018_to_use.replace('!', '0', regex=True, inplace=True)
+    aps_ftpt_gender_base_year_to_use.replace('!', '0', regex=True, inplace=True)
     # Ditto for *, but sample size is in range 3-9. Setting values to 0 here too...
-    aps_ftpt_gender_2018_to_use.replace('*', '0', inplace=True)
+    aps_ftpt_gender_base_year_to_use.replace('*', '0', inplace=True)
     # - indicates missing data. Only appears in confidence intervals columns
     # and the (removed) Isles of Scilly row, so replacing with 0 for simplicity
     # Also, all numbers in this dataset should be +ve, so no risk of removing
     # -ve values!
-    aps_ftpt_gender_2018_to_use.replace('-', '0', regex=True, inplace=True)
-    aps_ftpt_gender_2018_to_use[aps_ftpt_gender_2018_uk_ave_cols] = aps_ftpt_gender_2018_to_use[
-        aps_ftpt_gender_2018_uk_ave_cols].astype(float)
+    aps_ftpt_gender_base_year_to_use.replace('-', '0', regex=True, inplace=True)
+    aps_ftpt_gender_base_year_to_use[aps_ftpt_gender_base_year_uk_ave_cols] = aps_ftpt_gender_base_year_to_use[
+        aps_ftpt_gender_base_year_uk_ave_cols].astype(float)
     # Re-instate all the examples of '-' LAD in names
-    aps_ftpt_gender_2018_to_use['LAD'].replace('0', '-', regex=True, inplace=True)
+    aps_ftpt_gender_base_year_to_use['LAD'].replace('0', '-', regex=True, inplace=True)
 
     # Process APS workers data
-    aps_ftpt_gender_2018_summary = aps_ftpt_gender_2018_to_use.copy()
-    aps_ftpt_gender_2018_summary_cols = [
-        col for col in aps_ftpt_gender_2018_summary.columns if 'numerator' in col]
-    aps_ftpt_gender_2018_summary = aps_ftpt_gender_2018_summary[aps_ftpt_gender_2018_summary_cols]
-    aps_ftpt_gender_2018_summary_cols2 = [
-        col for col in aps_ftpt_gender_2018_summary.columns if 'male' in col]
-    aps_ftpt_gender_2018_summary = aps_ftpt_gender_2018_summary[aps_ftpt_gender_2018_summary_cols2]
-    aps_ftpt_gender_2018_summary_cols3 = [s.replace(' - aged 16-64 numerator', '') for s in
-                                          aps_ftpt_gender_2018_summary_cols2]
-    aps_ftpt_gender_2018_summary_cols3 = [s.replace('s in employment working', '') for s in
-                                          aps_ftpt_gender_2018_summary_cols3]
-    aps_ftpt_gender_2018_summary_cols3 = [s.replace('% of ', '') for s in aps_ftpt_gender_2018_summary_cols3]
-    aps_ftpt_gender_2018_summary_cols3 = [s.replace('full-time', 'fte') for s in aps_ftpt_gender_2018_summary_cols3]
-    aps_ftpt_gender_2018_summary_cols3 = [s.replace('part-time', 'pte') for s in aps_ftpt_gender_2018_summary_cols3]
-    aps_ftpt_gender_2018_summary.columns = aps_ftpt_gender_2018_summary_cols3
-    aps_ftpt_gender_2018_summary['Total Worker 16-64'] = aps_ftpt_gender_2018_summary.sum(axis=1)
+    aps_ftpt_gender_base_year_summary = aps_ftpt_gender_base_year_to_use.copy()
+    aps_ftpt_gender_base_year_summary_cols = [
+        col for col in aps_ftpt_gender_base_year_summary.columns if 'numerator' in col]
+    aps_ftpt_gender_base_year_summary = aps_ftpt_gender_base_year_summary[aps_ftpt_gender_base_year_summary_cols]
+    aps_ftpt_gender_base_year_summary_cols2 = [
+        col for col in aps_ftpt_gender_base_year_summary.columns if 'male' in col]
+    aps_ftpt_gender_base_year_summary = aps_ftpt_gender_base_year_summary[aps_ftpt_gender_base_year_summary_cols2]
+    aps_ftpt_gender_base_year_summary_cols3 = [s.replace(' - aged 16-64 numerator', '') for s in
+                                               aps_ftpt_gender_base_year_summary_cols2]
+    aps_ftpt_gender_base_year_summary_cols3 = [s.replace('s in employment working', '') for s in
+                                               aps_ftpt_gender_base_year_summary_cols3]
+    aps_ftpt_gender_base_year_summary_cols3 = [
+        s.replace('% of ', '') for s in aps_ftpt_gender_base_year_summary_cols3]
+    aps_ftpt_gender_base_year_summary_cols3 = [
+        s.replace('full-time', 'fte') for s in aps_ftpt_gender_base_year_summary_cols3]
+    aps_ftpt_gender_base_year_summary_cols3 = [
+        s.replace('part-time', 'pte') for s in aps_ftpt_gender_base_year_summary_cols3]
+    aps_ftpt_gender_base_year_summary.columns = aps_ftpt_gender_base_year_summary_cols3
+    aps_ftpt_gender_base_year_summary['Total Worker 16-64'] = aps_ftpt_gender_base_year_summary.sum(axis=1)
 
-    aps_ftpt_gender_2018_rows = aps_ftpt_gender_2018_to_use.copy()
-    aps_ftpt_gender_2018_rows = aps_ftpt_gender_2018_rows.iloc[:, :2]
-    aps_ftpt_gender_2018_summary = aps_ftpt_gender_2018_rows.join(aps_ftpt_gender_2018_summary)
+    aps_ftpt_gender_base_year_rows = aps_ftpt_gender_base_year_to_use.copy()
+    aps_ftpt_gender_base_year_rows = aps_ftpt_gender_base_year_rows.iloc[:, :2]
+    aps_ftpt_gender_base_year_summary = aps_ftpt_gender_base_year_rows.join(aps_ftpt_gender_base_year_summary)
 
-    aps_ftpt_gender_2018_summary_percent = aps_ftpt_gender_2018_summary.copy()
-    aps_ftpt_gender_2018_summary_percent = aps_ftpt_gender_2018_summary_percent[
-        aps_ftpt_gender_2018_summary_cols3].divide(
-        aps_ftpt_gender_2018_summary_percent['Total Worker 16-64'], axis='index')
+    aps_ftpt_gender_base_year_summary_percent = aps_ftpt_gender_base_year_summary.copy()
+    aps_ftpt_gender_base_year_summary_percent = aps_ftpt_gender_base_year_summary_percent[
+        aps_ftpt_gender_base_year_summary_cols3].divide(
+        aps_ftpt_gender_base_year_summary_percent['Total Worker 16-64'], axis='index')
 
     # Actually might want to do this Scilly bit right at the very end once merged with the rest of the data?
-    aps_ftpt_gender_2018_scilly = aps_ftpt_gender_2018_summary_percent.mean()
-    aps_ftpt_gender_2018_scilly = pd.DataFrame(aps_ftpt_gender_2018_scilly)
-    aps_ftpt_gender_2018_scilly = aps_ftpt_gender_2018_scilly.transpose()
-    aps_ftpt_gender_2018_scilly['Checksum'] = aps_ftpt_gender_2018_scilly.sum(axis=1)
-    aps_ftpt_gender_2018_scilly['Checksum'] = aps_ftpt_gender_2018_scilly['Checksum'] - 1
-    scilly_rows = aps_ftpt_gender_2018_scilly_pulled.copy()
+    aps_ftpt_gender_base_year_scilly = aps_ftpt_gender_base_year_summary_percent.mean()
+    aps_ftpt_gender_base_year_scilly = pd.DataFrame(aps_ftpt_gender_base_year_scilly)
+    aps_ftpt_gender_base_year_scilly = aps_ftpt_gender_base_year_scilly.transpose()
+    aps_ftpt_gender_base_year_scilly['Checksum'] = aps_ftpt_gender_base_year_scilly.sum(axis=1)
+    aps_ftpt_gender_base_year_scilly['Checksum'] = aps_ftpt_gender_base_year_scilly['Checksum'] - 1
+    scilly_rows = aps_ftpt_gender_base_year_scilly_pulled.copy()
     scilly_rows = scilly_rows.iloc[:, :2]
-    scilly_rows = scilly_rows.join(aps_ftpt_gender_2018_scilly)
+    scilly_rows = scilly_rows.join(aps_ftpt_gender_base_year_scilly)
 
-    aps_ftpt_gender_2018_summary_percent = aps_ftpt_gender_2018_rows.join(aps_ftpt_gender_2018_summary_percent)
-    aps_ftpt_gender_2018_summary_percent['Checksum'] = aps_ftpt_gender_2018_summary_percent.iloc[:, -4:].sum(axis=1)
-    aps_ftpt_gender_2018_summary_percent['Checksum'] = aps_ftpt_gender_2018_summary_percent['Checksum'] - 1
-    aps_ftpt_gender_2018_summary_percent = aps_ftpt_gender_2018_summary_percent.append(scilly_rows)
-    if abs(aps_ftpt_gender_2018_summary_percent['Checksum'].sum()) < 0.000000001:
+    aps_ftpt_gender_base_year_summary_percent = aps_ftpt_gender_base_year_rows.join(
+        aps_ftpt_gender_base_year_summary_percent)
+    aps_ftpt_gender_base_year_summary_percent['Checksum'] = aps_ftpt_gender_base_year_summary_percent.iloc[
+                                                            :, -4:].sum(axis=1)
+    aps_ftpt_gender_base_year_summary_percent['Checksum'] = aps_ftpt_gender_base_year_summary_percent['Checksum'] - 1
+    aps_ftpt_gender_base_year_summary_percent = aps_ftpt_gender_base_year_summary_percent.append(scilly_rows)
+    if abs(aps_ftpt_gender_base_year_summary_percent['Checksum'].sum()) < 0.000000001:
         logging.info('Sum of gender %ages across categories is close enough to 1 for all rows')
     else:
         logging.info('!!!!! WARNING !!!!!')
@@ -836,12 +855,12 @@ def mye_aps_process(census_and_by_lu_obj,
         print('Summing across fte/pte and gender caused an error')
         print('All rows did not sum to 1')
 
-    # Following lines would tidy up aps_ftpt_gender_2018_summary_percent if you ever want to look at it
+    # Following lines would tidy up aps_ftpt_gender_base_year_summary_percent if you ever want to look at it
     # Also remember to un-comment the small section above the gives one of the variables
-    # aps_ftpt_gender_2018_summary_percent = aps_ftpt_gender_2018_summary_percent.set_index('LAD')
-    # aps_ftpt_gender_2018_summary_percent = aps_ftpt_gender_2018_summary_percent.reindex(
-    #     index=aps_ftpt_gender_2018_to_use_la_list['LAD'])
-    # aps_ftpt_gender_2018_summary_percent = aps_ftpt_gender_2018_summary_percent.reset_index()
+    # aps_ftpt_gender_base_year_summary_percent = aps_ftpt_gender_base_year_summary_percent.set_index('LAD')
+    # aps_ftpt_gender_base_year_summary_percent = aps_ftpt_gender_base_year_summary_percent.reindex(
+    #     index=aps_ftpt_gender_base_year_to_use_la_list['LAD'])
+    # aps_ftpt_gender_base_year_summary_percent = aps_ftpt_gender_base_year_summary_percent.reset_index()
 
     # Repeat process for SOC data
     aps_soc_to_use = aps_soc.copy()
@@ -936,52 +955,53 @@ def mye_aps_process(census_and_by_lu_obj,
     aps_soc_props_to_merge = aps_soc_props_to_merge.drop(columns=['Total_Workers', 'Checksum'])
 
     # Turn gender/ftpt employment data into proportions by 2021 LA
-    aps_ftpt_gender_2018_props = aps_ftpt_gender_2018_summary.copy()
-    aps_ftpt_gender_2018_props = aps_ftpt_gender_2018_props.append(
-        aps_ftpt_gender_2018_props.sum(numeric_only=True), ignore_index=True)
-    aps_ftpt_gender_2018_props['LAD'].fillna("UK wide total", inplace=True)
-    aps_ftpt_gender_2018_props['2021_LA'].fillna("All_UK001", inplace=True)
-    aps_ftpt_gender_2018_props['male fte'] = (aps_ftpt_gender_2018_props['male fte'] /
-                                              aps_ftpt_gender_2018_props['Total Worker 16-64'])
-    aps_ftpt_gender_2018_props['male pte'] = (aps_ftpt_gender_2018_props['male pte'] /
-                                              aps_ftpt_gender_2018_props['Total Worker 16-64'])
-    aps_ftpt_gender_2018_props['female fte'] = (aps_ftpt_gender_2018_props['female fte'] /
-                                                aps_ftpt_gender_2018_props['Total Worker 16-64'])
-    aps_ftpt_gender_2018_props['female pte'] = (aps_ftpt_gender_2018_props['female pte'] /
-                                                aps_ftpt_gender_2018_props['Total Worker 16-64'])
-    aps_ftpt_gender_2018_props['Checksum'] = (aps_ftpt_gender_2018_props['male fte']
-                                              + aps_ftpt_gender_2018_props['male pte']
-                                              + aps_ftpt_gender_2018_props['female fte']
-                                              + aps_ftpt_gender_2018_props['female pte']
-                                              - 1)
-    if (abs(max(aps_ftpt_gender_2018_props['Checksum'])) < 0.000001 and
-            abs(min(aps_ftpt_gender_2018_props['Checksum'])) < 0.000001):
+    aps_ftpt_gender_base_year_props = aps_ftpt_gender_base_year_summary.copy()
+    aps_ftpt_gender_base_year_props = aps_ftpt_gender_base_year_props.append(
+        aps_ftpt_gender_base_year_props.sum(numeric_only=True), ignore_index=True)
+    aps_ftpt_gender_base_year_props['LAD'].fillna("UK wide total", inplace=True)
+    aps_ftpt_gender_base_year_props['2021_LA'].fillna("All_UK001", inplace=True)
+    aps_ftpt_gender_base_year_props['male fte'] = (aps_ftpt_gender_base_year_props['male fte'] /
+                                                   aps_ftpt_gender_base_year_props['Total Worker 16-64'])
+    aps_ftpt_gender_base_year_props['male pte'] = (aps_ftpt_gender_base_year_props['male pte'] /
+                                                   aps_ftpt_gender_base_year_props['Total Worker 16-64'])
+    aps_ftpt_gender_base_year_props['female fte'] = (aps_ftpt_gender_base_year_props['female fte'] /
+                                                     aps_ftpt_gender_base_year_props['Total Worker 16-64'])
+    aps_ftpt_gender_base_year_props['female pte'] = (aps_ftpt_gender_base_year_props['female pte'] /
+                                                     aps_ftpt_gender_base_year_props['Total Worker 16-64'])
+    aps_ftpt_gender_base_year_props['Checksum'] = (aps_ftpt_gender_base_year_props['male fte']
+                                                   + aps_ftpt_gender_base_year_props['male pte']
+                                                   + aps_ftpt_gender_base_year_props['female fte']
+                                                   + aps_ftpt_gender_base_year_props['female pte']
+                                                   - 1)
+    if (abs(max(aps_ftpt_gender_base_year_props['Checksum'])) < 0.000001 and
+            abs(min(aps_ftpt_gender_base_year_props['Checksum'])) < 0.000001):
         logging.info('All ft/pt gender proportions summed to 1')
         logging.info('(within reasonable deviation)')
-        logging.info('Max deviation value was:' + str(max(aps_ftpt_gender_2018_props['Checksum'])))
-        logging.info('Min deviation value was:' + str(min(aps_ftpt_gender_2018_props['Checksum'])))
+        logging.info('Max deviation value was:' + str(max(aps_ftpt_gender_base_year_props['Checksum'])))
+        logging.info('Min deviation value was:' + str(min(aps_ftpt_gender_base_year_props['Checksum'])))
     else:
         logging.info('!!!!! WARNING !!!!!')
         logging.info('ft/pt gender proportions did not sum to 1')
         logging.info('(within reasonable deviation)')
-        logging.info('Max deviation value was:' + str(max(aps_ftpt_gender_2018_props['Checksum'])))
-        logging.info('Min deviation value was:' + str(min(aps_ftpt_gender_2018_props['Checksum'])))
+        logging.info('Max deviation value was:' + str(max(aps_ftpt_gender_base_year_props['Checksum'])))
+        logging.info('Min deviation value was:' + str(min(aps_ftpt_gender_base_year_props['Checksum'])))
         print('!!!!! WARNING !!!!!')
         print('ft/pt gender proportions did not sum to 1')
         print('(within reasonable deviation)')
-        print('Max deviation value was:', max(aps_ftpt_gender_2018_props['Checksum']))
-        print('Min deviation value was:', min(aps_ftpt_gender_2018_props['Checksum']))
-    aps_ftpt_gender_to_add = aps_ftpt_gender_2018_props['LAD'] == 'UK wide total'
-    aps_ftpt_gender_to_add = aps_ftpt_gender_2018_props[aps_ftpt_gender_to_add]
+        print('Max deviation value was:', max(aps_ftpt_gender_base_year_props['Checksum']))
+        print('Min deviation value was:', min(aps_ftpt_gender_base_year_props['Checksum']))
+    aps_ftpt_gender_to_add = aps_ftpt_gender_base_year_props['LAD'] == 'UK wide total'
+    aps_ftpt_gender_to_add = aps_ftpt_gender_base_year_props[aps_ftpt_gender_to_add]
     aps_ftpt_gender_to_add = aps_ftpt_gender_to_add.replace('UK wide total', 'Isles of Scilly')
     aps_ftpt_gender_to_add = aps_ftpt_gender_to_add.replace('All_UK001', 'E06000053')
-    aps_ftpt_gender_2018_props = aps_ftpt_gender_2018_props.append([aps_ftpt_gender_to_add], ignore_index=True)
-    aps_ftpt_gender_2018_props_to_merge = aps_ftpt_gender_2018_props.copy()
-    aps_ftpt_gender_2018_props_to_merge.drop(columns=['Total Worker 16-64', 'Checksum'], inplace=True)
+    aps_ftpt_gender_base_year_props = aps_ftpt_gender_base_year_props.append(
+        [aps_ftpt_gender_to_add], ignore_index=True)
+    aps_ftpt_gender_base_year_props_to_merge = aps_ftpt_gender_base_year_props.copy()
+    aps_ftpt_gender_base_year_props_to_merge.drop(columns=['Total Worker 16-64', 'Checksum'], inplace=True)
 
     # Merge SOC and ft/pt gender tables into a single APS props table
     aps_props_to_merge = pd.merge(aps_soc_props_to_merge,
-                                  aps_ftpt_gender_2018_props_to_merge,
+                                  aps_ftpt_gender_base_year_props_to_merge,
                                   how='outer',
                                   on='LAD')
     aps_props_to_merge.drop(columns=['LAD'], inplace=True)
@@ -1040,14 +1060,14 @@ def mye_aps_process(census_and_by_lu_obj,
         logging.info('population totals across all age bands')
         logging.info('I expected that \'All Ages\' should match\'All_Ages\',')
         logging.info('but it did not in ' + str(all_residents['All_Ages_Check'].sum()) + ' cases')
-        logging.info('The erronious lines are:')
+        logging.info('The erroneous lines are:')
         logging.info(all_residents.loc[all_residents['All_Ages_Check'] == 1])
         print('!!!!! WARNING !!!!!!')
         print('Something went wrong when I tried to sum male and female')
         print('population totals across all age bands')
         print('I expected that \'All Ages\' should match\'All_Ages\',')
         print('but it did not in', all_residents['All_Ages_Check'].sum(), 'cases')
-        print('The erronious lines are:')
+        print('The erroneous lines are:')
         print(all_residents.loc[all_residents['All_Ages_Check'] == 1])
     all_residents.drop(columns=['All_Ages', 'All_Ages_Check'], inplace=True)
     all_residents.rename(columns={'All Ages': 'Total', 'mnemonic': 'MSOA'}, inplace=True)
@@ -1060,7 +1080,7 @@ def mye_aps_process(census_and_by_lu_obj,
     all_residents_scotland = scottish_2011_z2la_for_qs101.copy()
     all_residents_scotland = all_residents_scotland[['Zone', '2011_LA', 'MSOA']]
     all_residents_scotland = pd.merge(all_residents_scotland,
-                                      lad_scottish_2018_all,
+                                      lad_scottish_base_year_all_pop,
                                       how='left',
                                       on='2011_LA')
     all_residents_scotland = pd.merge(all_residents_scotland,
@@ -1095,7 +1115,7 @@ def mye_aps_process(census_and_by_lu_obj,
     hhr_by_z = qs101_uk_by_z.copy()
     hhr_by_z = hhr_by_z[['%_of_HHR', 'MSOA']]
 
-    # prepare Engalnd and Wales data for merging with Scotland and use in hhr
+    # prepare England and Wales data for merging with Scotland and use in hhr
     ew_data_for_hhr = all_residents.copy()
     data_for_hhr_to_multiply = list(ew_data_for_hhr.columns)
     data_for_hhr_to_multiply = data_for_hhr_to_multiply[3:]
@@ -1113,14 +1133,14 @@ def mye_aps_process(census_and_by_lu_obj,
 
     # Need to have LA level over 16s as a proportion of total pop
     # Later on can multiply this by APS proportion of workers who are over 16
-    working_age_pop_by_la_uk = nomis_2018_mye_pop_by_la_uk.copy()
+    working_age_pop_by_la_uk = nomis_base_year_mye_pop_by_la_gb.copy()
     working_age_pop_by_la_uk = working_age_pop_by_la_uk[['2021_LA', 'Aged 16+', 'All Ages']]
     working_age_pop_by_la_uk['Aged 16+'] = working_age_pop_by_la_uk['Aged 16+'].str.replace(',', '').astype(float)
     working_age_pop_by_la_uk['All Ages'] = working_age_pop_by_la_uk['All Ages'].str.replace(',', '').astype(float)
     # Just create this column to hold the place for now
     working_age_pop_by_la_uk['Over_16_prop'] = 0
 
-    aps_lad_lookup = aps_ftpt_gender_2018_summary.copy()
+    aps_lad_lookup = aps_ftpt_gender_base_year_summary.copy()
     aps_lad_lookup = aps_lad_lookup[['LAD', '2021_LA']]
     working_age_pop_by_la_uk = pd.merge(aps_lad_lookup,
                                         working_age_pop_by_la_uk,
@@ -1224,7 +1244,7 @@ def mye_aps_process(census_and_by_lu_obj,
     hhr_worker_by_d_for_export.columns = hhr_worker_by_d_for_export.columns.str.replace('feMale', 'Female', regex=True)
     hhr_worker_by_d_for_export.columns = hhr_worker_by_d_for_export.columns.str.replace('_LA', '_LA_code', regex=True)
 
-    hhr_worker_by_d_row_info = nomis_2018_mye_pop_by_la_uk.copy()
+    hhr_worker_by_d_row_info = nomis_base_year_mye_pop_by_la_gb.copy()
     hhr_worker_by_d_row_info.rename(
         columns={'local authority: district / unitary (as of April 2021)': '2021_LA_name',
                  '2021_LA': '2021_LA_code'},
@@ -1317,7 +1337,6 @@ def mye_aps_process(census_and_by_lu_obj,
     # Adam - DONE, we need to think how to organise the structure of outputs files per step
     full_mye_aps_process_dir = os.path.join(census_and_by_lu_obj.out_paths['write_folder'], mye_aps_process_dir)
     hhr_vs_all_pop_name = ModelYear + '_total_pop_vs_HHR_total.csv'
-    # all_residents_scotland_name = r'Output\2018_all_residents_scotland.csv' # Not used, but kept for QA purposes
     hhr_worker_by_d_for_export_name = r'MYE_APS_LA_Worker_scriptoutput.csv'
     hhr_nonworker_by_d_for_export_name = r'MYE_APS_LA_NonWorker_scriptoutput.csv'
     la_info_for_2021_name = r'2021LAID_LAcode_LAname.csv'
@@ -1371,7 +1390,7 @@ def mye_aps_process(census_and_by_lu_obj,
 def ntem_pop_interpolation(census_and_by_lu_obj, calling_functions_output_dir):
     """
     Process population data from NTEM CTripEnd database:
-    Interpolate population to the target year, in this case, it is for base year 2018 as databases
+    Interpolate population to the target year, in this case it is for the base year, as databases
     are available in 5 year interval;
     Translate NTEM zones in Scotland into NorNITs zones; for England and Wales, NTEM zones = NorMITs zones (MSOAs)
     """
@@ -1379,7 +1398,9 @@ def ntem_pop_interpolation(census_and_by_lu_obj, calling_functions_output_dir):
     # The year of data is set to define the upper and lower NTEM run years and interpolate as necessary between them.
     # The base year for NTEM is 2011 and it is run in 5-year increments from 2011 to 2051.
     # The year selected below must be between 2011 and 2051 (inclusive).
-    Year = 2018
+    # As we are running this inside the main base year script, we can set Year = ModelYear
+    # However, we do still need to retain Year, as it is assumed Year is an int, not a str (as ModelYear is).
+    Year = int(ModelYear)
 
     logging.info('Running NTEM_Pop_Interpolation function for Year ' + str(Year))
     print('Running NTEM_Pop_Interpolation function for Year ' + str(Year))
@@ -1540,19 +1561,19 @@ def mye_pop_compiled(census_and_by_lu_obj):
     #  but it could be made much more efficient!
     # Added a manual control to allow read in from file (rather than internal memory) in the event of a partial run
     # False means "read in from memory" and is the default.
-    _MYE_2018Pop_MSOA_path = mye_pop_compiled_output_dir
-    read_2018pop_msoa_path_file = False
-    if read_2018pop_msoa_path_file:
-        mye_msoa_pop_name = r'2018_total_pop_vs_HHR_total.csv'
+    read_base_year_pop_msoa_path_file = False
+    if read_base_year_pop_msoa_path_file:
+        mye_msoa_pop_name = '_'.join([ModelYear, 'total_pop_vs_HHR_total.csv'])
         mye_msoa_pop = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                _MYE_2018Pop_MSOA_path,
+                                                mye_pop_compiled_output_dir,
                                                 mye_msoa_pop_name))
         logging.info('Step 3.2.5 read in data processed by step the APS compiling function through an existing csv')
         logging.info('WARNING - This is not the default way of reading this data!')
         logging.info('Did you mean to do that?')
     else:
-        logging.info('Step 3.2.5 is calling step the APS compiling function in order to obtain 2018 population data')
-        mye_msoa_pop = mye_aps_process(census_and_by_lu_obj, mye_pop_compiled_name, _MYE_2018Pop_MSOA_path)
+        logging.info(
+            'Step 3.2.5 is calling step the APS compiling function in order to obtain Base Year population data')
+        mye_msoa_pop = mye_aps_process(census_and_by_lu_obj, mye_pop_compiled_name, mye_pop_compiled_output_dir)
         logging.info('Step 3.2.5 successfully read in data processed by the MYE_APS_prcoess function')
         logging.info('from internal memory')
 
@@ -1565,7 +1586,6 @@ def mye_pop_compiled(census_and_by_lu_obj):
     logging.info('Step 3.2.5 has called Step 3.2.4 and has obtained crp_pop')
     print('Step 3.2.5 has called Step 3.2.4 and has obtained crp_pop')
 
-    # crp_pop =  pd.read_csv(Output_Folder + 'classifiedResProperty_Flatscombined_2018.csv')
     crp_msoa_pop = crp_pop.groupby(['ZoneID'])['population'].sum().reset_index()
     crp_msoa_pop = crp_msoa_pop.merge(mye_msoa_pop, how='left', left_on='ZoneID', right_on='MSOA').drop(
         columns={'MSOA'})
@@ -1589,8 +1609,8 @@ def mye_pop_compiled(census_and_by_lu_obj):
     uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
     ntem_hh_pop = ntem_hh_pop.merge(uk_msoa, how='left', left_on='msoaZoneID', right_on='objectid')
     ntem_hh_pop_cols = ['msoaZoneID', 'msoa11cd', 'Borough', 'TravellerType', 'NTEM_TT_Name', 'Age_code',
-                       'Age', 'Gender_code', 'Gender', 'Household_composition_code', 'Household_size', 'Household_car',
-                       'Employment_type_code', 'Employment_type', 'Population']
+                        'Age', 'Gender_code', 'Gender', 'Household_composition_code', 'Household_size', 'Household_car',
+                        'Employment_type_code', 'Employment_type', 'Population']
 
     NTEM_HHpop_cols_to_groupby = ntem_hh_pop_cols[:-1]
     ntem_hh_pop = ntem_hh_pop.groupby(NTEM_HHpop_cols_to_groupby)['Population'].sum().reset_index()
@@ -1618,7 +1638,7 @@ def mye_pop_compiled(census_and_by_lu_obj):
 
     ntem_hh_pop = ntem_hh_pop.merge(NTEM_HHpop_Total, how='left', on=['msoaZoneID'])
     ntem_hh_pop = ntem_hh_pop.merge(Hhpop_Dt_Total, how='left', left_on=['msoa11cd'],
-                                  right_on=['ZoneID']).drop(columns={'ZoneID'})
+                                    right_on=['ZoneID']).drop(columns={'ZoneID'})
     # print('Headings of ntem_hh_pop')
     # print(ntem_hh_pop.head(5))
     ntem_hh_pop['pop_aj_factor'] = ntem_hh_pop['ZonePop'] / ntem_hh_pop['ZoneNTEMPop']
@@ -1676,10 +1696,11 @@ def mye_pop_compiled(census_and_by_lu_obj):
     audit_3_2_5_csv.to_csv(audit_3_2_5_csv_path, index=False)
 
     audit_3_2_5_header = 'Audit for Step 3.2.5\nCreated ' + str(datetime.datetime.now())
-    audit_3_2_5_text = '\n'.join(['The total 2018 population from MYPE is: ' + str(mye_msoa_pop.Total_Pop.sum()),
-                                  'The total 2018 household population from MYPE is: ' + str(
+    audit_3_2_5_text = '\n'.join(['The total ' + ModelYear + ' population from MYPE is: ' + str(
+                                      mye_msoa_pop.Total_Pop.sum()),
+                                  'The total ' + ModelYear + ' household population from MYPE is: ' + str(
                                       mye_msoa_pop.Total_HHR.sum()),
-                                  'The total 2018 household population output from Step 3.2.5 is: ',
+                                  'The total ' + ModelYear + ' household population output from Step 3.2.5 is: ',
                                   '\tBy zone, age, gender, HH composition and employment status (from NTEM): ' + str(
                                       audit_NTEM_HHpop['NTEM_pop'].sum()),
                                   '\tBy zone and dwelling type: ' + str(audit_aj_crp['crp_pop'].sum()),
@@ -1698,7 +1719,12 @@ def mye_pop_compiled(census_and_by_lu_obj):
     with open(audit_3_2_5_path, 'w') as text_file:
         text_file.write(audit_3_2_5_content)
 
-    census_and_by_lu_obj.state['3.2.5 Uplifting 2018 population according to 2018 MYPE'] = 1
+    ntem_hh_pop_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
+                                    mye_pop_compiled_output_dir,
+                                    '_'.join(['NTEM_Population_MYEcompiled', ModelYear]))
+    compress.write_out(ntem_hh_pop, ntem_hh_pop_path)
+
+    census_and_by_lu_obj.state['3.2.5 Uplifting Base Year population according to Base Year MYPE'] = 1
     logging.info('Step 3.2.5 completed')
     print('Step 3.2.5 completed')
     return [aj_crp, ntem_hh_pop, audit_mye_msoa_pop]
@@ -1801,7 +1827,7 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
 
         NTEM_HHpop_trim['aghe_Key'] = ['_'.join([str(z), str(a), str(g), str(h), str(e)])
                                        for z, a, g, h, e in NTEM_HHpop_trim_iterator]
-        # Read in f (f_tns|zaghe) to expand adjustedNTEM hh pop with addtional dimension of t(dwelling type),
+        # Read in f (f_tns|zaghe) to expand adjustedNTEM hh pop with additional dimension of t(dwelling type),
         # n(HRP NS-SEC) and s (SOC)
         # Replace this block with new process from 2011 output f.
         # ['z', 'a', 'g', 'h', 'e', 't', 'n', 's', 'f_tns|zaghe']
@@ -1850,7 +1876,8 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         audit_3_2_6_csv.to_csv(audit_3_2_6_csv_path, index=False)
 
         audit_3_2_6_header = 'Audit for Step 3.2.6\nCreated ' + str(datetime.datetime.now())
-        audit_3_2_6_text = '\n'.join(['The total 2018 population from MYPE is: ' + str(NTEM_HHpop_trim.P_aghetns.sum()),
+        audit_3_2_6_text = '\n'.join([' '.join(['The total', ModelYear, 'population from MYPE is:',
+                                                str(NTEM_HHpop_trim.P_aghetns.sum())]),
                                       'Comparing zonal HH population original to present:',
                                       '\tMax percentage difference: ' + str(audit_3_2_6_csv_max * 100) + '%',
                                       '\tMin percentage difference: ' + str(audit_3_2_6_csv_min * 100) + '%',
@@ -1895,6 +1922,8 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         # NTEM_HHpop_byDt_total_E02001045 = NTEM_HHpop_byDt[NTEM_HHpop_byDt['z'] == '1013']
         # NTEM_HHpop_byDt_total_E02001045.to_csv('NTEM_HHpop_byDt_total_E02001045.csv', index=False)
 
+        # TODO ART, 04/02/2022: Change these variable names to be gb instead of uk.
+        #  UK includes Northern Ireland and these variables do not.
         uk_ave_hh_occ = NorMITs_HHpop_byDt.copy()
         uk_ave_hh_occ['pop_pre_aj'] = uk_ave_hh_occ['crp_P_t'] / uk_ave_hh_occ['pop_aj_factor']
         uk_ave_hh_occ = uk_ave_hh_occ.groupby(['t'])[['properties', 'pop_pre_aj']].sum()
@@ -2047,17 +2076,19 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         pop_with_full_dims_filename = '_'.join(['HhPop_byfullNorMITsSegs_initial',
                                                 ModelYear,
                                                 census_and_by_lu_obj.model_zoning])
-        uk_ave_hh_occ_filename = 'uk_average_hh_occupancy_by_t.csv'
+        # Note that the output file name is now (correctly) GB,
+        # but the variable being dumped is still mislabelled as uk.
+        gb_ave_hh_occ_filename = 'GB_average_hh_occupancy_by_t.csv'
 
         pop_with_full_dims_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
                                                pop_with_full_dims_second_output_dir,
                                                pop_with_full_dims_filename)
-        uk_ave_hh_occ_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
+        gb_ave_hh_occ_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
                                           pop_with_full_dims_output_dir,
-                                          uk_ave_hh_occ_filename)
+                                          gb_ave_hh_occ_filename)
 
         compress.write_out(HHpop, pop_with_full_dims_path)
-        uk_ave_hh_occ.to_csv(uk_ave_hh_occ_path, index=False)
+        uk_ave_hh_occ.to_csv(gb_ave_hh_occ_path, index=False)
 
         census_and_by_lu_obj.state[
             '3.2.6 and 3.2.7 expand NTEM population to full dimensions and verify pop profile'] = 1
@@ -2214,20 +2245,19 @@ def la_level_adjustment(census_and_by_lu_obj):
     # Adam - DONE, the inputs here should be called in from the outcome of your scripts from function MYE_APS_process
     # Added a manual control to allow read in from file (rather than internal memory) in the event of a partial run
     # False means "read in from memory" and is the default.
-    read_2018pop_msoa_path_file = False
+    read_base_year_pop_msoa_path_file = False
 
-    if read_2018pop_msoa_path_file:
-        _MYE_2018Pop_MSOA_path = la_level_adjustment_output_dir
+    if read_base_year_pop_msoa_path_file:
         _LA_worker_control_path = r'MYE_APS_LA_Worker.csv'
         _LA_nonworker_control_path = r'MYE_APS_LA_NonWorker.csv'
         _2021LAID_path = r'2021LAID_LAcode_LAname.csv'
 
         _LA_worker_control_path = os.path.join(
-            census_and_by_lu_obj.out_paths['write_folder'], _MYE_2018Pop_MSOA_path, _LA_worker_control_path)
+            census_and_by_lu_obj.out_paths['write_folder'], la_level_adjustment_output_dir, _LA_worker_control_path)
         _LA_nonworker_control_path = os.path.join(
-            census_and_by_lu_obj.out_paths['write_folder'], _MYE_2018Pop_MSOA_path, _LA_nonworker_control_path)
+            census_and_by_lu_obj.out_paths['write_folder'], la_level_adjustment_output_dir, _LA_nonworker_control_path)
         _2021LAID_path = os.path.join(
-            census_and_by_lu_obj.out_paths['write_folder'], _MYE_2018Pop_MSOA_path, _2021LAID_path)
+            census_and_by_lu_obj.out_paths['write_folder'], la_level_adjustment_output_dir, _2021LAID_path)
 
         LA_ID = pd.read_csv(_2021LAID_path)
         LA_worker_control = pd.read_csv(_LA_worker_control_path)[['2021_LA_name', '2021_LA_code', 'LA', 'Worker']]
@@ -2248,7 +2278,7 @@ def la_level_adjustment(census_and_by_lu_obj):
         logging.info('WARNING - This is not the default way of reading this data!')
         logging.info('Did you mean to do that?')
     else:
-        logging.info('Step 3.2.9 is calling the MYE_APS_process function in order to obtain 2018 population data')
+        logging.info('Step 3.2.9 is calling the MYE_APS_process function in order to obtain Base Year population data')
         MYE_MSOA_pop = mye_aps_process(census_and_by_lu_obj, la_level_adjustment_name, la_level_adjustment_output_dir)
         logging.info('Step 3.2.9 read in data processed by the MYE_APS_process function from internal memory')
 
@@ -2467,8 +2497,8 @@ def la_level_adjustment(census_and_by_lu_obj):
     audit_hhpop_by_dag.to_csv(audit_hhpop_by_d_path, index=False)
 
     audit_3_2_9_header = 'Audit for Step 3.2.9\nCreated ' + str(datetime.datetime.now())
-    audit_3_2_9_text = '\n'.join(['The total 2018 population is currently: ' + str(HHpop_workers_LA.total.sum() +
-                                                                                   HHpop_nwkrs_ag_LA.nonworker.sum()),
+    audit_3_2_9_text = '\n'.join([' '.join(['The total', ModelYear, 'population is currently:',
+                                            str(HHpop_workers_LA.total.sum() + HHpop_nwkrs_ag_LA.nonworker.sum())]),
                                   'Total HHR workers currently {}'.format(HHpop_workers_LA.total.sum()),
                                   'Total non_workers currently {}'.format(HHpop_nwkrs_ag_LA.nonworker.sum()),
                                   'Comparing LA level HH population original to present (worker + non-worker):',
@@ -2495,14 +2525,20 @@ def la_level_adjustment(census_and_by_lu_obj):
 
     la_level_adjustment_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
                                             la_level_adjustment_output_dir)
-    furnessed_data_filename = 'furnessed_2018Worker.csv'
+    furnessed_data_filename = '_'.join(['furnessed', ModelYear, 'worker.csv'])
     nwkrs_aj_factor_LA_filename = 'nwkrs_aj_factor_LA_' + ModelYear + '.csv'
     wkrs_aj_factor_LA_filename = 'wkrs_aj_factor_LA_' + ModelYear + '.csv'
+    verified_d_worker_filename = '_'.join(['Verified_d_worker_fully_segmented_', ModelYear])
+    verified_d_non_worker_filename = '_'.join(['Verified_d_non_worker_fully_segmented_', ModelYear])
 
     # Export files
     seed.to_csv(os.path.join(la_level_adjustment_path, furnessed_data_filename), index=False)
     nwkrs_aj_factor_LA.to_csv(os.path.join(la_level_adjustment_path, nwkrs_aj_factor_LA_filename), index=False)
     wkrs_aj_factor_LA.to_csv(os.path.join(la_level_adjustment_path, wkrs_aj_factor_LA_filename), index=False)
+    verified_d_worker_path = os.path.join(la_level_adjustment_path, verified_d_worker_filename)
+    verified_d_non_worker_path = os.path.join(la_level_adjustment_path, verified_d_non_worker_filename)
+    compress.write_out(aj_HHpop_workers_LA, verified_d_worker_path)
+    compress.write_out(aj_HHpop_non_workers_LA, verified_d_non_worker_path)
     census_and_by_lu_obj.state['3.2.9 verify district level worker and non-worker'] = 1
     logging.info('Step 3.2.9 completed')
     print('Step 3.2.9 completed')
@@ -2512,13 +2548,10 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     logging.info('Running Step 3.2.10')
     print('Running Step 3.2.10')
     adjust_zonal_workers_nonworkers_name = 'adjust_zonal_workers_nonworkers'
-    nomis_mye_2018_path = os.path.join(
-        census_and_by_lu_obj.import_folder,
-        'MYE 2018 ONS/2018_pop_process_inputs/nomis_2021_08_24_MYE_2018_sheet_2018MYE_only.csv')
     # Had to save a copy of the xlsx as a csv as read_excel is annoying and doesn't support xlsx files anymore!
-    nomis_mye_2018 = pd.read_csv(nomis_mye_2018_path, skiprows=6)
-    nomis_mye_2018 = nomis_mye_2018[['local authority: district / unitary (as of April 2021)', 'All Ages']]
-    nomis_mye_2018 = nomis_mye_2018.rename(
+    nomis_mye_base_year = pd.read_csv(os.path.join(inputs_directory_mye, nomis_mye_path), skiprows=6)
+    nomis_mye_base_year = nomis_mye_base_year[['local authority: district / unitary (as of April 2021)', 'All Ages']]
+    nomis_mye_base_year = nomis_mye_base_year.rename(
         columns={'local authority: district / unitary (as of April 2021)': '2021_LA_Name',
                  'All Ages': 'MYE_pop'})
 
@@ -2545,7 +2578,7 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     # Read average uk hh occupancy from step 3.2.6
     uk_ave_hh_occ_lookup_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
                                              pop_with_full_dims_output_dir,
-                                             'uk_average_hh_occupancy_by_t.csv')
+                                             'gb_average_hh_occupancy_by_t.csv')
     uk_ave_hh_occ_lookup = pd.read_csv(uk_ave_hh_occ_lookup_path)
 
     HHpop_workers = HHpop_workers.merge(wkrs_aj_factor_LA,
@@ -2575,8 +2608,9 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     final_zonal_hh_pop_by_t_iterator = zip(final_zonal_hh_pop_by_t['z'], final_zonal_hh_pop_by_t['t'])
     final_zonal_hh_pop_by_t['z_t'] = ['_'.join([str(z), str(t)]) for z, t in final_zonal_hh_pop_by_t_iterator]
 
-    zonal_properties_by_t = pd.read_csv(
-        r"I:\NorMITs Land Use\test\Test_2018pop\2021-11-19 Notebook\Output\classifiedResProperty_MYEcompiled_2018.csv")
+    zonal_properties_by_t = pd.read_csv(os.path.join(
+        census_and_by_lu_obj.out_paths['write_folder'], mye_pop_compiled_output_dir,
+        ''.join(['classifiedResProperty_MYEcompiled_', ModelYear, '.csv'])))
     zonal_properties_by_t_iterator = zip(zonal_properties_by_t['Zone'], zonal_properties_by_t['census_property_type'])
     zonal_properties_by_t['z_t'] = ['_'.join([str(z), str(t)]) for z, t in zonal_properties_by_t_iterator]
 
@@ -2596,10 +2630,9 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     logging.info('Total hhpop is now:')
     logging.info(hhpop_combined.people.sum())
 
-    mye_folder = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                              mye_pop_compiled_output_dir)
-    _MYE_2018Pop_MSOA_path = os.path.join(mye_folder, '2018_total_pop_vs_HHR_total.csv')
-    mye_msoa_pop = pd.read_csv(_MYE_2018Pop_MSOA_path)
+    mye_msoa_pop = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
+                                            mye_pop_compiled_output_dir,
+                                            '_'.join([ModelYear, 'total_pop_vs_HHR_total.csv'])))
     mye_hhr_pop = mye_msoa_pop[['MSOA', 'Total_HHR']]
     logging.info('Original hhpop is:')
     logging.info(mye_hhr_pop.Total_HHR.sum())
@@ -2652,7 +2685,8 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     hhpop_combined_check_la.to_csv(hhpop_combined_check_la_path)
 
     audit_3_2_10_header = 'Audit for Step 3.2.10\nCreated ' + str(datetime.datetime.now())
-    audit_3_2_10_text = '\n'.join(['The total 2018 population is currently: ' + str(hhpop_combined.people.sum()),
+    audit_3_2_10_text = '\n'.join([' '.join(['The total', ModelYear, 'population is currently:',
+                                             str(hhpop_combined.people.sum())]),
                                    'Comparing z and d level HH population original to present:',
                                    '\tBy zone (z) - values will vary from 0. See Tech Note for expected values:',
                                    '\t\tMax percentage difference: ' + str(
@@ -2707,7 +2741,7 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
 
     # Check LA level pop against MYE
     check_all_pop_by_d = all_pop_by_d.copy()
-    check_all_pop_by_d = pd.merge(check_all_pop_by_d, nomis_mye_2018, on='2021_LA_Name', how='left')
+    check_all_pop_by_d = pd.merge(check_all_pop_by_d, nomis_mye_base_year, on='2021_LA_Name', how='left')
     # Remove all the pesky 1000 separators from the string interpreted numerical columns!
     check_all_pop_by_d.replace(',', '', regex=True, inplace=True)
     check_all_pop_by_d['MYE_pop'] = check_all_pop_by_d['MYE_pop'].astype(int)
@@ -2760,7 +2794,6 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     with open(audit_3_2_11_path, 'w') as text_file:
         text_file.write(audit_3_2_11_content)
 
-
     # Dump outputs
     pre_3_2_10_dir = os.getcwd()
     output_3_2_10_dir = os.path.join(census_and_by_lu_obj.out_paths['write_folder'], further_adjustments_output_dir)
@@ -2776,9 +2809,9 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
 
     census_and_by_lu_obj.state['3.2.10 adjust zonal pop with full dimensions'] = 1
     logging.info('Step 3.2.10 completed')
-    logging.info('If undertaking a full run through of the 2018 Base Year LU process,')
+    logging.info('If undertaking a full run through of the Base Year LU process,')
     logging.info('then this should have been the last function to run.')
-    logging.info('So the 2018 Base Year is DONE!')
+    logging.info(' '.join(['So the', ModelYear, 'Base Year is DONE!']))
     print('Step 3.2.10 completed')
     print('So, in theory, all steps have been run (Step 3.2.11 via Step 3.2.10), so we are')
     print('DONE!')
@@ -2794,10 +2827,9 @@ def process_cer_data(census_and_by_lu_obj, hhpop_combined_from_3_2_10, la_2_z_fr
     # Read MYE_MSOA_pop from file as it is small (produced by MYE_APS_process sub-function of 3.2.5)
 
     # Subtract HHpop from MYE total to get CER
-    mye_folder = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                              mye_pop_compiled_output_dir)
-    _MYE_2018Pop_MSOA_path = os.path.join(mye_folder, '2018_total_pop_vs_HHR_total.csv')
-    mye_pop = pd.read_csv(_MYE_2018Pop_MSOA_path)
+    mye_pop = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
+                                       mye_pop_compiled_output_dir,
+                                       '_'.join([ModelYear, 'total_pop_vs_HHR_total.csv'])))
     cer_pop = hhpop_combined_from_3_2_10.copy()
     cer_pop = cer_pop[['MSOA', 'people']]
     cer_pop = cer_pop.groupby(['MSOA']).sum()
