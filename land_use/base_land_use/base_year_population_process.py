@@ -59,26 +59,27 @@ _default_msoaRef = _default_zone_ref_folder + 'UK MSOA and Intermediate Zone Cli
 # Other paths
 _census_f_value_path = '2011 Census Furness/04 Post processing/Outputs'
 _Zone_2021LA_path = 'Lookups/MSOA_1991LA_2011LA_2021LA_LAgroups.csv'
+normits_seg_to_tfn_tt_file = r'I:\NorMITs Land Use\import\Lookups\NorMITs_segments_to_TfN_tt\normits_segs_to_tfn_tt.csv'
 
 # Set Model Year
 # TODO - ART, 16/02/2022: Make this a variable that is set in run_by_lu
 #  Maybe ModelYear should be BaseYear or BaseModelYear too...?
-ModelYear = '2018'
+ModelYear = '2019'
 
 # Directory and file paths for the MYPE section
 
 # Directory Paths
-scottish_data_directory = os.path.join('I:', 'NorMITs Land Use', 'import',
+scottish_data_directory = os.path.join(r'I:\NorMITs Land Use', 'import',
                                        ' '.join(['MYE', ModelYear, 'ONS']),
-                                       '_'.join([ModelYear, '_MidyearMSOA']))
+                                       '_'.join([ModelYear, 'MidyearMSOA']))
 la_to_msoa_directory = r'I:\NorMITs Synthesiser\Zone Translation\Export\lad_to_msoa'
 geography_directory = r'I:\NorMITs Land Use\import\Population Processing lookups'
 lookups_directory = r'I:\NorMITs Land Use\import\2011 Census Micro lookups'  # Uses the same lookups as 2011
-inputs_directory_mye = os.path.join('I:', 'NorMITs Land Use', 'import',
+inputs_directory_mye = os.path.join(r'I:\NorMITs Land Use', 'import',
                                     ' '.join(['MYE', ModelYear, 'ONS']),
-                                    '_'.join([ModelYear, '_pop_process_inputs']))
+                                    '_'.join([ModelYear, 'pop_process_inputs']))
 inputs_directory_census = r'I:\NorMITs Land Use\import\Nomis Census 2011 Head & Household'
-inputs_directory_aps = os.path.join('I:', 'NorMITs Land Use', 'import', 'NOMIS APS', ModelYear)
+inputs_directory_aps = os.path.join(r'I:\NorMITs Land Use', 'import', 'NOMIS APS', ModelYear)
 
 # File names
 nomis_mype_msoa_age_gender_path = '_'.join(['nomis', ModelYear, 'MYPE_MSOA_Age_Gender.csv'])
@@ -93,35 +94,40 @@ la_to_msoa_path = r'lad_to_msoa_normalised.csv'  # Path with manual corrections 
 scottish_la_changes_post_2011_path = r'ca11_ca19.csv'
 aps_ftpt_gender_path = '_'.join(['nomis_APS_FTPT_Gender', ModelYear, 'only.csv'])
 nomis_mye_pop_by_la_path = '_'.join(['nomis', ModelYear, 'MYE_LA_withareacodes_total_gender.csv'])
-aps_soc_path = '_'.join(['nomis_APS_SOC', ModelYear])
+aps_soc_path = ''.join(['nomis_APS_SOC_', ModelYear, '.csv'])
 nomis_mye_path = ''.join(['nomis_MYE_', ModelYear, '.csv'])
 
-# Output directory names
-copy_address_database_output_dir = '3.2.1_read_in_core_property_data'
-filled_properties_output_dir = '3.2.2_filled_property_adjustment'
-apply_household_occupancy_output_dir = '3.2.3_apply_household_occupancy'
-land_use_formatting_output_dir = '3.2.4_land_use_formatting'
-mye_pop_compiled_output_dir = '3.2.5_uplifting_base_year_pop_base_year_MYPE'
-pop_with_full_dims_output_dir = '3.2.6_expand_NTEM_pop'
-pop_with_full_dims_second_output_dir = '3.2.7_verify_population_profile_by_dwelling_type'
-subsets_worker_nonworker_output_dir = '3.2.8_subsets_of_workers+nonworkers'
-la_level_adjustment_output_dir = '3.2.9_verify_district_level_worker_and_nonworker'
-further_adjustments_output_dir = '3.2.10_adjust_zonal_pop_with_full_dimensions'
-cer_output_dir = '3.2.11_process_CER_data'
+# Function based audit/process directory names
+copy_address_database_dir = '3.2.1_read_in_core_property_data'
+filled_properties_dir = '3.2.2_filled_property_adjustment'
+apply_household_occupancy_dir = '3.2.3_apply_household_occupancy'
+land_use_formatting_dir = '3.2.4_land_use_formatting'
+mye_pop_compiled_dir = '3.2.5_uplifting_base_year_pop_base_year_MYPE'
+pop_with_full_dims_dir = '3.2.6_expand_NTEM_pop'
+pop_with_full_dims_second_dir = '3.2.7_verify_population_profile_by_dwelling_type'
+subsets_worker_nonworker_dir = '3.2.8_subsets_of_workers+nonworkers'
+la_level_adjustment_dir = '3.2.9_verify_district_level_worker_and_nonworker'
+further_adjustments_dir = '3.2.10_adjust_zonal_pop_with_full_dimensions'
+cer_dir = '3.2.11_process_CER_data'
+
+# Process/audit/output directory name
+process_dir = '01 Process'
+audit_dir = '02 Audits'
+output_dir = '03 Outputs'
 
 
 # This function doesn't seem to actually do anything?
 def copy_addressbase_files(by_lu_obj):
     # TODO: Should this be deprecated now?
     """
-    Copy the relevant ABP files from import drive to census_and_by_lu_obj.home_folder for use in later functions.
-    census_and_by_lu_obj: base year land use object
+    Copy the relevant ABP files from import drive to by_lu_obj.home_folder for use in later functions.
+    by_lu_obj: base year land use object
     """
     logging.info('Running Step 3.2.1')
     print('Running Step 3.2.1')
 
-    # dest = census_and_by_lu_obj.home_folder
-    # files = pd.read_csv(census_and_by_lu_obj.addressbase_path_list)
+    # dest = by_lu_obj.home_folder
+    # files = pd.read_csv(by_lu_obj.addressbase_path_list)
     print('no longer copying into default iter folder')
 
     # for file in files.FilePath:
@@ -135,9 +141,9 @@ def copy_addressbase_files(by_lu_obj):
     audit_3_2_1_text = 'Step 3.2.1 currently does nothing, so there is nothing to audit'
     audit_3_2_1_content = '\n'.join([audit_3_2_1_header, audit_3_2_1_text])
     audit_3_2_1_path = os.path.join(by_lu_obj.out_paths['write_folder'],
-                                    copy_address_database_output_dir,
-                                    'Audits',
-                                    'Audit_3.2.1.txt')
+                                    audit_dir,
+                                    copy_address_database_dir,
+                                    ''.join(['Audit_3.2.1_', ModelYear, '.txt']))
     with open(audit_3_2_1_path, 'w') as text_file:
         text_file.write(audit_3_2_1_content)
 
@@ -150,8 +156,8 @@ def filled_properties(by_lu_obj):
     """
     This is a rough account for unoccupied properties using KS401UK at LSOA level to infer whether the properties
     have any occupants.
-    A standalone process which builds ProbabilityDwellfilled, used in apply_household_occupancy
-    census_and_by_lu_obj: base year land use object, which includes the following paths:
+    A standalone process which builds dwelling_filled_probability, used in apply_household_occupancy
+    by_lu_obj: base year land use object, which includes the following paths:
     zone_translation_path: correspondence between LSOAs and the zoning system (default MSOA)
     KS401path: csv file path for the census KS401 table
     """
@@ -193,17 +199,18 @@ def filled_properties(by_lu_obj):
     filled_properties_df = filled_properties_df.fillna(1)  # default to all Scottish properties being occupied
     # Adam - DONE, we need to think how to organise the structure of outputs files per step
     filled_properties_path = os.path.join(by_lu_obj.out_paths['write_folder'],
-                                          filled_properties_output_dir,
-                                          'ProbabilityDwellfilled.csv')
+                                          process_dir,
+                                          filled_properties_dir,
+                                          '_'.join(['gb_msoa', ModelYear, 'dwells_occ.csv']))
     filled_properties_df.to_csv(filled_properties_path, index=False)
 
     audit_3_2_2_header = 'Audit for Step 3.2.2\nCreated ' + str(datetime.datetime.now())
     audit_3_2_2_text = 'Step 3.2.2 currently has no audits listed, so there is nothing to audit'
     audit_3_2_2_content = '\n'.join([audit_3_2_2_header, audit_3_2_2_text])
     audit_3_2_2_path = os.path.join(by_lu_obj.out_paths['write_folder'],
-                                    filled_properties_output_dir,
-                                    'Audits',
-                                    'Audit_3.2.2.txt')
+                                    audit_dir,
+                                    filled_properties_dir,
+                                    ''.join(['Audit_3.2.2_', ModelYear, '.txt']))
     with open(audit_3_2_2_path, 'w') as text_file:
         text_file.write(audit_3_2_2_content)
 
@@ -275,7 +282,7 @@ def lsoa_census_data_prep(dat_path,
 
 # Sub-sub-function used by apply_household_occupancy, called by balance_missing_hops.
 # Not called directly by census_lu.py
-def zone_up(census_and_by_lu_obj, cpt_data, grouping_col='msoaZoneID'):
+def zone_up(by_lu_obj, cpt_data, grouping_col='msoaZoneID'):
     """
     Function to raise up a level of spatial aggregation & aggregate at that level, then bring new factors back down
     # TODO: Might be nice to have this zone up any level of zonal aggregation
@@ -283,7 +290,7 @@ def zone_up(census_and_by_lu_obj, cpt_data, grouping_col='msoaZoneID'):
     """
     logging.info('Running zone_up function')
     print('Running zone_up function')
-    zone_translation_path = census_and_by_lu_obj.zones_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv'
+    zone_translation_path = by_lu_obj.zones_folder + 'Export/msoa_to_lsoa/msoa_to_lsoa.csv'
     zone_translation = pd.read_csv(zone_translation_path)
     zone_translation = zone_translation.rename(columns={'lsoa_zone_id': 'lsoaZoneID',
                                                         'msoa_zone_id': 'msoaZoneID'})
@@ -330,18 +337,18 @@ def aggregate_cpt(cpt_data,
     return agg_data
 
 
-def balance_missing_hops(census_and_by_lu_obj, cpt_data, grouping_col='msoaZoneID'):
+def balance_missing_hops(by_lu_obj, cpt_data, grouping_col='msoaZoneID'):
     """
     # TODO: Replace global with LAD or Country - likely to be marginal improvements. Currently UK-wide
     This resolves the  msoa/lad household occupancy
     """
     logging.info('Running function balanced_missing_hops')
     print('Running function balanced_missing_hops')
-    msoa_agg = zone_up(census_and_by_lu_obj, cpt_data, grouping_col=grouping_col)
+    msoa_agg = zone_up(by_lu_obj, cpt_data, grouping_col=grouping_col)
     msoa_agg = msoa_agg.loc[:, [grouping_col, 'census_property_type',
                                 'household_occupancy']].rename(columns={'household_occupancy': 'msoa_ho'})
 
-    global_agg = zone_up(census_and_by_lu_obj, cpt_data, grouping_col=grouping_col)
+    global_agg = zone_up(by_lu_obj, cpt_data, grouping_col=grouping_col)
     global_agg = aggregate_cpt(global_agg, grouping_col=None)
     global_agg = global_agg.loc[:, ['census_property_type',
                                     'household_occupancy']].rename(columns={'household_occupancy': 'global_ho'})
@@ -361,7 +368,7 @@ def balance_missing_hops(census_and_by_lu_obj, cpt_data, grouping_col='msoaZoneI
     return cpt_data
 
 
-def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=True):
+def apply_household_occupancy(by_lu_obj, do_import=False, write_out=True):
     """
     Import household occupancy data and apply to property data.
     """
@@ -373,9 +380,11 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
     print('Running Step 3.2.3')
 
     if do_import:
-        balanced_cpt_data = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                     apply_household_occupancy_output_dir,
-                                                     'GBHouseHoldOccupancy2011.csv'))
+        # TODO: Consider making 2011 a variable (i.e. Census Year)
+        balanced_cpt_data = pd.read_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                     process_dir,
+                                                     apply_household_occupancy_dir,
+                                                     'gb_msoa_prt_2011_occupancy.csv'))
     else:
         # TODO: put in constants
         EWQS401 = 'QS401UK_LSOA.csv'
@@ -384,25 +393,27 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
         SQS402 = 'QS402UK_DZ_2011.csv'
 
         # Import census household data
-        census_dat = census_and_by_lu_obj.import_folder + 'Nomis Census 2011 Head & Household'
+        census_dat = by_lu_obj.import_folder + 'Nomis Census 2011 Head & Household'
         cpt_data = lsoa_census_data_prep(census_dat, [EWQS401, SQS401], [EWQS402, SQS402],
                                          geography=_default_lsoaRef)
 
         # Zone up here to MSOA aggregations
-        balanced_cpt_data = balance_missing_hops(census_and_by_lu_obj, cpt_data, grouping_col='msoaZoneID')
+        balanced_cpt_data = balance_missing_hops(by_lu_obj, cpt_data, grouping_col='msoaZoneID')
         balanced_cpt_data = balanced_cpt_data.fillna(0)
 
         # Read the filled property adjustment back in and apply it to household occupancy
-        probability_filled = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                      filled_properties_output_dir,
-                                                      'ProbabilityDwellfilled.csv'))
+        probability_filled = pd.read_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                      process_dir,
+                                                      filled_properties_dir,
+                                                      '_'.join(['gb_msoa', ModelYear, 'dwells_occ.csv'])))
         balanced_cpt_data = balanced_cpt_data.merge(probability_filled, how='outer', on='msoaZoneID')
         balanced_cpt_data['household_occupancy'] = (balanced_cpt_data['household_occupancy'] *
                                                     balanced_cpt_data['Prob_DwellsFilled'])
         balanced_cpt_data = balanced_cpt_data.drop(columns={'Prob_DwellsFilled'})
-        balanced_cpt_data.to_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                              apply_household_occupancy_output_dir,
-                                              'GBHouseHoldOccupancy2011.csv'), index=False)
+        balanced_cpt_data.to_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                              process_dir,
+                                              apply_household_occupancy_dir,
+                                              'gb_msoa_prt_2011_occupancy.csv'), index=False)
 
     # Visual spot checks - count zones, check cpt
     audit = balanced_cpt_data.groupby(['msoaZoneID']).count().reset_index()
@@ -415,7 +426,7 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
     balanced_cpt_data = balanced_cpt_data.merge(uk_msoa, how='left', on='msoaZoneID').drop('objectid', axis=1)
 
     # Join MSOA to lad translation
-    lad_translation = pd.read_csv(census_and_by_lu_obj.zones_folder + 'Export/lad_to_msoa/lad_to_msoa.csv')
+    lad_translation = pd.read_csv(by_lu_obj.zones_folder + 'Export/lad_to_msoa/lad_to_msoa.csv')
     lad_translation = lad_translation.rename(columns={'lad_zone_id': 'ladZoneID', 'msoa_zone_id': 'msoaZoneID'})
     lad_translation = lad_translation[['ladZoneID', 'msoaZoneID']]
     balanced_cpt_data = balanced_cpt_data.merge(lad_translation, how='left', on='msoaZoneID')
@@ -434,7 +445,7 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
 
     # Read in HOPS growth data
     balanced_cpt_data = balanced_cpt_data.drop(['ladZoneID', 'objectid'], axis=1)
-    hops_path = census_and_by_lu_obj.import_folder + 'HOPs/hops_growth_factors.csv'
+    hops_path = by_lu_obj.import_folder + 'HOPs/hops_growth_factors.csv'
     hops_growth = pd.read_csv(hops_path)[['Area code', '_'.join(['11_to', ModelYear[-2:]])]]
 
     # Uplift the figures to the Base Year
@@ -443,19 +454,20 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
                                                 how='left', left_on='lad17cd',
                                                 right_on='Area code').drop('Area code', axis=1).reset_index(drop=True)
 
-    balanced_cpt_data['household_occupancy_18'] = (balanced_cpt_data['household_occupancy'] *
-                                                   (1 + balanced_cpt_data['_'.join(['11_to', ModelYear[-2:]])]))
-    trim_cols = ['msoaZoneID', 'census_property_type', 'household_occupancy_18', 'ho_type']
+    balanced_cpt_data['_'.join(['household_occupancy', ModelYear[-2:]])] = (balanced_cpt_data['household_occupancy'] *
+                                                                            (1 + balanced_cpt_data[
+                                                                                '_'.join(['11_to', ModelYear[-2:]])]))
+    trim_cols = ['msoaZoneID', 'census_property_type', '_'.join(['household_occupancy', ModelYear[-2:]]), 'ho_type']
     balanced_cpt_data = balanced_cpt_data[trim_cols]
 
     # Read in all res property for the level of aggregation
     print('Reading in AddressBase extract')
     addressbase_extract_path = (lu_constants.ALL_RES_PROPERTY_PATH + '/allResProperty' +
-                                census_and_by_lu_obj.model_zoning + 'Classified.csv')
+                                by_lu_obj.model_zoning + 'Classified.csv')
     all_res_property = pd.read_csv(addressbase_extract_path)[['ZoneID', 'census_property_type', 'UPRN']]
     all_res_property = all_res_property.groupby(['ZoneID', 'census_property_type']).count().reset_index()
 
-    if census_and_by_lu_obj.model_zoning == 'MSOA':
+    if by_lu_obj.model_zoning == 'MSOA':
         all_res_property = all_res_property.merge(balanced_cpt_data,
                                                   how='inner',
                                                   left_on=['ZoneID', 'census_property_type'],
@@ -472,17 +484,18 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
 
         # allResPropertyZonal.merge(filled_properties, on = 'ZoneID')
         all_res_property['population'] = all_res_property['UPRN'] * all_res_property[
-            'household_occupancy_18']
+            '_'.join(['household_occupancy', ModelYear[-2:]])]
 
         # Create folder for exports (audits)
         arp_msoa_audit = all_res_property.groupby('ZoneID')['population'].sum().reset_index()
-        hpa_folder = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                  apply_household_occupancy_output_dir,
-                                  'Hops Population Audits')
+        hpa_folder = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                  audit_dir,
+                                  apply_household_occupancy_dir,
+                                  '_'.join(['audit_1_hops_population_audits', ModelYear]))
         utils.create_folder(hpa_folder)
         arp_msoa_audit_path = os.path.join(
             hpa_folder,
-            '_'.join([census_and_by_lu_obj.model_zoning, 'population_from', ModelYear, 'hops.csv']))
+            '_'.join(['audit_1-1_hops_gb', by_lu_obj.model_zoning.lower(), ModelYear, 'pop.csv']))
         arp_msoa_audit.to_csv(arp_msoa_audit_path, index=False)
 
         arp_msoa_audit_total = arp_msoa_audit['population'].sum()
@@ -490,22 +503,25 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
         audit_3_2_3_text = 'The total arp population is currently: ' + str(arp_msoa_audit_total)
         audit_3_2_3_text2 = 'A zonal breakdown of the arp population has been created here:'
         audit_3_2_3_content = '\n'.join([audit_3_2_3_header, audit_3_2_3_text, audit_3_2_3_text2, arp_msoa_audit_path])
-        audit_3_2_3_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                        apply_household_occupancy_output_dir,
-                                        'Audits',
-                                        'Audit_3.2.3.txt')
+        audit_3_2_3_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                        audit_dir,
+                                        apply_household_occupancy_dir,
+                                        ''.join(['Audit_3.2.3_', ModelYear, '.txt']))
         with open(audit_3_2_3_path, 'w') as text_file:
             text_file.write(audit_3_2_3_content)
 
         # Adam - DONE, we need to think how to organise the structure of outputs files per step
-        apply_household_occupancy_filename = 'classifiedResProperty' + census_and_by_lu_obj.model_zoning + '.csv'
-        apply_household_occupancy_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                      apply_household_occupancy_output_dir,
+        apply_household_occupancy_filename = '_'.join(['resi_gb',
+                                                       by_lu_obj.model_zoning.lower(),
+                                                       'prt', ModelYear, 'dwells+pop.csv'])
+        apply_household_occupancy_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                      process_dir,
+                                                      apply_household_occupancy_dir,
                                                       apply_household_occupancy_filename)
         if write_out:
             all_res_property.to_csv(apply_household_occupancy_path, index=False)
 
-        census_and_by_lu_obj.state['3.2.3 household occupancy adjustment'] = 1  # record that this process has been run
+        by_lu_obj.state['3.2.3 household occupancy adjustment'] = 1  # record that this process has been run
         logging.info('Step 3.2.3 completed')
         print('Step 3.2.3 completed')
         return all_res_property
@@ -515,7 +531,7 @@ def apply_household_occupancy(census_and_by_lu_obj, do_import=False, write_out=T
         print("No support for this zoning system")  # only the MSOA zoning system is supported at the moment
 
 
-def property_type_mapping(census_and_by_lu_obj):
+def property_type_mapping(by_lu_obj):
     """
     Combines all flats into one category, i.e. property types = 4,5,6 and 7.
     """
@@ -523,29 +539,35 @@ def property_type_mapping(census_and_by_lu_obj):
     logging.info('Running Step 3.2.4')
     print('Running Step 3.2.4')
 
-    classified_res_property_import_filename = 'classifiedResProperty' + census_and_by_lu_obj.model_zoning + '.csv'
-    classified_res_property_import_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                       apply_household_occupancy_output_dir,
+    classified_res_property_import_filename = '_'.join(['resi_gb', by_lu_obj.model_zoning.lower(),
+                                                        'prt', ModelYear, 'dwells+pop.csv'])
+    classified_res_property_import_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                       process_dir,
+                                                       apply_household_occupancy_dir,
                                                        classified_res_property_import_filename)
 
-    crp_cols = ['ZoneID', 'census_property_type', 'UPRN', 'household_occupancy_18', 'population']
+    crp_cols = ['ZoneID', 'census_property_type', 'UPRN',
+                '_'.join(['household_occupancy', ModelYear[-2:]]), 'population']
     crp = pd.read_csv(classified_res_property_import_path)[crp_cols]
     crp_for_audit = crp.copy()
     # crp = crp.rename(columns={'census_property_type': 'property_type'})
     # Combine all flat types (4,5,6) and type 7.
     # Combine 4,5,6 and 7 dwelling types to 4.
     crp['census_property_type'] = crp['census_property_type'].map(lu_constants.PROPERTY_TYPE)
-    crp['popXocc'] = crp['population'] * crp['household_occupancy_18']
+    crp['popXocc'] = crp['population'] * crp['_'.join(['household_occupancy', ModelYear[-2:]])]
     crp = crp.groupby(['ZoneID', 'census_property_type']).sum().reset_index()
-    crp['household_occupancy_18'] = crp['popXocc'] / crp['population']  # compute the weighted average occupancy
+    # compute the weighted average occupancy
+    crp['_'.join(['household_occupancy', ModelYear[-2:]])] = crp['popXocc'] / crp['population']
     crp = crp.drop('popXocc', axis=1)
     logging.info('Population currently {}'.format(crp.population.sum()))
     processed_crp_for_audit = crp.copy()
 
     # Adam - DONE, we need to think how to organise the structure of outputs files per step
-    land_use_formatting_filename = 'classifiedResProperty_Flatscombined' + census_and_by_lu_obj.model_zoning + '.csv'
-    land_use_formatting_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                            land_use_formatting_output_dir,
+    land_use_formatting_filename = '_'.join(['resi_gb', by_lu_obj.model_zoning.lower(),
+                                             'agg_prt', ModelYear, 'dwells+pop.csv'])
+    land_use_formatting_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                            process_dir,
+                                            land_use_formatting_dir,
                                             land_use_formatting_filename)
     crp.to_csv(land_use_formatting_path, index=False)
 
@@ -562,10 +584,11 @@ def property_type_mapping(census_and_by_lu_obj):
                                          ) / crp_for_audit['Population_from_3.2.3']
     crp_params_to_check = ['Properties', 'Population']
 
-    audit_land_use_formatting_filename = 'Audit_' + census_and_by_lu_obj.model_zoning + '_Zonal_Properties+Pop.csv'
-    audit_land_use_formatting_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                  land_use_formatting_output_dir,
-                                                  'Audits',
+    audit_land_use_formatting_filename = '_'.join(['audit_2_gb', by_lu_obj.model_zoning.lower(),
+                                                   'agg_prt', ModelYear, 'dwells+pop.csv'])
+    audit_land_use_formatting_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                  audit_dir,
+                                                  land_use_formatting_dir,
                                                   audit_land_use_formatting_filename)
     crp_for_audit.to_csv(audit_land_use_formatting_path, index=False)
 
@@ -591,20 +614,20 @@ def property_type_mapping(census_and_by_lu_obj):
     audit_3_2_4_content = '\n'.join([audit_3_2_4_header, audit_3_2_4_text_properties, audit_3_2_4_text_pop,
                                      audit_3_2_4_text_zonal_min_max_means, audit_3_2_4_text_zonal,
                                      audit_land_use_formatting_path, audit_3_2_4_text_final])
-    audit_3_2_4_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                    land_use_formatting_output_dir,
-                                    'Audits',
-                                    'Audit_3.2.4.txt')
+    audit_3_2_4_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                    audit_dir,
+                                    land_use_formatting_dir,
+                                    ''.join(['Audit_3.2.4_', ModelYear, '.txt']))
     with open(audit_3_2_4_path, 'w') as text_file:
         text_file.write(audit_3_2_4_content)
 
-    census_and_by_lu_obj.state['3.2.4 property type mapping'] = 1
+    by_lu_obj.state['3.2.4 property type mapping'] = 1
     logging.info('Step 3.2.4 completed')
     print('Step 3.2.4 completed')
     return crp
 
 
-def mye_aps_process(census_and_by_lu_obj,
+def mye_aps_process(by_lu_obj,
                     function_that_called_me,
                     mye_aps_process_dir):
     logging.info('Running MYE_APS process function')
@@ -640,6 +663,7 @@ def mye_aps_process(census_and_by_lu_obj,
     nomis_base_year_mye_pop_by_la.rename(columns={'Unnamed: 1': '2021_LA'}, inplace=True)
 
     def process_age_based_pop(padp_df):
+        # Now begin manipulation
         padp_df['16-74'] = (padp_df['Aged 16 to 64'].astype(int) +
                             padp_df['Aged 65-69'].astype(int) +
                             padp_df['Aged 70-74'].astype(int))
@@ -769,7 +793,7 @@ def mye_aps_process(census_and_by_lu_obj,
     # Process APS data
 
     # Remove the Isles of Scilly with UK average data (as it's missing in APS data)
-    # Also stip the totals row
+    # Also strip the totals row
     aps_ftpt_gender_base_year_to_use = aps_ftpt_gender_base_year.copy()
     aps_ftpt_gender_base_year_to_use.dropna(inplace=True)  # Drops total column
     # Following lines not required unless you wish to interrogate some of the checking dfs in more detail
@@ -785,6 +809,13 @@ def mye_aps_process(census_and_by_lu_obj,
     aps_ftpt_gender_base_year_uk_ave_cols = list(aps_ftpt_gender_base_year_to_use.columns)
     aps_ftpt_gender_base_year_uk_ave_cols = aps_ftpt_gender_base_year_uk_ave_cols[2:]
     aps_ftpt_gender_base_year_to_use.replace(',', '', regex=True, inplace=True)
+    # # indicates data that is deemed 'statistically unreliable' by ONS.
+    # It occurs in only 2 locations, mostly in the south in the columns
+    # we are interested in here. Whilst a more robust approach might be
+    # to estimate a figure to replace it, it is being set to 0 here for
+    # simplicity, as any other approach would require bespoke solutions
+    # for each instance.
+    aps_ftpt_gender_base_year_to_use.replace('#', '0', regex=True, inplace=True)
     # ! indicate a small (0-2) sample size. Setting values to 0 where this occurs
     aps_ftpt_gender_base_year_to_use.replace('!', '0', regex=True, inplace=True)
     # Ditto for *, but sample size is in range 3-9. Setting values to 0 here too...
@@ -794,6 +825,11 @@ def mye_aps_process(census_and_by_lu_obj,
     # Also, all numbers in this dataset should be +ve, so no risk of removing
     # -ve values!
     aps_ftpt_gender_base_year_to_use.replace('-', '0', regex=True, inplace=True)
+    # ~ indicates an absolute value <500. It occurs only in the 'Males
+    # part time employment' column for the Outer Hebrides. As the Outer
+    # Hebrides are not famed for having a large part time workforce,
+    # setting this to 0 too.
+    aps_ftpt_gender_base_year_to_use.replace('~', '0', inplace=True)
     aps_ftpt_gender_base_year_to_use[aps_ftpt_gender_base_year_uk_ave_cols] = aps_ftpt_gender_base_year_to_use[
         aps_ftpt_gender_base_year_uk_ave_cols].astype(float)
     # Re-instate all the examples of '-' LAD in names
@@ -1135,8 +1171,14 @@ def mye_aps_process(census_and_by_lu_obj,
     # Later on can multiply this by APS proportion of workers who are over 16
     working_age_pop_by_la_uk = nomis_base_year_mye_pop_by_la_gb.copy()
     working_age_pop_by_la_uk = working_age_pop_by_la_uk[['2021_LA', 'Aged 16+', 'All Ages']]
+    # 2018 data are (somehow!) formatted as strings with 1000 (comma) separators! 2019 is not.
+    # Need to reformat to remove commas in 2018.
+    working_age_pop_by_la_uk['Aged 16+'] = working_age_pop_by_la_uk['Aged 16+'].astype(str)
     working_age_pop_by_la_uk['Aged 16+'] = working_age_pop_by_la_uk['Aged 16+'].str.replace(',', '').astype(float)
+    working_age_pop_by_la_uk['All Ages'] = working_age_pop_by_la_uk['All Ages'].astype(str)
     working_age_pop_by_la_uk['All Ages'] = working_age_pop_by_la_uk['All Ages'].str.replace(',', '').astype(float)
+    # Drop blank lines if any have made it through the reformatting process - trying to stop Scilly taking over!
+    working_age_pop_by_la_uk.dropna(axis=0, how='all', inplace=True)
     # Just create this column to hold the place for now
     working_age_pop_by_la_uk['Over_16_prop'] = 0
 
@@ -1146,6 +1188,7 @@ def mye_aps_process(census_and_by_lu_obj,
                                         working_age_pop_by_la_uk,
                                         how='right',
                                         on='2021_LA')
+
     working_age_pop_by_la_uk['LAD'].fillna("Isles of Scilly", inplace=True)
 
     aps_soc_to_merge = aps_soc_to_use.copy()
@@ -1210,6 +1253,7 @@ def mye_aps_process(census_and_by_lu_obj,
                                                                                  axis='index')
     hhr_worker_by_d['Checksum'] = ((hhr_worker_by_d['Worker'] * 2) -
                                    hhr_worker_by_d[hhr_worker_type].sum(axis=1))
+
     if (abs(max(hhr_worker_by_d['Checksum'])) < 0.000001 and
             abs(min(hhr_worker_by_d['Checksum'])) < 0.000001):
         logging.info('Worker proportions summed to total')
@@ -1329,17 +1373,21 @@ def mye_aps_process(census_and_by_lu_obj,
     pe_dag['a'] = pe_dag['ag'].map(a)
     pe_dag['g'] = pe_dag['ag'].map(g)
     pe_dag = pe_dag[['2021_LA_code', 'a', 'g', 'HHR_pop']]
-    pe_dag.to_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                               mye_pop_compiled_output_dir,
-                               ModelYear + '_HHR_pop_by_dag.csv'))
+    pe_dag.to_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                               audit_dir,
+                               mye_pop_compiled_dir,
+                               '_'.join(['audit_3_gb_dag', ModelYear, 'hh_pop.csv'])))
 
     # Printing outputs
     # Adam - DONE, we need to think how to organise the structure of outputs files per step
-    full_mye_aps_process_dir = os.path.join(census_and_by_lu_obj.out_paths['write_folder'], mye_aps_process_dir)
-    hhr_vs_all_pop_name = ModelYear + '_total_pop_vs_HHR_total.csv'
-    hhr_worker_by_d_for_export_name = r'MYE_APS_LA_Worker_scriptoutput.csv'
-    hhr_nonworker_by_d_for_export_name = r'MYE_APS_LA_NonWorker_scriptoutput.csv'
-    la_info_for_2021_name = r'2021LAID_LAcode_LAname.csv'
+    full_mye_aps_process_dir = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                            process_dir,
+                                            mye_aps_process_dir)
+    hhr_vs_all_pop_name = '_'.join(['gb', by_lu_obj.model_zoning.lower(),
+                                    ModelYear, 'pop+hh_pop.csv'])
+    hhr_worker_by_d_for_export_name = '_'.join(['mye_gb_d', ModelYear, 'wkrs_tot+by_ag.csv'])
+    hhr_nonworker_by_d_for_export_name = '_'.join(['mye_gb_d', ModelYear, 'nwkrs_tot+by_ag.csv'])
+    la_info_for_2021_name = r'lookup_gb_2021_lad_to_d.csv'
 
     # Export only the requested outputs
     mye_aps_logging_string = 'The MYE_APS_process completed after being called by'
@@ -1387,7 +1435,7 @@ def mye_aps_process(census_and_by_lu_obj,
     return mye_aps_process_output
 
 
-def ntem_pop_interpolation(census_and_by_lu_obj, calling_functions_output_dir):
+def ntem_pop_interpolation(by_lu_obj, calling_functions_dir):
     """
     Process population data from NTEM CTripEnd database:
     Interpolate population to the target year, in this case it is for the base year, as databases
@@ -1410,13 +1458,14 @@ def ntem_pop_interpolation(census_and_by_lu_obj, calling_functions_output_dir):
     else:
         pass
 
-    Output_Folder = census_and_by_lu_obj.out_paths['write_folder']
+    iter_folder = by_lu_obj.out_paths['write_folder']
     logging.info('NTEM_Pop_Interpolation output being written in:')
-    logging.info(Output_Folder)
-    LogFile = os.path.join(Output_Folder, calling_functions_output_dir, 'NTEM_Pop_Interpolation_LogFile.txt')
+    logging.info(iter_folder)
+    LogFile = os.path.join(iter_folder, audit_dir, calling_functions_dir, ''.join(['NTEM_Pop_Interpolation_LogFile_',
+                                                                                   ModelYear, '.txt']))
     # 'I:/NorMITs Synthesiser/Zone Translation/'
-    Zone_path = census_and_by_lu_obj.zones_folder + 'Export/ntem_to_msoa/ntem_msoa_pop_weighted_lookup.csv'
-    Pop_Segmentation_path = census_and_by_lu_obj.import_folder + 'CTripEnd/Pop_Segmentations.csv'
+    Zone_path = by_lu_obj.zones_folder + 'Export/ntem_to_msoa/ntem_msoa_pop_weighted_lookup.csv'
+    Pop_Segmentation_path = by_lu_obj.import_folder + 'CTripEnd/Pop_Segmentations.csv'
     with open(LogFile, 'w') as o:
         o.write("Notebook run on - " + str(datetime.datetime.now()) + "\n")
         o.write("\n")
@@ -1441,8 +1490,8 @@ def ntem_pop_interpolation(census_and_by_lu_obj, calling_functions_output_dir):
 
     # Import Upper and Lower Year Tables
     # 'I:/Data/NTEM/NTEM 7.2 outputs for TfN/'
-    LowerNTEMDatabase = census_and_by_lu_obj.CTripEnd_Database_path + 'CTripEnd7_' + str(LowerYear) + '.accdb'
-    UpperNTEMDatabase = census_and_by_lu_obj.CTripEnd_Database_path + 'CTripEnd7_' + str(UpperYear) + '.accdb'
+    LowerNTEMDatabase = by_lu_obj.CTripEnd_Database_path + 'CTripEnd7_' + str(LowerYear) + '.accdb'
+    UpperNTEMDatabase = by_lu_obj.CTripEnd_Database_path + 'CTripEnd7_' + str(UpperYear) + '.accdb'
     # UpperNTEMDatabase = by_lu_obj.CTripEnd_Database_path + r"\CTripEnd7_" + str(UpperYear) + r".accdb"
     cnxn = pyodbc.connect('DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' +
                           '{};'.format(UpperNTEMDatabase))
@@ -1528,25 +1577,25 @@ def ntem_pop_interpolation(census_and_by_lu_obj, calling_functions_output_dir):
     Export_SummaryPop = TZonePop_DataYear.groupby(['TravellerType', 'NTEM_TT_Name']).sum()
     print(Export_SummaryPop.Population.sum())
     # Export_SummaryPop.drop(['msoaZoneID'], inplace=True, axis=1)
-    PopOutput = "NTEM_{}_Population.csv".format(Year)
+    PopOutput = '_'.join(['ntem_gb_z_areatype_ntem_tt', str(Year), 'pop.csv'])
 
-    with open(os.path.join(Output_Folder, calling_functions_output_dir, PopOutput), "w", newline='') as f:
+    with open(os.path.join(iter_folder, process_dir, calling_functions_dir, PopOutput), "w", newline='') as f:
         TZonePop_DataYear.to_csv(f, header=True, sep=",")
     f.close()
 
-    with open(LogFile, "a") as o:
-        o.write("Total Population: \n")
+    with open(LogFile, 'a') as o:
+        o.write('Total Population: \n')
         Export_SummaryPop.to_csv(o, header=False, sep="-")
-        o.write("\n")
-        o.write("\n")
-    print("Export complete.")
+        o.write('\n')
+        o.write('\n')
+    print('Export complete.')
     print(NTEM_HHpop.head(5))
     logging.info('NTEM_Pop_Interpolation function complete')
     print('NTEM_Pop_Interpolation function complete')
     return NTEM_HHpop
 
 
-def mye_pop_compiled(census_and_by_lu_obj):
+def mye_pop_compiled(by_lu_obj):
     logging.info('Running Step 3.2.5')
     print('Running Step 3.2.5')
     mye_pop_compiled_name = 'MYE_pop_compiled'
@@ -1563,9 +1612,11 @@ def mye_pop_compiled(census_and_by_lu_obj):
     # False means "read in from memory" and is the default.
     read_base_year_pop_msoa_path_file = False
     if read_base_year_pop_msoa_path_file:
-        mye_msoa_pop_name = '_'.join([ModelYear, 'total_pop_vs_HHR_total.csv'])
-        mye_msoa_pop = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                mye_pop_compiled_output_dir,
+        mye_msoa_pop_name = '_'.join(['gb', by_lu_obj.model_zoning.lower(),
+                                      ModelYear, 'pop+hh_pop.csv'])
+        mye_msoa_pop = pd.read_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                process_dir,
+                                                mye_pop_compiled_dir,
                                                 mye_msoa_pop_name))
         logging.info('Step 3.2.5 read in data processed by step the APS compiling function through an existing csv')
         logging.info('WARNING - This is not the default way of reading this data!')
@@ -1573,7 +1624,7 @@ def mye_pop_compiled(census_and_by_lu_obj):
     else:
         logging.info(
             'Step 3.2.5 is calling step the APS compiling function in order to obtain Base Year population data')
-        mye_msoa_pop = mye_aps_process(census_and_by_lu_obj, mye_pop_compiled_name, mye_pop_compiled_output_dir)
+        mye_msoa_pop = mye_aps_process(by_lu_obj, mye_pop_compiled_name, mye_pop_compiled_dir)
         logging.info('Step 3.2.5 successfully read in data processed by the MYE_APS_prcoess function')
         logging.info('from internal memory')
 
@@ -1582,7 +1633,7 @@ def mye_pop_compiled(census_and_by_lu_obj):
     # Call Step 3.2.4 to get crp_pop
     logging.info('Step 3.2.5 is calling Step 3.2.4 to get crp_pop')
     print('Step 3.2.5 is calling Step 3.2.4 to get crp_pop')
-    crp_pop = property_type_mapping(census_and_by_lu_obj)
+    crp_pop = property_type_mapping(by_lu_obj)
     logging.info('Step 3.2.5 has called Step 3.2.4 and has obtained crp_pop')
     print('Step 3.2.5 has called Step 3.2.4 and has obtained crp_pop')
 
@@ -1604,7 +1655,7 @@ def mye_pop_compiled(census_and_by_lu_obj):
 
     # Car availability from NTEM
     # Read NTEM hh pop at NorMITs Zone level and make sure the zonal total is consistent to crp
-    ntem_hh_pop = ntem_pop_interpolation(census_and_by_lu_obj, mye_pop_compiled_output_dir)
+    ntem_hh_pop = ntem_pop_interpolation(by_lu_obj, mye_pop_compiled_dir)
 
     uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
     ntem_hh_pop = ntem_hh_pop.merge(uk_msoa, how='left', left_on='msoaZoneID', right_on='objectid')
@@ -1624,17 +1675,19 @@ def mye_pop_compiled(census_and_by_lu_obj):
     NTEM_HHpop_Total = NTEM_HHpop_Total.rename(columns={'Population': 'ZoneNTEMPop'})
     # print('Headings of NTEM_HHpop_Total')
     # print(NTEM_HHpop_Total.head(5))
-    NTEM_HHpop_Total.to_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                         mye_pop_compiled_output_dir,
-                                         'HHpop_NTEM_Total.csv'), index=False)
+    NTEM_HHpop_Total.to_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                         process_dir,
+                                         mye_pop_compiled_dir,
+                                         '_'.join(['ntem_gb_z', ModelYear, 'hh_pop.csv'])), index=False)
 
     Hhpop_Dt_Total = aj_crp.groupby(['ZoneID'])['population'].sum().reset_index()
     Hhpop_Dt_Total = Hhpop_Dt_Total.rename(columns={'population': 'ZonePop'})
     # print('Headings of Hhpop_Dt_Total')
     # print(Hhpop_Dt_Total.head(5))
-    Hhpop_Dt_Total.to_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                       mye_pop_compiled_output_dir,
-                                       'HHpop_Dt_Total.csv'), index=False)
+    Hhpop_Dt_Total.to_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                       process_dir,
+                                       mye_pop_compiled_dir,
+                                       '_'.join(['gb_msoa', ModelYear, 'hh_pop.csv'])), index=False)
 
     ntem_hh_pop = ntem_hh_pop.merge(NTEM_HHpop_Total, how='left', on=['msoaZoneID'])
     ntem_hh_pop = ntem_hh_pop.merge(Hhpop_Dt_Total, how='left', left_on=['msoa11cd'],
@@ -1658,9 +1711,10 @@ def mye_pop_compiled(census_and_by_lu_obj):
     logging.info(aj_crp.population.sum())
     logging.info('Population currently {}'.format(aj_crp.population.sum()))
     # Adam - DONE, we need to think how to organise the structure of outputs files per step
-    mye_pop_compiled_filename = 'classifiedResProperty_MYEcompiled_' + ModelYear + '.csv'
-    mye_pop_compiled_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                         mye_pop_compiled_output_dir,
+    mye_pop_compiled_filename = '_'.join(['gb_msoa_agg_prt', ModelYear, 'hh_pop.csv'])
+    mye_pop_compiled_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                         process_dir,
+                                         mye_pop_compiled_dir,
                                          mye_pop_compiled_filename)
     aj_crp.to_csv(mye_pop_compiled_path, index=False)
 
@@ -1689,15 +1743,15 @@ def mye_pop_compiled(census_and_by_lu_obj):
     audit_3_2_5_csv_mean = np.mean([audit_3_2_5_csv['MYE_vs_NTEM'].mean(),
                                     audit_3_2_5_csv['NTEM_vs_crp'].mean(),
                                     audit_3_2_5_csv['crp_vs_MYE'].mean()])
-    audit_3_2_5_csv_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                        mye_pop_compiled_output_dir,
-                                        'Audits',
-                                        'Audit_3.2.5_full_zonal_breakdown.csv')
+    audit_3_2_5_csv_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                        audit_dir,
+                                        mye_pop_compiled_dir,
+                                        '_'.join(['audit_4_mye_ntem_crp_comparison', ModelYear, 'pop.csv']))
     audit_3_2_5_csv.to_csv(audit_3_2_5_csv_path, index=False)
 
     audit_3_2_5_header = 'Audit for Step 3.2.5\nCreated ' + str(datetime.datetime.now())
     audit_3_2_5_text = '\n'.join(['The total ' + ModelYear + ' population from MYPE is: ' + str(
-                                      mye_msoa_pop.Total_Pop.sum()),
+        mye_msoa_pop.Total_Pop.sum()),
                                   'The total ' + ModelYear + ' household population from MYPE is: ' + str(
                                       mye_msoa_pop.Total_HHR.sum()),
                                   'The total ' + ModelYear + ' household population output from Step 3.2.5 is: ',
@@ -1712,45 +1766,45 @@ def mye_pop_compiled(census_and_by_lu_obj):
                                   'A full zonal breakdown of these metrics is presented in:',
                                   audit_3_2_5_csv_path])
     audit_3_2_5_content = '\n'.join([audit_3_2_5_header, audit_3_2_5_text])
-    audit_3_2_5_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                    mye_pop_compiled_output_dir,
-                                    'Audits',
-                                    'Audit_3.2.5.txt')
+    audit_3_2_5_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                    audit_dir,
+                                    mye_pop_compiled_dir,
+                                    ''.join(['Audit_3.2.5_', ModelYear, '.txt']))
     with open(audit_3_2_5_path, 'w') as text_file:
         text_file.write(audit_3_2_5_content)
 
-    ntem_hh_pop_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                    mye_pop_compiled_output_dir,
-                                    '_'.join(['NTEM_Population_MYEcompiled', ModelYear]))
+    ntem_hh_pop_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                    process_dir,
+                                    mye_pop_compiled_dir,
+                                    '_'.join(['ntem_gb_msoa_ntem_tt', ModelYear, 'mye_pop']))
     compress.write_out(ntem_hh_pop, ntem_hh_pop_path)
 
-    census_and_by_lu_obj.state['3.2.5 Uplifting Base Year population according to Base Year MYPE'] = 1
+    by_lu_obj.state['3.2.5 Uplifting Base Year population according to Base Year MYPE'] = 1
     logging.info('Step 3.2.5 completed')
     print('Step 3.2.5 completed')
     return [aj_crp, ntem_hh_pop, audit_mye_msoa_pop]
 
 
-def pop_with_full_dimensions(census_and_by_lu_obj):
+def pop_with_full_dimensions(by_lu_obj):
     """
     Function to join the bespoke census query to the classified residential property data.
     Problem here is that there are segments with attributed population coming in from the bespoke census query that
     don't have properties to join on. So we need classified properties by MSOA for this to work atm
-    TODO: make it work for zones other than MSOA
+    TODO: make it work for zones other than MSOA?
     ART, 12/11/2021 model_year moved defined at the head of this file. Can't find model_name!
     """
     logging.info('Running Step 3.2.6/3.2.7 function')
     print('Running Step 3.2.6/3.2.7 function')
 
-    # TODO - Sort out these filepaths a bit more permanently
-    output_NTEM_HHpop_filepath = 'NTEM_HHpop_Aj.csv'
-    input_NTEM_HHpop_filepath = r'I:\NorMITs Land Use\import\NorCOM outputs\NorCOM_TT_R20.csv'
+    # TODO - Sort out these filepaths a bit more permanently - may be redundant long term if NorCOM is integrated
+    output_NTEM_HHpop_filename = '_'.join(['output_0_ntem_gb_msoa_ntem_tt', ModelYear, 'aj_hh_pop.csv'])
+    input_NTEM_HHpop_filepath = os.path.join(
+        r'I:\NorMITs Land Use\import\NorCOM outputs', ModelYear, 'NorCOM_TT_output.csv')
 
     # TODO - Make this switching more robust
-    # Comment out one or the other of the following statements
-    # These select whether you are running NorMITs to MAKE NorCOM inputs
-    # or to UTILISE NorCOM inputs
-    # how_to_run = 'export to NorCOM'
-    how_to_run = 'import from NorCOM'
+    # Control now in by_lu.py
+    how_to_run = by_lu_obj.norcom
+    print(how_to_run)
 
     logging_how_to_run = ' '.join(['Running with section 3.2.6 set to', how_to_run])
     logging.info(logging_how_to_run)
@@ -1760,7 +1814,7 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
     #  3_2_6 to Step 3_2_5 at the last minute!
     logging.info('Step 3.2.6 is calling Step 3.2.5')
     print('Step 3.2.6 is calling Step 3.2.5')
-    call_3_2_5 = mye_pop_compiled(census_and_by_lu_obj)
+    call_3_2_5 = mye_pop_compiled(by_lu_obj)
     aj_crp = call_3_2_5[0]
     NTEM_HHpop = call_3_2_5[1]
     audit_original_hhpop = call_3_2_5[2]
@@ -1768,12 +1822,26 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
     print('Step 3.2.6 has completed its call of Step 3.2.5, Step 3.2.6 is continuing...')
 
     if how_to_run == 'export to NorCOM':
-        NTEM_HHpop.to_csv(output_NTEM_HHpop_filepath, index=False)
+        norcom_output_main_dir = r'I:\NorMITs Land Use\import\Base Year LU to NorCOM'
+        # iteration = by_lu_obj.out_paths['write_folder'].split(os.sep)[-1]
+        iteration = by_lu_obj.iteration
+        if not os.path.exists(os.path.join(norcom_output_main_dir, iteration)):
+            utils.create_folder(os.path.join(norcom_output_main_dir, iteration))
+        print('Dumping NorCOM output file to NorCOM input directory and main LU output directory...')
+        output_ntem_hhpop_filepath = os.path.join(norcom_output_main_dir, iteration, output_NTEM_HHpop_filename)
+        # Dump to a directory that NorCOM can find it in.
+        NTEM_HHpop.to_csv(output_ntem_hhpop_filepath, index=False)
+        # Also dump to the main iteration output directory
+        NTEM_HHpop.to_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                       output_dir,
+                                       output_NTEM_HHpop_filename))
+        print('Output dumped - script should be ending now...')
         # Testing for just Manchester
         # NTEM_HHpop_Aj_E02001045 = NTEM_HHpop[NTEM_HHpop['msoa11cd'] == 'E02001045']
-        # NTEM_HHpop_Aj_E02001045.to_csv('NTEM_HHpop_Aj_E02001045.csv', index=False)
+        # NTEM_HHpop_Aj_E02001045.to_csv('_'.join([
+        #     'output_0_ntem_gb_msoa_ntem_tt', ModelYear, 'aj_hh_pop_E02001045.csv']), index=False)
         logging.info('Step 3.2.6 completed')
-        logging.info('Dumped file "NTEM_HHpop_Aj.csv" for NorCOM')
+        logging.info(' '.join(['Dumped file', output_NTEM_HHpop_filename, 'for NorCOM']))
         logging.info('!!!!!! SERIOUS WARNING !!!!!!')
         logging.info('Any further functions that are called from this Land Use process are highly likely to be wrong!')
         # TODO - Call NorCOM script directly here? Then could remove if/else statement?
@@ -1818,6 +1886,7 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
                      'Household_composition_code': 'h',
                      'Employment_type_code': 'e',
                      'NorCOM_result': 'P_NTEM'})
+
         NTEM_HHpop_trim['z'] = NTEM_HHpop_trim['z'].astype(int)
         NTEM_HHpop_trim_iterator = zip(NTEM_HHpop_trim['z'],
                                        NTEM_HHpop_trim['a'],
@@ -1834,7 +1903,7 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
 
         # This is the 2011 Census Data coming in
         census_f_value = pd.read_csv(os.path.join(
-            census_and_by_lu_obj.import_folder, _census_f_value_path, 'NorMITs_2011_post_ipfn_f_values.csv'))
+            by_lu_obj.import_folder, _census_f_value_path, 'NorMITs_2011_post_ipfn_f_values.csv'))
         # census_f_value['z'] = census_f_value['z'].astype(int)
         census_f_value_iterator = zip(census_f_value['z'],
                                       census_f_value['a'],
@@ -1869,10 +1938,11 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         audit_3_2_6_csv_max = audit_3_2_6_csv['HH_pop_%age_diff'].max()
         audit_3_2_6_csv_min = audit_3_2_6_csv['HH_pop_%age_diff'].min()
         audit_3_2_6_csv_mean = audit_3_2_6_csv['HH_pop_%age_diff'].mean()
-        audit_3_2_6_csv_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                            pop_with_full_dims_output_dir,
-                                            'Audits',
-                                            'Audit_3.2.6_full_zonal_breakdown.csv')
+        audit_3_2_6_csv_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                            audit_dir,
+                                            pop_with_full_dims_dir,
+                                            '_'.join(['audit_5_gb_msoa_check_mye', ModelYear,
+                                                      'pop_vs_tfn_tt_agg_prt', ModelYear, 'pop.csv']))
         audit_3_2_6_csv.to_csv(audit_3_2_6_csv_path, index=False)
 
         audit_3_2_6_header = 'Audit for Step 3.2.6\nCreated ' + str(datetime.datetime.now())
@@ -1886,18 +1956,18 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
                                       'A full zonal breakdown of these metrics is presented in:',
                                       audit_3_2_6_csv_path])
         audit_3_2_6_content = '\n'.join([audit_3_2_6_header, audit_3_2_6_text])
-        audit_3_2_6_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                        pop_with_full_dims_output_dir,
-                                        'Audits',
-                                        'Audit_3.2.6.txt')
+        audit_3_2_6_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                        audit_dir,
+                                        pop_with_full_dims_dir,
+                                        ''.join(['Audit_3.2.6_', ModelYear, '.txt']))
         with open(audit_3_2_6_path, 'w') as text_file:
             text_file.write(audit_3_2_6_content)
 
-        pop_trim_with_full_dims_filename = '_'.join(['HhPop_trim_byfullNorMITsSegs_initial',
-                                                     ModelYear,
-                                                     census_and_by_lu_obj.model_zoning])
-        pop_trim_with_full_dims_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                    pop_with_full_dims_output_dir,
+        pop_trim_with_full_dims_filename = '_'.join(['gb', by_lu_obj.model_zoning.lower(),
+                                                     'tfn_tt_agg_prt', ModelYear, 'pop'])
+        pop_trim_with_full_dims_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                    process_dir,
+                                                    pop_with_full_dims_dir,
                                                     pop_trim_with_full_dims_filename)
         compress.write_out(NTEM_HHpop_trim, pop_trim_with_full_dims_path)
 
@@ -1914,9 +1984,10 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
                                                     'census_property_type': 't'})
         NTEM_HHpop_byDt = NTEM_HHpop_trim.groupby(['z', 't'])['P_aghetns'].sum().reset_index()
         NTEM_HHpop_byDt = NTEM_HHpop_byDt.rename(columns={'P_aghetns': 'P_t'})
-        NTEM_HHpop_byDt.to_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                            pop_with_full_dims_output_dir,
-                                            'NTEM_HHpop_byDt.csv'), index=False)
+        NTEM_HHpop_byDt.to_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                            process_dir,
+                                            pop_with_full_dims_dir,
+                                            '_'.join(['ntem_gb_z_t', ModelYear, 'hh_pop.csv'])), index=False)
 
         # Testing with Manchester
         # NTEM_HHpop_byDt_total_E02001045 = NTEM_HHpop_byDt[NTEM_HHpop_byDt['z'] == '1013']
@@ -1937,8 +2008,8 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
                             right_on=['MSOA', 't']).drop(
             columns={'MSOA', 'pop_aj_factor', 'Zone'}).rename(
             columns={'msoa11cd': 'MSOA'})
-        HHpop.loc[HHpop['household_occupancy_18'].isnull(),
-                  'household_occupancy_18'] = HHpop['t'].map(uk_ave_hh_occ.UK_average_hhocc)
+        HHpop.loc[HHpop['_'.join(['household_occupancy', ModelYear[-2:]])].isnull(),
+                  '_'.join(['household_occupancy', ModelYear[-2:]])] = HHpop['t'].map(uk_ave_hh_occ.UK_average_hhocc)
         HHpop.fillna({'properties': 0, 'crp_P_t': 0}, inplace=True)
 
         HHpop['P_aghetns_aj_factor'] = HHpop['crp_P_t'] / HHpop['P_t']
@@ -1959,10 +2030,11 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         # adjusted according to pop by dwelling type
         # Create and save an audit
         current_running_dir = os.getcwd()
-        pop_with_full_dims_second_dir_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                          pop_with_full_dims_second_output_dir)
-        os.chdir(os.path.join(pop_with_full_dims_second_dir_path, 'Audits'))
-        seg_folder = 'NTEM Segmentation Audits'
+        pop_with_full_dims_second_dir_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                          audit_dir,
+                                                          pop_with_full_dims_second_dir)
+        os.chdir(os.path.join(pop_with_full_dims_second_dir_path))
+        seg_folder = 'audit_6_ntem_segmentation_audits'
         utils.create_folder(seg_folder)
 
         ZonalTot = HHpop.groupby(['z', 'MSOA'])[['people', 'NTEM_HH_pop']].sum().reset_index()
@@ -1973,7 +2045,8 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         audit_ZonalTot_max = audit_ZonalTot['HH_pop_%age_diff'].max()
         audit_ZonalTot_min = audit_ZonalTot['HH_pop_%age_diff'].min()
         audit_ZonalTot_mean = audit_ZonalTot['HH_pop_%age_diff'].mean()
-        audit_ZonalTot.to_csv('Audit_3_2_7_HHpop_by_zone.csv', index=False)
+        audit_ZonalTot_filename = '_'.join(['audit_7_gb_msoa_check_mype_ntem_normits', ModelYear, 'hh_pop.csv'])
+        audit_ZonalTot.to_csv(audit_ZonalTot_filename, index=False)
 
         DT = HHpop.groupby(['z', 'MSOA', 't'])[['people', 'NTEM_HH_pop']].sum().reset_index()
         DT_check = DT.merge(ZonalTot, how='left', on=['z'])
@@ -1981,7 +2054,8 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         DT_check['NorMITs_profile'] = DT_check['people'] / DT_check['NorMITs_Zonal']
         DT_check['NTEM_profile'] = DT_check['NTEM_HH_pop'] / DT_check['NTEM_Zonal']
         DT_check['Profile_Perdiff'] = DT_check['NorMITs_profile'] / DT_check['NTEM_profile'] - 1
-        DT_check.to_csv(seg_folder + '/Zone_check_byDT.csv', index=False)
+        DT_check.to_csv(''.join([seg_folder, '/audit_6-1_ntem_gb_msoa_agg_prt_', ModelYear, '_pop_check.csv']),
+                        index=False)
 
         Cars = HHpop.groupby(['z', 'MSOA', 'Household_car'])[['people', 'NTEM_HH_pop']].sum().reset_index()
         Cars_check = Cars.merge(ZonalTot, how='left', on=['z'])
@@ -1989,7 +2063,8 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         Cars_check['NorMITs_profile'] = Cars_check['people'] / Cars_check['NorMITs_Zonal']
         Cars_check['NTEM_profile'] = Cars_check['NTEM_HH_pop'] / Cars_check['NTEM_Zonal']
         Cars_check['Profile_Perdiff'] = Cars_check['NorMITs_profile'] / Cars_check['NTEM_profile'] - 1
-        Cars_check.to_csv(seg_folder + '/Zone_check_byCars.csv', index=False)
+        Cars_check.to_csv(''.join([seg_folder, '/audit_6-2_ntem_gb_msoa_car_avail_', ModelYear, '_pop_check.csv']),
+                          index=False)
 
         HHsize = HHpop.groupby(['z', 'MSOA', 'Household_size'])[['people', 'NTEM_HH_pop']].sum().reset_index()
         HHsize_check = HHsize.merge(ZonalTot, how='left', on=['z'])
@@ -1997,7 +2072,8 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         HHsize_check['NorMITs_profile'] = HHsize_check['people'] / HHsize_check['NorMITs_Zonal']
         HHsize_check['NTEM_profile'] = HHsize_check['NTEM_HH_pop'] / HHsize_check['NTEM_Zonal']
         HHsize_check['Profile_Perdiff'] = HHsize_check['NorMITs_profile'] / HHsize_check['NTEM_profile'] - 1
-        HHsize_check.to_csv(seg_folder + '/Zone_check_byHHsize.csv', index=False)
+        HHsize_check.to_csv(''.join([seg_folder, '/audit_6-3_ntem_gb_msoa_hh_size_', ModelYear, '_pop_check.csv']),
+                            index=False)
 
         HH_composition = HHpop.groupby(['z', 'MSOA', 'h'])[['people', 'NTEM_HH_pop']].sum().reset_index()
         HH_composition_check = HH_composition.merge(ZonalTot, how='left', on=['z'])
@@ -2006,7 +2082,8 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         HH_composition_check['NTEM_profile'] = HH_composition_check['NTEM_HH_pop'] / HH_composition_check['NTEM_Zonal']
         HH_composition_check['Profile_Perdiff'] = (HH_composition_check['NorMITs_profile'] /
                                                    HH_composition_check['NTEM_profile']) - 1
-        HH_composition_check.to_csv(seg_folder + '/Zone_check_byHH_composition.csv', index=False)
+        HH_composition_check.to_csv(
+            ''.join([seg_folder, '/audit_6-4_ntem_gb_msoa_hh_comp_', ModelYear, '_pop_check.csv']), index=False)
 
         Age = HHpop.groupby(['z', 'MSOA', 'a'])[['people', 'NTEM_HH_pop']].sum().reset_index()
         Age_check = Age.merge(ZonalTot, how='left', on=['z'])
@@ -2014,7 +2091,8 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         Age_check['NorMITs_profile'] = Age_check['people'] / Age_check['NorMITs_Zonal']
         Age_check['NTEM_profile'] = Age_check['NTEM_HH_pop'] / Age_check['NTEM_Zonal']
         Age_check['Profile_Perdiff'] = Age_check['NorMITs_profile'] / Age_check['NTEM_profile'] - 1
-        Age_check.to_csv(seg_folder + '/Zone_check_byAge.csv', index=False)
+        Age_check.to_csv(''.join([seg_folder, '/audit_6-5_ntem_gb_msoa_age_', ModelYear, '_pop_check.csv']),
+                         index=False)
 
         Gender = HHpop.groupby(['z', 'MSOA', 'g'])[['people', 'NTEM_HH_pop']].sum().reset_index()
         Gender_check = Gender.merge(ZonalTot, how='left', on=['z'])
@@ -2022,7 +2100,8 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         Gender_check['NorMITs_profile'] = Gender_check['people'] / Gender_check['NorMITs_Zonal']
         Gender_check['NTEM_profile'] = Gender_check['NTEM_HH_pop'] / Gender_check['NTEM_Zonal']
         Gender_check['Profile_Perdiff'] = Gender_check['NorMITs_profile'] / Gender_check['NTEM_profile'] - 1
-        Gender_check.to_csv(seg_folder + '/Zone_check_byGender.csv', index=False)
+        Gender_check.to_csv(''.join([seg_folder, '/audit_6-6_ntem_gb_msoa_gender_', ModelYear, '_pop_check.csv']),
+                            index=False)
 
         Employment = HHpop.groupby(['z', 'MSOA', 'e'])[['people', 'NTEM_HH_pop']].sum().reset_index()
         Employment_check = Employment.merge(ZonalTot, how='left', on=['z'])
@@ -2030,7 +2109,8 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         Employment_check['NorMITs_profile'] = Employment_check['people'] / Employment_check['NorMITs_Zonal']
         Employment_check['NTEM_profile'] = Employment_check['NTEM_HH_pop'] / Employment_check['NTEM_Zonal']
         Employment_check['Profile_Perdiff'] = Employment_check['NorMITs_profile'] / Employment_check['NTEM_profile'] - 1
-        Employment_check.to_csv(seg_folder + '/Zone_check_byEmployment.csv', index=False)
+        Employment_check.to_csv(
+            ''.join([seg_folder, '/audit_6-7_ntem_gb_msoa_employment_', ModelYear, '_pop_check.csv']), index=False)
 
         audit_3_2_7_header = 'Audit for Step 3.2.7\nCreated ' + str(datetime.datetime.now())
         audit_3_2_7_text = '\n'.join(['>>> IMPORTANT NOTE <<<',
@@ -2046,13 +2126,13 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
                                       '\tMean percentage diff: ' + str(audit_ZonalTot_mean * 100) + '%',
                                       'These percentage differences should be equal (or close to) 0.',
                                       'A full zonal breakdown of these differences can be found here:',
-                                      os.path.join(os.getcwd(), 'Audit_3_2_7_HHpop_by_zone.csv'),
+                                      os.path.join(os.getcwd(), audit_ZonalTot_filename),
                                       'Additionally, number of segmentation audits have also been produced.',
                                       'These can be found in:',
                                       os.path.join(os.getcwd(), seg_folder),
                                       'Again, the differences are expected to be small.'])
         audit_3_2_7_content = '\n'.join([audit_3_2_7_header, audit_3_2_7_text])
-        audit_3_2_7_path = 'Audit_3.2.7.txt'  # Long filepath not needed as we are in the directory we want to dump to.
+        audit_3_2_7_path = ''.join(['Audit_3.2.7_', ModelYear, '.txt'])  # We are in the directory we want to dump to.
         with open(audit_3_2_7_path, 'w') as text_file:
             text_file.write(audit_3_2_7_content)
 
@@ -2061,7 +2141,7 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         # get 2021 LA in
         Zone_2021LA = pd.read_csv(
             os.path.join(
-                census_and_by_lu_obj.import_folder, _Zone_2021LA_path))[['NorMITs Zone', '2021 LA', '2021 LA Name']]
+                by_lu_obj.import_folder, _Zone_2021LA_path))[['NorMITs Zone', '2021 LA', '2021 LA Name']]
         HHpop = HHpop.merge(Zone_2021LA, how='left',
                             left_on=['z'],
                             right_on=['NorMITs Zone']).drop(columns={'NorMITs Zone'})
@@ -2073,24 +2153,25 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         logging.info('Population currently {}'.format(HHpop.people.sum()))
 
         # Adam - DONE, we need to think about how to organise the output files per step
-        pop_with_full_dims_filename = '_'.join(['HhPop_byfullNorMITsSegs_initial',
-                                                ModelYear,
-                                                census_and_by_lu_obj.model_zoning])
+        pop_with_full_dims_filename = '_'.join(['gb_lad', by_lu_obj.model_zoning.lower(),
+                                                'tfn_tt_agg_prt', ModelYear, 'properties+hh_pop'])
         # Note that the output file name is now (correctly) GB,
         # but the variable being dumped is still mislabelled as uk.
-        gb_ave_hh_occ_filename = 'GB_average_hh_occupancy_by_t.csv'
+        gb_ave_hh_occ_filename = '_'.join(['gb_t', ModelYear, 'ave_hh_occ.csv'])
 
-        pop_with_full_dims_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                               pop_with_full_dims_second_output_dir,
+        pop_with_full_dims_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               pop_with_full_dims_second_dir,
                                                pop_with_full_dims_filename)
-        gb_ave_hh_occ_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                          pop_with_full_dims_output_dir,
+        gb_ave_hh_occ_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                          process_dir,
+                                          pop_with_full_dims_dir,
                                           gb_ave_hh_occ_filename)
 
         compress.write_out(HHpop, pop_with_full_dims_path)
         uk_ave_hh_occ.to_csv(gb_ave_hh_occ_path, index=False)
 
-        census_and_by_lu_obj.state[
+        by_lu_obj.state[
             '3.2.6 and 3.2.7 expand NTEM population to full dimensions and verify pop profile'] = 1
         logging.info('Step 3.2.7 completed (along with some file dumping for Step 3.2.6)')
         logging.info('Step 3.2.6/Step 3.2.7 function has completed')
@@ -2098,17 +2179,17 @@ def pop_with_full_dimensions(census_and_by_lu_obj):
         print('Step 3.2.6/Step 3.2.7 function has completed')
 
 
-def subsets_worker_nonworker(census_and_by_lu_obj, function_that_called_me):
+def subsets_worker_nonworker(by_lu_obj, function_that_called_me):
     logging.info('Running Step 3.2.8, which has been called by ' + function_that_called_me)
     print('Running Step 3.2.8, which has been called by ' + function_that_called_me)
 
     # Read in output of Step 3.2.6/3.2.7 rather than calling the function and taking the output directly.
     # This prevents chain calling from 3.2.10 all the way back to 3.2.4!
-    hhpop_dir_path = pop_with_full_dims_second_output_dir
-    hhpop_filename = '_'.join(['HhPop_byfullNorMITsSegs_initial',
-                               ModelYear,
-                               census_and_by_lu_obj.model_zoning])
-    hhpop_filepath = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
+    hhpop_dir_path = pop_with_full_dims_second_dir
+    hhpop_filename = '_'.join(['gb_lad', by_lu_obj.model_zoning.lower(),
+                               'tfn_tt_agg_prt', ModelYear, 'properties+hh_pop'])
+    hhpop_filepath = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                  process_dir,
                                   hhpop_dir_path,
                                   hhpop_filename)
     HHpop = compress.read_in(hhpop_filepath)
@@ -2155,7 +2236,7 @@ def subsets_worker_nonworker(census_and_by_lu_obj, function_that_called_me):
     logging.info('Worker currently {}'.format(HHpop_workers.people.sum()))
     logging.info('Non_worker currently {}'.format(HHpop_non_workers.people.sum()))
     logging.info('Population currently {}'.format(HHpop_workers.people.sum() + HHpop_non_workers.people.sum()))
-    census_and_by_lu_obj.state['3.2.8 get subsets of worker and non-worker'] = 1
+    by_lu_obj.state['3.2.8 get subsets of worker and non-worker'] = 1
 
     audit_3_2_8_data = pd.merge(audit_3_2_8_data, audit_HHpop_workers_LA,
                                 how='left', on=['2021_LA_code', 'a', 'g', 'h', 'e', 't', 'n', 's'])
@@ -2171,10 +2252,11 @@ def subsets_worker_nonworker(census_and_by_lu_obj, function_that_called_me):
     audit_3_2_8_data_max = audit_3_2_8_data['Check_pop_tots'].max()
     audit_3_2_8_data_min = audit_3_2_8_data['Check_pop_tots'].min()
     audit_3_2_8_data_mean = audit_3_2_8_data['Check_pop_tots'].mean()
-    audit_3_2_8_data_export_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                subsets_worker_nonworker_output_dir,
-                                                'Audits',
-                                                'Audit_3_2_8_pop_vs_workers_and_non-workers_df_dump')
+    audit_3_2_8_data_export_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                audit_dir,
+                                                subsets_worker_nonworker_dir,
+                                                '_'.join(['audit_11_gb_msoa_tfn_tt_agg_prt',
+                                                          ModelYear, 'hh_pop+wkrs+nwkrs.csv']))
     compress.write_out(audit_3_2_8_data, audit_3_2_8_data_export_path)
 
     audit_3_2_8_header = 'Audit for Step 3.2.8\nCreated ' + str(datetime.datetime.now())
@@ -2193,10 +2275,10 @@ def subsets_worker_nonworker(census_and_by_lu_obj, function_that_called_me):
                                   'The compressed file is dumped here (plus its file extension):',
                                   audit_3_2_8_data_export_path])
     audit_3_2_8_content = '\n'.join([audit_3_2_8_header, audit_3_2_8_text])
-    audit_3_2_8_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                    subsets_worker_nonworker_output_dir,
-                                    'Audits',
-                                    'Audit_3.2.8.txt')
+    audit_3_2_8_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                    audit_dir,
+                                    subsets_worker_nonworker_dir,
+                                    ''.join(['Audit_3.2.8_', ModelYear, '.txt']))
     with open(audit_3_2_8_path, 'w') as text_file:
         text_file.write(audit_3_2_8_content)
 
@@ -2223,14 +2305,18 @@ def subsets_worker_nonworker(census_and_by_lu_obj, function_that_called_me):
     else:
         # Adam - DONE, we need to think how to organise the structure of outputs files per step
         # Saving files out only when called by functions outside of this .py file
-        subsets_worker_nonworker_dir_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                         subsets_worker_nonworker_output_dir)
+        subsets_worker_nonworker_dir_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                         audit_dir,
+                                                         subsets_worker_nonworker_dir)
         HHpop_nwkrs_ag_LA.to_csv(
-            os.path.join(subsets_worker_nonworker_dir_path, 'Initial_HHpop_nwkrs_ag_LA.csv'), index=False)
+            os.path.join(subsets_worker_nonworker_dir_path,
+                         '_'.join(['audit_8_dag', ModelYear, 'nwkrs.csv'])), index=False)
         HHpop_wkrs_ge_LA.to_csv(
-            os.path.join(subsets_worker_nonworker_dir_path, 'Initial_HHpop_wkrs_ge_LA.csv'), index=False)
+            os.path.join(subsets_worker_nonworker_dir_path,
+                         '_'.join(['audit_9_dge', ModelYear, 'wkrs.csv'])), index=False)
         HHpop_wkrs_s_LA.to_csv(
-            os.path.join(subsets_worker_nonworker_dir_path, 'Initial_HHpop_wkrs_s_LA.csv'), index=False)
+            os.path.join(subsets_worker_nonworker_dir_path,
+                         ''.join(['audit_10_ds', ModelYear, 'wkrs.csv'])), index=False)
         logging.info('Step 3.2.8 completed - not called by a 3.2.x function')
         logging.info('Returning only a short list stating no output was requested')
         logging.info('HHpop data has been saved to file though')
@@ -2238,7 +2324,7 @@ def subsets_worker_nonworker(census_and_by_lu_obj, function_that_called_me):
         return pd.DataFrame([], columns=['No data requested', 'but data saved to file'])
 
 
-def la_level_adjustment(census_and_by_lu_obj):
+def la_level_adjustment(by_lu_obj):
     logging.info('Running Step 3.2.9')
     print('Running Step 3.2.9')
     la_level_adjustment_name = 'LA_level_adjustment'
@@ -2248,16 +2334,25 @@ def la_level_adjustment(census_and_by_lu_obj):
     read_base_year_pop_msoa_path_file = False
 
     if read_base_year_pop_msoa_path_file:
-        _LA_worker_control_path = r'MYE_APS_LA_Worker.csv'
-        _LA_nonworker_control_path = r'MYE_APS_LA_NonWorker.csv'
-        _2021LAID_path = r'2021LAID_LAcode_LAname.csv'
+        _LA_worker_control_path = '_'.join(['mye_gb_d', ModelYear, 'nwkrs_tot+by_ag.csv'])
+        _LA_nonworker_control_path = '_'.join(['mye_gb_d', ModelYear, 'wkrs_tot+by_ag.csv'])
+        _2021LAID_path = r'lookup_gb_2021_lad_to_d.csv'
 
         _LA_worker_control_path = os.path.join(
-            census_and_by_lu_obj.out_paths['write_folder'], la_level_adjustment_output_dir, _LA_worker_control_path)
+            by_lu_obj.out_paths['write_folder'],
+            la_level_adjustment_dir,
+            process_dir,
+            _LA_worker_control_path)
         _LA_nonworker_control_path = os.path.join(
-            census_and_by_lu_obj.out_paths['write_folder'], la_level_adjustment_output_dir, _LA_nonworker_control_path)
+            by_lu_obj.out_paths['write_folder'],
+            la_level_adjustment_dir,
+            process_dir,
+            _LA_nonworker_control_path)
         _2021LAID_path = os.path.join(
-            census_and_by_lu_obj.out_paths['write_folder'], la_level_adjustment_output_dir, _2021LAID_path)
+            by_lu_obj.out_paths['write_folder'],
+            la_level_adjustment_dir,
+            process_dir,
+            _2021LAID_path)
 
         LA_ID = pd.read_csv(_2021LAID_path)
         LA_worker_control = pd.read_csv(_LA_worker_control_path)[['2021_LA_name', '2021_LA_code', 'LA', 'Worker']]
@@ -2270,16 +2365,17 @@ def la_level_adjustment(census_and_by_lu_obj):
         LA_nonworker_ag_control = pd.read_csv(_LA_nonworker_control_path)[
             ['2021_LA_name', '2021_LA_code', 'LA', 'Children', 'M_16-74', 'F_16-74', 'M_75 and over', 'F_75 and over']]
 
-        pe_dag_for_audit = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                    mye_pop_compiled_output_dir,
-                                                    ModelYear + '_HHR_pop_by_dag.csv'))
+        pe_dag_for_audit = pd.read_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                    audit_dir,
+                                                    mye_pop_compiled_dir,
+                                                    '_'.join(['audit_3_gb_dag', ModelYear, 'hh_pop.csv'])))
 
         logging.info('Step 3.2.9 read in data processed by the MYE_APS_process through an existing csv')
         logging.info('WARNING - This is not the default way of reading this data!')
         logging.info('Did you mean to do that?')
     else:
         logging.info('Step 3.2.9 is calling the MYE_APS_process function in order to obtain Base Year population data')
-        MYE_MSOA_pop = mye_aps_process(census_and_by_lu_obj, la_level_adjustment_name, la_level_adjustment_output_dir)
+        MYE_MSOA_pop = mye_aps_process(by_lu_obj, la_level_adjustment_name, la_level_adjustment_dir)
         logging.info('Step 3.2.9 read in data processed by the MYE_APS_process function from internal memory')
 
         la_worker_df_import = MYE_MSOA_pop[0]
@@ -2298,13 +2394,15 @@ def la_level_adjustment(census_and_by_lu_obj):
             '2021_LA_name', '2021_LA_code', 'LA', 'Children', 'M_16-74', 'F_16-74', 'M_75 and over', 'F_75 and over']]
 
     # Call the file containing Pe from step 3.2.5's outputs
-    pe_df = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                     mye_pop_compiled_output_dir,
-                                     ModelYear + '_total_pop_vs_HHR_total.csv'))
+    pe_df = pd.read_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                     process_dir,
+                                     mye_pop_compiled_dir,
+                                     '_'.join(['gb', by_lu_obj.model_zoning.lower(),
+                                               ModelYear, 'pop+hh_pop.csv'])))
 
     # seed_worker not exported as a file, so wll always need to read directly from a function 3.2.8 call
     # Whilst reading it in, can also read in HHpop variables
-    call_3_2_8 = subsets_worker_nonworker(census_and_by_lu_obj, la_level_adjustment_name)
+    call_3_2_8 = subsets_worker_nonworker(by_lu_obj, la_level_adjustment_name)
     seed_worker = call_3_2_8[0]
     HHpop_workers_LA = call_3_2_8[1]
     HHpop_nwkrs_ag_LA = call_3_2_8[2]
@@ -2391,9 +2489,10 @@ def la_level_adjustment(census_and_by_lu_obj):
 
     # Export seed_worker, then read it back in again. Failure to do so will result in the script crashing in ipfn
     # It is unclear why this occurs.
-    seed_worker_name = 'seed_worker.csv'
-    seed_worker_full_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                         la_level_adjustment_output_dir,
+    seed_worker_name = '_'.join(['seed_gb_d_tfn_tt_agg_prt', ModelYear, 'wkrs.csv'])
+    seed_worker_full_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                         process_dir,
+                                         la_level_adjustment_dir,
                                          seed_worker_name)
     seed_worker.to_csv(seed_worker_full_path, index=False)
     seed = pd.read_csv(seed_worker_full_path)
@@ -2476,10 +2575,10 @@ def la_level_adjustment(census_and_by_lu_obj):
     audit_hhpop_by_d_max = audit_hhpop_by_d['%age_diff_in_pop'].max()
     audit_hhpop_by_d_min = audit_hhpop_by_d['%age_diff_in_pop'].min()
     audit_hhpop_by_d_mean = audit_hhpop_by_d['%age_diff_in_pop'].mean()
-    audit_hhpop_by_d_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                         la_level_adjustment_output_dir,
-                                         'Audits',
-                                         'audit_' + ModelYear + '_HHpop_by_d.csv')
+    audit_hhpop_by_d_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                         audit_dir,
+                                         la_level_adjustment_dir,
+                                         '_'.join(['audit_12_gb_d', ModelYear, 'pop_deviation.csv']))
     audit_hhpop_by_d.to_csv(audit_hhpop_by_d_path, index=False)
 
     audit_hhpop_by_dag = audit_hhpop_by_dag.groupby(['2021_LA_code', 'a', 'g'])['total'].sum().reset_index()
@@ -2490,10 +2589,10 @@ def la_level_adjustment(census_and_by_lu_obj):
     audit_hhpop_by_dag_max = audit_hhpop_by_dag['%age_diff_in_pop'].max()
     audit_hhpop_by_dag_min = audit_hhpop_by_dag['%age_diff_in_pop'].min()
     audit_hhpop_by_dag_mean = audit_hhpop_by_dag['%age_diff_in_pop'].mean()
-    audit_hhpop_by_dag_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                           la_level_adjustment_output_dir,
-                                           'Audits',
-                                           'audit_' + ModelYear + '_HHpop_by_dag.csv')
+    audit_hhpop_by_dag_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                           audit_dir,
+                                           la_level_adjustment_dir,
+                                           '_'.join(['audit_13_gb_dag', ModelYear, 'pop_deviation.csv']))
     audit_hhpop_by_dag.to_csv(audit_hhpop_by_d_path, index=False)
 
     audit_3_2_9_header = 'Audit for Step 3.2.9\nCreated ' + str(datetime.datetime.now())
@@ -2516,35 +2615,45 @@ def la_level_adjustment(census_and_by_lu_obj):
                                   'A full breakdown of the LA, age and gender data is presented in:',
                                   audit_hhpop_by_dag_path])
     audit_3_2_9_content = '\n'.join([audit_3_2_9_header, audit_3_2_9_text])
-    audit_3_2_9_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                    la_level_adjustment_output_dir,
-                                    'Audits',
-                                    'Audit_3.2.9.txt')
+    audit_3_2_9_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                    audit_dir,
+                                    la_level_adjustment_dir,
+                                    ''.join(['Audit_3.2.9_', ModelYear, '.txt']))
     with open(audit_3_2_9_path, 'w') as text_file:
         text_file.write(audit_3_2_9_content)
 
-    la_level_adjustment_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                            la_level_adjustment_output_dir)
-    furnessed_data_filename = '_'.join(['furnessed', ModelYear, 'worker.csv'])
-    nwkrs_aj_factor_LA_filename = 'nwkrs_aj_factor_LA_' + ModelYear + '.csv'
-    wkrs_aj_factor_LA_filename = 'wkrs_aj_factor_LA_' + ModelYear + '.csv'
-    verified_d_worker_filename = '_'.join(['Verified_d_worker_fully_segmented_', ModelYear])
-    verified_d_non_worker_filename = '_'.join(['Verified_d_non_worker_fully_segmented_', ModelYear])
+    la_level_adjustment_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                            process_dir,
+                                            la_level_adjustment_dir)
+    la_level_adjustment_output_path = os.path.join(by_lu_obj.out_paths['write_folder'], output_dir)
+    furnessed_data_filename = '_'.join(['furnessed_gb_d_tfn_tt_agg_prt', ModelYear, 'wkrs.csv'])
+    nwkrs_aj_factor_LA_filename = '_'.join(['gb_lad_ag', ModelYear, 'nwkrs_aj_factor.csv'])
+    wkrs_aj_factor_LA_filename = '_'.join(['gb_lad_tfn_tt_agg_prt', ModelYear, 'wkrs_aj_factor.csv'])
+    verified_d_worker_filename = '_'.join(['output_1_resi_gb_lad_tfn_tt_agg_prt', ModelYear, 'wkrs'])
+    verified_d_non_worker_filename = '_'.join(['output_2_resi_gb_lad_tfn_tt_agg_prt', ModelYear, 'nwkrs'])
+
+    # Format output files to tfn tt instead of NorMITs segmentation
+    seg_to_tt_df = pd.read_csv(normits_seg_to_tfn_tt_file)
+    aj_HHpop_workers_LA_out = aj_HHpop_workers_LA.merge(seg_to_tt_df, on=['a', 'g', 'h', 'e', 'n', 's'])
+    aj_HHpop_workers_LA_out = aj_HHpop_workers_LA_out[['2021_LA_code', 'tfn_tt', 't', 'total']]
+    aj_HHpop_non_workers_LA_out = aj_HHpop_non_workers_LA.merge(seg_to_tt_df, on=['a', 'g', 'h', 'e', 'n', 's'])
+    aj_HHpop_non_workers_LA_out = aj_HHpop_non_workers_LA_out[
+        ['2021_LA_code', 'tfn_tt', 't', 'people', 'nwkr_aj_factor', 'total']]
 
     # Export files
     seed.to_csv(os.path.join(la_level_adjustment_path, furnessed_data_filename), index=False)
     nwkrs_aj_factor_LA.to_csv(os.path.join(la_level_adjustment_path, nwkrs_aj_factor_LA_filename), index=False)
     wkrs_aj_factor_LA.to_csv(os.path.join(la_level_adjustment_path, wkrs_aj_factor_LA_filename), index=False)
-    verified_d_worker_path = os.path.join(la_level_adjustment_path, verified_d_worker_filename)
-    verified_d_non_worker_path = os.path.join(la_level_adjustment_path, verified_d_non_worker_filename)
-    compress.write_out(aj_HHpop_workers_LA, verified_d_worker_path)
-    compress.write_out(aj_HHpop_non_workers_LA, verified_d_non_worker_path)
-    census_and_by_lu_obj.state['3.2.9 verify district level worker and non-worker'] = 1
+    verified_d_worker_path = os.path.join(la_level_adjustment_output_path, verified_d_worker_filename)
+    verified_d_non_worker_path = os.path.join(la_level_adjustment_output_path, verified_d_non_worker_filename)
+    compress.write_out(aj_HHpop_workers_LA_out, verified_d_worker_path)
+    compress.write_out(aj_HHpop_non_workers_LA_out, verified_d_non_worker_path)
+    by_lu_obj.state['3.2.9 verify district level worker and non-worker'] = 1
     logging.info('Step 3.2.9 completed')
     print('Step 3.2.9 completed')
 
 
-def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
+def adjust_zonal_workers_nonworkers(by_lu_obj):
     logging.info('Running Step 3.2.10')
     print('Running Step 3.2.10')
     adjust_zonal_workers_nonworkers_name = 'adjust_zonal_workers_nonworkers'
@@ -2557,18 +2666,18 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
 
     # Call function for 3.2.8 to get HHpop_workers
     # (because 3.2.8 is a quick to run function vs the file read/write time)
-    call_3_2_8 = subsets_worker_nonworker(census_and_by_lu_obj, adjust_zonal_workers_nonworkers_name)
+    call_3_2_8 = subsets_worker_nonworker(by_lu_obj, adjust_zonal_workers_nonworkers_name)
     HHpop_workers = call_3_2_8[0]
     HHpop_non_workers = call_3_2_8[1]
 
     # Read wkrs_aj_factor_LA from csv dumped by 3.2.9 (because IPFN can take a long time to run)
-    read_la_level_adjustment_output_dir = la_level_adjustment_output_dir
-    wkrs_aj_factor_LA_filename = 'wkrs_aj_factor_LA_' + ModelYear + '.csv'
-    nwkrs_aj_factor_LA_filename = 'nwkrs_aj_factor_LA_' + ModelYear + '.csv'
-    wkrs_aj_factor_LA_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
+    read_la_level_adjustment_output_dir = os.path.join(process_dir, la_level_adjustment_dir)
+    wkrs_aj_factor_LA_filename = '_'.join(['gb_lad_tfn_tt_agg_prt', ModelYear, 'wkrs_aj_factor.csv'])
+    nwkrs_aj_factor_LA_filename = '_'.join(['gb_lad_ag', ModelYear, 'nwkrs_aj_factor.csv'])
+    wkrs_aj_factor_LA_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                           read_la_level_adjustment_output_dir,
                                           wkrs_aj_factor_LA_filename)
-    nwkrs_aj_factor_LA_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
+    nwkrs_aj_factor_LA_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                            read_la_level_adjustment_output_dir,
                                            nwkrs_aj_factor_LA_filename)
 
@@ -2576,9 +2685,10 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     nwkrs_aj_factor_LA = pd.read_csv(nwkrs_aj_factor_LA_path)
 
     # Read average uk hh occupancy from step 3.2.6
-    uk_ave_hh_occ_lookup_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                             pop_with_full_dims_output_dir,
-                                             'gb_average_hh_occupancy_by_t.csv')
+    uk_ave_hh_occ_lookup_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                             process_dir,
+                                             pop_with_full_dims_dir,
+                                             '_'.join(['gb_t', ModelYear, 'ave_hh_occ.csv']))
     uk_ave_hh_occ_lookup = pd.read_csv(uk_ave_hh_occ_lookup_path)
 
     HHpop_workers = HHpop_workers.merge(wkrs_aj_factor_LA,
@@ -2609,8 +2719,10 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     final_zonal_hh_pop_by_t['z_t'] = ['_'.join([str(z), str(t)]) for z, t in final_zonal_hh_pop_by_t_iterator]
 
     zonal_properties_by_t = pd.read_csv(os.path.join(
-        census_and_by_lu_obj.out_paths['write_folder'], mye_pop_compiled_output_dir,
-        ''.join(['classifiedResProperty_MYEcompiled_', ModelYear, '.csv'])))
+        by_lu_obj.out_paths['write_folder'],
+        process_dir,
+        mye_pop_compiled_dir,
+        '_'.join(['gb_msoa_agg_prt', ModelYear, 'hh_pop.csv'])))
     zonal_properties_by_t_iterator = zip(zonal_properties_by_t['Zone'], zonal_properties_by_t['census_property_type'])
     zonal_properties_by_t['z_t'] = ['_'.join([str(z), str(t)]) for z, t in zonal_properties_by_t_iterator]
 
@@ -2630,9 +2742,11 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     logging.info('Total hhpop is now:')
     logging.info(hhpop_combined.people.sum())
 
-    mye_msoa_pop = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                            mye_pop_compiled_output_dir,
-                                            '_'.join([ModelYear, 'total_pop_vs_HHR_total.csv'])))
+    mye_msoa_pop = pd.read_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                            process_dir,
+                                            mye_pop_compiled_dir,
+                                            '_'.join(['gb', by_lu_obj.model_zoning.lower(),
+                                                      ModelYear, 'pop+hh_pop.csv'])))
     mye_hhr_pop = mye_msoa_pop[['MSOA', 'Total_HHR']]
     logging.info('Original hhpop is:')
     logging.info(mye_hhr_pop.Total_HHR.sum())
@@ -2673,14 +2787,14 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     logging.info('The max %age diff is ' + str(hhpop_combined_check_la['percentage_diff'].max() * 100) + '%')
     logging.info('The mean %age diff is ' + str(hhpop_combined_check_la['percentage_diff'].mean() * 100) + '%')
 
-    hhpop_combined_check_z_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                               further_adjustments_output_dir,
-                                               'Audits',
-                                               ModelYear + '_hhpop_combined-check_by_z.csv')
-    hhpop_combined_check_la_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                further_adjustments_output_dir,
-                                                'Audits',
-                                                ModelYear + '_hhpop_combined-check_by_d.csv')
+    hhpop_combined_check_z_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               audit_dir,
+                                               further_adjustments_dir,
+                                               '_'.join(['audit_16_gb_msoa', ModelYear, 'check_furnessed_hh_pop.csv']))
+    hhpop_combined_check_la_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                audit_dir,
+                                                further_adjustments_dir,
+                                                '_'.join(['audit_15_gb_dag', ModelYear, 'check_furnessed_hh_pop.csv']))
     hhpop_combined_check_z.to_csv(hhpop_combined_check_z_path)
     hhpop_combined_check_la.to_csv(hhpop_combined_check_la_path)
 
@@ -2709,10 +2823,10 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     audit_3_2_10_content = '\n'.join([audit_3_2_10_header, audit_3_2_10_text])
 
     running_dir_3_2_10 = os.getcwd()
-    os.chdir(os.path.join(census_and_by_lu_obj.out_paths['write_folder'], further_adjustments_output_dir))
-    hhpop_combined_pdiff_extremes.to_csv('zonal_hhpop_extreme_percentage_diffs.csv')
-    final_zonal_hh_pop_by_t.to_csv(ModelYear + '_final_zonal_hh_pop_by_t.csv')
-    audit_3_2_10_path = os.path.join('Audits', 'Audit_3.2.10.txt')
+    os.chdir(os.path.join(by_lu_obj.out_paths['write_folder'], audit_dir, further_adjustments_dir))
+    hhpop_combined_pdiff_extremes.to_csv('_'.join(['audit_14_gb_msoa', ModelYear, 'min_max_hh_pop_percent_diff.csv']))
+
+    audit_3_2_10_path = ''.join(['Audit_3.2.10_', ModelYear, '.txt'])
     with open(audit_3_2_10_path, 'w') as text_file:
         text_file.write(audit_3_2_10_content)
     os.chdir(running_dir_3_2_10)
@@ -2722,7 +2836,7 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     # read the output back in and merge it to create the final output.
     logging.info('Step 3.2.10 is calling step 3.2.11 to generate CER pop data')
     print('Step 3.2.10 is calling Step 3.2.11')
-    expanded_cer_pop = process_cer_data(census_and_by_lu_obj, hhpop_combined, la_2_z)
+    expanded_cer_pop = process_cer_data(by_lu_obj, hhpop_combined, la_2_z)
     logging.info('Step 3.2.11 completed, returning to step 3.2.10')
     print('Step 3.2.10 has completed its call of Step 3.2.11')
 
@@ -2751,10 +2865,10 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     logging.info('The mean %age diff is ' + str(check_all_pop_by_d['pop_deviation'].mean() * 100) + '%')
     logging.info('The overall deviation is ' + str(
         check_all_pop_by_d['people'].sum() - check_all_pop_by_d['MYE_pop'].sum()) + ' people')
-    check_all_pop_by_d_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                           further_adjustments_output_dir,
-                                           'Audits',
-                                           'check_final_' + ModelYear + '_pop_by_d.csv')
+    check_all_pop_by_d_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                           audit_dir,
+                                           further_adjustments_dir,
+                                           '_'.join(['audit_17_gb_lad', ModelYear, 'check_pop.csv']))
     check_all_pop_by_d.to_csv(check_all_pop_by_d_path, index=False)
 
     # Also groupby this output by removing t to get zaghens population.
@@ -2783,31 +2897,43 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
                                    'A full breakdown of the ' + ModelYear + 'population by d can be found at:',
                                    check_all_pop_by_d_path,
                                    'The Step 3.2.11 Audits directory is located here:',
-                                   os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                cer_output_dir),
+                                   os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                audit_dir,
+                                                cer_dir),
                                    'The Step 3.2.11 main audit file should be obvious in it.'])
     audit_3_2_11_content = '\n'.join([audit_3_2_11_header, audit_3_2_11_text])
-    audit_3_2_11_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                     further_adjustments_output_dir,
-                                     'Audits',
-                                     'Audit_3.2.11.txt')
+    audit_3_2_11_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                     audit_dir,
+                                     further_adjustments_dir,
+                                     ''.join(['Audit_3.2.11_', ModelYear, '.txt']))
     with open(audit_3_2_11_path, 'w') as text_file:
         text_file.write(audit_3_2_11_content)
 
+    # Format ouputs
+    seg_to_tt_df = pd.read_csv(normits_seg_to_tfn_tt_file)
+    hhpop_combined_out = hhpop_combined.merge(seg_to_tt_df, on=['a', 'g', 'h', 'e', 'n', 's'])
+    hhpop_combined_out = hhpop_combined_out[['2021_LA_code', '2021_LA_Name', 'z', 'MSOA', 'tfn_tt', 't', 'people']]
+    all_pop_out = all_pop.merge(seg_to_tt_df, on=['a', 'g', 'h', 'e', 'n', 's'])
+    all_pop_out = all_pop_out[['2021_LA_Name', 'z', 'MSOA', 'tfn_tt', 't', 'people']]
+    all_pop_by_t_out = all_pop_by_t.merge(seg_to_tt_df, on=['a', 'g', 'h', 'e', 'n', 's'])
+    all_pop_by_t_out = all_pop_by_t_out[['2021_LA_Name', 'z', 'MSOA', 'tfn_tt', 'people']]
+
     # Dump outputs
     pre_3_2_10_dir = os.getcwd()
-    output_3_2_10_dir = os.path.join(census_and_by_lu_obj.out_paths['write_folder'], further_adjustments_output_dir)
+    output_3_2_10_dir = os.path.join(by_lu_obj.out_paths['write_folder'], output_dir)
     os.chdir(output_3_2_10_dir)
     logging.info('Dumping final outputs...')
-    compress.write_out(hhpop_combined, ModelYear + '_household_population_processed')
+    compress.write_out(hhpop_combined_out, '_'.join(['output_3_resi_gb_lad_msoa_tfn_tt_agg_prt', ModelYear, 'hh_pop']))
     logging.info('HH pop dumped')
-    compress.write_out(all_pop, ModelYear + '_total_population')
+    final_zonal_hh_pop_by_t.to_csv('_'.join(['output_4_resi_gb_msoa_agg_prt', ModelYear, 'hh_pop+dwells+hh_occ.csv']))
+    logging.info('HH pop by property type dumped')
+    compress.write_out(all_pop_out, '_'.join(['output_6_resi_gb_msoa_tfn_tt_prt', ModelYear, 'pop']))
     logging.info('Total pop (by z, a, g, h, e, t, n, s) dumped')
-    compress.write_out(all_pop_by_t, ModelYear + '_total_population_independent_of_property_type')
+    compress.write_out(all_pop_by_t_out, '_'.join(['output_7_resi_gb_msoa_tfn_tt', ModelYear, 'pop']))
     logging.info('Total pop (by z, a, g, h, e, n, s) dumped')
     os.chdir(pre_3_2_10_dir)
 
-    census_and_by_lu_obj.state['3.2.10 adjust zonal pop with full dimensions'] = 1
+    by_lu_obj.state['3.2.10 adjust zonal pop with full dimensions'] = 1
     logging.info('Step 3.2.10 completed')
     logging.info('If undertaking a full run through of the Base Year LU process,')
     logging.info('then this should have been the last function to run.')
@@ -2817,7 +2943,7 @@ def adjust_zonal_workers_nonworkers(census_and_by_lu_obj):
     print('DONE!')
 
 
-def process_cer_data(census_and_by_lu_obj, hhpop_combined_from_3_2_10, la_2_z_from_3_2_10):
+def process_cer_data(by_lu_obj, hhpop_combined_from_3_2_10, la_2_z_from_3_2_10):
     # This function should ONLY be called by 3.2.10
     logging.info('Running Step 3.2.11')
     print('Running Step 3.2.11')
@@ -2827,9 +2953,11 @@ def process_cer_data(census_and_by_lu_obj, hhpop_combined_from_3_2_10, la_2_z_fr
     # Read MYE_MSOA_pop from file as it is small (produced by MYE_APS_process sub-function of 3.2.5)
 
     # Subtract HHpop from MYE total to get CER
-    mye_pop = pd.read_csv(os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                       mye_pop_compiled_output_dir,
-                                       '_'.join([ModelYear, 'total_pop_vs_HHR_total.csv'])))
+    mye_pop = pd.read_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                       process_dir,
+                                       mye_pop_compiled_dir,
+                                       '_'.join(['gb', by_lu_obj.model_zoning.lower(),
+                                                 ModelYear, 'pop+hh_pop.csv'])))
     cer_pop = hhpop_combined_from_3_2_10.copy()
     cer_pop = cer_pop[['MSOA', 'people']]
     cer_pop = cer_pop.groupby(['MSOA']).sum()
@@ -2886,8 +3014,9 @@ def process_cer_data(census_and_by_lu_obj, hhpop_combined_from_3_2_10, la_2_z_fr
         ['MSOA', 'Zone', 'a', 'g', 'h', 'e', 't', 'n', 's', '2021_LA_Name', 'zaghetns_CER']]
 
     # Dump cer_pop_expanded to compressed file for QA purposes
-    cer_output_dir_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'], cer_output_dir)
-    cer_output_full_path = os.path.join(cer_output_dir_path, ModelYear + '_CER_population_expanded')
+    cer_output_dir_path = os.path.join(by_lu_obj.out_paths['write_folder'], output_dir)
+    cer_output_full_path = os.path.join(cer_output_dir_path,
+                                        '_'.join(['output_5_gb_msoa_tfn_tt', ModelYear, 'CER_pop']))
     compress.write_out(cer_pop_expanded, cer_output_full_path)
 
     # Auditing
@@ -2897,19 +3026,20 @@ def process_cer_data(census_and_by_lu_obj, hhpop_combined_from_3_2_10, la_2_z_fr
                                    'This is because the script for Step 3.2.10 carries out all of the processing that',
                                    'is assigned to Step 3.2.11 in the Technical Note beyond the creation of CER pop.',
                                    'The Step 3.2.10 Audits directory is located here:',
-                                   os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                                further_adjustments_output_dir),
+                                   os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                audit_dir,
+                                                further_adjustments_dir),
                                    'The Step 3.2.11 (in Step 3.2.10) main audit file should be obvious in it.'])
     audit_3_2_11_content = '\n'.join([audit_3_2_11_header, audit_3_2_11_text])
-    audit_3_2_11_path = os.path.join(census_and_by_lu_obj.out_paths['write_folder'],
-                                     cer_output_dir,
-                                     'Audits',
-                                     'Audit_3.2.11.txt')
+    audit_3_2_11_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                     audit_dir,
+                                     cer_dir,
+                                     ''.join(['Audit_3.2.11_', ModelYear, '.txt']))
     with open(audit_3_2_11_path, 'w') as text_file:
         text_file.write(audit_3_2_11_content)
 
     # Flagging and logging
-    census_and_by_lu_obj.state['3.2.11 process CER data'] = 1
+    by_lu_obj.state['3.2.11 process CER data'] = 1
     logging.info('Step 3.2.11 completed')
     print('Step 3.2.11 completed')
 

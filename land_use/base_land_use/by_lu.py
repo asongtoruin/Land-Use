@@ -20,7 +20,7 @@ class BaseYearLandUse:
                  emp_e_cat_data_path=lu_constants.E_CAT_DATA,
                  emp_soc_cat_data_path=lu_constants.SOC_BY_REGION,
                  emp_unm_data_path=lu_constants.UNM_DATA,
-                 base_year='2018',
+                 base_year='2019',
                  scenario_name=None):
         """
         parse parameters from run call (file paths, requested outputs and audits)
@@ -61,12 +61,12 @@ class BaseYearLandUse:
         write_folder = os.path.join(
             model_folder,
             output_folder,
-            iteration,
-            'outputs')
+            iteration)
 
         pop_write_name = os.path.join(write_folder, 'land_use_' + str(self.base_year) + '_pop.csv')
         emp_write_name = os.path.join(write_folder, 'land_use_' + str(self.base_year) + '_emp.csv')
-        report_folder = os.path.join(write_folder, 'reports')
+        # Report folder not currently in use.
+        # report_folder = os.path.join(write_folder, 'reports')
 
         # TODO: Implement this way of checking state
         self.step_keys = lu_constants.BY_POP_BUILD_STEPS
@@ -74,6 +74,10 @@ class BaseYearLandUse:
         self.step_descs = lu_constants.BY_POP_BUILD_STEP_DESCS
         
         # self._check_state()
+
+        list_of_type_folders = ['01 Process', '02 Audits']
+        # '03 Outputs' will also be a directory at this level,
+        # but does not have the step sub-directories
 
         list_of_step_folders = [
             '3.2.1_read_in_core_property_data',
@@ -91,18 +95,23 @@ class BaseYearLandUse:
         # Build folders
         if not os.path.exists(write_folder):
             file_ops.create_folder(write_folder)
-        if not os.path.exists(report_folder):
-            file_ops.create_folder(report_folder)
-        for listed_folder in list_of_step_folders:
-            if not os.path.exists(os.path.join(write_folder, listed_folder)):
-                file_ops.create_folder(os.path.join(write_folder, listed_folder))
-            if not os.path.exists(os.path.join(write_folder, listed_folder, 'Audits')):
-                file_ops.create_folder(os.path.join(write_folder, listed_folder, 'Audits'))
+        # Report folder not currently in use.
+        # if not os.path.exists(report_folder):
+        #     file_ops.create_folder(report_folder)
+        for folder_type in list_of_type_folders:
+            for listed_folder in list_of_step_folders:
+                if not os.path.exists(os.path.join(write_folder, folder_type, listed_folder)):
+                    file_ops.create_folder(os.path.join(write_folder, folder_type, listed_folder))
+        if not os.path.exists(os.path.join(write_folder, '03 Outputs')):
+            file_ops.create_folder(os.path.join(write_folder, '03 Outputs'))
+        if not os.path.exists(os.path.join(write_folder, '00 Logging')):
+            file_ops.create_folder(os.path.join(write_folder, '00 Logging'))
 
         # Set object paths
         self.out_paths = {
             'write_folder': write_folder,
-            'report_folder': report_folder,
+            # Report folder not currently in use.
+            # 'report_folder': report_folder,
             'pop_write_path': pop_write_name,
             'emp_write_path': emp_write_name
         }
@@ -124,6 +133,9 @@ class BaseYearLandUse:
             '3.2.11 process CER data': 0
         }
 
+        self.norcom = 'import from NorCOM'
+        # self.norcom = 'export to NorCOM'
+
     def build_by_pop(self):
         # TODO: Method name, this is more of an adjustment to a base now
         """
@@ -136,12 +148,27 @@ class BaseYearLandUse:
         # Make a new sub folder of the home directory for the iteration and set this as the working directory
         os.chdir(self.model_folder)
         file_ops.create_folder(self.iteration, ch_dir=True)
-        logging.basicConfig(filename='base_year_land_use.log', level=logging.INFO, format='%(asctime)s: %(message)s')
+        os.chdir('00 Logging')
+        # Create log file without overwriting existing files
+        base_year_log_name = '_'.join([self.base_year, 'base_year_land_use.log'])
+        base_year_log_dir = os.getcwd()
+        if os.path.exists(os.path.join(base_year_log_dir, base_year_log_name)):
+            log_v_count = 1
+            og_base_year_log_name = base_year_log_name[:-4]
+            while os.path.exists(os.path.join(base_year_log_dir, base_year_log_name)):
+                base_year_log_name = ''.join([og_base_year_log_name, '_', str(log_v_count), '.log'])
+                log_v_count = log_v_count + 1
+                print('The last log name I tried was already taken!')
+                print('Now trying log name: %s' % base_year_log_name)
+        logging.basicConfig(filename=base_year_log_name,
+                            level=logging.INFO,
+                            format='%(asctime)s: %(message)s')
+
 
         # TODO: Check that this picks up the 2011 process!
 
         # TODO: Change from copy to check imports
-        # Run through the 2018 Base Year Build process
+        # Run through the Base Year Build process
         # Steps from main build
         # TODO: Decide if this is used for anything anymore
         if self.state['3.2.1 read in core property data'] == 0:
