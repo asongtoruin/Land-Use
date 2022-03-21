@@ -31,7 +31,6 @@ class FutureYearLandUse:
                  sub_for_defaults=False):
 
         # TODO: Add versioning
-        # TODO: Bring through household and property type data required for NorCOM
 
         # File ops
         self.model_folder = model_folder
@@ -183,8 +182,6 @@ class FutureYearLandUse:
                                                              reports=reports)
         else:
             dem_reports = dict({'null_report': 0})
-
-        # TODO: Derive property type mix
 
         # Adjust car availability mix
         if adjust_ca:
