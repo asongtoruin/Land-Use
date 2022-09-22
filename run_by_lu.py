@@ -7,9 +7,9 @@ def main():
     run_pop = True
     run_emp = False
 
-    iteration = 'iter4l'
+    iteration = 'iter4m'
     census_year = '2011'
-    base_year = '2019'
+    base_year = '2018'
 
     print('Building lu run, %s' % iteration)
     print('Census year is %s' % census_year)

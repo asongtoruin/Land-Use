@@ -16,11 +16,11 @@ process_working_dir = os.path.join(r'I:\NorMITs Land Use\base_land_use', iterati
 audit_working_dir = os.path.join(r'I:\NorMITs Land Use\base_land_use', iteration, '02 Audits')
 output_working_dir = os.path.join(r'I:\NorMITs Land Use\base_land_use', iteration, '03 Outputs')
 
-run_check_326 = False
+run_check_326 = True
 run_check_327 = False
 run_check_328 = False
 run_check_3210 = False
-run_check_3211 = True
+run_check_3211 = False
 
 manchester_zones = ['E02001045', 'E02001046', 'E02001047', 'E02001048', 'E02001049', 'E02001050', 'E02001051',
                     'E02001052', 'E02001053', 'E02001055', 'E02001056', 'E02001057', 'E02001059', 'E02001061',

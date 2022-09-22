@@ -20,7 +20,7 @@ class BaseYearLandUse:
                  emp_e_cat_data_path=lu_constants.E_CAT_DATA,
                  emp_soc_cat_data_path=lu_constants.SOC_BY_REGION,
                  emp_unm_data_path=lu_constants.UNM_DATA,
-                 base_year='2019',
+                 base_year='2018',
                  scenario_name=None):
         """
         parse parameters from run call (file paths, requested outputs and audits)
@@ -132,9 +132,10 @@ class BaseYearLandUse:
             '3.2.10 adjust zonal pop with full dimensions': 0,
             '3.2.11 process CER data': 0
         }
-
-        self.norcom = 'import from NorCOM'
+        # YZ--for DDG aligned process, NorCOM import step is skipped
+        self.norcom = 'skip NorCOM'
         # self.norcom = 'export to NorCOM'
+        # self.norcom = 'import from NorCOM'
 
     def build_by_pop(self):
         # TODO: Method name, this is more of an adjustment to a base now

@@ -64,7 +64,7 @@ normits_seg_to_tfn_tt_file = r'I:\NorMITs Land Use\import\Lookups\NorMITs_segmen
 # Set Model Year
 # TODO - ART, 16/02/2022: Make this a variable that is set in run_by_lu
 #  Maybe ModelYear should be BaseYear or BaseModelYear too...?
-ModelYear = '2019'
+ModelYear = '2018'
 
 # Directory and file paths for the MYPE section
 
@@ -1846,7 +1846,7 @@ def pop_with_full_dimensions(by_lu_obj):
         logging.info('Any further functions that are called from this Land Use process are highly likely to be wrong!')
         # TODO - Call NorCOM script directly here? Then could remove if/else statement?
         #  Waiting for NorCOM to be refined enough that it doesn't take 3 days to run...
-    else:
+    elif how_to_run == 'import from NorCOM':
         logging.info('Reading in file from NorCOM')
         # Make sure this read in and is picking up an actual file and actual columns
         NorCOM_NTEM_HHpop = pd.read_csv(input_NTEM_HHpop_filepath)
@@ -1877,6 +1877,18 @@ def pop_with_full_dimensions(by_lu_obj):
                                    how='right',
                                    left_on=['msoa11cd', 'TravellerType'],
                                    right_on=['msoa11cd', 'lu_TravellerType'])
+    else:
+        logging.info('Skipping importing NorCOM')
+        NTEM_HHpop_trim = NTEM_HHpop[['msoaZoneID',
+                                      'msoa11cd',
+                                      'TravellerType',
+                                      'Age_code',
+                                      'Gender_code',
+                                      'Household_composition_code',
+                                      'Household_size',
+                                      'Household_car',
+                                      'Employment_type_code',
+                                      'pop_aj']]
 
         NTEM_HHpop_trim = NTEM_HHpop_trim.rename(
             columns={'msoaZoneID': 'z',
@@ -1885,7 +1897,7 @@ def pop_with_full_dimensions(by_lu_obj):
                      'Gender_code': 'g',
                      'Household_composition_code': 'h',
                      'Employment_type_code': 'e',
-                     'NorCOM_result': 'P_NTEM'})
+                     'pop_aj': 'P_NTEM'})
 
         NTEM_HHpop_trim['z'] = NTEM_HHpop_trim['z'].astype(int)
         NTEM_HHpop_trim_iterator = zip(NTEM_HHpop_trim['z'],
