@@ -17,6 +17,8 @@ class FutureYearLandUse:
                  model_zoning='msoa',
                  base_resi_land_use_path=None,
                  base_non_resi_land_use_path=None,
+                 area_type_path=lu_constants.LU_AREA_TYPES,
+                 ctripend_database_path=lu_constants.CTripEnd_Database,
                  fy_demographic_path=None,
                  fy_at_mix_path=None,
                  fy_soc_mix_path=None,
@@ -42,6 +44,8 @@ class FutureYearLandUse:
         self.base_year = base_year
         self.future_year = future_year
         self.scenario_name = scenario_name.upper()
+        self.area_type_path = area_type_path
+        self.CTripEnd_Database_path = ctripend_database_path
 
         # If Nones passed in, set defaults
         # This is for base datasets that don't vary between scenarios

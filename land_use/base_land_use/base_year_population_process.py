@@ -1928,7 +1928,7 @@ def pop_with_full_dimensions(by_lu_obj):
                                    census_f_value,
                                    on='aghe_Key')
         NTEM_HHpop_trim = NTEM_HHpop_trim.drop(
-            columns=['z_x', 'a_x', 'g_x', 'h_x', 'e_x', 'lu_TravellerType'])
+            columns=['z_x', 'a_x', 'g_x', 'h_x', 'e_x'])
         NTEM_HHpop_trim = NTEM_HHpop_trim.rename(
             columns={'z_y': 'z', 'a_y': 'a', 'g_y': 'g', 'h_y': 'h', 'e_y': 'e'})
         NTEM_HHpop_trim['P_aghetns'] = (NTEM_HHpop_trim['f_tns|zaghe']

@@ -11,16 +11,16 @@ import pandas as pd
 
 starting_dir = os.getcwd()
 ModelYear = '2018'
-iteration = 'iter4l'
+iteration = 'iter4m'
 process_working_dir = os.path.join(r'I:\NorMITs Land Use\base_land_use', iteration, '01 Process')
 audit_working_dir = os.path.join(r'I:\NorMITs Land Use\base_land_use', iteration, '02 Audits')
 output_working_dir = os.path.join(r'I:\NorMITs Land Use\base_land_use', iteration, '03 Outputs')
 
-run_check_326 = True
+run_check_326 = False
 run_check_327 = False
 run_check_328 = False
 run_check_3210 = False
-run_check_3211 = False
+run_check_3211 = True
 
 manchester_zones = ['E02001045', 'E02001046', 'E02001047', 'E02001048', 'E02001049', 'E02001050', 'E02001051',
                     'E02001052', 'E02001053', 'E02001055', 'E02001056', 'E02001057', 'E02001059', 'E02001061',
@@ -79,9 +79,12 @@ def check_3210():
     s3210_data = compress.read_in(s3210_testfile)
     manchester_s3210_data = s3210_data[s3210_data['2021_LA_code'].isin(manchester_la)]
     manchester_s3210_dump_path = os.path.join(''.join(['output_3_resi_manchester_lad_msoa_tfn_tt_agg_prt_', ModelYear, '_hh_pop.csv']))
+    s3210_data_dump_path = os.path.join(''.join(['output_3_resi_lad_msoa_tfn_tt_agg_prt_', ModelYear, '_hh_pop.csv']))
     print('dumping to csv')
     manchester_s3210_data.to_csv(manchester_s3210_dump_path, index=False)
+    s3210_data.to_csv(s3210_data_dump_path, index=False)
     print(manchester_s3210_data)
+    print(s3210_data)
 
 
 def check_3211():
@@ -91,8 +94,11 @@ def check_3211():
     manchester_s3211_data = s3211_data[s3211_data['2021_LA_Name'].isin(['Manchester'])]
     manchester_s3211_dump_path = os.path.join(''.join(['output_6_resi_manchester_msoa_tfn_tt_prt_',
                                                        ModelYear, '_pop.csv']))
+    s3211_dump_path = os.path.join(''.join(['output_6_resi_gb_msoa_tfn_tt_prt_',
+                                                       ModelYear, '_pop.csv']))
     print('dumping to csv')
     manchester_s3211_data.to_csv(manchester_s3211_dump_path, index=False)
+    s3211_data.to_csv(s3211_dump_path, index=False)
     print(manchester_s3211_data)
 
 if run_check_326:

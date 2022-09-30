@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Sep 22 2022
+Created on Fri Sep 30 2022
 
 @author: yanzhu
 Version number:
@@ -49,13 +49,172 @@ DDG_wkrfrac_path = '_'.join(['DD', 'Nov21', CAS_Scen, 'frac{WOR}{WAP}', 'LA.csv'
 DDG_emp_path = '_'.join(['DD', 'Nov21', CAS_Scen, 'Emp', 'LA.csv'])
 
 
-# Function based audit/process directory names
-DDG_process_dir = '3.2.12_process_DDG_data'
+# # Function based audit/process directory names
+# DDG_process_dir = '3.2.12_process_DDG_data'
 
 # Process/audit/output directory name
 process_dir = '01 Process'
 audit_dir = '02 Audits'
 output_dir = '03 Outputs'
+
+def ntem_pop_interpolation(fy_lu_obj, calling_functions_dir):
+    """
+    Process population data from NTEM CTripEnd database:
+    Interpolate population to the target year, in this case it is for the base year, as databases
+    are available in 5 year interval;
+    Translate NTEM zones in Scotland into NorNITs zones; for England and Wales, NTEM zones = NorMITs zones (MSOAs)
+    """
+
+    # The year of data is set to define the upper and lower NTEM run years and interpolate as necessary between them.
+    # The base year for NTEM is 2011 and it is run in 5-year increments from 2011 to 2051.
+    # The year selected below must be between 2011 and 2051 (inclusive).
+    # As we are running this inside the main base year script, we can set Year = ModelYear
+    # However, we do still need to retain Year, as it is assumed Year is an int, not a str (as ModelYear is).
+    Year = int(fy_lu_obj.future_year, calling_functions_dir)
+
+    logging.info('Running NTEM_Pop_Interpolation function for Year ' + str(Year))
+    print('Running NTEM_Pop_Interpolation function for Year ' + str(Year))
+
+    if Year < 2011 | Year > 2051:
+        raise ValueError("Please select a valid year of data.")
+    else:
+        pass
+
+    iter_folder = fy_lu_obj.out_paths['write_folder']
+    logging.info('NTEM_Pop_Interpolation output being written in:')
+    logging.info(iter_folder)
+    LogFile = os.path.join(iter_folder, audit_dir, calling_functions_dir, ''.join(['NTEM_Pop_Interpolation_LogFile_',
+                                                                                   ModelYear, '.txt']))
+    # 'I:/NorMITs Synthesiser/Zone Translation/'
+    Zone_path = by_lu_obj.zones_folder + 'Export/ntem_to_msoa/ntem_msoa_pop_weighted_lookup.csv'
+    Pop_Segmentation_path = by_lu_obj.import_folder + 'CTripEnd/Pop_Segmentations.csv'
+    with open(LogFile, 'w') as o:
+        o.write("Notebook run on - " + str(datetime.datetime.now()) + "\n")
+        o.write("\n")
+        o.write("Data Year - " + str(Year) + "\n")
+        o.write("\n")
+        o.write("Correspondence Lists:\n")
+        o.write(Zone_path + "\n")
+        o.write(Pop_Segmentation_path + "\n")
+        o.write("\n")
+
+    # Data years
+    # NTEM is run in 5-year increments with a base of 2011.
+    # This section calculates the upper and lower years of data that are required
+    InterpolationYears = Year % 5
+    LowerYear = Year - ((InterpolationYears - 1) % 5)
+    UpperYear = Year + ((1 - InterpolationYears) % 5)
+
+    logging.info("Lower Interpolation Year - " + str(LowerYear))
+    logging.info("Upper Interpolation Year - " + str(UpperYear))
+    print("Lower Interpolation Year - " + str(LowerYear))
+    print("Upper Interpolation Year - " + str(UpperYear))
+
+    # Import Upper and Lower Year Tables
+    # 'I:/Data/NTEM/NTEM 7.2 outputs for TfN/'
+    LowerNTEMDatabase = by_lu_obj.CTripEnd_Database_path + 'CTripEnd7_' + str(LowerYear) + '.accdb'
+    UpperNTEMDatabase = by_lu_obj.CTripEnd_Database_path + 'CTripEnd7_' + str(UpperYear) + '.accdb'
+    # UpperNTEMDatabase = by_lu_obj.CTripEnd_Database_path + r"\CTripEnd7_" + str(UpperYear) + r".accdb"
+    cnxn = pyodbc.connect('DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' +
+                          '{};'.format(UpperNTEMDatabase))
+
+    query = r"SELECT * FROM ZoneData"
+    UZoneData = pd.read_sql(query, cnxn)
+    cnxn.close()
+
+    cnxn = pyodbc.connect('DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' +
+                          '{};'.format(LowerNTEMDatabase))
+
+    query = r"SELECT * FROM ZoneData"
+    LZoneData = pd.read_sql(query, cnxn)
+    cnxn.close()
+
+    # Re-format Tables
+    LZonePop = LZoneData.copy()
+    UZonePop = UZoneData.copy()
+    LZonePop.drop(
+        ['E01', 'E02', 'E03', 'E04', 'E05', 'E06', 'E07', 'E08', 'E09', 'E10', 'E11', 'E12', 'E13', 'E14', 'E15', 'K01',
+         'K02', 'K03', 'K04', 'K05', 'K06', 'K07', 'K08', 'K09', 'K10', 'K11', 'K12', 'K13', 'K14', 'K15'], axis=1,
+        inplace=True)
+    UZonePop.drop(
+        ['E01', 'E02', 'E03', 'E04', 'E05', 'E06', 'E07', 'E08', 'E09', 'E10', 'E11', 'E12', 'E13', 'E14', 'E15', 'K01',
+         'K02', 'K03', 'K04', 'K05', 'K06', 'K07', 'K08', 'K09', 'K10', 'K11', 'K12', 'K13', 'K14', 'K15'], axis=1,
+        inplace=True)
+    LZonePop_long = pd.melt(LZonePop, id_vars=["I", "R", "B", "Borough", "ZoneID", "ZoneName"],
+                            var_name="LTravellerType", value_name="LPopulation")
+    UZonePop_long = pd.melt(UZonePop, id_vars=["I", "R", "B", "Borough", "ZoneID", "ZoneName"],
+                            var_name="UTravellerType", value_name="UPopulation")
+
+    LZonePop_long.rename(columns={"I": "LZoneID", "B": "LBorough", "R": "LAreaType"}, inplace=True)
+    UZonePop_long.rename(columns={"I": "UZoneID", "B": "UBorough", "R": "UAreaType"}, inplace=True)
+
+    LZonePop_long['LIndivID'] = LZonePop_long.LZoneID.map(str) + "_" + LZonePop_long.LAreaType.map(
+        str) + "_" + LZonePop_long.LBorough.map(str) + "_" + LZonePop_long.LTravellerType.map(str)
+    UZonePop_long['UIndivID'] = UZonePop_long.UZoneID.map(str) + "_" + UZonePop_long.UAreaType.map(
+        str) + "_" + UZonePop_long.UBorough.map(str) + "_" + UZonePop_long.UTravellerType.map(str)
+
+    # Join Upper and Lower Tables
+    TZonePop_DataYear = LZonePop_long.join(UZonePop_long.set_index('UIndivID'), on='LIndivID', how='right',
+                                           lsuffix='_left', rsuffix='_right')
+    TZonePop_DataYear.drop(['UZoneID', 'UBorough', 'UAreaType', 'UTravellerType'], axis=1, inplace=True)
+
+    # Interpolate Between Upper and Lower Years
+    TZonePop_DataYear['GrowthinPeriod'] = TZonePop_DataYear.eval('UPopulation - LPopulation')
+    TZonePop_DataYear['GrowthperYear'] = TZonePop_DataYear.eval('GrowthinPeriod / 5')
+    TZonePop_DataYear = TZonePop_DataYear.assign(GrowthtoYear=TZonePop_DataYear['GrowthperYear'] * (Year - LowerYear))
+    TZonePop_DataYear['Population'] = TZonePop_DataYear.eval('LPopulation + GrowthtoYear')
+
+    # Tidy up
+    TZonePop_DataYear.rename(
+        columns={"LZoneID": "ZoneID", "LBorough": "Borough", "LAreaType": "AreaType", "LTravellerType": "TravellerType",
+                 "LIndivID": "IndivID"}, inplace=True)
+    TZonePop_DataYear.drop(
+        ['GrowthinPeriod', 'GrowthperYear', 'GrowthtoYear', 'LPopulation', 'UPopulation', 'ZoneID_left', 'ZoneID_right',
+         'ZoneName_right', 'ZoneName_left', 'Borough_left', 'Borough_right', 'IndivID'], axis=1, inplace=True)
+    print(TZonePop_DataYear.Population.sum())
+
+    # Translating zones for those in Scotland
+    Zone_List = pd.read_csv(Zone_path)
+    TZonePop_DataYear = TZonePop_DataYear.join(Zone_List.set_index('ntemZoneID'), on='ZoneID', how='right')
+    # TZonePop_DataYear.rename(columns={'msoaZoneID': 'ModelZone'}, inplace=True)
+    TZonePop_DataYear[
+        'Population_RePropped'] = TZonePop_DataYear['Population'] * TZonePop_DataYear['overlap_ntem_pop_split_factor']
+
+    Segmentation_List = pd.read_csv(Pop_Segmentation_path)
+    TZonePop_DataYear = TZonePop_DataYear.join(Segmentation_List.set_index('NTEM_Traveller_Type'), on='TravellerType',
+                                               how='right')
+    TZonePop_DataYear.drop(
+        ['Population', 'ZoneID', 'overlap_population', 'ntem_population', 'msoa_population',
+         'overlap_msoa_pop_split_factor', 'overlap_type'], axis=1, inplace=True)
+    TZonePop_DataYear.rename(columns={"Population_RePropped": "Population"}, inplace=True)
+    print(TZonePop_DataYear.Population.sum())
+    TZonePop_DataYear = TZonePop_DataYear.groupby(['msoaZoneID', 'AreaType', 'Borough', 'TravellerType',
+                                                   'NTEM_TT_Name', 'Age_code', 'Age',
+                                                   'Gender_code', 'Gender', 'Household_composition_code',
+                                                   'Household_size', 'Household_car', 'Employment_type_code',
+                                                   'Employment_type'])[
+        ['Population']].sum().reset_index()
+    NTEM_HHpop = TZonePop_DataYear
+    # Export
+    Export_SummaryPop = TZonePop_DataYear.groupby(['TravellerType', 'NTEM_TT_Name']).sum()
+    print(Export_SummaryPop.Population.sum())
+    # Export_SummaryPop.drop(['msoaZoneID'], inplace=True, axis=1)
+    PopOutput = '_'.join(['ntem_gb_z_areatype_ntem_tt', str(Year), 'pop.csv'])
+
+    with open(os.path.join(iter_folder, process_dir, calling_functions_dir, PopOutput), "w", newline='') as f:
+        TZonePop_DataYear.to_csv(f, header=True, sep=",")
+    f.close()
+
+    with open(LogFile, 'a') as o:
+        o.write('Total Population: \n')
+        Export_SummaryPop.to_csv(o, header=False, sep="-")
+        o.write('\n')
+        o.write('\n')
+    print('Export complete.')
+    print(NTEM_HHpop.head(5))
+    logging.info('NTEM_Pop_Interpolation function complete')
+    print('NTEM_Pop_Interpolation function complete')
+    return NTEM_HHpop
 
 def DDGaligned_pop_process(by_lu_obj):
     logging.info('Running Step 3.2.12')

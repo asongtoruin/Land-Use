@@ -2,7 +2,7 @@ import logging
 import os
 from land_use import lu_constants
 from land_use.utils import file_ops
-from land_use.base_land_use import base_year_population_process, employment
+from land_use.base_land_use import base_year_population_process, employment, DDG_process
 
 
 class BaseYearLandUse:
@@ -90,7 +90,8 @@ class BaseYearLandUse:
             '3.2.8_subsets_of_workers+nonworkers',
             '3.2.9_verify_district_level_worker_and_nonworker',
             '3.2.10_adjust_zonal_pop_with_full_dimensions',
-            '3.2.11_process_CER_data']
+            '3.2.11_process_CER_data',
+            '3.2.12_process_DDG_data']
 
         # Build folders
         if not os.path.exists(write_folder):
@@ -130,7 +131,8 @@ class BaseYearLandUse:
             '3.2.8 get subsets of worker and non-worker': 0,
             '3.2.9 verify district level worker and non-worker': 0,
             '3.2.10 adjust zonal pop with full dimensions': 0,
-            '3.2.11 process CER data': 0
+            '3.2.11 process CER data': 0,
+            '3.2.12 process DDG data': 0
         }
         # YZ--for DDG aligned process, NorCOM import step is skipped
         self.norcom = 'skip NorCOM'
@@ -248,6 +250,14 @@ class BaseYearLandUse:
         #     logging.info('Running step 3.2.11, process CER data')
         #     BaseYear2018_population_process.process_cer_data(self, hhpop_combined_from_3_2_10, la_2_z_from_3_2_10)
 
+        if self.state['3.2.12 process DDG data'] == 0:
+            logging.info('')
+            logging.info('\n' + '=' * 75)
+            print('\n' + '=' * 75)
+            logging.info('Running step 3.2.12, adjust zonal pop to be aligned with DDG')
+            DDG_process.DDGaligned_pop_process(self)
+            #DDG_pop_process.DDGaligned_pop_process(self)
+
     def _check_state(self,
                      step_key: str = None):
         """
@@ -288,5 +298,8 @@ class BaseYearLandUse:
 
         employment.unemp_infill(self)
 
+
         self.emp_out.to_csv(self.out_paths['emp_write_path'],
                             index=False)
+
+        DDG_process.DDGaligned_emp_process(self)

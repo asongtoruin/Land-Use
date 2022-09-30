@@ -208,7 +208,7 @@ TFN_TT_DESC = pd.read_csv(os.path.join(REF_PATH,
 BY_POP_BUILD_STEPS = [
             '3.2.1', '3.2.2', '3.2.3', '3.2.4', '3.2.5',
             '3.2.6', '3.2.7', '3.2.8', '3.2.9', '3.2.10',
-            '3.2.11'
+            '3.2.11', '3.2.12'
         ]
 
 BY_POP_BUILD_STEP_DESCS = [
@@ -222,5 +222,6 @@ BY_POP_BUILD_STEP_DESCS = [
             'get subsets of worker and non-worker',
             'verify worker and non-worker',
             'adjust pop with full dimensions',
-            'process CER data'
+            'process CER data',
+            'process DDG data'
         ]
