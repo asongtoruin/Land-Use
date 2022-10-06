@@ -80,7 +80,7 @@ def DDGaligned_pop_process(by_lu_obj):
 
     # get correspondence table between tfn_tt and NorMITs segs a,g,h,e,n,s
     tfn_tt_segs = pd.read_csv(normits_seg_to_tfn_tt_file)
-    BYpop_MYE = BYpop_MYE.merge(tfn_tt_segs, how='left', on=['tfn_tt'])
+    BYpop_MYE = BYpop_MYE.merge(tfn_tt_segs, how='left', on='tfn_tt')
 
     #define NWAP, and wkr and nwkr within WAP
     wkr = {
@@ -139,6 +139,7 @@ def DDGaligned_pop_process(by_lu_obj):
 
     # Adjustments: step 1 to make sure pop by segs are scaled to meet DDG LAD totals;
     # Adjustments: step 2 to incorporate worker ratio into scaled WAP to produce worker;
+    # 5 audit files are produced audit1, audit2, audit3, audit4, audit5
     # Adjustment1:
     #Merge LAD population with DDG population
     BYpop_MYE_LAD = BYpop_MYE_LAD.merge(pop_DDG_LAD, how='left',
@@ -224,8 +225,42 @@ def DDGaligned_pop_process(by_lu_obj):
 
     BYpop_DDG['pop_DDG_aj2'] = BYpop_DDG['pop_DDG_aj1'] * BYpop_DDG['aj2_fac']
     logging.info('DDG population after adjustment 2 currently {}'.format(BYpop_DDG.pop_DDG_aj2.sum()))
-
     # audit4
+    # sum LAD level WAP and wkr based on DDG_pop_aj2
+    BYpop_DDGaj2_agg_da = BYpop_DDG.groupby(['2013_LA_code', 'a'])[['pop_DDG_aj2']].sum().reset_index()
+    BYWAP_DDGaj2_LAD = BYpop_DDGaj2_agg_da.loc[(BYpop_DDGaj2_agg_da['a'] == 2)]
+    logging.info('DDG aj2 WAP currently {}'.format(BYWAP_DDGaj2_LAD.pop_DDG_aj2.sum()))
+    BYWAP_DDGaj2_LAD = BYWAP_DDGaj2_LAD.rename(columns={'pop_DDG_aj2': 'WAP_DDG_aj2'})
+    BYpop_DDGaj2_agg_dw = BYpop_DDG.groupby(['2013_LA_code', 'worker_type'])[['pop_DDG_aj2']].sum().reset_index()
+    BYwkr_DDGaj2_LAD = BYpop_DDGaj2_agg_dw.loc[(BYpop_DDGaj2_agg_dw['worker_type'] =='wkr')]
+    logging.info('DDG aj2 worker currently {}'.format(BYwkr_DDGaj2_LAD.pop_DDG_aj2.sum()))
+    BYwkr_DDGaj2_LAD = BYwkr_DDGaj2_LAD.rename(columns={'pop_DDG_aj2': 'wkr_DDG_aj2'})
+
+    # Columns in df BYWAP_MYE_LAD after merging is: ['2013_LA_code','pop_DDG_aj2','WAP_DDG_aj2','wkr_DDG_aj2']
+    BYWAP_DDGaj2_LAD = BYWAP_DDGaj2_LAD.merge(BYwkr_DDGaj2_LAD, how='left',
+                                        on=['2013_LA_code']).drop(columns={'a', 'worker_type'})
+
+    # addtional two columns created-- work out ration of worker over total pop as well as over total WAP from MYE
+    # BYWAP_DDGaj2_LAD['nwkr_DDG_aj2'] = BYpop_MYE_LAD['WAP_DDG_aj2'] - BYpop_MYE_LAD['wkr_DDG_aj2']
+    BYWAP_DDGaj2_LAD['fact_wkr_WAP_by'] = BYWAP_DDGaj2_LAD['wkr_DDG_aj2'] / BYWAP_DDGaj2_LAD['WAP_DDG_aj2']
+    BYWkrfac_DDG_LAD_audit = BYWAP_DDGaj2_LAD[['2013_LA_code', 'fact_wkr_WAP_by']]
+    BYWkrfac_DDG_LAD_audit = BYWkrfac_DDG_LAD_audit.merge(wrkfac_DDG_LAD, how='left',
+                                                          left_on=['2013_LA_code'],
+                                                          right_on=['LAD13CD']).drop(columns={'LAD13CD'})
+    BYWkrfac_DDG_LAD_audit = BYWkrfac_DDG_LAD_audit.rename(columns={ModelYear: 'wrkfac_DDG'})
+    BYWkrfac_DDG_LAD_audit['ratio_deviation'] = BYWkrfac_DDG_LAD_audit['wrkfac_DDG']\
+                                                /BYWkrfac_DDG_LAD_audit['fact_wkr_WAP_by']-1
+
+    logging.info('The min %age diff is ' + str(BYWkrfac_DDG_LAD_audit['ratio_deviation'].min() * 100) + '%')
+    logging.info('The max %age diff is ' + str(BYWkrfac_DDG_LAD_audit['ratio_deviation'].max() * 100) + '%')
+    logging.info('The mean %age diff is ' + str(BYWkrfac_DDG_LAD_audit['ratio_deviation'].mean() * 100) + '%')
+
+    BYWkrfac_DDG_LAD_audit_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                           audit_dir,
+                                           DDG_process_dir,
+                                           '_'.join(['audit_4_gb_lad', ModelYear, 'worker_ratio.csv']))
+    BYWkrfac_DDG_LAD_audit.to_csv(BYWkrfac_DDG_LAD_audit_path, index=False)
+    # audit5
     # check LAD level pop is consistent with DDG LAD
     BYpop_DDG_LAD_audit = BYpop_DDG.groupby(['2013_LA_code'])[['pop_MYE', 'pop_DDG_aj1', 'pop_DDG_aj2']].sum().reset_index()
     BYpop_DDG_LAD_audit = BYpop_DDG_LAD_audit.merge(pop_DDG_LAD, how='left',
@@ -241,7 +276,7 @@ def DDGaligned_pop_process(by_lu_obj):
     BYpop_DDG_LAD_audit_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                            audit_dir,
                                            DDG_process_dir,
-                                           '_'.join(['audit_4_gb_lad', ModelYear, 'check_pop.csv']))
+                                           '_'.join(['audit_5_gb_lad', ModelYear, 'check_pop.csv']))
     BYpop_DDG_LAD_audit.to_csv(BYpop_DDG_LAD_audit_path, index=False)
     # Auditing text for Step 3.2.12 pop process
     audit_3_2_12_header = '\n'.join(['Audit for  Step 3.2.12',
@@ -297,9 +332,7 @@ def DDGaligned_emp_process(by_lu_obj):
     output_working_dir_path = by_lu_obj.home_folder
     BYemp_process_output_file = os.path.join(output_working_dir_path, ''.join(['land_use_',
                                                                             BaseYear, '_emp.csv']))
-    BYemp_unm = pd.read_csv(
-        os.path.join(
-            output_working_dir_path, BYemp_process_output_file))
+    BYemp_unm = pd.read_csv(BYemp_process_output_file)
     # Extract employment only
     BYemp = BYemp_unm.query("soc_cat == 1 or soc_cat == 2 or soc_cat == 3")
     # Extract unemployment-- could not understand why there a category of unemployment for job?
@@ -340,7 +373,7 @@ def DDGaligned_emp_process(by_lu_obj):
     BYemp_LAD_fac = BYemp_LAD[['2013_LA_code', 'emp_aj_fac']]
     BYemp_DDG = BYemp.merge(BYemp_LAD_fac, how='left', on=['2013_LA_code'])
 
-    #scale MYE pop by segments to be compliant with DDG
+    #scale MYE emp by segments to be compliant with DDG
     BYemp_DDG['emp_aj'] = BYemp_DDG['employment'] * BYemp_DDG['emp_aj_fac']
     BYemp_DDG = BYemp_DDG.rename(columns={'employment': 'emp_pre', 'emp_aj': 'employment'})
     logging.info('DDG aligned employment total currently {}'.format(BYemp_DDG.employment.sum()))
@@ -367,8 +400,8 @@ def DDGaligned_emp_process(by_lu_obj):
     BYemp_DDG_output = BYemp_DDG[['msoa_zone_id', 'e_cat', 'soc_cat', 'employment']]
     # Dump outputs
     #DDG_aligned_emp_output_path = by_lu_obj.out_paths['write_folder']
-    BYemp_DDG_filename = '_'.join(['output_DDG_gb_msoa_', ModelYear, 'emp.csv'])
-    BYemp_DDG_path = os.path.join(output_working_dir_path, BYemp_DDG_filename)
+    BYemp_DDG_filename = '_'.join(['output_DDG_gb_msoa', ModelYear, 'emp.csv'])
+    BYemp_DDG_path = os.path.join(output_working_dir_path, output_dir, BYemp_DDG_filename)
     BYemp_DDG_output.to_csv(BYemp_DDG_path, index=False)
     return 0
 

@@ -39,6 +39,8 @@ def skill_weight_e_cats(by_lu_obj,
                                   how='left',
                                   on='gor')
     soc_factor['soc_factor'] = soc_factor['seg_jobs']/soc_factor['total_jobs']
+    # YZ - fill na with zero
+    soc_factor['soc_factor'] = soc_factor['soc_factor'].fillna(0)
     soc_factor = soc_factor.reindex(
         ['gor', 'soc_cat', 'soc_factor'], axis=1)
 

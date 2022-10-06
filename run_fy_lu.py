@@ -8,12 +8,14 @@ import land_use.future_land_use.fy_lu as fylu
 
 if __name__ == '__main__':
 
-    fy_iter = 'iter4a'
+    fy_iter = 'iter4m'
 
     by_resi_lu_path = r'I:\NorMITs Land Use\base_land_use\iter3e\outputs\land_use_output_msoa.csv'
     by_non_resi_lu_path = r'I:\NorMITs Land Use\base_land_use\iter3e\outputs\land_use_2018_emp.csv'
 
-    scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
+    # scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
+    scenarios = ['Regional Scenario', 'High', 'Low']
+    CAS_scen = ['CASReg', 'CASLo','CASHi']
     all_fy = range(2019, 2051)
     future_years = list()
     for i in all_fy:

@@ -19,7 +19,7 @@ DATA_FOLDER = 'Y://Data Strategy//Data//'
 
 # Most recent Land Use Iteration
 LU_MR_ITER = 'iter4m'
-FYLU_MR_ITER = 'iter3c'
+FYLU_MR_ITER = 'iter4m'
 LU_IMPORTS = 'import'
 LU_REFS = 'Lookups'
 
@@ -33,6 +33,7 @@ KS401_PATH = LU_FOLDER + '/' + LU_IMPORTS + '/' + 'Nomis Census 2011 Head & Hous
 LU_AREA_TYPES = LU_FOLDER + '/area types/TfNAreaTypesLookup.csv'
 ALL_RES_PROPERTY_PATH = 'I:/NorMITs Land Use/import/AddressBase/2018/processed'
 CTripEnd_Database = 'I:/Data/NTEM/NTEM 7.2 outputs for TfN/'
+
 
 
 # Path to a default land use build
