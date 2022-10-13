@@ -20,7 +20,8 @@ run_check_326 = False
 run_check_327 = False
 run_check_328 = False
 run_check_3210 = False
-run_check_3211 = True
+run_check_3211 = False
+run_check_3212 = True
 
 manchester_zones = ['E02001045', 'E02001046', 'E02001047', 'E02001048', 'E02001049', 'E02001050', 'E02001051',
                     'E02001052', 'E02001053', 'E02001055', 'E02001056', 'E02001057', 'E02001059', 'E02001061',
@@ -101,6 +102,20 @@ def check_3211():
     s3211_data.to_csv(s3211_dump_path, index=False)
     print(manchester_s3211_data)
 
+def check_3212():
+    print('running check_3212')
+    s3212_testfile = os.path.join(''.join(['output_8_DDG_resi_gb_msoa_tfn_tt_prt_', ModelYear, '_pop']))
+    s3212_data = compress.read_in(s3212_testfile)
+    manchester_s3212_data = s3212_data[s3212_data['2013_LA_code'].isin(manchester_la)]
+    manchester_s3212_dump_path = os.path.join(''.join(['output_8_DDG_resi_manchester_msoa_tfn_tt_prt_',
+                                                       ModelYear, '_pop.csv']))
+    # s3212_dump_path = os.path.join(''.join(['output_6_resi_gb_msoa_tfn_tt_prt_',
+    #                                                    ModelYear, '_pop.csv']))
+    print('dumping to csv')
+    manchester_s3212_data.to_csv(manchester_s3212_dump_path, index=False)
+    # s3211_data.to_csv(s3211_dump_path, index=False)
+    print(manchester_s3212_data)
+
 if run_check_326:
     os.chdir(process_working_dir)
     check_326()
@@ -116,5 +131,8 @@ if run_check_3210:
 if run_check_3211:
     os.chdir(output_working_dir)
     check_3211()
+if run_check_3212:
+    os.chdir(output_working_dir)
+    check_3212()
 
 os.chdir(starting_dir)

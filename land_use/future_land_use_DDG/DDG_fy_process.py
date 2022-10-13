@@ -461,8 +461,7 @@ def DDGaligned_fy_emp_process(fy_lu_obj):
     BYemp_unm = pd.read_csv(BYemp_process_output_file)
     # Directory and file paths for the DDG
     # Directory Paths
-    DDG_directory = os.path.join(fy_lu_obj.import_folder, 'DDG',
-                                 ' '.join(['CAS', scenario_name]))
+    DDG_directory = os.path.join(fy_lu_obj.import_folder, 'DDG', scenario_name)
     # File names
     DDG_emp_path = '_'.join(['DD', 'Nov21', CAS_scen, 'Emp', 'LA.csv'])
     # Extract employment only
