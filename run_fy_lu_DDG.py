@@ -27,14 +27,14 @@ def main():
 
     if run_pop:
         for scenario in scenarios:
-        if scenario == 'CAS Regional Scenario':
-            CAS_scen = 'CASReg'
-        elif scenario == 'CAS High':
-            CAS_scen = 'CASHi'
-        elif scenario == 'CAS Low':
-            CAS_scen = 'CASLo'
-        else:
-            CAS_scen = 'Central'
+            if scenario == 'CAS Regional Scenario':
+                CAS_scen = 'CASReg'
+            elif scenario == 'CAS High':
+                CAS_scen = 'CASHi'
+            elif scenario == 'CAS Low':
+                CAS_scen = 'CASLo'
+            else:
+                CAS_scen = 'Central'
             for fy in future_years:
                 fy_run = fylu.FutureYearLandUse(iteration=iteration, future_year=fy, scenario_name=scenario, CAS_scen=CAS_scen)
                 fy_run.build_fy_pop_DDG()
