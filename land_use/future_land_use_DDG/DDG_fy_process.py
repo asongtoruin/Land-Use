@@ -37,8 +37,8 @@ output_dir = '03 Outputs'
 
 
 def ntem_fy_pop_growthfactor(fy_lu_obj):
-    logging.info('Calculating growth factor of NTEM pop')
-    print('Calculating growth factor of NTEM pop')
+    logging.info('Calculating growth factor of NTEM pop for ' + fy_lu_obj.future_year)
+    print('Calculating growth factor of NTEM pop for ' + fy_lu_obj.future_year)
     base_year = fy_lu_obj.base_year
     future_year = fy_lu_obj.future_year
     Pop_Segmentation_path = fy_lu_obj.import_folder + '/CTripEnd/Pop_Segmentations.csv'
@@ -58,8 +58,11 @@ def ntem_fy_pop_growthfactor(fy_lu_obj):
                                               'Employment_type_code': 'e'})
     cols_chosen = ['z', 'tt', 'a', 'g', 'h', 'e', base_year, future_year]
     ntem_pop_growfac = ntem_pop_growfac[cols_chosen]
-    ntem_pop_growfac['growthfac'] = ntem_pop_growfac[future_year] / ntem_pop_growfac[base_year]
+
+    ntem_pop_growfac['growthfac'] = np.where(ntem_pop_growfac[base_year] == 0, 1,
+                              ntem_pop_growfac[future_year] / ntem_pop_growfac[base_year])
     ntem_pop_growfac['growthfac'] = ntem_pop_growfac['growthfac'].fillna(1)
+
 
 
 
@@ -79,8 +82,8 @@ def ntem_fy_pop_growthfactor(fy_lu_obj):
     ntem_pop_growfac.to_csv(os.path.join(fy_lu_obj.out_paths['write_folder'],
                                          process_dir,
                                          Gfactor_Output), index=False)
-    logging.info('ntem_fy_pop_growthfactor function complete')
-    print('ntem_fy_pop_growthfactor function complete')
+    logging.info('ntem_fy_pop_growthfactor function complete for ' + fy_lu_obj.future_year)
+    print('ntem_fy_pop_growthfactor function complete for ' + fy_lu_obj.future_year )
 
 def base_year_pop(fy_lu_obj):
     logging.info('Getting dimension details for base year pop')
@@ -116,20 +119,97 @@ def base_year_pop(fy_lu_obj):
     BYpop_MYE_pre['zaghe_Key'] = ['_'.join([str(z), str(a), str(g), str(h), str(e)])
                                      for z, a, g, h, e in BYpop_MYE_pre_iterator]
 
-    BYpop_MYE_pre = BYpop_MYE_pre[['2013_LA_code', '2013_LA_name', 'z', 'MSOA',
-                           'tfn_tt', 't', 'zaghe_Key', 'a', 'g', 'h', 'e', 'n', 's', 'pop_by']]
-    BYpop_MYE_name = '_'.join(['output_0_MYE_allsegs', base_year, 'pop.csv.bz2'])
+    #define NWAP, and wkr and nwkr within WAP
+    wkr = {
+        1: 'wkr', # full-time worker
+        2: 'wkr', # part-time worker
+        3: 'nwkr', # student not in any employment
+        4: 'nwkr', #other unemployed
+        5: 'nwap' # children and elderly outside 16-74
+        }
+    BYpop_MYE_pre['worker_type'] = BYpop_MYE_pre['e'].map(wkr)
+
+    BYpop_MYE_pre = BYpop_MYE_pre[['2013_LA_code', 'z', 'MSOA',
+                                   'tfn_tt', 't', 'zaghe_Key', 'a',
+                                   'worker_type', 'pop_by']]
+    BYpop_MYE_name = '_'.join(['process_0_MYE_allsegs', base_year, 'pop.csv.bz2'])
     BYpop_MYE_path = os.path.join(fy_lu_obj.out_paths['write_folder'],
-                                  output_dir,
+                                  process_dir,
                                   BYpop_MYE_name)
     BYpop_MYE_pre.to_csv(BYpop_MYE_path)
     logging.info('Step completed-- base_year_pop')
     print('Step completed -- base_year_pop')
     return 0
 
+def NTEMaligned_pop_process(fy_lu_obj):
+    logging.info('Processing fy pop to be aligned with NTEM for ' + fy_lu_obj.future_year)
+    print('Processing fy pop to be aligned with NTEM for ' + fy_lu_obj.future_year)
+    base_year = fy_lu_obj.base_year
+    future_year = fy_lu_obj.future_year
+    # by_output_folder = fy_lu_obj.by_home_folder
+    fy_output_folder = fy_lu_obj.fy_home_folder
+    # Directiry and file paths for ntem growth factor
+    ntem_growth_file = os.path.join(fy_output_folder, process_dir,
+                                    '_'.join(['ntem_gb_zaghe', future_year, 'growth_factor.csv']))
+    ntem_growth_factor = pd.read_csv(ntem_growth_file)
+    # Directiry and file paths for by pop
+    BYpop_process_output_file = os.path.join(fy_output_folder, process_dir,
+                                             '_'.join(['process_0_MYE_allsegs', base_year, 'pop.csv.bz2']))
+    BYpop_MYE = pd.read_csv(BYpop_process_output_file)
+    # merge by_pop with ntem growth factor to get base pop adjusted for future year
+    FYpop_NTEM = BYpop_MYE.copy()
+    FYpop_NTEM = FYpop_NTEM.merge(ntem_growth_factor, how='left', on=['zaghe_Key'])
+    FYpop_NTEM['pop_fy'] = FYpop_NTEM['pop_by'] * FYpop_NTEM['growthfac']
+    FYpop_NTEM = FYpop_NTEM[['2013_LA_code', 'z', 'MSOA',
+                            'tfn_tt', 't', 'a',
+                            'worker_type', 'pop_fy']]
+
+    # sum up LAD total of MYE compiled ntem scaled future year pop
+    FYpop_LAD = FYpop_NTEM.groupby(['2013_LA_code'])[['pop_fy']].sum().reset_index()
+    logging.info('MYE_NTEM complied fy pop aggregated from LAD currently {}'.format(FYpop_LAD.pop_fy.sum()))
+    # sum up LAD total of WAP and wkr from MYE compiled base year pop
+    FYpop_agg_da = FYpop_NTEM.groupby(['2013_LA_code', 'a'])[['pop_fy']].sum().reset_index()
+    FYWAP_LAD = FYpop_agg_da.loc[(FYpop_agg_da['a'] == 2)]
+    logging.info('MYE_NTEM complied fy WAP currently {}'.format(FYWAP_LAD.pop_fy.sum()))
+    FYWAP_LAD = FYWAP_LAD.rename(columns={'pop_fy': 'WAP_fy'})
+
+
+    FYpop_agg_dw = FYpop_NTEM.groupby(['2013_LA_code', 'worker_type'])[['pop_fy']].sum().reset_index()
+    FYwkr_LAD = FYpop_agg_dw.loc[(FYpop_agg_dw['worker_type'] =='wkr')]
+    logging.info('MYE_NTEM complied fy wkr currently {}'.format(FYwkr_LAD.pop_fy.sum()))
+    FYwkr_LAD = FYwkr_LAD.rename(columns={'pop_fy': 'wkr_fy'})
+
+    #Merge LAD WAP and worker with total pop from BY MYE compiled process
+    # Columns in df FYWAP_LAD after merging is: ['2013_LA_code','pop_fy','WAP_fy','wkr_fy']
+    FYWAP_LAD = FYWAP_LAD.merge(FYwkr_LAD, how='left',
+                                        on=['2013_LA_code']).drop(columns={'a', 'worker_type'})
+    FYpop_LAD = FYpop_LAD.merge(FYWAP_LAD, how='left', on=['2013_LA_code'])
+
+    # addtional three columns created-- work out ration of worker over total pop as well as over total WAP from MYE
+    FYpop_LAD['nwkr_fy'] = FYpop_LAD['WAP_fy'] - FYpop_LAD['wkr_fy']
+    FYpop_LAD['fact_wkr_pop_fy'] = FYpop_LAD['wkr_fy'] / FYpop_LAD['pop_fy']
+    FYpop_LAD['fact_wkr_WAP_fy'] = FYpop_LAD['wkr_fy'] / FYpop_LAD['WAP_fy']
+
+    # audit1- dump df FYpop_LAD for checking purpose
+    pop_LAD_audit = FYpop_LAD.copy()
+    pop_LAD_audit_path = os.path.join(fy_lu_obj.out_paths['write_folder'],
+                                        audit_dir,
+                                        '_'.join(['audit_1_gb_LAD_preaj', future_year, 'pop.csv']))
+    pop_LAD_audit.to_csv(pop_LAD_audit_path, index=False)
+
+    # Output NTEM growth complied fy pop
+    FYpop_NTEM_name = '_'.join(['process_1_NTEM_allsegs', future_year, 'pop.csv.bz2'])
+    FYpop_NTEM_path = os.path.join(fy_lu_obj.out_paths['write_folder'],
+                                  process_dir,
+                                  FYpop_NTEM_name)
+    FYpop_NTEM.to_csv(FYpop_NTEM_path)
+    logging.info('Step completed-- NTEMaligned_by_pop_process for '+ fy_lu_obj.future_year)
+    print('Step completed -- NTEMaligned_by_pop_process for '+ fy_lu_obj.future_year)
+    return 0
+
 def DDGaligned_fy_pop_process(fy_lu_obj):
-    logging.info('Processing fy pop to be aligned with DDG')
-    print('Processing fy pop to be aligned with DDG')
+    logging.info('Processing fy pop to be aligned with DDG for ' + fy_lu_obj.future_year + fy_lu_obj.scenario_name)
+    print('Processing fy pop to be aligned with DDG for ' + fy_lu_obj.future_year + fy_lu_obj.scenario_name)
     base_year = fy_lu_obj.base_year
     future_year = fy_lu_obj.future_year
     # by_output_folder = fy_lu_obj.by_home_folder
@@ -139,73 +219,21 @@ def DDGaligned_fy_pop_process(fy_lu_obj):
 
     # Directory and file paths for the DDG
     # Directory Paths
-    DDG_directory = os.path.join(fy_lu_obj.import_folder, 'DDG',
-                                 ' '.join(['CAS', scenario_name]))
+    DDG_directory = os.path.join(fy_lu_obj.import_folder, 'DDG', scenario_name)
     # File names
     DDG_pop_path = '_'.join(['DD', 'Nov21', CAS_scen, 'Pop', 'LA.csv'])
     DDG_wkrfrac_path = '_'.join(['DD', 'Nov21', CAS_scen, 'frac{WOR}{WAP}', 'LA.csv'])
 
 
-
-    # Directiry and file paths for ntem growth factor
-    ntem_growth_path = os.path.join(fy_output_folder, process_dir)
-    ntem_growth_file = '_'.join(['ntem_gb_zaghe', future_year, 'growth_factor.csv'])
-    ntem_growth_factor = pd.read_csv(
-        os.path.join(
-            ntem_growth_path, ntem_growth_file))
-    # Directiry and file paths for by pop
-    output_working_dir_path = os.path.join(fy_output_folder, output_dir)
-    BYpop_process_output_file = os.path.join(output_working_dir_path, '_'.join(['output_0_MYE_allsegs', base_year, 'pop.csv.bz2']))
-    BYpop_MYE = pd.read_csv(BYpop_process_output_file)
-
-    # merge by_pop with ntem growth factor to get base pop adjusted for future year
-    FYpop_MYE = BYpop_MYE.copy()
-    FYpop_MYE = FYpop_MYE.merge(ntem_growth_factor, how='left', on=['zaghe_Key'])
-    FYpop_MYE['pop_fy'] = FYpop_MYE['pop_by'] * FYpop_MYE['growthfac']
-
-    #define NWAP, and wkr and nwkr within WAP
-    wkr = {
-        1: 'wkr', # full-time worker
-        2: 'wkr', # part-time worker
-        3: 'nwkr', # student not in any employment
-        4: 'nwkr', #other unemployed
-        5: 'nwap' # children and elderly outside 16-74
-        }
-    FYpop_MYE['worker_type'] = FYpop_MYE['e'].map(wkr)
-
-    # sum up LAD total of MYE compiled ntem scaled future year pop
-    FYpop_MYE_LAD = FYpop_MYE.groupby(['2013_LA_code'])[['pop_fy']].sum().reset_index()
-    logging.info('MYE complied fy pop aggregated from LAD currently {}'.format(FYpop_MYE_LAD.pop_fy.sum()))
-    # sum up LAD total of WAP and wkr from MYE compiled base year pop
-    FYpop_MYE_agg_da = FYpop_MYE.groupby(['2013_LA_code', 'a'])[['pop_fy']].sum().reset_index()
-    FYWAP_MYE_LAD = FYpop_MYE_agg_da.loc[(FYpop_MYE_agg_da['a'] == 2)]
-    logging.info('MYE complied fy WAP currently {}'.format(FYWAP_MYE_LAD.pop_fy.sum()))
-    FYWAP_MYE_LAD = FYWAP_MYE_LAD.rename(columns={'pop_fy': 'WAP_fy'})
-
-
-    FYpop_MYE_agg_dw = FYpop_MYE.groupby(['2013_LA_code', 'worker_type'])[['pop_fy']].sum().reset_index()
-    FYwkr_MYE_LAD = FYpop_MYE_agg_dw.loc[(FYpop_MYE_agg_dw['worker_type'] =='wkr')]
-    logging.info('MYE complied fy wkr currently {}'.format(FYwkr_MYE_LAD.pop_fy.sum()))
-    FYwkr_MYE_LAD = FYwkr_MYE_LAD.rename(columns={'pop_fy': 'wkr_fy'})
-
-    #Merge LAD WAP and worker with total pop from BY MYE compiled process
-    # Columns in df FYWAP_MYE_LAD after merging is: ['2013_LA_code','pop_fy','WAP_fy','wkr_fy']
-    FYWAP_MYE_LAD = FYWAP_MYE_LAD.merge(FYwkr_MYE_LAD, how='left',
-                                        on=['2013_LA_code']).drop(columns={'a', 'worker_type'})
-    FYpop_MYE_LAD = FYpop_MYE_LAD.merge(FYWAP_MYE_LAD, how='left', on=['2013_LA_code'])
-
-    # addtional three columns created-- work out ration of worker over total pop as well as over total WAP from MYE
-    FYpop_MYE_LAD['nwkr_fy'] = FYpop_MYE_LAD['WAP_fy'] - FYpop_MYE_LAD['wkr_fy']
-    FYpop_MYE_LAD['fact_wkr_pop_fy'] = FYpop_MYE_LAD['wkr_fy'] / FYpop_MYE_LAD['pop_fy']
-    FYpop_MYE_LAD['fact_wkr_WAP_fy'] = FYpop_MYE_LAD['wkr_fy'] / FYpop_MYE_LAD['WAP_fy']
-
-    # audit1- dump df FYpop_MYE_LAD for checking purpose
-    pop_MYE_LAD_audit = FYpop_MYE_LAD.copy()
-    pop_MYE_LAD_audit_path = os.path.join(fy_lu_obj.out_paths['write_folder'],
-                                        audit_dir,
-                                        '_'.join(['audit_1_gb_LAD_mye', future_year, 'pop.csv']))
-    pop_MYE_LAD_audit.to_csv(pop_MYE_LAD_audit_path, index=False)
-
+    # Directiry and file paths for fy NTEM pop
+    # process_working_path = os.path.join(fy_output_folder, process_dir)
+    # output_working_path = os.path.join(fy_output_folder, output_dir)
+    FYpop_NTEM_output_file = os.path.join(fy_output_folder, process_dir,
+                                          '_'.join(['process_1_NTEM_allsegs', future_year, 'pop.csv.bz2']))
+    FYpop = pd.read_csv(FYpop_NTEM_output_file)
+    FYpop_NTEM_audit_file = os.path.join(fy_output_folder, audit_dir,
+                                          '_'.join(['audit_1_gb_LAD_preaj', future_year, 'pop.csv']))
+    FYpop_LAD = pd.read_csv(FYpop_NTEM_audit_file)
 
     # get DDG pop for base year 2018 to adjust all population for base year
     pop_DDG_LAD = pd.read_csv(
@@ -221,20 +249,24 @@ def DDGaligned_fy_pop_process(fy_lu_obj):
     # Adjustments: step 2 to incorporate worker ratio into scaled WAP to produce worker;
     # Adjustment1:
     #Merge LAD population with DDG population
-    FYpop_MYE_LAD = FYpop_MYE_LAD.merge(pop_DDG_LAD, how='left',
+    FYpop_LAD = FYpop_LAD.merge(pop_DDG_LAD, how='left',
                         left_on=['2013_LA_code'],
                         right_on=['LAD13CD']).drop(columns={'LAD13CD'})
-    FYpop_MYE_LAD = FYpop_MYE_LAD.rename(columns={future_year: 'pop_fy_DDG'})
+    FYpop_LAD = FYpop_LAD.rename(columns={future_year: 'pop_fy_DDG'})
     #calculate adjustment factor on total pop per LAD
-    FYpop_MYE_LAD['pop_aj_fac'] = FYpop_MYE_LAD['pop_fy_DDG'] / FYpop_MYE_LAD['pop_fy']
-    FYpop_MYE_LAD['pop_aj_fac'] = FYpop_MYE_LAD['pop_aj_fac'].fillna(1)
-    FYpop_MYE_LAD_fac = FYpop_MYE_LAD[['2013_LA_code', 'pop_aj_fac']]
-    FYpop_DDG = FYpop_MYE.merge(FYpop_MYE_LAD_fac, how='left', on=['2013_LA_code'])
+    FYpop_LAD['pop_aj_fac'] = FYpop_LAD['pop_fy_DDG'] / FYpop_LAD['pop_fy']
+    FYpop_LAD['pop_aj_fac'] = FYpop_LAD['pop_aj_fac'].fillna(1)
+    FYpop_LAD_fac = FYpop_LAD[['2013_LA_code', 'pop_aj_fac']]
+    FYpop = FYpop.merge(FYpop_LAD_fac, how='left', on=['2013_LA_code'])
+    FYpop_DDG = FYpop.copy()
+
 
     #scale MYE pop by segments to be compliant with DDG
     FYpop_DDG['pop_DDG_aj1'] = FYpop_DDG['pop_fy'] * FYpop_DDG['pop_aj_fac']
     logging.info('DDG population after adjustment 1 currently {}'.format(FYpop_DDG.pop_DDG_aj1.sum()))
-
+    FYpop_DDG = FYpop_DDG[['2013_LA_code', 'z', 'MSOA',
+                            'tfn_tt', 't', 'a',
+                            'worker_type', 'pop_DDG_aj1']]
     # sum up LAD total of DDG aj1 base year pop
     FYpop_DDG_LAD = FYpop_DDG.groupby(['2013_LA_code'])[['pop_DDG_aj1']].sum().reset_index()
     logging.info('DDG aj1 pop aggregated from LAD currently {}'.format(FYpop_DDG_LAD.pop_DDG_aj1.sum()))
@@ -286,9 +318,9 @@ def DDGaligned_fy_pop_process(fy_lu_obj):
     FYpop_DDG_LAD_fac = FYpop_DDG_LAD_fac.rename(columns={'wkr_aj_fac': 'wkr', 'nwkr_aj_fac': 'nwkr'})
     FYpop_DDG_LAD_fac = FYpop_DDG_LAD_fac.melt(id_vars=['2013_LA_code'], var_name='worker_type', value_name='aj2_fac')
     FYpop_DDG_LAD_fac_append = FYpop_DDG_LAD[['2013_LA_code']]
-    FYpop_DDG_LAD_fac_append['worker_type'] = "nwap"
-    FYpop_DDG_LAD_fac_append['aj2_fac'] = 1
-    FYpop_DDG_LAD_fac = FYpop_DDG_LAD_fac.append(FYpop_DDG_LAD_fac_append).reset_index()
+    FYpop_DDG_LAD_fac_append = FYpop_DDG_LAD_fac_append.assign(worker_type='nwap')
+    FYpop_DDG_LAD_fac_append = FYpop_DDG_LAD_fac_append.assign(aj2_fac=1)
+    FYpop_DDG_LAD_fac = pd.concat([FYpop_DDG_LAD_fac, FYpop_DDG_LAD_fac_append])
 
     # audit3- dump aj_factor
     ajfac_DDG_LAD_audit = FYpop_DDG_LAD_fac.copy()
@@ -302,6 +334,9 @@ def DDGaligned_fy_pop_process(fy_lu_obj):
     FYpop_DDG = FYpop_DDG.merge(FYpop_DDG_LAD_fac, how='left', on=['2013_LA_code', 'worker_type'])
 
     FYpop_DDG['pop_DDG_aj2'] = FYpop_DDG['pop_DDG_aj1'] * FYpop_DDG['aj2_fac']
+    FYpop_DDG = FYpop_DDG[['2013_LA_code', 'z', 'MSOA',
+                            'tfn_tt', 't', 'a',
+                            'worker_type', 'pop_DDG_aj2']]
     logging.info('DDG population after adjustment 2 currently {}'.format(FYpop_DDG.pop_DDG_aj2.sum()))
     # audit4
     # sum LAD level WAP and wkr based on DDG_pop_aj2
@@ -341,7 +376,7 @@ def DDGaligned_fy_pop_process(fy_lu_obj):
 
     # audit5
     # check LAD level pop is consistent with DDG LAD
-    FYpop_DDG_LAD_audit = FYpop_DDG.groupby(['2013_LA_code'])[['pop_fy', 'pop_DDG_aj1', 'pop_DDG_aj2']].sum().reset_index()
+    FYpop_DDG_LAD_audit = FYpop_DDG.groupby(['2013_LA_code'])[['pop_DDG_aj2']].sum().reset_index()
     FYpop_DDG_LAD_audit = FYpop_DDG_LAD_audit.merge(pop_DDG_LAD, how='left',
                         left_on=['2013_LA_code'],
                         right_on=['LAD13CD']).drop(columns={'LAD13CD'})
@@ -386,16 +421,16 @@ def DDGaligned_fy_pop_process(fy_lu_obj):
 
     # Format ouputs
     FYpop_DDG = FYpop_DDG.rename(columns={'pop_DDG_aj2': 'people'})
-    FYpop_DDG_out = FYpop_DDG[['2013_LA_code', '2013_LA_name', 'z', 'MSOA', 'tfn_tt', 't','people']]
+    FYpop_DDG_out = FYpop_DDG[['2013_LA_code', 'z', 'MSOA', 'tfn_tt', 't', 'people']]
 
     #Also groupby this output FY removing t
-    groupby_cols = ['2013_LA_code', '2013_LA_name', 'z', 'MSOA', 'tfn_tt']
+    groupby_cols = ['2013_LA_code', 'z', 'MSOA', 'tfn_tt']
     FYpop_DDG_exc_t_out = FYpop_DDG_out.groupby(groupby_cols)['people'].sum().reset_index()
 
     #Dump outputs
     #DDG_aligned_pop_output_path = os.path.join(fy_lu_obj.out_paths['write_folder'], output_dir)
-    FYpop_DDG_pop_allsegs_filename = '_'.join(['output_1_DDG_resi_gb_msoa_tfn_tt', future_year, CAS_scen,'pop'])
-    FYpop_DDG_pop_tfn_tt_filename = '_'.join(['output_2_DDG_resi_gb_msoa_tfn', future_year, CAS_scen,'pop'])
+    FYpop_DDG_pop_allsegs_filename = '_'.join(['output_1_DDG_gb_msoa_allsegs_', future_year, CAS_scen,'pop'])
+    FYpop_DDG_pop_tfn_tt_filename = '_'.join(['output_2_DDG_gb_msoa_tfn_tt', future_year, CAS_scen,'pop'])
 
     FYpop_DDG_pop_allsegs_path = os.path.join(fy_lu_obj.out_paths['write_folder'],
                                   output_dir,
@@ -405,21 +440,20 @@ def DDGaligned_fy_pop_process(fy_lu_obj):
                                   output_dir,
                                   scenario_name,
                                   FYpop_DDG_pop_tfn_tt_filename)
-    compress.write_out(FYpop_DDG_out, FYpop_DDG_pop_allsegs_path)
+    # compress.write_out(FYpop_DDG_out, FYpop_DDG_pop_allsegs_path)
     compress.write_out(FYpop_DDG_exc_t_out, FYpop_DDG_pop_tfn_tt_path)
-    logging.info('Step completed-- processing fy pop to be aligned with DDG')
-    print('Step completed -- processing fy pop to be aligned with DDG')
+    logging.info('Step completed-- processing fy pop to be aligned with DDG for ' + fy_lu_obj.future_year + fy_lu_obj.scenario_name)
+    print('Step completed -- processing fy pop to be aligned with DDG for ' + fy_lu_obj.future_year + fy_lu_obj.scenario_name)
     return 0
 
 
 def DDGaligned_fy_emp_process(fy_lu_obj):
     # Distrctory and file from standard base year employment process in employment.py
-    logging.info('Processing fy emp to be aligned with DDG')
-    print('Processing fy emp to be aligned with DDG')
+    logging.info('Processing fy emp to be aligned with DDG for ' + fy_lu_obj.future_year + fy_lu_obj.scenario_name)
+    print('Processing fy emp to be aligned with DDG for ' + fy_lu_obj.future_year + fy_lu_obj.scenario_name)
     base_year = fy_lu_obj.base_year
     future_year = fy_lu_obj.future_year
     by_output_folder = fy_lu_obj.by_home_folder
-    fy_output_folder = fy_lu_obj.fy_home_folder
     scenario_name = fy_lu_obj.scenario_name
     CAS_scen = fy_lu_obj.CAS_scen
     BYemp_process_output_file = os.path.join(by_output_folder, ''.join(['land_use_',
@@ -434,7 +468,7 @@ def DDGaligned_fy_emp_process(fy_lu_obj):
     # Extract employment only
     BYemp = BYemp_unm.query("soc_cat == 1 or soc_cat == 2 or soc_cat == 3")
     # Extract unemployment-- could not understand why there a category of unemployment for job?
-    BYunemp = BYemp_unm.query("soc_cat == 4")
+    # BYunemp = BYemp_unm.query("soc_cat == 4")
     # Extract total original employment loc to E01
     BYemp_tot = BYemp[BYemp['e_cat'] == 'E01']
 
@@ -443,7 +477,7 @@ def DDGaligned_fy_emp_process(fy_lu_obj):
 
     # get 2013 LA in
     _2013LA_path = fy_lu_obj.import_folder + Zone_LA_path
-    Zone_2013LA = pd.read_csv(_2013LA_path)[['NorMITs Zone', '2013 LA', '2013 LA Name']]
+    Zone_2013LA = pd.read_csv(_2013LA_path)[['NorMITs Zone', 'MSOA',  '2013 LA', '2013 LA Name']]
     BYemp = BYemp.merge(Zone_2013LA, how='left',
                                 left_on=['msoa_zone_id'],
                                 right_on=['MSOA']).drop(columns={'MSOA'})
@@ -468,7 +502,8 @@ def DDGaligned_fy_emp_process(fy_lu_obj):
     BYemp_LAD['emp_aj_fac'] = BYemp_LAD['emp_DDG'] / BYemp_LAD['employment']
     BYemp_LAD['emp_aj_fac'] = BYemp_LAD['emp_aj_fac'].fillna(1)
     FYemp_LAD_fac = BYemp_LAD[['2013_LA_code', 'emp_aj_fac']]
-    FYemp_DDG = BYemp.merge(FYemp_LAD_fac, how='left', on=['2013_LA_code'])
+    BYemp = BYemp.merge(FYemp_LAD_fac, how='left', on=['2013_LA_code'])
+    FYemp_DDG = BYemp.copy()
 
     #scale base year employments by segments to be compliant with DDG future year
     FYemp_DDG['emp_aj'] = FYemp_DDG['employment'] * FYemp_DDG['emp_aj_fac']
@@ -504,8 +539,8 @@ def DDGaligned_fy_emp_process(fy_lu_obj):
                                   scenario_name,
                                   FYemp_DDG_filename)
     FYemp_DDG_output.to_csv(FYemp_DDG_path, index=False)
-    logging.info('Step completed-- processing fy emp to be aligned with DDG')
-    print('Step completed -- processing fy emp to be aligned with DDG')
+    logging.info('Step completed-- processing fy emp to be aligned with DDG for ' + fy_lu_obj.future_year + fy_lu_obj.scenario_name)
+    print('Step completed -- processing fy emp to be aligned with DDG for ' + fy_lu_obj.future_year + fy_lu_obj.scenario_name)
     return 0
 
 

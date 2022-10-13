@@ -81,9 +81,9 @@ class FutureYearLandUse:
         if not os.path.exists(write_folder):
             fo.create_folder(write_folder)
 
-        list_of_type_folders = ['01 Process', '02 Audits', '03 Outputs']
+        list_of_type_folders = ['02 Audits', '03 Outputs']
 
-        list_of_scenario_folders = ['Regional Scenario', 'High', 'Low']
+        list_of_scenario_folders = ['CAS Regional Scenario', 'CAS High', 'CAS Low', 'Nov 21 central']
         # Build folders
 
         # Report folder not currently in use.
@@ -95,6 +95,8 @@ class FutureYearLandUse:
                     fo.create_folder(os.path.join(write_folder, folder_type, listed_folder))
         if not os.path.exists(os.path.join(write_folder, '00 Logging')):
             fo.create_folder(os.path.join(write_folder, '00 Logging'))
+        if not os.path.exists(os.path.join(write_folder, '01 Process')):
+            fo.create_folder(os.path.join(write_folder, '01 Process'))
 
 
         # Set object paths
@@ -141,7 +143,30 @@ class FutureYearLandUse:
     def by_pop(self):
         DDG_fy_process.base_year_pop(self)
 
-    def build_fy_pop(self):
+    def build_fy_pop_ntem(self):
+
+        os.chdir(self.model_folder)
+        fo.create_folder(self.iteration, ch_dir=True)
+        os.chdir('00 Logging')
+        # Create log file without overwriting existing files
+        future_year_log_name = '_'.join(['future_year_ntem_complied_pop.log'])
+        future_year_log_dir = os.getcwd()
+        if os.path.exists(os.path.join(future_year_log_dir, future_year_log_name)):
+            log_v_count = 1
+            og_future_year_log_name = future_year_log_name[:-4]
+            while os.path.exists(os.path.join(future_year_log_dir, future_year_log_name)):
+                future_year_log_name = ''.join([og_future_year_log_name, '_', str(log_v_count), '.log'])
+                log_v_count = log_v_count + 1
+                print('The last log name I tried was already taken!')
+                print('Now trying log name: %s' % future_year_log_name)
+        logging.basicConfig(filename=future_year_log_name,
+                            level=logging.INFO,
+                            format='%(asctime)s: %(message)s')
+
+        DDG_fy_process.ntem_fy_pop_growthfactor(self)
+        DDG_fy_process.NTEMaligned_pop_process(self)
+
+    def build_fy_pop_DDG(self):
         # TODO: Method name, this is more of an adjustment to a base now
         """
 
@@ -155,7 +180,7 @@ class FutureYearLandUse:
         fo.create_folder(self.iteration, ch_dir=True)
         os.chdir('00 Logging')
         # Create log file without overwriting existing files
-        future_year_log_name = '_'.join([self.scenario_name, self.future_year, 'future_year_land_use.log'])
+        future_year_log_name = '_'.join(['future_year_land_use.log'])
         future_year_log_dir = os.getcwd()
         if os.path.exists(os.path.join(future_year_log_dir, future_year_log_name)):
             log_v_count = 1
@@ -170,7 +195,6 @@ class FutureYearLandUse:
                             format='%(asctime)s: %(message)s')
 
 
-        DDG_fy_process.ntem_fy_pop_growthfactor(self)
 
         DDG_fy_process.DDGaligned_fy_pop_process(self)
 
@@ -179,6 +203,21 @@ class FutureYearLandUse:
     def build_fy_emp(self):
         os.chdir(self.model_folder)
         fo.create_folder(self.iteration, ch_dir=True)
+        os.chdir('00 Logging')
+        # Create log file without overwriting existing files
+        future_year_log_name = '_'.join(['future_year_employment.log'])
+        future_year_log_dir = os.getcwd()
+        if os.path.exists(os.path.join(future_year_log_dir, future_year_log_name)):
+            log_v_count = 1
+            og_future_year_log_name = future_year_log_name[:-4]
+            while os.path.exists(os.path.join(future_year_log_dir, future_year_log_name)):
+                future_year_log_name = ''.join([og_future_year_log_name, '_', str(log_v_count), '.log'])
+                log_v_count = log_v_count + 1
+                print('The last log name I tried was already taken!')
+                print('Now trying log name: %s' % future_year_log_name)
+        logging.basicConfig(filename=future_year_log_name,
+                            level=logging.INFO,
+                            format='%(asctime)s: %(message)s')
 
         DDG_fy_process.DDGaligned_fy_emp_process(self)
 

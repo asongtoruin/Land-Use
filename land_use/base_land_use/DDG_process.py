@@ -27,7 +27,7 @@ from land_use.utils import compress
 import logging
 
 # Other paths
-_Zone_LA_path = 'Lookups/MSOA_1991LA_2011LA_2021LA_LAgroups.csv'
+_Zone_LA_path = 'Lookups/MSOA_1991LA_2011LA_2013LA_2021LA_LAgroups.csv'
 normits_seg_to_tfn_tt_file = r'I:\NorMITs Land Use\import\Lookups\NorMITs_segments_to_TfN_tt\normits_segs_to_tfn_tt.csv'
 
 # Set Model Year
@@ -306,10 +306,10 @@ def DDGaligned_pop_process(by_lu_obj):
 
     # Format ouputs
     BYpop_DDG = BYpop_DDG.rename(columns={'pop_DDG_aj2': 'people'})
-    BYpop_DDG_out = BYpop_DDG[['2013_LA_code', '2013_LA_name', 'z', 'MSOA', 'tfn_tt', 't','people']]
+    BYpop_DDG_out = BYpop_DDG[['2013_LA_code', 'z', 'MSOA', 'tfn_tt', 't','people']]
 
     #Also groupby this output by removing t
-    groupby_cols = ['2013_LA_code', '2013_LA_name', 'z', 'MSOA', 'tfn_tt']
+    groupby_cols = ['2013_LA_code', 'z', 'MSOA', 'tfn_tt']
     BYpop_DDG_exc_t_out = BYpop_DDG_out.groupby(groupby_cols)['people'].sum().reset_index()
 
     #Dump outputs
