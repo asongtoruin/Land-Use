@@ -208,9 +208,12 @@ def DDGaligned_pop_process(by_lu_obj):
     BYpop_DDG_LAD_fac = BYpop_DDG_LAD_fac.rename(columns={'wkr_aj_fac': 'wkr', 'nwkr_aj_fac': 'nwkr'})
     BYpop_DDG_LAD_fac = BYpop_DDG_LAD_fac.melt(id_vars=['2013_LA_code'], var_name='worker_type', value_name='aj2_fac')
     BYpop_DDG_LAD_fac_append = BYpop_DDG_LAD[['2013_LA_code']]
-    BYpop_DDG_LAD_fac_append['worker_type'] = "nwap"
-    BYpop_DDG_LAD_fac_append['aj2_fac'] = 1
-    BYpop_DDG_LAD_fac = BYpop_DDG_LAD_fac.append(BYpop_DDG_LAD_fac_append).reset_index()
+    # BYpop_DDG_LAD_fac_append['worker_type'] = "nwap"
+    # BYpop_DDG_LAD_fac_append['aj2_fac'] = 1
+    # BYpop_DDG_LAD_fac = BYpop_DDG_LAD_fac.append(BYpop_DDG_LAD_fac_append).reset_index()
+    BYpop_DDG_LAD_fac_append = BYpop_DDG_LAD_fac_append.assign(worker_type='nwap')
+    BYpop_DDG_LAD_fac_append = BYpop_DDG_LAD_fac_append.assign(aj2_fac=1)
+    BYpop_DDG_LAD_fac = pd.concat([BYpop_DDG_LAD_fac, BYpop_DDG_LAD_fac_append])
 
     # audit3- dump aj_factor
     ajfac_DDG_LAD_audit = BYpop_DDG_LAD_fac.copy()
@@ -314,8 +317,8 @@ def DDGaligned_pop_process(by_lu_obj):
 
     #Dump outputs
     #DDG_aligned_pop_output_path = os.path.join(by_lu_obj.out_paths['write_folder'], output_dir)
-    BYpop_DDG_pop_allsegs_filename = '_'.join(['output_8_DDG_resi_gb_msoa_tfn_tt', ModelYear, 'pop'])
-    BYpop_DDG_pop_tfn_tt_filename = '_'.join(['output_9_DDG_resi_gb_msoa_tfn', ModelYear, 'pop'])
+    BYpop_DDG_pop_allsegs_filename = '_'.join(['output_8_DDG_resi_gb_msoa_tfn_tt_prt', ModelYear, 'pop'])
+    BYpop_DDG_pop_tfn_tt_filename = '_'.join(['output_9_DDG_resi_gb_msoa_tfn_tt', ModelYear, 'pop'])
 
     BYpop_DDG_pop_allsegs_path = os.path.join(output_working_dir_path, BYpop_DDG_pop_allsegs_filename)
     BYpop_DDG_pop_tfn_tt_path = os.path.join(output_working_dir_path, BYpop_DDG_pop_tfn_tt_filename)
@@ -400,7 +403,7 @@ def DDGaligned_emp_process(by_lu_obj):
     BYemp_DDG_output = BYemp_DDG[['msoa_zone_id', 'e_cat', 'soc_cat', 'employment']]
     # Dump outputs
     #DDG_aligned_emp_output_path = by_lu_obj.out_paths['write_folder']
-    BYemp_DDG_filename = '_'.join(['output_DDG_gb_msoa', ModelYear, 'emp.csv'])
+    BYemp_DDG_filename = '_'.join(['output_10_DDG_gb_msoa', ModelYear, 'emp.csv'])
     BYemp_DDG_path = os.path.join(output_working_dir_path, output_dir, BYemp_DDG_filename)
     BYemp_DDG_output.to_csv(BYemp_DDG_path, index=False)
     return 0
