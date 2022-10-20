@@ -23,10 +23,13 @@ TODO: allResPropertyMSOAClassified.csv is a product of land_use_data_prep.py and
 """
 import os
 import sys
+import logging
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 import shutil
+import pyodbc
+import datetime
 from land_use.utils import file_ops as utils
 from land_use.utils import compress
 import land_use.lu_constants as consts
@@ -56,7 +59,8 @@ def copy_addressbase_files(by_lu_obj):
     #    except IOError:
     #        print("File not found")
 
-    by_lu_obj.pop_state['5.2.2 read in core property data'] = 1
+    by_lu_obj.state['5.2.2 read in core property data'] = 1
+    logging.info('Step 5.2.2 completed')
 
 
 # 2. Main analysis functions - everything related to census and segmentation
@@ -235,13 +239,157 @@ def create_employment_segmentation(by_lu_obj, bsq):
     return bsq
 
 
-def create_ntem_areas(by_lu_obj):
+def NTEM_Pop_Interpolation(by_lu_obj):
     """
-    Reduce age & gender categories down to NTEM requirements and add area type for each zone.
+    Process population data from NTEM CTripEnd database:
+    Interpolate population to the target year, in this case, it is for base year 2018 as databases
+    are available in 5 year interval;
+    Translate NTEM zones in Scotland into NorNITs zones; for England and Wales, NTEM zones = NorMITs zones (MSOAs)
+    """
 
-    bsq_import_path: location of the bespoke census query data
-    area_type_import_path: NTEM area type classifications by zone
-    """
+    # The year of data is set to define the upper and lower NTEM run years and interpolate as necessary between them.
+    # The base year for NTEM is 2011 and it is run in 5-year increments from 2011 to 2051.
+    # The year selected below must be between 2011 and 2051 (inclusive).
+    Year = 2018
+
+    if Year < 2011 | Year > 2051:
+        raise ValueError("Please select a valid year of data.")
+    else:
+        pass
+
+    Output_Folder = by_lu_obj.home_folder + '/Outputs/'
+    print(Output_Folder)
+    LogFile = Output_Folder + 'LogFile.txt'
+    # 'I:/NorMITs Synthesiser/Zone Translation/'
+    Zone_path = by_lu_obj.zones_folder + 'Export/ntem_to_msoa/ntem_msoa_pop_weighted_lookup.csv'
+    Pop_Segmentation_path = by_lu_obj.import_folder + 'CTripEnd/Pop_Segmentations.csv'
+    with open(LogFile, 'w') as o:
+        o.write("Notebook run on - " + str(datetime.datetime.now()) + "\n")
+        o.write("\n")
+        o.write("Data Year - " + str(Year) + "\n")
+        o.write("\n")
+        o.write("Correspondence Lists:\n")
+        o.write(Zone_path + "\n")
+        o.write(Pop_Segmentation_path + "\n")
+        o.write("\n")
+
+    # Data years
+    # NTEM is run in 5-year increments with a base of 2011.
+    # This section calculates the upper and lower years of data that are required
+    InterpolationYears = Year % 5
+    LowerYear = Year - ((InterpolationYears - 1) % 5)
+    UpperYear = Year + ((1 - InterpolationYears) % 5)
+
+    print("Lower Interpolation Year - " + str(LowerYear))
+    print("Upper Interpolation Year - " + str(UpperYear))
+
+    # Import Upper and Lower Year Tables
+    # 'I:/Data/NTEM/NTEM 7.2 outputs for TfN/'
+    LowerNTEMDatabase = by_lu_obj.CTripEnd_Database_path + 'CTripEnd7_' + str(LowerYear) + '.accdb'
+    UpperNTEMDatabase = by_lu_obj.CTripEnd_Database_path + 'CTripEnd7_' + str(UpperYear) + '.accdb'
+    # UpperNTEMDatabase = by_lu_obj.CTripEnd_Database_path + r"\CTripEnd7_" + str(UpperYear) + r".accdb"
+    cnxn = pyodbc.connect('DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' + \
+                          '{};'.format(UpperNTEMDatabase))
+
+    query = r"SELECT * FROM ZoneData"
+    UZoneData = pd.read_sql(query, cnxn)
+    cnxn.close()
+
+    cnxn = pyodbc.connect('DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' +
+                          '{};'.format(LowerNTEMDatabase))
+
+    query = r"SELECT * FROM ZoneData"
+    LZoneData = pd.read_sql(query, cnxn)
+    cnxn.close()
+
+    # Re-format Tables
+    LZonePop = LZoneData.copy()
+    UZonePop = UZoneData.copy()
+    LZonePop.drop(
+        ['E01', 'E02', 'E03', 'E04', 'E05', 'E06', 'E07', 'E08', 'E09', 'E10', 'E11', 'E12', 'E13', 'E14', 'E15', 'K01',
+         'K02', 'K03', 'K04', 'K05', 'K06', 'K07', 'K08', 'K09', 'K10', 'K11', 'K12', 'K13', 'K14', 'K15'], axis=1,
+        inplace=True)
+    UZonePop.drop(
+        ['E01', 'E02', 'E03', 'E04', 'E05', 'E06', 'E07', 'E08', 'E09', 'E10', 'E11', 'E12', 'E13', 'E14', 'E15', 'K01',
+         'K02', 'K03', 'K04', 'K05', 'K06', 'K07', 'K08', 'K09', 'K10', 'K11', 'K12', 'K13', 'K14', 'K15'], axis=1,
+        inplace=True)
+    LZonePop_long = pd.melt(LZonePop, id_vars=["I", "R", "B", "Borough", "ZoneID", "ZoneName"],
+                            var_name="LTravellerType", value_name="LPopulation")
+    UZonePop_long = pd.melt(UZonePop, id_vars=["I", "R", "B", "Borough", "ZoneID", "ZoneName"],
+                            var_name="UTravellerType", value_name="UPopulation")
+
+    LZonePop_long.rename(columns={"I": "LZoneID", "B": "LBorough", "R": "LAreaType"}, inplace=True)
+    UZonePop_long.rename(columns={"I": "UZoneID", "B": "UBorough", "R": "UAreaType"}, inplace=True)
+
+    LZonePop_long['LIndivID'] = LZonePop_long.LZoneID.map(str) + "_" + LZonePop_long.LAreaType.map(
+        str) + "_" + LZonePop_long.LBorough.map(str) + "_" + LZonePop_long.LTravellerType.map(str)
+    UZonePop_long['UIndivID'] = UZonePop_long.UZoneID.map(str) + "_" + UZonePop_long.UAreaType.map(
+        str) + "_" + UZonePop_long.UBorough.map(str) + "_" + UZonePop_long.UTravellerType.map(str)
+
+    # Join Upper and Lower Tables
+    TZonePop_DataYear = LZonePop_long.join(UZonePop_long.set_index('UIndivID'), on='LIndivID', how='right',
+                                           lsuffix='_left', rsuffix='_right')
+    TZonePop_DataYear.drop(['UZoneID', 'UBorough', 'UAreaType', 'UTravellerType'], axis=1, inplace=True)
+
+    # Interpolate Between Upper and Lower Years
+    TZonePop_DataYear['GrowthinPeriod'] = TZonePop_DataYear.eval('UPopulation - LPopulation')
+    TZonePop_DataYear['GrowthperYear'] = TZonePop_DataYear.eval('GrowthinPeriod / 5')
+    TZonePop_DataYear = TZonePop_DataYear.assign(GrowthtoYear=TZonePop_DataYear['GrowthperYear'] * (Year - LowerYear))
+    TZonePop_DataYear['Population'] = TZonePop_DataYear.eval('LPopulation + GrowthtoYear')
+
+    # Tidy up
+    TZonePop_DataYear.rename(
+        columns={"LZoneID": "ZoneID", "LBorough": "Borough", "LAreaType": "AreaType", "LTravellerType": "TravellerType",
+                 "LIndivID": "IndivID"}, inplace=True)
+    TZonePop_DataYear.drop(
+        ['GrowthinPeriod', 'GrowthperYear', 'GrowthtoYear', 'LPopulation', 'UPopulation', 'ZoneID_left', 'ZoneID_right',
+         'ZoneName_right', 'ZoneName_left', 'Borough_left', 'Borough_right', 'IndivID'], axis=1, inplace=True)
+    print(TZonePop_DataYear.Population.sum())
+
+    # Translating zones for those in Scotland
+    Zone_List = pd.read_csv(Zone_path)
+    TZonePop_DataYear = TZonePop_DataYear.join(Zone_List.set_index('ntemZoneID'), on='ZoneID', how='right')
+    # TZonePop_DataYear.rename(columns={'msoaZoneID': 'ModelZone'}, inplace=True)
+    TZonePop_DataYear[
+        'Population_RePropped'] = TZonePop_DataYear['Population'] * TZonePop_DataYear['overlap_ntem_pop_split_factor']
+
+    Segmentation_List = pd.read_csv(Pop_Segmentation_path)
+    TZonePop_DataYear = TZonePop_DataYear.join(Segmentation_List.set_index('NTEM_Traveller_Type'), on='TravellerType',
+                                               how='right')
+    TZonePop_DataYear.drop(
+        ['Population', 'ZoneID', 'overlap_population', 'ntem_population', 'msoa_population',
+         'overlap_msoa_pop_split_factor', 'overlap_type'], axis=1, inplace=True)
+    TZonePop_DataYear.rename(columns={"Population_RePropped": "Population"}, inplace=True)
+    print(TZonePop_DataYear.Population.sum())
+    TZonePop_DataYear = TZonePop_DataYear.groupby(['msoaZoneID', 'AreaType', 'Borough', 'TravellerType',
+                                                   'NTEM_TT_Name', 'Age_code', 'Age',
+                                                   'Gender_code', 'Gender', 'Household_composition_code',
+                                                   'Household_size', 'Household_car', 'Employment_type_code',
+                                                   'Employment_type'])[
+        ['Population']].sum().reset_index()
+    NTEM_HHpop = TZonePop_DataYear
+    # Export
+    Export_SummaryPop = TZonePop_DataYear.groupby(['TravellerType', 'NTEM_TT_Name']).sum()
+    print(Export_SummaryPop.Population.sum())
+    # Export_SummaryPop.drop(['msoaZoneID'], inplace=True, axis=1)
+    PopOutput = "NTEM_{}_Population.csv".format(Year)
+
+    with open(Output_Folder + PopOutput, "w", newline='') as f:
+        TZonePop_DataYear.to_csv(f, header=True, sep=",")
+    f.close()
+
+    with open(LogFile, "a") as o:
+        o.write("Total Population: \n")
+        Export_SummaryPop.to_csv(o, header=False, sep="-")
+        o.write("\n")
+        o.write("\n")
+    print("Export complete.")
+    print(NTEM_HHpop.head(5))
+    return NTEM_HHpop
+
+
+# def create_ntem_areas(by_lu_obj):
+def Process_bsq(by_lu_obj):
     # Import Bespoke Census Query - already transformed to long format in R
     print('Importing bespoke census query')
     bsq_import_path = by_lu_obj.import_folder + '/Bespoke Census Query/formatted_long_bsq.csv'
@@ -265,6 +413,7 @@ def create_ntem_areas(by_lu_obj):
     mlaLookup = mlaLookup[['msoaZoneID', 'merged_laZoneID']]
     ntem_to_msoa = pd.read_csv(by_lu_obj.zones_folder + 'Export/ntem_to_msoa/ntem_msoa_pop_weighted_lookup.csv')
     ntem_to_msoa = ntem_to_msoa[['ntemZoneID', 'msoaZoneID', 'overlap_ntem_pop_split_factor']]
+    LAD_Region = pd.read_csv(by_lu_obj.zones_folder + 'Export/LAD_Region.csv')
 
     # Reduce age & gender categories down to NTEM requirements
     def _segment_tweaks(bsq, asisSegments, groupingCol, aggCols, targetCol, newSegment):
@@ -302,12 +451,18 @@ def create_ntem_areas(by_lu_obj):
     # Calculate the total population in each LAD and the proportion of this that each segment represents
     bsq_total = bsq.groupby(['LAD_code', 'LAD_Desc'])['population'].sum().reset_index()
     bsq_total = bsq_total.rename(columns={'population': 'lad_pop'})
+    bsq_dagh = bsq.groupby(['LAD_code', 'LAD_Desc', 'Age', 'Gender',
+                            'household_composition'])['population'].sum().reset_index()
+    bsq_dagh = bsq_dagh.rename(columns={'population': 'Pop_dagh'})
     bsq = bsq.merge(bsq_total, how='left', on=['LAD_code', 'LAD_Desc'])
+    bsq = bsq.merge(bsq_dagh, how='left', on=['LAD_code', 'LAD_Desc', 'Age', 'Gender', 'household_composition'])
     del bsq_total  # save some memory
     bsq['pop_factor'] = bsq['population'] / bsq['lad_pop']
-    bsq = bsq[['LAD_code', 'LAD_Desc', 'Gender', 'Age', 'property_type', 'household_composition', 'pop_factor']]
+    bsq['Dt_profile'] = bsq['population'] / bsq['Pop_dagh']
+    bsq = bsq[['LAD_code', 'Gender', 'Age', 'property_type', 'household_composition',
+               'pop_factor', 'Dt_profile']]
 
-    # Merge on msoaZoneID - includes only English & Welsh MSOAs
+    # Merge on msoaZoneID - includes only English & Welsh MSOAs, total 7201 zones
     bsq = bsq.merge(mlaShp, how='left', left_on='LAD_code',
                     right_on='cmlad11cd').drop('cmlad11cd', axis=1)
     bsq = bsq.merge(mlaLookup, how='left', left_on='objectid',
@@ -329,10 +484,23 @@ def create_ntem_areas(by_lu_obj):
     # Merge area types onto bsq
     bsq = bsq.merge(ntem_to_msoa, how='left', on='msoaZoneID')
 
+    # Merge region onto bsq
+    bsq = bsq.merge(LAD_Region, how='left', left_on='LAD_code',
+                    right_on='Cmlad11cd').drop(columns={'Cmlad11cd'})
+    print('Headings of bsq')
+    print(bsq.head(5))
+
     # Derive North East and North West bsq data by area type, used to infill Scottish values
     # TODO: review this generic north section... taking first 72 LADs makes me nervous
+    # Now have merge LADs with Regions where they reside.
+    # And created list of regions to represent missing zones in Scotland
+
     unqMergedLad = bsq[['LAD_code', 'LAD_Desc']].drop_duplicates().reset_index(drop=True)
-    northUnqMergedLad = unqMergedLad.iloc[0:72]
+    unqMergedLad = unqMergedLad.merge(LAD_Region, how='left', left_on='LAD_code',
+                    right_on='Cmlad11cd').drop('Cmlad11cd', axis=1)
+    NorthRegions = ['North East', 'North West']
+    northUnqMergedLad = unqMergedLad[unqMergedLad['Rgn17nm'].isin(NorthRegions)]
+    # northUnqMergedLad = unqMergedLad.iloc[0:72]
     del unqMergedLad
     northMsoaBsq = bsq[bsq.LAD_code.isin(northUnqMergedLad.LAD_code)]
     genericNorthTypeBsq = northMsoaBsq.drop(['msoaZoneID',
@@ -342,12 +510,15 @@ def create_ntem_areas(by_lu_obj):
                                                                     'property_type',
                                                                     'household_composition']).mean().reset_index()
     del northMsoaBsq
+    genericNorthTypeBsq.to_csv('genericNorthTypeBsq.csv', index=False)
 
     # Identify and add the missing Scottish zones to bsq
     missing_zones = ntem_to_msoa[~ntem_to_msoa.msoaZoneID.isin(bsq.msoaZoneID)]
     missing_zones = missing_zones.merge(genericNorthTypeBsq, how='left', on='R')
+    missing_zones.to_csv('missing_zones.csv', index=False)
     bsq = bsq[list(missing_zones)]
     bsq = bsq.append(missing_zones).reset_index(drop=True)
+    bsq.to_csv('bsq_includeScotland.csv', index=False)
     print('Number of unique MSOA zones:', len(bsq.msoaZoneID.unique()), 'should be 8480 with Scotland')
 
     # Create and export pop_factor and land audits
@@ -357,6 +528,9 @@ def create_ntem_areas(by_lu_obj):
                                                                           left_on='msoaZoneID',
                                                                           right_on='objectid').drop('objectid', axis=1)
     land_audit.to_csv('landAudit.csv', index=False)
+    bsq.to_csv('bsq_MSOAzones_pop_factor_profile.csv', index=False)
+    bsq = bsq[['msoaZoneID', 'Zone_Desc', 'B', 'R', 'Age', 'Gender',
+               'household_composition', 'property_type', 'Dt_profile']]
 
     return bsq
 
@@ -370,7 +544,7 @@ def filled_properties(by_lu_obj):
             KS401path: csv file path for the census KS401 table
     """
     # Read in the census filled property data
-    filled_properties_df = pd.read_csv(by_lu_obj.KS401path)
+    filled_properties_df = pd.read_csv(by_lu_obj.ks401path)
     filled_properties_df = filled_properties_df.rename(columns={
         'Dwelling Type: All categories: Household spaces; measures: Value': 'Total_Dwells',
         'Dwelling Type: Household spaces with at least one usual resident; measures: Value': 'Filled_Dwells',
@@ -401,7 +575,9 @@ def filled_properties(by_lu_obj):
     filled_properties_df = filled_properties_df.fillna(1)  # default to all Scottish properties being occupied
     filled_properties_df.to_csv('ProbabilityDwellfilled.csv', index=False)
 
-    by_lu_obj.pop_state['5.2.4 filled property adjustment'] = 1  # record that this process has been run
+    by_lu_obj.state['5.2.4 filled property adjustment'] = 1  # record that this process has been run
+    logging.info('Step 5.2.4 completed')
+
     return filled_properties_df
 
 
@@ -479,7 +655,9 @@ def apply_household_occupancy(by_lu_obj, do_import=False, write_out=True):
 
     # Read in all res property for the level of aggregation
     print('Reading in AddressBase extract')
-    #addressbase_extract_path = by_lu_obj.home_folder + '/allResProperty' + by_lu_obj.model_zoning + 'Classified.csv'
+
+    # addressbase_extract_path = by_lu_obj.home_folder + '/allResProperty' + by_lu_obj.model_zoning + 'Classified.csv'
+
     addressbase_extract_path = consts.ALL_RES_PROPERTY_PATH + '/allResProperty' + by_lu_obj.model_zoning + 'Classified.csv'
     all_res_property = pd.read_csv(addressbase_extract_path)[['ZoneID', 'census_property_type', 'UPRN']]
     all_res_property = all_res_property.groupby(['ZoneID', 'census_property_type']).count().reset_index()
@@ -511,7 +689,9 @@ def apply_household_occupancy(by_lu_obj, do_import=False, write_out=True):
         if write_out:
             all_res_property.to_csv('classifiedResProperty' + by_lu_obj.model_zoning + '.csv', index=False)
 
-        by_lu_obj.pop_state['5.2.5 household occupancy adjustment'] = 1  # record that this process has been run
+        by_lu_obj.state['5.2.5 household occupancy adjustment'] = 1  # record that this process has been run
+        logging.info('Step 5.2.5 completed')
+
         return all_res_property
 
     else:
@@ -529,76 +709,180 @@ def apply_ntem_segments(by_lu_obj, classified_res_property_import_path='classifi
     crp = pd.read_csv(classified_res_property_import_path)[crp_cols]
 
     # Reclassify property type 7 (mobile homes) in crp as type 6, in line with the bespoke census query
+    # Adam - Combine 7 dwelling types to 4.
     crp['census_property_type'] = np.where(crp['census_property_type'] == 7, 6, crp['census_property_type'])
     crp['popXocc'] = crp['population'] * crp['household_occupancy_18']
     crp = crp.groupby(['ZoneID', 'census_property_type']).sum().reset_index()
     crp['household_occupancy_18'] = crp['popXocc'] / crp['population']  # compute the weighted average occupancy
     crp = crp.drop('popXocc', axis=1)
 
-    # Read in the Bespoke Census Query and create NTEM areas and employment segmentation
-    bsq = create_ntem_areas(by_lu_obj)
-    bsq = create_employment_segmentation(by_lu_obj, bsq)
+    # Car availability from NTEM
+    # Read NTEM hh pop at NorMITs Zone level and make sure the zonal total is consistent to crp
+    NTEM_HHpop = NTEM_Pop_Interpolation(by_lu_obj)
 
-    # Compute property type factors
-    factor_property_type = bsq[['msoaZoneID', 'property_type', 'pop_factor']]
-    factor_property_type = factor_property_type.groupby(['msoaZoneID', 'property_type']).sum().reset_index()
-    factor_property_type = factor_property_type.rename(columns={'pop_factor': 'pt_pop_factor'})
-    bsq = bsq.merge(factor_property_type, how='left', on=['msoaZoneID', 'property_type'])
-    bsq['pop_factor'] = bsq['pop_factor'] / bsq['pt_pop_factor']
-    bsq = bsq.drop('pt_pop_factor', axis=1)
+    uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
+    NTEM_HHpop = NTEM_HHpop.merge(uk_msoa, how='left', left_on='msoaZoneID', right_on='objectid')
+    NTEM_HHpop_cols = ['msoaZoneID', 'msoa11cd', 'AreaType', 'Borough', 'TravellerType','NTEM_TT_Name', 'Age_code',
+                       'Age', 'Gender_code', 'Gender','Household_composition_code', 'Household_size', 'Household_car',
+                       'Employment_type_code', 'Employment_type', 'Population']
+    NTEM_HHpop_E02001045 = NTEM_HHpop[NTEM_HHpop['msoa11cd'] == 'E02001045']
+    NTEM_HHpop_E02001045.to_csv('NTEM_HHpop_E02001045.csv', index=False)
 
+    NTEM_HHpop = NTEM_HHpop[NTEM_HHpop_cols]
+    NTEM_HHpop_Total = NTEM_HHpop.groupby(['msoaZoneID'])['Population'].sum().reset_index()
+    NTEM_HHpop_Total = NTEM_HHpop_Total.rename(columns={'Population': 'ZoneNTEMPop'})
+    print('Headings of NTEM_HHpop_Total')
+    print(NTEM_HHpop_Total.head(5))
+    NTEM_HHpop_Total.to_csv('HHpop_NTEM_Total.csv', index=False)
+
+    Hhpop_Dt_Total = crp.groupby(['ZoneID'])['population'].sum().reset_index()
+    Hhpop_Dt_Total = Hhpop_Dt_Total.rename(columns={'population': 'ZonePop'})
+    print('Headings of Hhpop_Dt_Total')
+    print(Hhpop_Dt_Total.head(5))
+    Hhpop_Dt_Total.to_csv('Hhpop_Dt_Total.csv', index=False)
+
+    NTEM_HHpop = NTEM_HHpop.merge(NTEM_HHpop_Total, how='left', on=['msoaZoneID'])
+    NTEM_HHpop = NTEM_HHpop.merge(Hhpop_Dt_Total, how='left', left_on=['msoa11cd'],
+                                  right_on=['ZoneID']).drop(columns={'ZoneID'})
+    print('Headings of NTEM_HHpop')
+    print(NTEM_HHpop.head(5))
+    NTEM_HHpop['pop_aj_factor'] = NTEM_HHpop['ZonePop'] / NTEM_HHpop['ZoneNTEMPop']
+
+    NTEM_HHpop['pop_aj'] = NTEM_HHpop['Population'] * NTEM_HHpop['pop_aj_factor']
+    print(NTEM_HHpop.pop_aj.sum())
+    print(crp.population.sum())
+    NTEM_HHpop.to_csv('NTEM_HHpop_Aj.csv', index=False)
+    NTEM_HHpop_Aj_E02001045 = NTEM_HHpop[NTEM_HHpop['msoa11cd'] == 'E02001045']
+    NTEM_HHpop_Aj_E02001045.to_csv('NTEM_HHpop_Aj_E02001045.csv', index=False)
+
+    # Read in the Bespoke Census Query
+    # Adam - Replace this block with new process from 2011 output f.
+
+    bsq = Process_bsq(by_lu_obj)
+    # bsq = create_employment_segmentation(by_lu_obj, bsq)
+    # bsq = bsq[['msoaZoneID', 'Zone_Desc', 'B', 'R', 'Age', 'Gender',
+    #            'household_composition', 'property_type', 'Dt_profile']]
+    # Expand adjusted NTEM zonal population
+    # according to factors derived from 2011 bsq to get addtional dimension of dwelling type in.
+    NTEM_HHpop = NTEM_HHpop.rename(columns={'Household_composition_code': 'household_composition'})
+    NTEM_HHpop = NTEM_HHpop.merge(bsq, how='left',
+                                  on=['msoaZoneID', 'Age', 'Gender', 'household_composition'])
+
+    NTEM_HHpop = NTEM_HHpop[['msoaZoneID', 'msoa11cd', 'Zone_Desc', 'AreaType', 'Borough', 'TravellerType',
+                             'NTEM_TT_Name', 'Age_code', 'Age', 'Gender_code', 'Gender',
+                             'household_composition', 'Household_size', 'Household_car',
+                             'Employment_type_code', 'Employment_type', 'property_type', 'Dt_profile', 'pop_aj']]
+    NTEM_HHpop = NTEM_HHpop.rename(columns={'pop_aj': 'population'})
+    NTEM_HHpop['pop_withDT'] = NTEM_HHpop['population'] * NTEM_HHpop['Dt_profile']
+    NTEM_HH_PopAj_withDT_E02001045 = NTEM_HHpop[NTEM_HHpop['msoa11cd'] == 'E02001045']
+    NTEM_HH_PopAj_withDT_E02001045.to_csv('NTEM_HH_PopAj_withDT_E02001045.csv', index=False)
+    # Adam - Stop editing 2018 here.
+
+    # Further adjust detailed dimensional population according to zonal dwelling type from crp
+    NorMITS_HHpop_byDt = crp.rename(columns={'population': 'crp_byDT_pop', 'UPRN': "properties"})
+    NTEM_HHpop_byDt = NTEM_HHpop.groupby(['msoaZoneID', 'property_type'])['pop_withDT'].sum().reset_index()
+    NTEM_HHpop_byDt = NTEM_HHpop_byDt.rename(columns={'pop_withDT': 'NTEM_byDT_pop'})
+    NTEM_HHpop_byDt.to_csv('NTEM_HHpop_byDt.csv', index=False)
+    NTEM_HHpop_byDt_total_E02001045 = NTEM_HHpop_byDt[NTEM_HHpop_byDt['msoaZoneID'] == '1013']
+    NTEM_HHpop_byDt_total_E02001045.to_csv('NTEM_HHpop_byDt_total_E02001045.csv', index=False)
+
+    HHpop = NTEM_HHpop.merge(NTEM_HHpop_byDt, how='left', on=['msoaZoneID', 'property_type'])
+    # Where the problem occur:
+    HHpop = HHpop.merge(NorMITS_HHpop_byDt, how='left', left_on=['msoa11cd', 'property_type'],
+                        right_on=['ZoneID', 'census_property_type']).drop(columns={'msoa11cd'})
+
+    HHpop['pop_withDT_aj_factor'] = HHpop['crp_byDT_pop'] / HHpop['NTEM_byDT_pop']
+    HHpop['pop_withDT_aj'] = HHpop['pop_withDT'] * HHpop['pop_withDT_aj_factor']
+    HH_Pop_withDT_E02001045 = HHpop[HHpop['ZoneID'] == 'E02001045']
+    HH_Pop_withDT_E02001045.to_csv('HH_Pop_withDT_E02001045.csv', index=False)
+
+    print(HHpop.pop_withDT_aj.sum())
+    print(crp.population.sum())
+    HHpop = HHpop.rename(columns={'pop_withDT': 'NTEM_HH_pop', 'pop_withDT_aj': 'people',
+                                  'AreaType': 'area_type', 'Employment_type': 'employment_type'})
+
+    # Check the outcome compare NTEM aj pop (NTEM_HH_pop) against NorMITS pop (people)
+    # adjusted according to pop by dwelling type
     # Create and save an audit
     seg_folder = 'NTEM Segmentation Audits'
     utils.create_folder(seg_folder)
-    audit = bsq[['msoaZoneID', 'property_type', 'pop_factor']].groupby(['msoaZoneID',
-                                                                        'property_type']).sum().reset_index()
-    audit.to_csv(seg_folder + '/Zone_PT_Factor_Pre_Join_Audit.csv', index=False)
-    print('Should be near to zones x property types - ie. 8480 x 6 = 50880 :', bsq['pop_factor'].sum())
 
-    # Join in MSOA names and format matrix for further steps
-    # TODO: Some handling required here for other zoning systems
-    uk_msoa = gpd.read_file(_default_msoaRef)[['objectid', 'msoa11cd']]
-    bsq = bsq.merge(uk_msoa, how='left', left_on='msoaZoneID', right_on='objectid')
-    bsq_cols = ['msoa11cd', 'Age', 'Gender', 'employment_type', 'household_composition', 'property_type', 'R',
-                'pop_factor']
-    bsq = bsq[bsq_cols]
-    bsq = bsq.rename(columns={'R': 'area_type'})
+    ZonalTot = HHpop.groupby(['ZoneID'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+    ZonalTot = ZonalTot.rename(columns={'people': 'NorMITS_Zonal', 'NTEM_HH_pop': 'NTEM_Zonal'})
 
-    # Save out an audit of the sum of the pop_factors by zone and property type (should all be 1)
-    audit = bsq[['msoa11cd', 'property_type', 'pop_factor']].groupby(['msoa11cd', 'property_type']).sum().reset_index()
-    audit.to_csv(seg_folder + '/Zone_PT_Factor_Audit_Inter_Join.csv', index=False)
+    DT = HHpop.groupby(['ZoneID', 'property_type'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+    DT_check = DT.merge(ZonalTot, how='left', on=['ZoneID'])
+    DT_check['Ab_Perdiff'] = DT_check['people'] / DT_check['NTEM_HH_pop'] - 1
+    DT_check['NorMITS_profile'] = DT_check['people'] / DT_check['NorMITS_Zonal']
+    DT_check['NTEM_profile'] = DT_check['NTEM_HH_pop'] / DT_check['NTEM_Zonal']
+    DT_check['Profile_Perdiff'] = DT_check['NorMITS_profile'] / DT_check['NTEM_profile'] - 1
+    DT_check.to_csv(seg_folder + '/Zone_check_byDT.csv', index=False)
 
-    # Print checks on the number of segments for each zone/property type and the total population
-    bsq_audit = bsq.groupby(['msoa11cd', 'property_type'])['pop_factor'].count().drop_duplicates()
-    if len(bsq_audit) == 1:
-        print('Each zone and property type has {} segments'.format(bsq_audit[0]))
-    else:
-        print('Some zones have missing segments!')
-    crp_audit = crp['population'].sum()
-    print('Total population (audit):', crp_audit)
+    Cars = HHpop.groupby(['ZoneID', 'Household_car'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+    Cars_check = Cars.merge(ZonalTot, how='left', on=['ZoneID'])
+    Cars_check['Ab_Perdiff'] = Cars_check['people'] / Cars_check['NTEM_HH_pop'] - 1
+    Cars_check['NorMITS_profile'] = Cars_check['people'] / Cars_check['NorMITS_Zonal']
+    Cars_check['NTEM_profile'] = Cars_check['NTEM_HH_pop'] / Cars_check['NTEM_Zonal']
+    Cars_check['Profile_Perdiff'] = Cars_check['NorMITS_profile'] / Cars_check['NTEM_profile'] - 1
+    Cars_check.to_csv(seg_folder + '/Zone_check_byCars.csv', index=False)
 
-    # Merge the bespoke census query data onto the classified residential properties
-    crp = crp.merge(bsq,
-                    how='inner',
-                    left_on=['ZoneID', 'census_property_type'],
-                    right_on=['msoa11cd', 'property_type'])
+    HHsize = HHpop.groupby(['ZoneID', 'Household_size'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+    HHsize_check = HHsize.merge(ZonalTot, how='left', on=['ZoneID'])
+    HHsize_check['Ab_Perdiff'] = HHsize_check['people'] / HHsize_check['NTEM_HH_pop'] - 1
+    HHsize_check['NorMITS_profile'] = HHsize_check['people'] / HHsize_check['NorMITS_Zonal']
+    HHsize_check['NTEM_profile'] = HHsize_check['NTEM_HH_pop'] / HHsize_check['NTEM_Zonal']
+    HHsize_check['Profile_Perdiff'] = HHsize_check['NorMITS_profile'] / HHsize_check['NTEM_profile'] - 1
+    HHsize_check.to_csv(seg_folder + '/Zone_check_byHHsize.csv', index=False)
 
-    # Apply population factor to populations to get people by property type
-    crp['people'] = crp['population'] * crp['pop_factor']
-    output_cols = ['ZoneID', 'area_type', 'census_property_type', 'property_type', 'UPRN',
-                   'household_composition', 'Age', 'Gender', 'employment_type', 'people']
-    crp = crp[output_cols]
-    crp = crp.rename(columns={'UPRN': 'properties'})
-    print('Final population after factoring:', crp['people'].sum())
+    HH_composition = HHpop.groupby(['ZoneID', 'household_composition'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+    HH_composition_check = HH_composition.merge(ZonalTot, how='left', on=['ZoneID'])
+    HH_composition_check['Ab_Perdiff'] = HH_composition_check['people'] / HH_composition_check['NTEM_HH_pop'] - 1
+    HH_composition_check['NorMITS_profile'] = HH_composition_check['people'] / HH_composition_check['NorMITS_Zonal']
+    HH_composition_check['NTEM_profile'] = HH_composition_check['NTEM_HH_pop'] / HH_composition_check['NTEM_Zonal']
+    HH_composition_check['Profile_Perdiff'] = HH_composition_check['NorMITS_profile'] / \
+                                              HH_composition_check['NTEM_profile'] - 1
+    HH_composition_check.to_csv(seg_folder + '/Zone_check_byHH_composition.csv', index=False)
+
+    Age = HHpop.groupby(['ZoneID', 'Age'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+    Age_check = Age.merge(ZonalTot, how='left', on=['ZoneID'])
+    Age_check['Ab_Perdiff'] = Age_check['people'] / Age_check['NTEM_HH_pop'] - 1
+    Age_check['NorMITS_profile'] = Age_check['people'] / Age_check['NorMITS_Zonal']
+    Age_check['NTEM_profile'] = Age_check['NTEM_HH_pop'] / Age_check['NTEM_Zonal']
+    Age_check['Profile_Perdiff'] = Age_check['NorMITS_profile'] / Age_check['NTEM_profile'] - 1
+    Age_check.to_csv(seg_folder + '/Zone_check_byAge.csv', index=False)
+
+    Gender = HHpop.groupby(['ZoneID', 'Gender'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+    Gender_check = Gender.merge(ZonalTot, how='left', on=['ZoneID'])
+    Gender_check['Ab_Perdiff'] = Gender_check['people'] / Gender_check['NTEM_HH_pop'] - 1
+    Gender_check['NorMITS_profile'] = Gender_check['people'] / Gender_check['NorMITS_Zonal']
+    Gender_check['NTEM_profile'] = Gender_check['NTEM_HH_pop'] / Gender_check['NTEM_Zonal']
+    Gender_check['Profile_Perdiff'] = Gender_check['NorMITS_profile'] / Gender_check['NTEM_profile'] - 1
+    Gender_check.to_csv(seg_folder + '/Zone_check_byGender.csv', index=False)
+
+    Employment = HHpop.groupby(['ZoneID', 'employment_type'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+    Employment_check = Employment.merge(ZonalTot, how='left', on=['ZoneID'])
+    Employment_check['Ab_Perdiff'] = Employment_check['people'] / Employment_check['NTEM_HH_pop'] - 1
+    Employment_check['NorMITS_profile'] = Employment_check['people'] / Employment_check['NorMITS_Zonal']
+    Employment_check['NTEM_profile'] = Employment_check['NTEM_HH_pop'] / Employment_check['NTEM_Zonal']
+    Employment_check['Profile_Perdiff'] = Employment_check['NorMITS_profile'] / Employment_check['NTEM_profile'] - 1
+    Employment_check.to_csv(seg_folder + '/Zone_check_byEmployment.csv', index=False)
+
+    output_cols = ['ZoneID', 'area_type', 'property_type', 'census_property_type', 'properties', 'household_composition',
+                   'Age', 'Gender', 'employment_type', 'people']
+    crp = HHpop[output_cols]
 
     # Total MSOA Pop Audit
     msoa_audit = crp[['ZoneID', 'people']].groupby('ZoneID').sum()
     msoa_audit.to_csv(seg_folder + '/2018MSOAPopulation_OutputEnd.csv', index=False)
 
     # Export to file
+    logging.info('Population currently {}'.format(crp.people.sum()))
     compress.write_out(crp, by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning)
+    crp.to_csv(by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '.csv')
 
-    by_lu_obj.pop_state['5.2.6 NTEM segmentation'] = 1  # record that this process has been run
+    by_lu_obj.state['5.2.6 NTEM segmentation'] = 1  # record that this process has been run
+    logging.info('Step 5.2.6 completed')
+
     return crp, bsq
 
 
@@ -731,10 +1015,12 @@ def join_establishments(by_lu_obj):
     landuse = landuse[cols]
     landusewComm = landuse.append(CommunalEstablishments)
     print('Joined communal communities. Total pop for GB is now', landusewComm['people'].sum())
+    logging.info('Population currently {}'.format(landusewComm.people.sum()))
     compress.write_out(landusewComm,
                        by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_withCommunal')
 
-    by_lu_obj.pop_state['5.2.7 communal establishments'] = 1  # record that this process has been run
+    by_lu_obj.state['5.2.7 communal establishments'] = 1  # record that this process has been run
+    logging.info('Step 5.2.7 completed')
 
 
 def land_use_formatting(by_lu_obj):
@@ -744,10 +1030,12 @@ def land_use_formatting(by_lu_obj):
     # 1.Combine all flat types. Sort out flats on the landuse side; actually there's no 7
     land_use = compress.read_in(by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_withCommunal')
     land_use['property_type'] = land_use['property_type'].map(consts.PROPERTY_TYPE)
+    logging.info('Population currently {}'.format(land_use.people.sum()))
     compress.write_out(land_use,
                        by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_flats_combined')
 
-    by_lu_obj.pop_state['5.2.3 property type mapping'] = 1
+    by_lu_obj.state['5.2.3 property type mapping'] = 1
+    logging.info('Step 5.2.3 completed')
 
     return land_use
 
@@ -986,5 +1274,6 @@ def apply_ns_sec_soc_splits(by_lu_obj):
     NPRSegments = ['ZoneID', 'area_type', 'property_type', 'Age', 'Gender', 'employment_type',
                    'ns_sec', 'household_composition', 'SOC_category', 'newpop']
     All = All[NPRSegments].rename(columns={'newpop': 'people'})
+    logging.info('Population currently {}'.format(All.people.sum()))
     compress.write_out(All, by_lu_obj.home_folder + '/landUseOutput' + by_lu_obj.model_zoning + '_NS_SEC_SOC')
     print(All['people'].sum())

@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import gc
+import logging
 from land_use.utils import compress
 
 # Outputs from previous steps
@@ -88,7 +89,10 @@ def format_scottish_mype(by_lu_obj):
     scot_msoa['people2018'] = scot_msoa['2018pop'] * scot_msoa['lad_to_msoa']
     scot_msoa = scot_msoa.drop(columns={'overlap_type', 'lad_to_msoa', 'msoa_to_lad',
                                         '2018pop', 'lad17cd', 'ladZoneID'}).rename(columns={'msoa_zone_id': 'ZoneID'})
-
+    # TODO: TO get back log and find where has gone wrong for all the null values
+    # Temp solution to get rid of `null records- need to dig where has gone wrong to have all these null values though
+    # total is not affected
+    land_use_segments = land_use_segments.dropna()
     scotland_use = land_use_segments[land_use_segments.ZoneID.str.startswith('S')]
 
     scotland_use_grouped = scotland_use.groupby(by=['ZoneID', 'Age', 'Gender'],
@@ -368,6 +372,7 @@ def adjust_landuse_to_specific_yr(by_lu_obj, writeOut=True):
         gb_adjusted = gb_adjusted.groupby(by=['ZoneID', 'gender', 'age_code', 'emp', 'SOC_category', 'ns_sec',
                                               'area_type', 'property_type', 'household_composition']
                                           , as_index=False).sum()
+        logging.info('Population currently {}'.format(gb_adjusted.people.sum()))
         compress.write_out(gb_adjusted, by_lu_obj.home_folder + '/landUseOutputMSOA_2018')
         print('full GB adjusted dataset should be now saved in default iter folder')
 
@@ -463,7 +468,8 @@ def adjust_car_availability(by_lu_obj):
     car_available = all_combined2.groupby(by=['household_composition'], as_index=False).sum()
     car_available.to_csv(by_lu_obj.home_folder + '/caravailable.csv')
 
-    by_lu_obj.pop_state['5.2.11 car availability'] = 1
+    by_lu_obj.state['5.2.11 car availability'] = 1
+    logging.info('Step 5.2.11 completed')
 
 
 # TODO: revise the print statements in this function. Good points to add logging maybe
@@ -559,6 +565,7 @@ def adjust_soc_gb(by_lu_obj):
     not_employed = land_use_segments[~land_use_segments.emp.isin([1, 2])]  # neither fte nor pte
     npr_segmentation = not_employed.append(soc_revised)
 
+    logging.info('Population currently {}'.format(npr_segmentation.people.sum()))
     compress.write_out(npr_segmentation, by_lu_obj.home_folder + '/landuse_adjustedSOCs')
 
 
@@ -640,11 +647,12 @@ def adjust_soc_lad(by_lu_obj):
 
     # Write it out as an output
     land_use = land_use.drop(columns={'lad_zone_id', 'factor'})
+    logging.info('Population currently {}'.format(land_use.people.sum()))
     compress.write_out(land_use, by_lu_obj.home_folder + '/final_land_use')
+    by_lu_obj.state['5.2.10 SEC/SOC'] = 1  # record as done, this is the final SEC/SOC adjustment
+    logging.info('Step 5.2.10 completed')
 
-    by_lu_obj.pop_state['5.2.10 SEC/SOC'] = 1  # record as done, this is the final SEC/SOC adjustment
-
-
+    
 def control_to_lad_employment_ag(by_lu_obj):
     """
     control to employment at LAD level for age, gender and fte/pte employment; 
@@ -847,11 +855,12 @@ def control_to_lad_employment_ag(by_lu_obj):
     gb_land_use_controlled.groupby(by=['ZoneID', 'age_code', 'emp', 'area_type', 'property_type',
                                        'household_composition', 'gender',
                                        'SOC_category', 'ns_sec'])
-
+    logging.info('Population currently {}'.format(gb_land_use_controlled.people.sum()))
     compress.write_out(gb_land_use_controlled, by_lu_obj.home_folder + '/GBlanduseControlled')
     gc.collect()
 
-    by_lu_obj.pop_state['5.2.8 MYPE adjustment'] = 1  # record that the mid year adjustment is complete
+    by_lu_obj.state['5.2.8 MYPE adjustment'] = 1  # record that the mid year adjustment is complete
+    logging.info('Step 5.2.8 completed')
 
     return gb_land_use_controlled
 
@@ -968,9 +977,11 @@ def country_emp_control(by_lu_obj):
     # audit the msoa population totals
     check_msoa_totals(by_lu_obj, adjusted_gb_land_use, function_name='country_control')
     print('Saving to default folder...')
+    logging.info('Population currently {}'.format(adjusted_gb_land_use.people.sum()))
     compress.write_out(adjusted_gb_land_use, by_lu_obj.home_folder + '/AdjustedGBlanduse_emp')
 
-    by_lu_obj.pop_state['5.2.9 employment adjustment'] = 1  # record step as complete in the base year land use object
+    by_lu_obj.state['5.2.9 employment adjustment'] = 1  # record step as complete in the base year land use object
+    logging.info('Step 5.2.9 completed')
 
 
 def run_mype(by_lu_obj, midyear=True):

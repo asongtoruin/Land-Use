@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+# TODO: Deprecated - remove
+
 """
 Created on Thu Nov 21 16:10:36 2019
 @author: mags15

@@ -30,20 +30,34 @@ def skill_weight_e_cats(by_lu_obj,
 
     # Sum by seg and soc total
     soc_factor = soc_dat.groupby(
-        ['msoa_zone_id', 'soc_class'])['seg_jobs'].sum().reset_index()
-    soc_total = soc_dat.groupby('msoa_zone_id')['seg_jobs'].sum().reset_index()
+        ['gor', 'soc_cat'])['seg_jobs'].sum().reset_index()
+    soc_total = soc_dat.groupby('gor')['seg_jobs'].sum().reset_index()
     soc_total = soc_total.rename(columns={'seg_jobs': 'total_jobs'})
 
     # Make factors
     soc_factor = soc_factor.merge(soc_total,
                                   how='left',
-                                  on='msoa_zone_id')
+                                  on='gor')
     soc_factor['soc_factor'] = soc_factor['seg_jobs']/soc_factor['total_jobs']
+    # YZ - fill na with zero
+    soc_factor['soc_factor'] = soc_factor['soc_factor'].fillna(0)
     soc_factor = soc_factor.reindex(
-        ['msoa_zone_id', 'soc_class', 'soc_factor'], axis=1)
+        ['gor', 'soc_cat', 'soc_factor'], axis=1)
 
     # Apply to e_cat dat
     # Splits cats equally by e-cat, which is a bad assumption
+
+    # Bring in GOR to MSOA Lookup
+    # TODO: Move to constants
+    msoa_to_gor = r'I:\Data\Zone Translations\msoa_to_gor_correspondence.csv'
+    # Join region to MSOA in SOCs
+    msoa_gor = pd.read_csv(msoa_to_gor)
+    msoa_gor = msoa_gor.reindex(['msoa_zone_id', 'gor'], axis=1)
+    msoa_gor = msoa_gor.drop_duplicates()
+
+    soc_factor = soc_factor.merge(msoa_gor,
+                                  how='left',
+                                  on='gor')
 
     # Pivot ee cats to long
     emp_data = by_lu_obj.emp_data['e_cat'].copy()
@@ -70,7 +84,7 @@ def skill_weight_e_cats(by_lu_obj,
     emp_out = emp_out.drop('soc_factor', axis=1)
 
     # Format
-    format_cols = ['msoa_zone_id', 'e_cat', 'soc_class', 'employment']
+    format_cols = ['msoa_zone_id', 'e_cat', 'soc_cat', 'employment']
     emp_out = emp_out.reindex(format_cols, axis=1)
     emp_out = emp_out.sort_values(format_cols[0:-1]).reset_index(drop=True)
 
@@ -108,11 +122,11 @@ def unemp_infill(by_lu_obj):
 
     unm_in = emp_summary.copy()
     unm_in['employment'] *= unm_total
-    unm_in['soc_class'] = 4
+    unm_in['soc_cat'] = 4
 
     emp_out = pd.concat([emp_data, unm_in])
 
-    format_cols = ['msoa_zone_id', 'e_cat', 'soc_class', 'employment']
+    format_cols = ['msoa_zone_id', 'e_cat', 'soc_cat', 'employment']
     emp_out = emp_out.reindex(format_cols, axis=1)
     emp_out = emp_out.sort_values(format_cols[0:-1]).reset_index(drop=True)
 

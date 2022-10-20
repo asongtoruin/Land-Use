@@ -1,31 +1,25 @@
+import logging
 import os
-import land_use.lu_constants as consts
-from land_use.utils import file_ops as utils
-from land_use.base_land_use import main_build, employment, car_availability_adjustment
-from land_use.base_land_use import mid_year_pop_adjustments as mypa
-
-
-"""
-TODO:
-1. Inherit from a pathing object?
-2. See normits_demand.utils.compression for ways to speed up I/O
-"""
+from land_use import lu_constants
+from land_use.utils import file_ops
+from land_use.base_land_use import base_year_population_process, employment, DDG_process
 
 
 class BaseYearLandUse:
     def __init__(self,
-                 model_folder=consts.LU_FOLDER,
-                 output_folder=consts.BY_FOLDER,
-                 iteration=consts.LU_MR_ITER,
-                 import_folder=consts.LU_IMPORTS,
+                 model_folder=lu_constants.LU_FOLDER,
+                 output_folder=lu_constants.BY_FOLDER,
+                 iteration=lu_constants.LU_MR_ITER,
+                 import_folder=lu_constants.LU_IMPORTS,
                  model_zoning='MSOA',
-                 zones_folder=consts.ZONES_FOLDER,
-                 zone_translation_path=consts.ZONE_TRANSLATION_PATH,
-                 KS401path=consts.KS401_PATH,
-                 area_type_path=consts.LU_AREA_TYPES,
-                 emp_e_cat_data_path=consts.E_CAT_DATA,
-                 emp_soc_cat_data_path=consts.SOC_2DIGIT_SIC,
-                 emp_unm_data_path=consts.UNM_DATA,
+                 zones_folder=lu_constants.ZONES_FOLDER,
+                 zone_translation_path=lu_constants.ZONE_TRANSLATION_PATH,
+                 ks401path=lu_constants.KS401_PATH,
+                 area_type_path=lu_constants.LU_AREA_TYPES,
+                 ctripend_database_path=lu_constants.CTripEnd_Database,
+                 emp_e_cat_data_path=lu_constants.E_CAT_DATA,
+                 emp_soc_cat_data_path=lu_constants.SOC_BY_REGION,
+                 emp_unm_data_path=lu_constants.UNM_DATA,
                  base_year='2018',
                  scenario_name=None):
         """
@@ -44,13 +38,15 @@ class BaseYearLandUse:
         self.home_folder = model_folder + '/' + output_folder + '/' + iteration
         self.import_folder = model_folder + '/' + import_folder + '/'
 
-        # Inputs
-        self.addressbase_path_list = consts.ADDRESSBASE_PATH_LIST
+        # Resi inputs
+        self.addressbase_path_list = lu_constants.ADDRESSBASE_PATH_LIST
         self.zones_folder = zones_folder
         self.zone_translation_path = zone_translation_path
-        self.KS401path = KS401path
+        self.ks401path = ks401path
         self.area_type_path = area_type_path
+        self.CTripEnd_Database_path = ctripend_database_path
 
+        # Non resi inputs
         self.e_cat_emp_path = emp_e_cat_data_path
         self.soc_emp_path = emp_soc_cat_data_path
         self.unemp_path = emp_unm_data_path
@@ -61,51 +57,90 @@ class BaseYearLandUse:
         self.scenario_name = scenario_name.upper() if scenario_name is not None else ''
 
         # Build paths
+        print('Building Base Year paths and preparing to run')
         write_folder = os.path.join(
             model_folder,
             output_folder,
-            iteration,
-            'outputs')
+            iteration)
 
-        pop_write_name = 'land_use_' + str(self.base_year) + '_' + model_zoning.lower() + '_pop.csv'
-        emp_write_name = 'land_use_' + str(self.base_year) + '_' + model_zoning.lower() + '_emp.csv'
+        pop_write_name = os.path.join(write_folder, 'land_use_' + str(self.base_year) + '_pop.csv')
+        emp_write_name = os.path.join(write_folder, 'land_use_' + str(self.base_year) + '_emp.csv')
+        # Report folder not currently in use.
+        # report_folder = os.path.join(write_folder, 'reports')
 
-        pop_write_path = os.path.join(write_folder, pop_write_name)
-        emp_write_path = os.path.join(write_folder, emp_write_name)
+        # TODO: Implement this way of checking state
+        self.step_keys = lu_constants.BY_POP_BUILD_STEPS
 
-        report_folder = os.path.join(write_folder, 'reports')
+        self.step_descs = lu_constants.BY_POP_BUILD_STEP_DESCS
+        
+        # self._check_state()
+
+        list_of_type_folders = ['01 Process', '02 Audits']
+        # '03 Outputs' will also be a directory at this level,
+        # but does not have the step sub-directories
+
+        list_of_step_folders = [
+            '3.2.1_read_in_core_property_data',
+            '3.2.2_filled_property_adjustment',
+            '3.2.3_apply_household_occupancy',
+            '3.2.4_land_use_formatting',
+            '3.2.5_uplifting_base_year_pop_base_year_MYPE',
+            '3.2.6_expand_NTEM_pop',
+            '3.2.7_verify_population_profile_by_dwelling_type',
+            '3.2.8_subsets_of_workers+nonworkers',
+            '3.2.9_verify_district_level_worker_and_nonworker',
+            '3.2.10_adjust_zonal_pop_with_full_dimensions',
+            '3.2.11_process_CER_data',
+            '3.2.12_process_DDG_data']
 
         # Build folders
         if not os.path.exists(write_folder):
-            utils.create_folder(write_folder)
-        if not os.path.exists(report_folder):
-            utils.create_folder(report_folder)
+            file_ops.create_folder(write_folder)
+        # Report folder not currently in use.
+        # if not os.path.exists(report_folder):
+        #     file_ops.create_folder(report_folder)
+        for folder_type in list_of_type_folders:
+            for listed_folder in list_of_step_folders:
+                if not os.path.exists(os.path.join(write_folder, folder_type, listed_folder)):
+                    file_ops.create_folder(os.path.join(write_folder, folder_type, listed_folder))
+        if not os.path.exists(os.path.join(write_folder, '03 Outputs')):
+            file_ops.create_folder(os.path.join(write_folder, '03 Outputs'))
+        if not os.path.exists(os.path.join(write_folder, '00 Logging')):
+            file_ops.create_folder(os.path.join(write_folder, '00 Logging'))
 
         # Set object paths
         self.out_paths = {
             'write_folder': write_folder,
-            'report_folder': report_folder,
-            'pop_write_path': pop_write_path,
-            'emp_write_path': emp_write_path
+            # Report folder not currently in use.
+            # 'report_folder': report_folder,
+            'pop_write_path': pop_write_name,
+            'emp_write_path': emp_write_name
         }
 
         # Establish a state dictionary recording which steps have been run
         # These are aligned with the section numbers in the documentation
         # TODO: enable a way to init from a point part way through the process
-        self.pop_state = {
-            '5.2.2 read in core property data': 0,
-            '5.2.3 property type mapping': 0,
-            '5.2.4 filled property adjustment': 0,
-            '5.2.5 household occupancy adjustment': 0,
-            '5.2.6 NTEM segmentation': 0,
-            '5.2.7 communal establishments': 0,
-            '5.2.8 MYPE adjustment': 0,
-            '5.2.9 employment adjustment': 0,
-            '5.2.10 SEC/SOC': 0,
-            '5.2.11 car availability': 0
+
+        self.state = {
+            '3.2.1 read in core property data': 0,
+            '3.2.2 filled property adjustment': 0,
+            '3.2.3 household occupancy adjustment': 0,
+            '3.2.4 property type mapping': 0,
+            '3.2.5 Uplifting Base Year population according to Base Year MYPE': 0,
+            '3.2.6 and 3.2.7 expand NTEM population to full dimensions and verify pop profile': 0,
+            '3.2.8 get subsets of worker and non-worker': 0,
+            '3.2.9 verify district level worker and non-worker': 0,
+            '3.2.10 adjust zonal pop with full dimensions': 0,
+            '3.2.11 process CER data': 0,
+            '3.2.12 process DDG data': 0
         }
+        # YZ--for DDG aligned process, NorCOM import step is skipped
+        self.norcom = 'skip NorCOM'
+        # self.norcom = 'export to NorCOM'
+        # self.norcom = 'import from NorCOM'
 
     def build_by_pop(self):
+        # TODO: Method name, this is more of an adjustment to a base now
         """
 
         Returns
@@ -115,58 +150,147 @@ class BaseYearLandUse:
         # Check which parts of the process need running
         # Make a new sub folder of the home directory for the iteration and set this as the working directory
         os.chdir(self.model_folder)
-        utils.create_folder(self.iteration, ch_dir=True)
+        file_ops.create_folder(self.iteration, ch_dir=True)
+        os.chdir('00 Logging')
+        # Create log file without overwriting existing files
+        base_year_log_name = '_'.join([self.base_year, 'base_year_land_use.log'])
+        base_year_log_dir = os.getcwd()
+        if os.path.exists(os.path.join(base_year_log_dir, base_year_log_name)):
+            log_v_count = 1
+            og_base_year_log_name = base_year_log_name[:-4]
+            while os.path.exists(os.path.join(base_year_log_dir, base_year_log_name)):
+                base_year_log_name = ''.join([og_base_year_log_name, '_', str(log_v_count), '.log'])
+                log_v_count = log_v_count + 1
+                print('The last log name I tried was already taken!')
+                print('Now trying log name: %s' % base_year_log_name)
+        logging.basicConfig(filename=base_year_log_name,
+                            level=logging.INFO,
+                            format='%(asctime)s: %(message)s')
+
+
+        # TODO: Check that this picks up the 2011 process!
+
         # TODO: Change from copy to check imports
-        # Run through the main build process
-        if self.pop_state['5.2.2 read in core property data'] == 0:
-            main_build.copy_addressbase_files(self)
-
+        # Run through the Base Year Build process
         # Steps from main build
-        if self.pop_state['5.2.4 filled property adjustment'] == 0:
-            main_build.filled_properties(self)
+        # TODO: Decide if this is used for anything anymore
+        if self.state['3.2.1 read in core property data'] == 0:
+            logging.info('')
+            logging.info('\n' + '=' * 75)
+            logging.info('Running step 3.2.1, reading in core property data')
+            print('\n' + '=' * 75)
+            base_year_population_process.copy_addressbase_files(self)
 
-        if self.pop_state['5.2.5 household occupancy adjustment'] == 0:
-            main_build.apply_household_occupancy(self)
+        if self.state['3.2.2 filled property adjustment'] == 0:
+            logging.info('')
+            logging.info('\n' + '=' * 75)
+            logging.info('Running step 3.2.2, calculating the filled property adjustment factors')
+            print('\n' + '=' * 75)
+            base_year_population_process.filled_properties(self)
 
-        if self.pop_state['5.2.6 NTEM segmentation'] == 0:
-            main_build.apply_ntem_segments(self)
+        if self.state['3.2.3 household occupancy adjustment'] == 0:
+            logging.info('')
+            logging.info('\n' + '=' * 75)
+            print('\n' + '=' * 75)
+            logging.info('Running step 3.2.3, household occupancy adjustment')
+            base_year_population_process.apply_household_occupancy(self)
 
-        if self.pop_state['5.2.7 communal establishments'] == 0:
-            main_build.join_establishments(self)
+        if self.state['3.2.4 property type mapping'] == 0:
+            logging.info('')
+            logging.info('\n' + '=' * 75)
+            print('\n' + '=' * 75)
+            logging.info('Running step 3.2.4, combining flat types')
+            base_year_population_process.property_type_mapping(self)
 
-        # Property type mapping is done after communal establishments are added, despite position in the documentation
-        if self.pop_state['5.2.3 property type mapping'] == 0:
-            main_build.land_use_formatting(self)
+        if self.state['3.2.5 Uplifting Base Year population according to Base Year MYPE'] == 0:
+            logging.info('')
+            logging.info('\n' + '=' * 75)
+            print('\n' + '=' * 75)
+            logging.info('Running step 3.2.5, uplifting 2018 population according to 2018 MYPE')
+            base_year_population_process.mye_pop_compiled(self)
 
-        # Steps from mid-year population estimate adjustment
-        if self.pop_state['5.2.8 MYPE adjustment'] == 0:
-            main_build.apply_ns_sec_soc_splits(self)  # part of step 5.2.10 but required as input to 5.2.8
-            mypa.adjust_landuse_to_specific_yr(self)
-            mypa.control_to_lad_employment_ag(self)
-            mypa.sort_out_hops_uplift(self)  # for audit
+        if self.state['3.2.6 and 3.2.7 expand NTEM population to full dimensions and verify pop profile'] == 0:
+            logging.info('')
+            logging.info('\n' + '=' * 75)
+            print('\n' + '=' * 75)
+            logging.info('Running step 3.2.6, expand NTEM population to full dimensions')
+            logging.info('Also running step 3.2.7, verify population profile by dwelling type')
+            base_year_population_process.pop_with_full_dimensions(self)
 
-        if self.pop_state['5.2.9 employment adjustment'] == 0:
-            mypa.country_emp_control(self)
+        if self.state['3.2.8 get subsets of worker and non-worker'] == 0:
+            logging.info('')
+            logging.info('\n' + '=' * 75)
+            print('\n' + '=' * 75)
+            logging.info('Running step 3.2.8, get subsets of worker and non-worker')
+            logging.info('Called from "census_lu.py" so saving outputs to files')
+            logging.info('but not saving any variables to memory')
+            logging.info('Note that this function will get called again by other functions')
+            base_year_population_process.subsets_worker_nonworker(self, 'census_and_by_lu')
 
-        if self.pop_state['5.2.10 SEC/SOC'] == 0:
-            mypa.adjust_soc_gb(self)
-            mypa.adjust_soc_lad(self)  # TODO: fix this function
+        if self.state['3.2.9 verify district level worker and non-worker'] == 0:
+            logging.info('')
+            logging.info('\n' + '=' * 75)
+            print('\n' + '=' * 75)
+            logging.info('Running step 3.2.9, verify district level worker and non-worker')
+            base_year_population_process.la_level_adjustment(self)
 
-        # Car availability
-        if self.pop_state['5.2.11 car availability'] == 0:
-            # First prepare the NTS data
-            car_availability_adjustment.nts_import(self)
-            print('NTS import completed successfully')
+        if self.state['3.2.10 adjust zonal pop with full dimensions'] == 0:
+            logging.info('')
+            logging.info('\n' + '=' * 75)
+            print('\n' + '=' * 75)
+            logging.info('Running step 3.2.10, adjust zonal pop with full dimensions')
+            base_year_population_process.adjust_zonal_workers_nonworkers(self)
 
-            # Then apply the function from mid_year_pop_adjustments
-            # TODO: uncomment line below once MYPE script has been replaced
-            # mypa.adjust_car_availability(self)
+        # Step 3.2.11 should always be called from Step 3.2.10 (to save read/writing massive files)
+        # Syntax for calling it is maintained here (albeit commented out) for QA purposes
+        # if self.state['3.2.11 process CER data'] == 0:
+        #     logging.info('')
+        #     logging.info('=========================================================================')
+        #     print('\n' + '=' * 75)
+        #     logging.info('Running step 3.2.11, process CER data')
+        #     BaseYear2018_population_process.process_cer_data(self, hhpop_combined_from_3_2_10, la_2_z_from_3_2_10)
+
+        if self.state['3.2.12 process DDG data'] == 0:
+            logging.info('')
+            logging.info('\n' + '=' * 75)
+            print('\n' + '=' * 75)
+            logging.info('Running step 3.2.12, adjust zonal pop to be aligned with DDG')
+            DDG_process.DDGaligned_pop_process(self)
+            #DDG_pop_process.DDGaligned_pop_process(self)
+
+    def _check_state(self,
+                     step_key: str = None):
+        """
+        Check state function, in development.
+        """
+        if step_key in self.step_keys:
+            check = 1  # TODO: Check run status
+            self.status[self.step_key]['status'] = check
+
+        else:
+            state_dict = dict()
+            # TODO: Derive from another step list
+
+            for step in range(0, len(self.step_keys)):
+                state_dict.update(
+                    {self.step_keys[step]: {'desc': self.steps_descs[step],
+                                            'status': 0}})
+
+            for step, dat in state_dict.iteritems():
+                # Pull from key
+                self.status[self.step_key]['status'] = self._check_state(step)
+
+        pass
 
     def build_by_emp(self):
         """
         """
+
+        # TODO: Build from NTEM aligned in more detail?
+        # Need to see what's available
+
         os.chdir(self.model_folder)
-        utils.create_folder(self.iteration, ch_dir=True)
+        file_ops.create_folder(self.iteration, ch_dir=True)
 
         employment.get_emp_data(self)
 
@@ -174,5 +298,8 @@ class BaseYearLandUse:
 
         employment.unemp_infill(self)
 
+
         self.emp_out.to_csv(self.out_paths['emp_write_path'],
                             index=False)
+
+        DDG_process.DDGaligned_emp_process(self)

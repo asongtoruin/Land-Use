@@ -18,8 +18,8 @@ FY_FOLDER = 'future_land_use'
 DATA_FOLDER = 'Y://Data Strategy//Data//'
 
 # Most recent Land Use Iteration
-LU_MR_ITER = 'iter3d'
-FYLU_MR_ITER = 'iter3d'
+LU_MR_ITER = 'iter4m'
+FYLU_MR_ITER = 'iter4m'
 LU_IMPORTS = 'import'
 LU_REFS = 'Lookups'
 
@@ -35,7 +35,10 @@ ADDRESSBASE_PATH_LIST = 'I:/Data/AddressBase/2018/List of ABP datasets.csv'
 #LU_FOLDER + '/' + LU_IMPORTS + '/AddressBase/2018/List of ABP datasets.csv'
 KS401_PATH = LU_FOLDER + '/' + LU_IMPORTS + '/' + 'Nomis Census 2011 Head & Household/KS401UK_LSOA.csv'
 LU_AREA_TYPES = LU_FOLDER + '/area types/TfNAreaTypesLookup.csv'
-ALL_RES_PROPERTY_PATH = 'Y:/NorMITs Land Use/iter4'
+ALL_RES_PROPERTY_PATH = 'I:/NorMITs Land Use/import/AddressBase/2018/processed'
+CTripEnd_Database = 'I:/Data/NTEM/NTEM 7.2 outputs for TfN/'
+
+
 
 # Path to a default land use build
 RESI_LAND_USE_MSOA = os.path.join(
@@ -134,6 +137,12 @@ SOC_2DIGIT_SIC = os.path.join(
     'soc_2_digit_sic_2018.csv'
 )
 
+SOC_BY_REGION = os.path.join(
+    LU_FOLDER,
+    LU_IMPORTS,
+    'SOC Mix',
+    'hsl_3cat_summary.csv'
+)
 
 # REFERENCES
 # purposes to apply soc split to
@@ -199,4 +208,24 @@ TFN_TT_INDEX = pd.read_csv(os.path.join(REF_PATH,
 TFN_TT_DESC = pd.read_csv(os.path.join(REF_PATH,
                                        'tfn_traveller_types_illustrated.csv'))
 
+# LU Pop Build Steps
+BY_POP_BUILD_STEPS = [
+            '3.2.1', '3.2.2', '3.2.3', '3.2.4', '3.2.5',
+            '3.2.6', '3.2.7', '3.2.8', '3.2.9', '3.2.10',
+            '3.2.11', '3.2.12'
+        ]
 
+BY_POP_BUILD_STEP_DESCS = [
+            'read in core property data',
+            'filled property adjustment',
+            'household occupancy adjustment',
+            'property type mapping',
+            '2018 MYPE uplift',
+            'expand NTEM population and verify 1',
+            'expand NTEM population and verify 2',
+            'get subsets of worker and non-worker',
+            'verify worker and non-worker',
+            'adjust pop with full dimensions',
+            'process CER data',
+            'process DDG data'
+        ]

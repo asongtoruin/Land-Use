@@ -8,21 +8,29 @@ import land_use.utils.compress as comp
 import land_use.utils.general as utils
 import land_use.utils.file_ops as fo
 import land_use.utils.normalise_tts as norm
+from land_use.future_land_use_DDG import NTEM_fy_process
+
 
 class FutureYearLandUse:
     def __init__(self,
                  model_folder=consts.LU_FOLDER,
                  iteration=consts.FYLU_MR_ITER,
                  import_folder=consts.LU_IMPORTS,
+                 by_folder=consts.BY_FOLDER,
+                 fy_folder=consts.FY_FOLDER,
                  model_zoning='msoa',
+                 zones_folder=consts.ZONES_FOLDER,
                  base_resi_land_use_path=None,
                  base_non_resi_land_use_path=None,
+                 area_type_path=consts.LU_AREA_TYPES,
+                 ctripend_database_path=consts.CTripEnd_Database,
                  fy_demographic_path=None,
                  fy_at_mix_path=None,
                  fy_soc_mix_path=None,
                  base_year='2018',
                  future_year=None,
                  scenario_name=None,
+                 CAS_scen=None,
                  pop_growth_path=None,
                  emp_growth_path=None,
                  ca_growth_path=None,
@@ -35,13 +43,22 @@ class FutureYearLandUse:
         # File ops
         self.model_folder = model_folder
         self.iteration = iteration
-        self.import_folder = import_folder
+        self.import_folder = model_folder + '/' + import_folder
+        self.zones_folder = zones_folder
+        self.by_folder = by_folder
+        self.fy_folder = fy_folder
+        self.by_home_folder = model_folder + '/' + by_folder + '/' + iteration
+        self.fy_home_folder = model_folder + '/' + fy_folder + '/' + iteration
+
 
         # Basic config
         self.model_zoning = model_zoning
         self.base_year = base_year
         self.future_year = future_year
-        self.scenario_name = scenario_name.upper()
+        self.scenario_name = scenario_name
+        self.CAS_scen = CAS_scen
+        self.area_type_path = area_type_path
+        self.CTripEnd_Database_path = ctripend_database_path
 
         # If Nones passed in, set defaults
         # This is for base datasets that don't vary between scenarios
@@ -104,11 +121,15 @@ class FutureYearLandUse:
         # Build paths
         write_folder = os.path.join(
             model_folder,
-            consts.FY_FOLDER,
-            iteration,
-            'outputs',
-            'scenarios',
-            scenario_name)
+            fy_folder,
+            iteration)
+        # write_folder = os.path.join(
+        #     model_folder,
+        #     consts.FY_FOLDER,
+        #     iteration,
+        #     'outputs',
+        #     'scenarios',
+        #     scenario_name)
 
         pop_write_name = os.path.join(
             write_folder,
@@ -162,6 +183,8 @@ class FutureYearLandUse:
                                                    self.future_year))
         )
 
+    def NTEM_pop(self):
+        NTEM_fy_process.ntem_fy_pop_interpolation(self)
     def build_fy_pop(self,
                      balance_demographics=True,
                      adjust_ca=True,

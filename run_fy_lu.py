@@ -9,14 +9,20 @@ import land_use.lu_constants as consts
 
 if __name__ == '__main__':
 
-    fy_iter = 'iter3d'
+    fy_iter = 'iter4m'
 
-    base_land_use = 'I:/NorMITs Land Use/base_land_use/iter3d/outputs/land_use_output_msoa.csv'
+    by_resi_lu_path = r'I:\NorMITs Land Use\base_land_use\iter3e\outputs\land_use_output_msoa.csv'
+    by_non_resi_lu_path = r'I:\NorMITs Land Use\base_land_use\iter3e\outputs\land_use_2018_emp.csv'
 
-    scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
-    future_years = ['2027', '2033', '2035', '2040', '2050', '2055']
-    future_years = list(range(2051, 2056))
-    future_years = [str(x) for x in future_years]
+    # scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
+    scenarios = ['Regional Scenario', 'High', 'Low']
+    CAS_scen = ['CASReg', 'CASLo','CASHi']
+    all_fy = range(2019, 2051)
+    future_years = list()
+    for i in all_fy:
+        future_years.append(str(i))
+    # future_years = ['2019', '2033', '2035', '2040', '2050']
+
 
     pop = False
     emp = True
