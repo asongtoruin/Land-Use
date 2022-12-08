@@ -50,7 +50,7 @@ DDG_emp_path = '_'.join(['DD', 'Nov21', CAS_Scen, 'Emp', 'LA.csv'])
 
 
 # Function based audit/process directory names
-DDG_process_dir = '3.2.12_process_DDG_data'
+DDG_process_dir = '3.2.9_process_DDG_data'
 
 # Process/audit/output directory name
 process_dir = '01 Process'
@@ -58,14 +58,13 @@ audit_dir = '02 Audits'
 output_dir = '03 Outputs'
 
 def DDGaligned_pop_process(by_lu_obj):
-    logging.info('Running Step 3.2.12')
-    print('Running Step 3.2.12')
+    logging.info('Running Step 3.2.9')
+    print('Running Step 3.2.9')
     output_folder = by_lu_obj.home_folder
     BaseYear = by_lu_obj.base_year
     # Distrctory and file from base year population process
     output_working_dir_path = os.path.join(output_folder, output_dir)
-    BYpop_process_output_file = os.path.join(output_working_dir_path, ''.join(['output_6_resi_gb_msoa_tfn_tt_prt_',
-                                                                            BaseYear, '_pop']))
+    BYpop_process_output_file = os.path.join(output_working_dir_path, '_'.join(['output_5_gb_msoa_tfntt_t', ModelYear, 'tot_pop']))
     BYpop_MYE = compress.read_in(BYpop_process_output_file)
     logging.info('Initial check on MYE complied population currently {}'.format(BYpop_MYE.people.sum()))
 
@@ -281,10 +280,10 @@ def DDGaligned_pop_process(by_lu_obj):
                                            DDG_process_dir,
                                            '_'.join(['audit_5_gb_lad', ModelYear, 'check_pop.csv']))
     BYpop_DDG_LAD_audit.to_csv(BYpop_DDG_LAD_audit_path, index=False)
-    # Auditing text for Step 3.2.12 pop process
-    audit_3_2_12_header = '\n'.join(['Audit for  Step 3.2.12',
+    # Auditing text for Step 3.2.9 pop process
+    audit_3_2_9_header = '\n'.join(['Audit for  Step 3.2.9',
                                      'Created ' + str(datetime.datetime.now())])
-    audit_3_2_12_text = '\n'.join(['The total ' + ModelYear + ' population at the end of the running process is:',
+    audit_3_2_9_text = '\n'.join(['The total ' + ModelYear + ' population at the end of the running process is:',
                                    '\t' + str(BYpop_DDG['pop_DDG_aj2'].sum()),
                                    'Checking final district total population against DDG district population:',
                                    '\tThe min %age diff is ' + str(
@@ -299,13 +298,13 @@ def DDGaligned_pop_process(by_lu_obj):
                                    'All of the above values should be equal (or close) to 0.',
                                    'A full breakdown of the ' + ModelYear + 'population by d can be found at:',
                                    BYpop_DDG_LAD_audit_path])
-    audit_3_2_12_content = '\n'.join([audit_3_2_12_header, audit_3_2_12_text])
-    audit_3_2_12_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+    audit_3_2_9_content = '\n'.join([audit_3_2_9_header, audit_3_2_9_text])
+    audit_3_2_9_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                      audit_dir,
                                      DDG_process_dir,
-                                     ''.join(['Audit_3.2.12_', ModelYear, '.txt']))
-    with open(audit_3_2_12_path, 'w') as text_file:
-        text_file.write(audit_3_2_12_content)
+                                     ''.join(['Audit_3.2.9_', ModelYear, '.txt']))
+    with open(audit_3_2_9_path, 'w') as text_file:
+        text_file.write(audit_3_2_9_content)
 
     # Format ouputs
     BYpop_DDG = BYpop_DDG.rename(columns={'pop_DDG_aj2': 'people'})
@@ -317,16 +316,16 @@ def DDGaligned_pop_process(by_lu_obj):
 
     #Dump outputs
     #DDG_aligned_pop_output_path = os.path.join(by_lu_obj.out_paths['write_folder'], output_dir)
-    BYpop_DDG_pop_allsegs_filename = '_'.join(['output_8_DDG_resi_gb_msoa_tfn_tt_prt', ModelYear, 'pop'])
-    BYpop_DDG_pop_tfn_tt_filename = '_'.join(['output_9_DDG_resi_gb_msoa_tfn_tt', ModelYear, 'pop'])
+    BYpop_DDG_pop_allsegs_filename = '_'.join(['output_7_DDG_gb_msoa_tfntt_t', ModelYear, 'pop'])
+    BYpop_DDG_pop_tfn_tt_filename = '_'.join(['output_8_DDG_gb_msoa_tfntt', ModelYear, 'pop'])
 
     BYpop_DDG_pop_allsegs_path = os.path.join(output_working_dir_path, BYpop_DDG_pop_allsegs_filename)
     BYpop_DDG_pop_tfn_tt_path = os.path.join(output_working_dir_path, BYpop_DDG_pop_tfn_tt_filename)
     compress.write_out(BYpop_DDG_out, BYpop_DDG_pop_allsegs_path)
     compress.write_out(BYpop_DDG_exc_t_out, BYpop_DDG_pop_tfn_tt_path)
-    by_lu_obj.state['3.2.12 process DDG data'] = 1
-    logging.info('Step 3.2.12 completed')
-    print('Step 3.2.12 completed')
+    by_lu_obj.state['3.2.9 process DDG data'] = 1
+    logging.info('Step 3.2.9 completed')
+    print('Step 3.2.9 completed')
 
 
 def DDGaligned_emp_process(by_lu_obj):
@@ -379,7 +378,8 @@ def DDGaligned_emp_process(by_lu_obj):
     #scale MYE emp by segments to be compliant with DDG
     BYemp_DDG['emp_aj'] = BYemp_DDG['employment'] * BYemp_DDG['emp_aj_fac']
     BYemp_DDG = BYemp_DDG.rename(columns={'employment': 'emp_pre', 'emp_aj': 'employment'})
-    logging.info('DDG aligned employment total currently {}'.format(BYemp_DDG.employment.sum()))
+    total_BYEmp = BYemp_DDG.employment.sum()
+    logging.info('DDG aligned employment total (excl. E01) currently %d' % (total_BYEmp/2))
 
     # sum up LAD total of DDG employment for audit
     BYemp_DDG_LAD_ecat = BYemp_DDG.groupby(['2013_LA_code','e_cat'])[['emp_pre', 'employment']].sum().reset_index()
@@ -407,6 +407,5 @@ def DDGaligned_emp_process(by_lu_obj):
     BYemp_DDG_path = os.path.join(output_working_dir_path, output_dir, BYemp_DDG_filename)
     BYemp_DDG_output.to_csv(BYemp_DDG_path, index=False)
     return 0
-
 
 

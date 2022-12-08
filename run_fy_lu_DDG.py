@@ -5,13 +5,15 @@ import land_use.future_land_use_DDG.fy_lu as fylu
 def main():
     run_base_pop = False
     run_fy_ntem = False
-    run_pop = False
-    run_emp = True
-    iteration = 'iter4m'
-    scenarios = ['CAS Regional Scenario', 'CAS High', 'CAS Low', 'Nov 21 central']
+    run_pop = True
+    run_emp = False
+    run_full = True
+    iteration = 'iter4q'
+    # 'CAS Regional Scenario',
+    scenarios = ['CAS High', 'CAS Low', 'Nov 21 central']
     # CAS_scen = ['CASReg', 'CASHi', 'CASLo', 'Central']
     by = '2018'
-    all_fy = range(2019, 2071)
+    all_fy = range(2019, 2066)
     future_years = list()
     for i in all_fy:
         future_years.append(str(i))
@@ -26,6 +28,30 @@ def main():
             ntem_run.build_fy_pop_ntem()
 
     if run_pop:
+        if run_full:
+            for scenario in scenarios:
+                if scenario == 'CAS Regional Scenario':
+                    CAS_scen = 'CASReg'
+                elif scenario == 'CAS High':
+                    CAS_scen = 'CASHi'
+                elif scenario == 'CAS Low':
+                    CAS_scen = 'CASLo'
+                else:
+                    CAS_scen = 'Central'
+                for fy in future_years:
+                    fy_run = fylu.FutureYearLandUse(iteration=iteration, future_year=fy, scenario_name=scenario, CAS_scen=CAS_scen)
+                    fy_run.build_fy_pop_DDG()
+        else:
+            for fy in future_years:
+
+
+                fy_run = fylu.FutureYearLandUse(iteration=iteration,
+                                                future_year=fy,
+                                                scenario_name='CAS Regional Scenario',
+                                                CAS_scen='CASReg')
+                fy_run.build_fy_pop_DDG()
+
+    if run_emp:
         for scenario in scenarios:
             if scenario == 'CAS Regional Scenario':
                 CAS_scen = 'CASReg'
@@ -37,31 +63,12 @@ def main():
                 CAS_scen = 'Central'
             for fy in future_years:
                 fy_run = fylu.FutureYearLandUse(iteration=iteration, future_year=fy, scenario_name=scenario, CAS_scen=CAS_scen)
-                fy_run.build_fy_pop_DDG()
+                fy_run.build_fy_emp()
 
         # for fy in future_years:
         #      # fy_run = fylu.FutureYearLandUse(iteration=iteration, future_year=fy, scenario_name='CAS Low', CAS_scen='CASLo')
         #      fy_run = fylu.FutureYearLandUse(iteration=iteration, future_year=fy, scenario_name='Nov 21 central', CAS_scen='Central')
-        #      fy_run.build_fy_pop_DDG()
-
-    if run_emp:
-        # for scenario in scenarios:
-        #     if scenario == 'CAS Regional Scenario':
-        #         CAS_scen = 'CASReg'
-        #     elif scenario == 'CAS High':
-        #         CAS_scen = 'CASHi'
-        #     elif scenario == 'CAS Low':
-        #         CAS_scen = 'CASLo'
-        #     else:
-        #         CAS_scen = 'Central'
-        #     for fy in future_years:
-        #         fy_run = fylu.FutureYearLandUse(iteration=iteration, future_year=fy, scenario_name=scenario, CAS_scen=CAS_scen)
-        #         fy_run.build_fy_emp()
-
-        for fy in future_years:
-             # fy_run = fylu.FutureYearLandUse(iteration=iteration, future_year=fy, scenario_name='CAS Low', CAS_scen='CASLo')
-             fy_run = fylu.FutureYearLandUse(iteration=iteration, future_year=fy, scenario_name='Nov 21 central', CAS_scen='Central')
-             fy_run.build_fy_emp()
+        #      fy_run.build_fy_emp()
 
 
 

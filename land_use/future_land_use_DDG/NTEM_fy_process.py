@@ -178,12 +178,13 @@ def ntem_fy_pop_interpolation(fy_lu_obj):
                                                    'Household_size', 'Household_car', 'Employment_type_code',
                                                    'Employment_type'])[
         ['Population']].sum().reset_index()
-    NTEM_HHpop = TZonePop_DataYear[['msoaZoneID', 'TravellerType', 'Population']]
+    NTEM_HHpop = TZonePop_DataYear[['msoaZoneID', 'AreaType', 'TravellerType', 'Population']]
     Total_pop = NTEM_HHpop.Population.sum()
     print(NTEM_HHpop.Population.sum())
     NTEM_HHpop['Population'] = NTEM_HHpop['Population'].fillna(0)
     print(NTEM_HHpop.head(10))
     NTEM_HHpop = NTEM_HHpop.rename(columns={'msoaZoneID': 'z',
+                                            'AreaType': 'A',
                                             'TravellerType': 'tt',
                                             'Population': Heading_year})
     print(NTEM_HHpop.tail(10))
