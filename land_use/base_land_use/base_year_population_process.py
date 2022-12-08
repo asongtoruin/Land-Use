@@ -38,7 +38,9 @@ Updates here relative to main_build.py are:
 import pandas as pd
 import numpy as np
 import os
-from ipfn import ipfn
+# from ipfn import ipfn
+from caf.toolkit import iterative_proportional_fitting as ipfn
+from caf.toolkit import concurrency
 import datetime
 import pyodbc
 import geopandas as gpd
@@ -58,7 +60,7 @@ _default_msoaRef = _default_zone_ref_folder + 'UK MSOA and Intermediate Zone Cli
 
 # Other paths
 _census_f_value_path = '2011 Census Furness/04 Post processing/Outputs'
-_Zone_2021LA_path = 'Lookups/MSOA_1991LA_2011LA_2021LA_LAgroups.csv'
+_Zone_2021LA_path = 'Lookups/MSOA_1991LA_2011LA_2013LA_2021LA_LAgroups.csv'
 normits_seg_to_tfn_tt_file = r'I:\NorMITs Land Use\import\Lookups\NorMITs_segments_to_TfN_tt\normits_segs_to_tfn_tt.csv'
 
 # Set Model Year
@@ -98,17 +100,15 @@ aps_soc_path = ''.join(['nomis_APS_SOC_', ModelYear, '.csv'])
 nomis_mye_path = ''.join(['nomis_MYE_', ModelYear, '.csv'])
 
 # Function based audit/process directory names
-copy_address_database_dir = '3.2.1_read_in_core_property_data'
-filled_properties_dir = '3.2.2_filled_property_adjustment'
-apply_household_occupancy_dir = '3.2.3_apply_household_occupancy'
-land_use_formatting_dir = '3.2.4_land_use_formatting'
-mye_pop_compiled_dir = '3.2.5_uplifting_base_year_pop_base_year_MYPE'
-pop_with_full_dims_dir = '3.2.6_expand_NTEM_pop'
-pop_with_full_dims_second_dir = '3.2.7_verify_population_profile_by_dwelling_type'
-subsets_worker_nonworker_dir = '3.2.8_subsets_of_workers+nonworkers'
-la_level_adjustment_dir = '3.2.9_verify_district_level_worker_and_nonworker'
-further_adjustments_dir = '3.2.10_adjust_zonal_pop_with_full_dimensions'
-cer_dir = '3.2.11_process_CER_data'
+copy_address_database_dir = '3.2.1_Read_in_core_property_data'
+filled_properties_dir = '3.2.2_Filled_property_adjustment'
+apply_household_occupancy_dir = '3.2.3_Apply_household_occupancy'
+land_use_formatting_dir = '3.2.4_Land_use_formatting'
+mye_pop_compiled_dir = '3.2.5_Adjust_base_year_pop_from_MYPE'
+pop_with_full_dims_dir = '3.2.6_Expand_NTEM_pop'
+furness_hhr_dir = '3.2.7_Furness_household_population'
+further_adjustments_dir = '3.2.8_Combine_HHR_with_CER'
+cer_dir = '3.2.8_Combine_HHR_with_CER'
 
 # Process/audit/output directory name
 process_dir = '01 Process'
@@ -1383,6 +1383,9 @@ def mye_aps_process(by_lu_obj,
     full_mye_aps_process_dir = os.path.join(by_lu_obj.out_paths['write_folder'],
                                             process_dir,
                                             mye_aps_process_dir)
+    hhr_zag_name = '_'.join(['gb', by_lu_obj.model_zoning.lower(),
+                                    ModelYear, 'hhr_age_gender'])
+    hhr_zag_path = os.path.join(full_mye_aps_process_dir, hhr_zag_name)
     hhr_vs_all_pop_name = '_'.join(['gb', by_lu_obj.model_zoning.lower(),
                                     ModelYear, 'pop+hh_pop.csv'])
     hhr_worker_by_d_for_export_name = '_'.join(['mye_gb_d', ModelYear, 'wkrs_tot+by_ag.csv'])
@@ -1392,6 +1395,31 @@ def mye_aps_process(by_lu_obj,
     # Export only the requested outputs
     mye_aps_logging_string = 'The MYE_APS_process completed after being called by'
     if function_that_called_me == 'MYE_pop_compiled':
+        # Yan: export zonal MYE hhr by age and gender as control
+        hhr_zag = hhr_by_z.copy()
+        hhr_zag = pd.melt(hhr_zag, id_vars=['MSOA', 'Zone'],
+                                   value_vars=['M_under_16', 'M_16-74',
+                                               'M_75_and_over', 'F_under_16', 'F_16-74',
+                                               'F_75_and_over']).rename(columns={'variable': 'ag', 'value': 'HHR'})
+        a = {
+            'M_under_16': 1,
+            'M_16-74': 2,
+            'M_75_and_over': 3,
+            'F_under_16': 1,
+            'F_16-74': 2,
+            'F_75_and_over': 3
+        }
+        g = {
+            'M_under_16': 1,
+            'M_16-74': 2,
+            'M_75_and_over': 2,
+            'F_under_16': 1,
+            'F_16-74': 3,
+            'F_75_and_over': 3
+        }
+        hhr_zag['a'] = hhr_zag['ag'].map(a)
+        hhr_zag['g'] = hhr_zag['ag'].map(g)
+        hhr_zag = hhr_zag[['MSOA', 'Zone', 'ag', 'a', 'g', 'HHR']]
         hhr_vs_all_pop = hhr_by_z.copy()
         hhr_vs_all_pop = hhr_vs_all_pop[['Zone', 'MSOA', 'Total']]
         hhr_vs_all_pop.rename(columns={'Total': 'Total_HHR'}, inplace=True)
@@ -1404,8 +1432,10 @@ def mye_aps_process(by_lu_obj,
         # after this function (and 3.2.5) have run, so will not need to skip ahead
         # to call it, as was the case here.
         hhr_vs_all_pop.to_csv(os.path.join(full_mye_aps_process_dir, hhr_vs_all_pop_name), index=False)
+        compress.write_out(hhr_zag, hhr_zag_path)
+        # hhr_zag.to_csv(os.path.join(full_mye_aps_process_dir, hhr_zag_name), index=False)
         mye_aps_process_output = hhr_vs_all_pop
-    elif function_that_called_me == 'LA_level_adjustment':
+    elif function_that_called_me == 'Furness_hhr':
         # Dump the APS worker and non-worker files
         hhr_worker_by_d_for_export.to_csv(
             os.path.join(full_mye_aps_process_dir, hhr_worker_by_d_for_export_name), index=False)
@@ -1578,7 +1608,8 @@ def ntem_pop_interpolation(by_lu_obj, calling_functions_dir):
     print(Export_SummaryPop.Population.sum())
     # Export_SummaryPop.drop(['msoaZoneID'], inplace=True, axis=1)
     PopOutput = '_'.join(['ntem_gb_z_areatype_ntem_tt', str(Year), 'pop.csv'])
-
+    # the base year ntem PopOutput will be further cleased and saved in
+    # ntem_output_folder = r'I:\NorMITs Land Use\import\CTripEnd\All_year'
     with open(os.path.join(iter_folder, process_dir, calling_functions_dir, PopOutput), "w", newline='') as f:
         TZonePop_DataYear.to_csv(f, header=True, sep=",")
     f.close()
@@ -1793,8 +1824,8 @@ def pop_with_full_dimensions(by_lu_obj):
     TODO: make it work for zones other than MSOA?
     ART, 12/11/2021 model_year moved defined at the head of this file. Can't find model_name!
     """
-    logging.info('Running Step 3.2.6/3.2.7 function')
-    print('Running Step 3.2.6/3.2.7 function')
+    logging.info('Running Step 3.2.6 function')
+    print('Running Step 3.2.6 function')
 
     # TODO - Sort out these filepaths a bit more permanently - may be redundant long term if NorCOM is integrated
     output_NTEM_HHpop_filename = '_'.join(['output_0_ntem_gb_msoa_ntem_tt', ModelYear, 'aj_hh_pop.csv'])
@@ -1812,12 +1843,30 @@ def pop_with_full_dimensions(by_lu_obj):
     # TODO - These variable names could probably do with tidying up at bit to avoid confusion with
     #  their Step 3_2_5 counterparts. Only still like this as a block of code was moved from Step
     #  3_2_6 to Step 3_2_5 at the last minute!
-    logging.info('Step 3.2.6 is calling Step 3.2.5')
-    print('Step 3.2.6 is calling Step 3.2.5')
-    call_3_2_5 = mye_pop_compiled(by_lu_obj)
-    aj_crp = call_3_2_5[0]
-    NTEM_HHpop = call_3_2_5[1]
-    audit_original_hhpop = call_3_2_5[2]
+    logging.info('Step 3.2.6 is loading files written out from prev Step 3.2.5')
+    print('Step 3.2.6 is loading files written out from prev Step 3.2.5')
+    # call_3_2_5 = mye_pop_compiled(by_lu_obj)
+    # aj_crp = call_3_2_5[0]
+    # NTEM_HHpop = call_3_2_5[1]
+    # audit_original_hhpop = call_3_2_5[2]
+    aj_crp_pop_filename = '_'.join(['gb_msoa_agg_prt', ModelYear, 'hh_pop.csv'])
+    aj_crp = pd.read_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                         process_dir,
+                                         mye_pop_compiled_dir,
+                                         aj_crp_pop_filename))
+    ntem_hh_pop_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                    process_dir,
+                                    mye_pop_compiled_dir,
+                                    '_'.join(['ntem_gb_msoa_ntem_tt', ModelYear, 'mye_pop']))
+    NTEM_HHpop = compress.read_in(ntem_hh_pop_path)
+
+    audit_original_hhpop = pd.read_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                     process_dir,
+                                     mye_pop_compiled_dir,
+                                     '_'.join(['gb', by_lu_obj.model_zoning.lower(),
+                                               ModelYear, 'pop+hh_pop.csv'])))
+    audit_original_hhpop = audit_original_hhpop[['MSOA', 'Total_HHR']]
+    audit_original_hhpop = audit_original_hhpop.rename(columns={'Total_HHR': 'MYE_pop'})
     logging.info('Step 3.2.6 has completed its call of Step 3.2.5, Step 3.2.6 is continuing...')
     print('Step 3.2.6 has completed its call of Step 3.2.5, Step 3.2.6 is continuing...')
 
@@ -1975,21 +2024,7 @@ def pop_with_full_dimensions(by_lu_obj):
         with open(audit_3_2_6_path, 'w') as text_file:
             text_file.write(audit_3_2_6_content)
 
-        pop_trim_with_full_dims_filename = '_'.join(['gb', by_lu_obj.model_zoning.lower(),
-                                                     'tfn_tt_agg_prt', ModelYear, 'pop'])
-        pop_trim_with_full_dims_path = os.path.join(by_lu_obj.out_paths['write_folder'],
-                                                    process_dir,
-                                                    pop_with_full_dims_dir,
-                                                    pop_trim_with_full_dims_filename)
-        compress.write_out(NTEM_HHpop_trim, pop_trim_with_full_dims_path)
 
-        logging.info('Step 3.2.6 completed. Continuing running this function as Step 3.2.7.')
-
-        # Further adjust detailed dimensional population according to zonal dwelling type from crp
-        # This is Section 3.2.7 (to the end of this function)
-        # Title of section 3.2.7 is "Verify population profile by dwelling type"
-        # TODO ART, update script around here to reflect Jupyter - Done? It seems to work anyway...
-        #  still need to add audits for 3.2.6 above this though
         NorMITs_HHpop_byDt = aj_crp.rename(columns={'ZoneID': 'MSOA',
                                                     'population': 'crp_P_t',
                                                     'UPRN': 'properties',
@@ -2001,9 +2036,6 @@ def pop_with_full_dimensions(by_lu_obj):
                                             pop_with_full_dims_dir,
                                             '_'.join(['ntem_gb_z_t', ModelYear, 'hh_pop.csv'])), index=False)
 
-        # Testing with Manchester
-        # NTEM_HHpop_byDt_total_E02001045 = NTEM_HHpop_byDt[NTEM_HHpop_byDt['z'] == '1013']
-        # NTEM_HHpop_byDt_total_E02001045.to_csv('NTEM_HHpop_byDt_total_E02001045.csv', index=False)
 
         # TODO ART, 04/02/2022: Change these variable names to be gb instead of uk.
         #  UK includes Northern Ireland and these variables do not.
@@ -2011,362 +2043,232 @@ def pop_with_full_dimensions(by_lu_obj):
         uk_ave_hh_occ['pop_pre_aj'] = uk_ave_hh_occ['crp_P_t'] / uk_ave_hh_occ['pop_aj_factor']
         uk_ave_hh_occ = uk_ave_hh_occ.groupby(['t'])[['properties', 'pop_pre_aj']].sum()
         uk_ave_hh_occ['UK_average_hhocc'] = uk_ave_hh_occ['pop_pre_aj'] / uk_ave_hh_occ['properties']
-
-        HHpop = NTEM_HHpop_trim.merge(NTEM_HHpop_byDt, how='left', on=['z', 't'])
-        # Where the problem occur: Does it still occur?
-        HHpop = HHpop.merge(NorMITs_HHpop_byDt,
-                            how='left',
-                            left_on=['msoa11cd', 't'],
-                            right_on=['MSOA', 't']).drop(
-            columns={'MSOA', 'pop_aj_factor', 'Zone'}).rename(
-            columns={'msoa11cd': 'MSOA'})
-        HHpop.loc[HHpop['_'.join(['household_occupancy', ModelYear[-2:]])].isnull(),
-                  '_'.join(['household_occupancy', ModelYear[-2:]])] = HHpop['t'].map(uk_ave_hh_occ.UK_average_hhocc)
-        HHpop.fillna({'properties': 0, 'crp_P_t': 0}, inplace=True)
-
-        HHpop['P_aghetns_aj_factor'] = HHpop['crp_P_t'] / HHpop['P_t']
-        HHpop['P_aghetns_aj'] = HHpop['P_aghetns'] * HHpop['P_aghetns_aj_factor']
-
-        # Testing with Manchester
-        # HH_P_aghetns_aj_E02001045 = HHpop[HHpop['MSOA'] == 'E02001045']
-        # HH_P_aghetns_aj_E02001045.to_csv('HH_P_aghetns_aj_E02001045.csv', index=False)
-
-        HHpop = HHpop.rename(columns={'P_aghetns': 'NTEM_HH_pop', 'P_aghetns_aj': 'people'})
-
-        logging.info('total of hh pop from aj_ntem: ')
-        logging.info(HHpop.people.sum())
-        logging.info('total of hh pop from aj_crp: ')
-        logging.info(aj_crp.population.sum())
-
-        # Check the outcome compare NTEM aj pop (NTEM_HH_pop) against NorMITs pop (people)
-        # adjusted according to pop by dwelling type
-        # Create and save an audit
-        current_running_dir = os.getcwd()
-        pop_with_full_dims_second_dir_path = os.path.join(by_lu_obj.out_paths['write_folder'],
-                                                          audit_dir,
-                                                          pop_with_full_dims_second_dir)
-        os.chdir(os.path.join(pop_with_full_dims_second_dir_path))
-        seg_folder = 'audit_6_ntem_segmentation_audits'
-        utils.create_folder(seg_folder)
-
-        ZonalTot = HHpop.groupby(['z', 'MSOA'])[['people', 'NTEM_HH_pop']].sum().reset_index()
-        ZonalTot = ZonalTot.rename(columns={'people': 'NorMITs_Zonal', 'NTEM_HH_pop': 'NTEM_Zonal'})
-        audit_ZonalTot = pd.merge(audit_original_hhpop, ZonalTot, how='right', on='MSOA')
-        audit_ZonalTot['HH_pop_%age_diff'] = (audit_ZonalTot['NorMITs_Zonal'] -
-                                              audit_ZonalTot['MYE_pop']) / audit_ZonalTot['MYE_pop']
-        audit_ZonalTot_max = audit_ZonalTot['HH_pop_%age_diff'].max()
-        audit_ZonalTot_min = audit_ZonalTot['HH_pop_%age_diff'].min()
-        audit_ZonalTot_mean = audit_ZonalTot['HH_pop_%age_diff'].mean()
-        audit_ZonalTot_filename = '_'.join(['audit_7_gb_msoa_check_mype_ntem_normits', ModelYear, 'hh_pop.csv'])
-        audit_ZonalTot.to_csv(audit_ZonalTot_filename, index=False)
-
-        DT = HHpop.groupby(['z', 'MSOA', 't'])[['people', 'NTEM_HH_pop']].sum().reset_index()
-        DT_check = DT.merge(ZonalTot, how='left', on=['z'])
-        DT_check['Ab_Perdiff'] = DT_check['people'] / DT_check['NTEM_HH_pop'] - 1
-        DT_check['NorMITs_profile'] = DT_check['people'] / DT_check['NorMITs_Zonal']
-        DT_check['NTEM_profile'] = DT_check['NTEM_HH_pop'] / DT_check['NTEM_Zonal']
-        DT_check['Profile_Perdiff'] = DT_check['NorMITs_profile'] / DT_check['NTEM_profile'] - 1
-        DT_check.to_csv(''.join([seg_folder, '/audit_6-1_ntem_gb_msoa_agg_prt_', ModelYear, '_pop_check.csv']),
-                        index=False)
-
-        Cars = HHpop.groupby(['z', 'MSOA', 'Household_car'])[['people', 'NTEM_HH_pop']].sum().reset_index()
-        Cars_check = Cars.merge(ZonalTot, how='left', on=['z'])
-        Cars_check['Ab_Perdiff'] = Cars_check['people'] / Cars_check['NTEM_HH_pop'] - 1
-        Cars_check['NorMITs_profile'] = Cars_check['people'] / Cars_check['NorMITs_Zonal']
-        Cars_check['NTEM_profile'] = Cars_check['NTEM_HH_pop'] / Cars_check['NTEM_Zonal']
-        Cars_check['Profile_Perdiff'] = Cars_check['NorMITs_profile'] / Cars_check['NTEM_profile'] - 1
-        Cars_check.to_csv(''.join([seg_folder, '/audit_6-2_ntem_gb_msoa_car_avail_', ModelYear, '_pop_check.csv']),
-                          index=False)
-
-        HHsize = HHpop.groupby(['z', 'MSOA', 'Household_size'])[['people', 'NTEM_HH_pop']].sum().reset_index()
-        HHsize_check = HHsize.merge(ZonalTot, how='left', on=['z'])
-        HHsize_check['Ab_Perdiff'] = HHsize_check['people'] / HHsize_check['NTEM_HH_pop'] - 1
-        HHsize_check['NorMITs_profile'] = HHsize_check['people'] / HHsize_check['NorMITs_Zonal']
-        HHsize_check['NTEM_profile'] = HHsize_check['NTEM_HH_pop'] / HHsize_check['NTEM_Zonal']
-        HHsize_check['Profile_Perdiff'] = HHsize_check['NorMITs_profile'] / HHsize_check['NTEM_profile'] - 1
-        HHsize_check.to_csv(''.join([seg_folder, '/audit_6-3_ntem_gb_msoa_hh_size_', ModelYear, '_pop_check.csv']),
-                            index=False)
-
-        HH_composition = HHpop.groupby(['z', 'MSOA', 'h'])[['people', 'NTEM_HH_pop']].sum().reset_index()
-        HH_composition_check = HH_composition.merge(ZonalTot, how='left', on=['z'])
-        HH_composition_check['Ab_Perdiff'] = HH_composition_check['people'] / HH_composition_check['NTEM_HH_pop'] - 1
-        HH_composition_check['NorMITs_profile'] = HH_composition_check['people'] / HH_composition_check['NorMITs_Zonal']
-        HH_composition_check['NTEM_profile'] = HH_composition_check['NTEM_HH_pop'] / HH_composition_check['NTEM_Zonal']
-        HH_composition_check['Profile_Perdiff'] = (HH_composition_check['NorMITs_profile'] /
-                                                   HH_composition_check['NTEM_profile']) - 1
-        HH_composition_check.to_csv(
-            ''.join([seg_folder, '/audit_6-4_ntem_gb_msoa_hh_comp_', ModelYear, '_pop_check.csv']), index=False)
-
-        Age = HHpop.groupby(['z', 'MSOA', 'a'])[['people', 'NTEM_HH_pop']].sum().reset_index()
-        Age_check = Age.merge(ZonalTot, how='left', on=['z'])
-        Age_check['Ab_Perdiff'] = Age_check['people'] / Age_check['NTEM_HH_pop'] - 1
-        Age_check['NorMITs_profile'] = Age_check['people'] / Age_check['NorMITs_Zonal']
-        Age_check['NTEM_profile'] = Age_check['NTEM_HH_pop'] / Age_check['NTEM_Zonal']
-        Age_check['Profile_Perdiff'] = Age_check['NorMITs_profile'] / Age_check['NTEM_profile'] - 1
-        Age_check.to_csv(''.join([seg_folder, '/audit_6-5_ntem_gb_msoa_age_', ModelYear, '_pop_check.csv']),
-                         index=False)
-
-        Gender = HHpop.groupby(['z', 'MSOA', 'g'])[['people', 'NTEM_HH_pop']].sum().reset_index()
-        Gender_check = Gender.merge(ZonalTot, how='left', on=['z'])
-        Gender_check['Ab_Perdiff'] = Gender_check['people'] / Gender_check['NTEM_HH_pop'] - 1
-        Gender_check['NorMITs_profile'] = Gender_check['people'] / Gender_check['NorMITs_Zonal']
-        Gender_check['NTEM_profile'] = Gender_check['NTEM_HH_pop'] / Gender_check['NTEM_Zonal']
-        Gender_check['Profile_Perdiff'] = Gender_check['NorMITs_profile'] / Gender_check['NTEM_profile'] - 1
-        Gender_check.to_csv(''.join([seg_folder, '/audit_6-6_ntem_gb_msoa_gender_', ModelYear, '_pop_check.csv']),
-                            index=False)
-
-        Employment = HHpop.groupby(['z', 'MSOA', 'e'])[['people', 'NTEM_HH_pop']].sum().reset_index()
-        Employment_check = Employment.merge(ZonalTot, how='left', on=['z'])
-        Employment_check['Ab_Perdiff'] = Employment_check['people'] / Employment_check['NTEM_HH_pop'] - 1
-        Employment_check['NorMITs_profile'] = Employment_check['people'] / Employment_check['NorMITs_Zonal']
-        Employment_check['NTEM_profile'] = Employment_check['NTEM_HH_pop'] / Employment_check['NTEM_Zonal']
-        Employment_check['Profile_Perdiff'] = Employment_check['NorMITs_profile'] / Employment_check['NTEM_profile'] - 1
-        Employment_check.to_csv(
-            ''.join([seg_folder, '/audit_6-7_ntem_gb_msoa_employment_', ModelYear, '_pop_check.csv']), index=False)
-
-        audit_3_2_7_header = 'Audit for Step 3.2.7\nCreated ' + str(datetime.datetime.now())
-        audit_3_2_7_text = '\n'.join(['>>> IMPORTANT NOTE <<<',
-                                      '\tIf you can\'t find the output you are looking for, which should have been',
-                                      '\texported to Step 3.2.7, try looking in the Step 3.2.6 directory, as both',
-                                      '\tsteps run using the same function, so separating the outputs can be tricky!',
-                                      'High level summaries:',
-                                      '\tThe total HH pop from aj_ntem is: ' + str(HHpop.people.sum()),
-                                      '\tThe total HH pop from aj_crp is: ' + str(aj_crp.population.sum()),
-                                      'The zonal variation in HH pop against the original MYPE derived HH pop has:',
-                                      '\tMax percentage diff: ' + str(audit_ZonalTot_max * 100) + '%',
-                                      '\tMin percentage diff: ' + str(audit_ZonalTot_min * 100) + '%',
-                                      '\tMean percentage diff: ' + str(audit_ZonalTot_mean * 100) + '%',
-                                      'These percentage differences should be equal (or close to) 0.',
-                                      'A full zonal breakdown of these differences can be found here:',
-                                      os.path.join(os.getcwd(), audit_ZonalTot_filename),
-                                      'Additionally, number of segmentation audits have also been produced.',
-                                      'These can be found in:',
-                                      os.path.join(os.getcwd(), seg_folder),
-                                      'Again, the differences are expected to be small.'])
-        audit_3_2_7_content = '\n'.join([audit_3_2_7_header, audit_3_2_7_text])
-        audit_3_2_7_path = ''.join(['Audit_3.2.7_', ModelYear, '.txt'])  # We are in the directory we want to dump to.
-        with open(audit_3_2_7_path, 'w') as text_file:
-            text_file.write(audit_3_2_7_content)
-
-        os.chdir(current_running_dir)
+        #
+        # HHpop = NTEM_HHpop_trim.merge(NTEM_HHpop_byDt, how='left', on=['z', 't'])
+        # # Where the problem occur: Does it still occur?
+        # HHpop = HHpop.merge(NorMITs_HHpop_byDt,
+        #                     how='left',
+        #                     left_on=['msoa11cd', 't'],
+        #                     right_on=['MSOA', 't']).drop(
+        #     columns={'MSOA', 'pop_aj_factor', 'Zone'}).rename(
+        #     columns={'msoa11cd': 'MSOA'})
+        # HHpop.loc[HHpop['_'.join(['household_occupancy', ModelYear[-2:]])].isnull(),
+        #           '_'.join(['household_occupancy', ModelYear[-2:]])] = HHpop['t'].map(uk_ave_hh_occ.UK_average_hhocc)
+        # HHpop.fillna({'properties': 0, 'crp_P_t': 0}, inplace=True)
+        #
+        # HHpop['P_aghetns_aj_factor'] = HHpop['crp_P_t'] / HHpop['P_t']
+        # HHpop['P_aghetns_aj'] = HHpop['P_aghetns'] * HHpop['P_aghetns_aj_factor']
+        #
+        # # Testing with Manchester
+        # # HH_P_aghetns_aj_E02001045 = HHpop[HHpop['MSOA'] == 'E02001045']
+        # # HH_P_aghetns_aj_E02001045.to_csv('HH_P_aghetns_aj_E02001045.csv', index=False)
+        #
+        # HHpop = HHpop.rename(columns={'P_aghetns': 'NTEM_HH_pop', 'P_aghetns_aj': 'people'})
+        #
+        # logging.info('total of hh pop from aj_ntem: ')
+        # logging.info(HHpop.people.sum())
+        # logging.info('total of hh pop from aj_crp: ')
+        # logging.info(aj_crp.population.sum())
+        #
+        # # Check the outcome compare NTEM aj pop (NTEM_HH_pop) against NorMITs pop (people)
+        # # adjusted according to pop by dwelling type
+        # # Create and save an audit
+        # current_running_dir = os.getcwd()
+        # pop_with_full_dims_second_dir_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+        #                                                   audit_dir,
+        #                                                   pop_with_full_dims_second_dir)
+        # os.chdir(os.path.join(pop_with_full_dims_second_dir_path))
+        # seg_folder = 'audit_6_ntem_segmentation_audits'
+        # utils.create_folder(seg_folder)
+        #
+        # ZonalTot = HHpop.groupby(['z', 'MSOA'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+        # ZonalTot = ZonalTot.rename(columns={'people': 'NorMITs_Zonal', 'NTEM_HH_pop': 'NTEM_Zonal'})
+        # audit_ZonalTot = pd.merge(audit_original_hhpop, ZonalTot, how='right', on='MSOA')
+        # audit_ZonalTot['HH_pop_%age_diff'] = (audit_ZonalTot['NorMITs_Zonal'] -
+        #                                       audit_ZonalTot['MYE_pop']) / audit_ZonalTot['MYE_pop']
+        # audit_ZonalTot_max = audit_ZonalTot['HH_pop_%age_diff'].max()
+        # audit_ZonalTot_min = audit_ZonalTot['HH_pop_%age_diff'].min()
+        # audit_ZonalTot_mean = audit_ZonalTot['HH_pop_%age_diff'].mean()
+        # audit_ZonalTot_filename = '_'.join(['audit_7_gb_msoa_check_mype_ntem_normits', ModelYear, 'hh_pop.csv'])
+        # audit_ZonalTot.to_csv(audit_ZonalTot_filename, index=False)
+        #
+        # DT = HHpop.groupby(['z', 'MSOA', 't'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+        # DT_check = DT.merge(ZonalTot, how='left', on=['z'])
+        # DT_check['Ab_Perdiff'] = DT_check['people'] / DT_check['NTEM_HH_pop'] - 1
+        # DT_check['NorMITs_profile'] = DT_check['people'] / DT_check['NorMITs_Zonal']
+        # DT_check['NTEM_profile'] = DT_check['NTEM_HH_pop'] / DT_check['NTEM_Zonal']
+        # DT_check['Profile_Perdiff'] = DT_check['NorMITs_profile'] / DT_check['NTEM_profile'] - 1
+        # DT_check.to_csv(''.join([seg_folder, '/audit_6-1_ntem_gb_msoa_agg_prt_', ModelYear, '_pop_check.csv']),
+        #                 index=False)
+        #
+        # Cars = HHpop.groupby(['z', 'MSOA', 'Household_car'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+        # Cars_check = Cars.merge(ZonalTot, how='left', on=['z'])
+        # Cars_check['Ab_Perdiff'] = Cars_check['people'] / Cars_check['NTEM_HH_pop'] - 1
+        # Cars_check['NorMITs_profile'] = Cars_check['people'] / Cars_check['NorMITs_Zonal']
+        # Cars_check['NTEM_profile'] = Cars_check['NTEM_HH_pop'] / Cars_check['NTEM_Zonal']
+        # Cars_check['Profile_Perdiff'] = Cars_check['NorMITs_profile'] / Cars_check['NTEM_profile'] - 1
+        # Cars_check.to_csv(''.join([seg_folder, '/audit_6-2_ntem_gb_msoa_car_avail_', ModelYear, '_pop_check.csv']),
+        #                   index=False)
+        #
+        # HHsize = HHpop.groupby(['z', 'MSOA', 'Household_size'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+        # HHsize_check = HHsize.merge(ZonalTot, how='left', on=['z'])
+        # HHsize_check['Ab_Perdiff'] = HHsize_check['people'] / HHsize_check['NTEM_HH_pop'] - 1
+        # HHsize_check['NorMITs_profile'] = HHsize_check['people'] / HHsize_check['NorMITs_Zonal']
+        # HHsize_check['NTEM_profile'] = HHsize_check['NTEM_HH_pop'] / HHsize_check['NTEM_Zonal']
+        # HHsize_check['Profile_Perdiff'] = HHsize_check['NorMITs_profile'] / HHsize_check['NTEM_profile'] - 1
+        # HHsize_check.to_csv(''.join([seg_folder, '/audit_6-3_ntem_gb_msoa_hh_size_', ModelYear, '_pop_check.csv']),
+        #                     index=False)
+        #
+        # HH_composition = HHpop.groupby(['z', 'MSOA', 'h'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+        # HH_composition_check = HH_composition.merge(ZonalTot, how='left', on=['z'])
+        # HH_composition_check['Ab_Perdiff'] = HH_composition_check['people'] / HH_composition_check['NTEM_HH_pop'] - 1
+        # HH_composition_check['NorMITs_profile'] = HH_composition_check['people'] / HH_composition_check['NorMITs_Zonal']
+        # HH_composition_check['NTEM_profile'] = HH_composition_check['NTEM_HH_pop'] / HH_composition_check['NTEM_Zonal']
+        # HH_composition_check['Profile_Perdiff'] = (HH_composition_check['NorMITs_profile'] /
+        #                                            HH_composition_check['NTEM_profile']) - 1
+        # HH_composition_check.to_csv(
+        #     ''.join([seg_folder, '/audit_6-4_ntem_gb_msoa_hh_comp_', ModelYear, '_pop_check.csv']), index=False)
+        #
+        # Age = HHpop.groupby(['z', 'MSOA', 'a'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+        # Age_check = Age.merge(ZonalTot, how='left', on=['z'])
+        # Age_check['Ab_Perdiff'] = Age_check['people'] / Age_check['NTEM_HH_pop'] - 1
+        # Age_check['NorMITs_profile'] = Age_check['people'] / Age_check['NorMITs_Zonal']
+        # Age_check['NTEM_profile'] = Age_check['NTEM_HH_pop'] / Age_check['NTEM_Zonal']
+        # Age_check['Profile_Perdiff'] = Age_check['NorMITs_profile'] / Age_check['NTEM_profile'] - 1
+        # Age_check.to_csv(''.join([seg_folder, '/audit_6-5_ntem_gb_msoa_age_', ModelYear, '_pop_check.csv']),
+        #                  index=False)
+        #
+        # Gender = HHpop.groupby(['z', 'MSOA', 'g'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+        # Gender_check = Gender.merge(ZonalTot, how='left', on=['z'])
+        # Gender_check['Ab_Perdiff'] = Gender_check['people'] / Gender_check['NTEM_HH_pop'] - 1
+        # Gender_check['NorMITs_profile'] = Gender_check['people'] / Gender_check['NorMITs_Zonal']
+        # Gender_check['NTEM_profile'] = Gender_check['NTEM_HH_pop'] / Gender_check['NTEM_Zonal']
+        # Gender_check['Profile_Perdiff'] = Gender_check['NorMITs_profile'] / Gender_check['NTEM_profile'] - 1
+        # Gender_check.to_csv(''.join([seg_folder, '/audit_6-6_ntem_gb_msoa_gender_', ModelYear, '_pop_check.csv']),
+        #                     index=False)
+        #
+        # Employment = HHpop.groupby(['z', 'MSOA', 'e'])[['people', 'NTEM_HH_pop']].sum().reset_index()
+        # Employment_check = Employment.merge(ZonalTot, how='left', on=['z'])
+        # Employment_check['Ab_Perdiff'] = Employment_check['people'] / Employment_check['NTEM_HH_pop'] - 1
+        # Employment_check['NorMITs_profile'] = Employment_check['people'] / Employment_check['NorMITs_Zonal']
+        # Employment_check['NTEM_profile'] = Employment_check['NTEM_HH_pop'] / Employment_check['NTEM_Zonal']
+        # Employment_check['Profile_Perdiff'] = Employment_check['NorMITs_profile'] / Employment_check['NTEM_profile'] - 1
+        # Employment_check.to_csv(
+        #     ''.join([seg_folder, '/audit_6-7_ntem_gb_msoa_employment_', ModelYear, '_pop_check.csv']), index=False)
+        #
+        # audit_3_2_7_header = 'Audit for Step 3.2.7\nCreated ' + str(datetime.datetime.now())
+        # audit_3_2_7_text = '\n'.join(['>>> IMPORTANT NOTE <<<',
+        #                               '\tIf you can\'t find the output you are looking for, which should have been',
+        #                               '\texported to Step 3.2.7, try looking in the Step 3.2.6 directory, as both',
+        #                               '\tsteps run using the same function, so separating the outputs can be tricky!',
+        #                               'High level summaries:',
+        #                               '\tThe total HH pop from aj_ntem is: ' + str(HHpop.people.sum()),
+        #                               '\tThe total HH pop from aj_crp is: ' + str(aj_crp.population.sum()),
+        #                               'The zonal variation in HH pop against the original MYPE derived HH pop has:',
+        #                               '\tMax percentage diff: ' + str(audit_ZonalTot_max * 100) + '%',
+        #                               '\tMin percentage diff: ' + str(audit_ZonalTot_min * 100) + '%',
+        #                               '\tMean percentage diff: ' + str(audit_ZonalTot_mean * 100) + '%',
+        #                               'These percentage differences should be equal (or close to) 0.',
+        #                               'A full zonal breakdown of these differences can be found here:',
+        #                               os.path.join(os.getcwd(), audit_ZonalTot_filename),
+        #                               'Additionally, number of segmentation audits have also been produced.',
+        #                               'These can be found in:',
+        #                               os.path.join(os.getcwd(), seg_folder),
+        #                               'Again, the differences are expected to be small.'])
+        # audit_3_2_7_content = '\n'.join([audit_3_2_7_header, audit_3_2_7_text])
+        # audit_3_2_7_path = ''.join(['Audit_3.2.7_', ModelYear, '.txt'])  # We are in the directory we want to dump to.
+        # with open(audit_3_2_7_path, 'w') as text_file:
+        #     text_file.write(audit_3_2_7_content)
+        #
+        # os.chdir(current_running_dir)
 
         # get 2021 LA in
+        HHpop = NTEM_HHpop_trim.copy()
+        NTEM_HHpop_trim['P_aghetns']
         Zone_2021LA = pd.read_csv(
             os.path.join(
-                by_lu_obj.import_folder, _Zone_2021LA_path))[['NorMITs Zone', '2021 LA', '2021 LA Name']]
+                by_lu_obj.import_folder, _Zone_2021LA_path))[['NorMITs Zone', '2021 LA', '2021 LA Name', '2021 LA ID']]
         HHpop = HHpop.merge(Zone_2021LA, how='left',
                             left_on=['z'],
                             right_on=['NorMITs Zone']).drop(columns={'NorMITs Zone'})
-        HHpop = HHpop.rename(columns={'2021 LA': '2021_LA_code', '2021 LA Name': '2021_LA_Name'})
-
-        output_cols = ['2021_LA_code', '2021_LA_Name', 'z', 'MSOA', 'a', 'g', 'h', 'e', 't', 'n', 's', 'properties',
-                       'people']
+        HHpop = HHpop.rename(columns={'2021 LA': '2021_LA_code',
+                                      '2021 LA Name': '2021_LA_Name',
+                                      '2021 LA ID': 'LA',
+                                      'msoa11cd': 'MSOA',
+                                      'P_aghetns': 'people'})
+        eplus = {1: 1, 2: 2, 3: 34, 4: 34, 5: 5}
+        HHpop['e+'] = HHpop['e'].map(eplus)
+        output_cols = ['2021_LA_code', '2021_LA_Name', 'LA', 'z', 'MSOA', 'a', 'g', 'h', 'e', 't', 'n', 's', 'e+', 'people']
         HHpop = HHpop[output_cols]
         logging.info('Population currently {}'.format(HHpop.people.sum()))
 
         # Adam - DONE, we need to think about how to organise the output files per step
         pop_with_full_dims_filename = '_'.join(['gb_lad', by_lu_obj.model_zoning.lower(),
-                                                'tfn_tt_agg_prt', ModelYear, 'properties+hh_pop'])
+                                                'tfn_tt_agg_prt', ModelYear, 'hh_pop'])
+        pop_with_full_dims_csvname = '_'.join(['gb_lad', by_lu_obj.model_zoning.lower(),
+                                                'tfn_tt_agg_prt', ModelYear, 'hh_pop.csv.bz2'])
         # Note that the output file name is now (correctly) GB,
         # but the variable being dumped is still mislabelled as uk.
         gb_ave_hh_occ_filename = '_'.join(['gb_t', ModelYear, 'ave_hh_occ.csv'])
 
         pop_with_full_dims_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                                process_dir,
-                                               pop_with_full_dims_second_dir,
+                                               pop_with_full_dims_dir,
                                                pop_with_full_dims_filename)
+        pop_with_full_dims_csv_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               pop_with_full_dims_dir,
+                                               pop_with_full_dims_csvname)
         gb_ave_hh_occ_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                           process_dir,
                                           pop_with_full_dims_dir,
                                           gb_ave_hh_occ_filename)
 
         compress.write_out(HHpop, pop_with_full_dims_path)
+        # HHpop.to_csv(pop_with_full_dims_csv_path, index=False)
         uk_ave_hh_occ.to_csv(gb_ave_hh_occ_path, index=False)
-
+        logging.info('Step 3.2.6 completed.')
         by_lu_obj.state[
-            '3.2.6 and 3.2.7 expand NTEM population to full dimensions and verify pop profile'] = 1
-        logging.info('Step 3.2.7 completed (along with some file dumping for Step 3.2.6)')
-        logging.info('Step 3.2.6/Step 3.2.7 function has completed')
-        print('Step 3.2.7 completed (along with some file dumping for Step 3.2.6)')
-        print('Step 3.2.6/Step 3.2.7 function has completed')
+            '3.2.6 expand NTEM population to full dimensions'] = 1
 
+        print('Step 3.2.6 function has completed')
 
-def subsets_worker_nonworker(by_lu_obj, function_that_called_me):
-    logging.info('Running Step 3.2.8, which has been called by ' + function_that_called_me)
-    print('Running Step 3.2.8, which has been called by ' + function_that_called_me)
-
-    # Read in output of Step 3.2.6/3.2.7 rather than calling the function and taking the output directly.
-    # This prevents chain calling from 3.2.10 all the way back to 3.2.4!
-    hhpop_dir_path = pop_with_full_dims_second_dir
-    hhpop_filename = '_'.join(['gb_lad', by_lu_obj.model_zoning.lower(),
-                               'tfn_tt_agg_prt', ModelYear, 'properties+hh_pop'])
-    hhpop_filepath = os.path.join(by_lu_obj.out_paths['write_folder'],
-                                  process_dir,
-                                  hhpop_dir_path,
-                                  hhpop_filename)
-    HHpop = compress.read_in(hhpop_filepath)
-
-    audit_3_2_8_data = HHpop.copy()
-    audit_3_2_8_data = audit_3_2_8_data.groupby(['2021_LA_code', 'a', 'g', 'h', 'e', 't', 'n', 's'])[
-        ['people']].sum().reset_index()
-    audit_3_2_8_data = audit_3_2_8_data.rename(columns={'people': 'HHpop'})
-
-    HHpop_workers = HHpop.loc[
-        (HHpop['e'] <= 2)]
-    HHpop_non_workers = HHpop.loc[
-        (HHpop['e'] > 2)]
-
-    HHpop_workers_LA = HHpop_workers.groupby(['2021_LA_code', 'a', 'g', 'h', 'e', 't', 'n', 's'])[
-        ['people']].sum().reset_index()
-    audit_HHpop_workers_LA = HHpop_workers_LA.copy()
-    HHpop_non_workers_LA = HHpop_non_workers.groupby(['2021_LA_code', 'a', 'g', 'h', 'e', 't', 'n', 's'])[
-        ['people']].sum().reset_index()
-    audit_HHpop_non_workers_LA = HHpop_non_workers_LA.copy()
-
-    # check totals
-    # print(HHpop.people.sum())
-    # print(HHpop_workers.people.sum())
-    # print(HHpop_non_workers.people.sum())
-    # print(HHpop_workers_LA.people.sum() + HHpop_non_workers_LA.people.sum())
-
-    # gender and employment status combined for workers to prepare for furness on LA level
-    ge_combination = [(HHpop_workers_LA['g'] == 2) & (HHpop_workers_LA['e'] == 1),
-                      (HHpop_workers_LA['g'] == 2) & (HHpop_workers_LA['e'] == 2),
-                      (HHpop_workers_LA['g'] == 3) & (HHpop_workers_LA['e'] == 1),
-                      (HHpop_workers_LA['g'] == 3) & (HHpop_workers_LA['e'] == 2)]
-    ge_combination_values = ['1', '2', '3', '4']
-    HHpop_workers_LA['ge'] = np.select(ge_combination, ge_combination_values)
-    seed_worker = HHpop_workers_LA[['2021_LA_code', 'ge', 's', 'a', 'h', 't', 'n', 'people']]
-    # print(HHpop_workers_LA.head(5))
-    # print(HHpop_workers_LA.tail(5))
-
-    HHpop_nwkrs_ag_LA = HHpop_non_workers_LA.groupby(['2021_LA_code', 'a', 'g'])[['people']].sum().reset_index()
-    # the following outputs are just for checking purpose
-    HHpop_wkrs_ge_LA = HHpop_workers_LA.groupby(['2021_LA_code', 'ge'])[['people']].sum().reset_index()
-    HHpop_wkrs_s_LA = HHpop_workers_LA.groupby(['2021_LA_code', 's'])[['people']].sum().reset_index()
-
-    logging.info('Worker currently {}'.format(HHpop_workers.people.sum()))
-    logging.info('Non_worker currently {}'.format(HHpop_non_workers.people.sum()))
-    logging.info('Population currently {}'.format(HHpop_workers.people.sum() + HHpop_non_workers.people.sum()))
-    by_lu_obj.state['3.2.8 get subsets of worker and non-worker'] = 1
-
-    audit_3_2_8_data = pd.merge(audit_3_2_8_data, audit_HHpop_workers_LA,
-                                how='left', on=['2021_LA_code', 'a', 'g', 'h', 'e', 't', 'n', 's'])
-    audit_3_2_8_data['people'] = audit_3_2_8_data['people'].fillna(0)
-    audit_3_2_8_data = audit_3_2_8_data.rename(columns={'people': 'worker_pop'})
-    audit_3_2_8_data = pd.merge(audit_3_2_8_data, audit_HHpop_non_workers_LA,
-                                how='left', on=['2021_LA_code', 'a', 'g', 'h', 'e', 't', 'n', 's'])
-    audit_3_2_8_data['people'] = audit_3_2_8_data['people'].fillna(0)
-    audit_3_2_8_data = audit_3_2_8_data.rename(columns={'people': 'non_worker_pop'})
-    audit_3_2_8_data['worker+non_worker_pop'] = audit_3_2_8_data['worker_pop'] + audit_3_2_8_data['non_worker_pop']
-    audit_3_2_8_data['Check_pop_tots'] = (audit_3_2_8_data['worker+non_worker_pop'] -
-                                          audit_3_2_8_data['HHpop']) / audit_3_2_8_data['HHpop']
-    audit_3_2_8_data_max = audit_3_2_8_data['Check_pop_tots'].max()
-    audit_3_2_8_data_min = audit_3_2_8_data['Check_pop_tots'].min()
-    audit_3_2_8_data_mean = audit_3_2_8_data['Check_pop_tots'].mean()
-    audit_3_2_8_data_export_path = os.path.join(by_lu_obj.out_paths['write_folder'],
-                                                audit_dir,
-                                                subsets_worker_nonworker_dir,
-                                                '_'.join(['audit_11_gb_msoa_tfn_tt_agg_prt',
-                                                          ModelYear, 'hh_pop+wkrs+nwkrs.csv']))
-    compress.write_out(audit_3_2_8_data, audit_3_2_8_data_export_path)
-
-    audit_3_2_8_header = 'Audit for Step 3.2.8\nCreated ' + str(datetime.datetime.now())
-    audit_3_2_8_text = '\n'.join(['Totals at the end of Step 3.2.8:',
-                                  '\tWorkers: {}'.format(HHpop_workers.people.sum()),
-                                  '\tNon_workers: {}'.format(HHpop_non_workers.people.sum()),
-                                  '\tPopulation (worker + non-worker): {}'.format(
-                                      HHpop_workers.people.sum() + HHpop_non_workers.people.sum()),
-                                  'Also check variations at the LA level (by a, g, h, e, t, n, s), where:',
-                                  '\tMax %age difference is:' + str(audit_3_2_8_data_max * 100) + '%',
-                                  '\tMin %age difference is:' + str(audit_3_2_8_data_min * 100) + '%',
-                                  '\tMean %age difference is:' + str(audit_3_2_8_data_mean * 100) + '%',
-                                  'These differences should be 0 by definition.',
-                                  'A compressed full d, a, g, h, e, t, n, s breakdown is included for completeness.',
-                                  'It is expected that a csv dump would have been too big.',
-                                  'The compressed file is dumped here (plus its file extension):',
-                                  audit_3_2_8_data_export_path])
-    audit_3_2_8_content = '\n'.join([audit_3_2_8_header, audit_3_2_8_text])
-    audit_3_2_8_path = os.path.join(by_lu_obj.out_paths['write_folder'],
-                                    audit_dir,
-                                    subsets_worker_nonworker_dir,
-                                    ''.join(['Audit_3.2.8_', ModelYear, '.txt']))
-    with open(audit_3_2_8_path, 'w') as text_file:
-        text_file.write(audit_3_2_8_content)
-
-    print('Step 3.2.8 completed (it is just returning outputs now...)')
-    # Return variables based on function calling this step
-    if function_that_called_me == 'LA_level_adjustment':
-        la_2021_to_z_lookup = HHpop_workers[['2021_LA_code', 'MSOA']]
-        la_2021_to_z_lookup = la_2021_to_z_lookup.drop_duplicates()
-        logging.info('Step 3.2.8 completed - Called by step 3.2.9')
-        logging.info('Returning variable "seed_worker" in internal memory')
-        logging.info('Returning variable "HHpop_workers_LA" in internal memory')
-        logging.info('Returning variable "HHpop_nwkrs_ag_LA" in internal memory')
-        logging.info('Returning variable "HHpop_non_workers_LA" in internal memory')
-        logging.info('Returning variable "la_2021_to_z_lookup" in internal memory')
-        logging.info('Note that no files have been written out from this call')
-        print('Returned variables:')
-        print('seed_worker, HHpop_workers_LA, HHpop_nwrkrs_LA, HHpop_non_workers_LA, la_2021_to_z_lookup')
-        return [seed_worker, HHpop_workers_LA, HHpop_nwkrs_ag_LA, HHpop_non_workers_LA, la_2021_to_z_lookup]
-    elif function_that_called_me == 'adjust_zonal_workers_nonworkers':
-        logging.info('Step 3.2.8 completed - Called by step 3.2.10')
-        logging.info('Returning variable "HHpop_workers_LA" in internal memory')
-        print('Returned variable adjust_zonal_workers_nonworkers')
-        return [HHpop_workers, HHpop_non_workers]
-    else:
-        # Adam - DONE, we need to think how to organise the structure of outputs files per step
-        # Saving files out only when called by functions outside of this .py file
-        subsets_worker_nonworker_dir_path = os.path.join(by_lu_obj.out_paths['write_folder'],
-                                                         audit_dir,
-                                                         subsets_worker_nonworker_dir)
-        HHpop_nwkrs_ag_LA.to_csv(
-            os.path.join(subsets_worker_nonworker_dir_path,
-                         '_'.join(['audit_8_dag', ModelYear, 'nwkrs.csv'])), index=False)
-        HHpop_wkrs_ge_LA.to_csv(
-            os.path.join(subsets_worker_nonworker_dir_path,
-                         '_'.join(['audit_9_dge', ModelYear, 'wkrs.csv'])), index=False)
-        HHpop_wkrs_s_LA.to_csv(
-            os.path.join(subsets_worker_nonworker_dir_path,
-                         ''.join(['audit_10_ds', ModelYear, 'wkrs.csv'])), index=False)
-        logging.info('Step 3.2.8 completed - not called by a 3.2.x function')
-        logging.info('Returning only a short list stating no output was requested')
-        logging.info('HHpop data has been saved to file though')
-        print('Was not called by a valid 3.2.x function, no data returned, but saved HHpop to file')
-        return pd.DataFrame([], columns=['No data requested', 'but data saved to file'])
-
-
-def la_level_adjustment(by_lu_obj):
-    logging.info('Running Step 3.2.9')
-    print('Running Step 3.2.9')
-    la_level_adjustment_name = 'LA_level_adjustment'
+def furness_hhr(by_lu_obj):
+    logging.info('Running Step 3.2.7')
+    print('Running Step 3.2.7')
+    furness_hhr_name = 'Furness_hhr'
     # Adam - DONE, the inputs here should be called in from the outcome of your scripts from function MYE_APS_process
     # Added a manual control to allow read in from file (rather than internal memory) in the event of a partial run
     # False means "read in from memory" and is the default.
+    # Yan- Make sure the function of MYE_APS_process has been called to write out the outputs needed for this step and
+    # read the outputs in rather than calling dataframe.
     read_base_year_pop_msoa_path_file = False
 
     if read_base_year_pop_msoa_path_file:
-        _LA_worker_control_path = '_'.join(['mye_gb_d', ModelYear, 'nwkrs_tot+by_ag.csv'])
-        _LA_nonworker_control_path = '_'.join(['mye_gb_d', ModelYear, 'wkrs_tot+by_ag.csv'])
-        _2021LAID_path = r'lookup_gb_2021_lad_to_d.csv'
+        logging.info('Step 3.2.7 is calling the MYE_APS_process function in order to write out Base Year population data')
+        MYE_MSOA_pop = mye_aps_process(by_lu_obj, furness_hhr_name, furness_hhr_dir)
+        logging.info('Step 3.2.7 read in data processed by the MYE_APS_process function from written out files')
+        _LA_worker_control_file = '_'.join(['mye_gb_d', ModelYear, 'nwkrs_tot+by_ag.csv'])
+        _LA_nonworker_control_file = '_'.join(['mye_gb_d', ModelYear, 'wkrs_tot+by_ag.csv'])
+        _2021LAID_file = r'lookup_gb_2021_lad_to_d.csv'
 
         _LA_worker_control_path = os.path.join(
             by_lu_obj.out_paths['write_folder'],
-            la_level_adjustment_dir,
+            furness_hhr_dir,
             process_dir,
-            _LA_worker_control_path)
+            _LA_worker_control_file)
         _LA_nonworker_control_path = os.path.join(
             by_lu_obj.out_paths['write_folder'],
-            la_level_adjustment_dir,
+            furness_hhr_dir,
             process_dir,
-            _LA_nonworker_control_path)
+            _LA_nonworker_control_file)
         _2021LAID_path = os.path.join(
             by_lu_obj.out_paths['write_folder'],
-            la_level_adjustment_dir,
+            furness_hhr_dir,
             process_dir,
-            _2021LAID_path)
+            _2021LAID_file)
 
-        LA_ID = pd.read_csv(_2021LAID_path)
+        # LA_ID = pd.read_csv(_2021LAID_path)
         LA_worker_control = pd.read_csv(_LA_worker_control_path)[['2021_LA_name', '2021_LA_code', 'LA', 'Worker']]
         LA_worker_ge_control = pd.read_csv(_LA_worker_control_path)[
             ['2021_LA_name', '2021_LA_code', 'LA', 'Male fte', 'Male pte', 'Female fte', 'Female pte']]
@@ -2382,13 +2284,15 @@ def la_level_adjustment(by_lu_obj):
                                                     mye_pop_compiled_dir,
                                                     '_'.join(['audit_3_gb_dag', ModelYear, 'hh_pop.csv'])))
 
-        logging.info('Step 3.2.9 read in data processed by the MYE_APS_process through an existing csv')
-        logging.info('WARNING - This is not the default way of reading this data!')
-        logging.info('Did you mean to do that?')
+        logging.info('Step 3.2.7 read in data processed by the MYE_APS_process through an existing csv')
+        # logging.info('WARNING - This is not the default way of reading this data!')
+        # logging.info('Did you mean to do that?')
+
+
     else:
-        logging.info('Step 3.2.9 is calling the MYE_APS_process function in order to obtain Base Year population data')
-        MYE_MSOA_pop = mye_aps_process(by_lu_obj, la_level_adjustment_name, la_level_adjustment_dir)
-        logging.info('Step 3.2.9 read in data processed by the MYE_APS_process function from internal memory')
+        logging.info('Step 3.2.7 is calling the MYE_APS_process function in order to obtain Base Year population data')
+        MYE_MSOA_pop = mye_aps_process(by_lu_obj, furness_hhr_name, furness_hhr_dir)
+        logging.info('Step 3.2.7 read in data processed by the MYE_APS_process function from internal memory')
 
         la_worker_df_import = MYE_MSOA_pop[0]
         la_nonworker_df_import = MYE_MSOA_pop[1]
@@ -2404,68 +2308,161 @@ def la_level_adjustment(by_lu_obj):
             '2021_LA_name', '2021_LA_code', 'LA', 'Non worker']]
         LA_nonworker_ag_control = la_nonworker_df_import[[
             '2021_LA_name', '2021_LA_code', 'LA', 'Children', 'M_16-74', 'F_16-74', 'M_75 and over', 'F_75 and over']]
+    # Read in seed file
+    logging.info('Read in compressed output from Step 3.2.6_expand NTEM population to full dimensions')
+    print('Read in compressed output from Step 3.2.6_expand NTEM population to full dimensions')
 
-    # Call the file containing Pe from step 3.2.5's outputs
+    # Read in output of Step 3.2.6 rather than calling the function and taking the output directly.
+    # This prevents chain calling from 3.2.10 all the way back to 3.2.4!
+    hhpop_dir_path = pop_with_full_dims_dir
+    hhpop_filename = '_'.join(['gb_lad', by_lu_obj.model_zoning.lower(),
+                               'tfn_tt_agg_prt', ModelYear, 'hh_pop'])
+    hhpop_filepath = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                  process_dir,
+                                  hhpop_dir_path,
+                                  hhpop_filename)
+    hhpop = compress.read_in(hhpop_filepath)
+    seed = hhpop[['z', 'LA', 'a', 'g', 'h', 'e', 't', 'n', 's', 'e+', 'people']]
+    seed_zt = seed.groupby(['z', 'LA', 't'], as_index=False)['people'].sum()
+    seed_zt = seed_zt[['z', 'LA', 't']]
+
+
+    # Call the file containing MYE from step 3.2.5's outputs
+    Zone_2021LA = pd.read_csv(
+        os.path.join(
+            by_lu_obj.import_folder, _Zone_2021LA_path))[['NorMITs Zone', 'MSOA', '2021 LA', '2021 LA Name', '2021 LA ID']]
+    Zone_2021LA = Zone_2021LA.rename(columns={'2021 LA': '2021_LA_code', '2021 LA Name': '2021_LA_Name', '2021 LA ID': '2021_LA_ID'})
     pe_df = pd.read_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
                                      process_dir,
                                      mye_pop_compiled_dir,
                                      '_'.join(['gb', by_lu_obj.model_zoning.lower(),
                                                ModelYear, 'pop+hh_pop.csv'])))
+    pe_df = pd.merge(pe_df, Zone_2021LA, how='left',
+                           left_on='Zone', right_on='NorMITs Zone').drop(columns={'NorMITs Zone'})
+    z_hhr_control = pe_df[['Zone', 'Total_HHR']]
+    z_hhr_control = z_hhr_control.rename(columns={'Zone': 'z', 'Total_HHR': 'people'})
+    d_hhr_total = pe_df.groupby(['2021_LA_code'], as_index=False)['Total_HHR'].sum()
+    mye_hhr_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                            process_dir,
+                                            mye_pop_compiled_dir,
+                                            '_'.join(['gb', by_lu_obj.model_zoning.lower(),
+                                              ModelYear, 'hhr_age_gender']))
+    mye_hhr = compress.read_in(mye_hhr_path)
+    mye_hhr = mye_hhr[['Zone', 'a', 'g', 'HHR']]
+    z_hhr_ag_control = mye_hhr.copy()
+    z_hhr_ag_control = pd.merge(z_hhr_ag_control, Zone_2021LA, how='left',
+                           left_on='Zone', right_on='NorMITs Zone').drop(columns={'NorMITs Zone', 'MSOA',
+                                                                                  '2021_LA_code', '2021_LA_Name'})
+    z_hhr_ag_control = z_hhr_ag_control.rename(columns={'Zone': 'z', 'HHR': 'people', '2021_LA_ID': 'LA'})
+    z_hhr_ag = z_hhr_ag_control.groupby(['z','a','g'], as_index=False)['people'].sum()
 
-    # seed_worker not exported as a file, so wll always need to read directly from a function 3.2.8 call
-    # Whilst reading it in, can also read in HHpop variables
-    call_3_2_8 = subsets_worker_nonworker(by_lu_obj, la_level_adjustment_name)
-    seed_worker = call_3_2_8[0]
-    HHpop_workers_LA = call_3_2_8[1]
-    HHpop_nwkrs_ag_LA = call_3_2_8[2]
-    hhpop_non_workers_d = call_3_2_8[3]
-    z_2_la = call_3_2_8[4]
+    # Get zonal aj_NTEM pop and aj_crp(pop by dwelling type)
+    ntem_hh_pop_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                    process_dir,
+                                    mye_pop_compiled_dir,
+                                    '_'.join(['ntem_gb_msoa_ntem_tt', ModelYear, 'mye_pop']))
+    ntem_HHpop = compress.read_in(ntem_hh_pop_path)
+    ntem_HHpop = ntem_HHpop[['msoaZoneID',
+                                  'Age_code',
+                                  'Gender_code',
+                                  'Household_composition_code',
+                                  'Employment_type_code',
+                                  'pop_aj']]
 
-    pe_df = pe_df[['MSOA', 'Total_HHR']]
-    pe_df = pd.merge(pe_df, z_2_la, how='left', on='MSOA')
-    pe_df = pe_df.groupby('2021_LA_code')['Total_HHR'].sum().reset_index()
+    z_hhr_h_control = ntem_HHpop.copy()
+    z_hhr_h_control = z_hhr_h_control.rename(columns={'msoaZoneID': 'z',
+                                            'Age_code': 'a',
+                                            'Gender_code': 'g',
+                                            'Household_composition_code': 'h',
+                                            'Employment_type_code': 'e',
+                                            'pop_aj': 'people'})
 
+    z_hhr_h_control = z_hhr_h_control.groupby(['z', 'h'], as_index=False)['people'].sum()
+    z_hhr_h_control = pd.merge(z_hhr_h_control, Zone_2021LA, how='left',
+                           left_on='z', right_on='NorMITs Zone').drop(columns={'NorMITs Zone', 'MSOA',
+                                                                                  '2021_LA_code', '2021_LA_Name'})
+    z_hhr_h_control = z_hhr_h_control.rename(columns={'2021_LA_ID': 'LA'})
+    z_hhr_h = z_hhr_h_control.groupby(['z', 'h'], as_index=False)['people'].sum()
+
+    crp_pop_filename = '_'.join(['gb_msoa_agg_prt', ModelYear, 'hh_pop.csv'])
+    crp_HHpop = pd.read_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
+                                         process_dir,
+                                         mye_pop_compiled_dir,
+                                         crp_pop_filename))
+
+
+    crp_HHpop = crp_HHpop[['Zone', 'census_property_type', 'population']]
+    z_hhr_t_control = crp_HHpop.copy()
+
+    z_hhr_t_control = z_hhr_t_control.rename(columns={'Zone': 'z',
+                                                      'census_property_type': 't',
+                                                      'population': 'people'})
+    z_hhr_t_control = pd.merge(seed_zt, z_hhr_t_control, on=['z', 't'], how='left')
+    z_hhr_t_control['people'].fillna(1e-9, inplace=True)
+    z_hhr_t = z_hhr_t_control.groupby(['z', 't'], as_index=False)['people'].sum()
+    # Yan: Prepare marginals for ipf procedure
     LA_nonworker_control = LA_nonworker_control.rename(columns={'Non worker': 'nonworker'})
+    LA_hhr_s_control = LA_worker_s_control.copy()
+    LA_hhr_s_control = LA_hhr_s_control[['2021_LA_code', 'higher', 'medium', 'skilled']]
+    LA_hhr_s_control = pd.merge(LA_hhr_s_control, LA_nonworker_control, how='left', on='2021_LA_code')
+
+    LA_hhr_s_control = pd.melt(LA_hhr_s_control,
+                                  id_vars=['2021_LA_name', '2021_LA_code', 'LA'],
+                                  value_vars=['higher', 'medium',
+                                              'skilled', 'nonworker']).rename(
+        columns={'variable': 'soc', 'value': 'people'})
+    s = {
+        'higher': 1,
+        'medium': 2,
+        'skilled': 3,
+        'nonworker': 4
+    }
+    LA_hhr_s_control['s'] = LA_hhr_s_control['soc'].map(s)
+    LA_hhr_s_control = LA_hhr_s_control[['2021_LA_name', '2021_LA_code', 'LA', 's', 'people']]
+    LA_hhr_s = LA_hhr_s_control[['LA', 's', 'people']]
+    # LA_hhr_s = LA_hhr_s_control.groupby(['LA', 's'], as_index=False)['people'].sum
+
+    logging.info('number of hh pop (by s): ')
+    logging.info(LA_hhr_s_control.people.sum())
+
     LA_worker_ge_control = pd.melt(LA_worker_ge_control,
                                    id_vars=['2021_LA_name', '2021_LA_code', 'LA'],
                                    value_vars=['Male fte', 'Male pte', 'Female fte',
-                                               'Female pte']).rename(columns={'variable': 'ge', 'value': 'worker'})
+                                               'Female pte']).rename(columns={'variable': 'ge', 'value': 'people'})
+    a_w = {
+        'Male fte': 2,
+        'Male pte': 2,
+        'Female fte': 2,
+        'Female pte': 2
+    }
+    g_w = {
+        'Male fte': 2,
+        'Male pte': 2,
+        'Female fte': 3,
+        'Female pte': 3
+    }
+    eplus_w = {
+        'Male fte': 1,
+        'Male pte': 2,
+        'Female fte': 1,
+        'Female pte': 2
+    }
+
+    LA_worker_ge_control['a'] = LA_worker_ge_control['ge'].map(a_w)
+    LA_worker_ge_control['g'] = LA_worker_ge_control['ge'].map(g_w)
+    LA_worker_ge_control['e+'] = LA_worker_ge_control['ge'].map(eplus_w)
+    LA_worker_ge_control = LA_worker_ge_control[['2021_LA_name', '2021_LA_code', 'LA', 'a', 'g', 'e+', 'people']]
+    logging.info('number of worker (by ge): ')
+    logging.info(LA_worker_ge_control.people.sum())
+
     # print(LA_worker_ge_control.head(5))
-    LA_worker_s_control = pd.melt(LA_worker_s_control,
-                                  id_vars=['2021_LA_name', '2021_LA_code', 'LA'],
-                                  value_vars=['higher', 'medium',
-                                              'skilled']).rename(columns={'variable': 's', 'value': 'worker'})
-    # print(LA_worker_s_control.head(5))
+
     LA_nonworker_ag_control = pd.melt(LA_nonworker_ag_control,
                                       id_vars=['2021_LA_name', '2021_LA_code', 'LA'],
                                       value_vars=['Children', 'M_16-74', 'F_16-74', 'M_75 and over',
                                                   'F_75 and over']).rename(
-        columns={'variable': 'ag', 'value': 'nonworker'})
-    # print(LA_nonworker_ag_control.head(5))
-    # print('\n')
-    logging.info('number of worker (by ge): ')
-    logging.info(LA_worker_ge_control.worker.sum())
-    logging.info('number of worker (by s): ')
-    logging.info(LA_worker_s_control.worker.sum())
-    logging.info('number of nonworker: ')
-    logging.info(LA_nonworker_ag_control.nonworker.sum())
-    logging.info('number of hh pop: ')
-    logging.info(LA_worker_control.Worker.sum() + LA_nonworker_control.nonworker.sum())
-
-    ge = {
-        'Male fte': 1,
-        'Male pte': 2,
-        'Female fte': 3,
-        'Female pte': 4
-    }
-
-    s = {
-        'higher': 1,
-        'medium': 2,
-        'skilled': 3
-    }
-
-    a = {
+        columns={'variable': 'ag', 'value': 'people'})
+    a_nw = {
         'Children': 1,
         'M_16-74': 2,
         'F_16-74': 2,
@@ -2473,146 +2470,358 @@ def la_level_adjustment(by_lu_obj):
         'F_75 and over': 3
     }
 
-    g = {
+    g_nw = {
         'Children': 1,
         'M_16-74': 2,
         'F_16-74': 3,
         'M_75 and over': 2,
         'F_75 and over': 3
     }
-    LA_worker_ge_control['ge'] = LA_worker_ge_control['ge'].map(ge)
-    LA_worker_s_control['s'] = LA_worker_s_control['s'].map(s)
-    LA_nonworker_ag_control['a'] = LA_nonworker_ag_control['ag'].map(a)
-    LA_nonworker_ag_control['g'] = LA_nonworker_ag_control['ag'].map(g)
 
-    seed_worker = seed_worker.merge(
-        LA_ID, how='left', on='2021_LA_code').drop(columns={'2021_LA_name', '2021_LA_code'})
+    eplus_nw = {
+        'Children': 5,
+        'M_16-74': 34,
+        'F_16-74': 34,
+        'M_75 and over': 5,
+        'F_75 and over': 5
+    }
+    LA_nonworker_ag_control['a'] = LA_nonworker_ag_control['ag'].map(a_nw)
+    LA_nonworker_ag_control['g'] = LA_nonworker_ag_control['ag'].map(g_nw)
+    LA_nonworker_ag_control['e+'] = LA_nonworker_ag_control['ag'].map(eplus_nw)
+    LA_nonworker_ag_control = LA_nonworker_ag_control[['2021_LA_name', '2021_LA_code', 'LA', 'a', 'g', 'e+', 'people']]
+    logging.info('number of nonworker: ')
+    logging.info(LA_nonworker_ag_control.people.sum())
 
-    seed_worker = seed_worker.rename(columns={"LA": "d", "people": "total"})
-    seed_worker = seed_worker[['d', 'ge', 's', 'a', 'h', 't', 'n', 'total']]
+    logging.info('number of hh pop: ')
+    logging.info(LA_worker_control.Worker.sum() + LA_nonworker_control.nonworker.sum())
+    # print(LA_nonworker_ag_control.head(5))
+    # print('\n')
+    # concat worker and non worker by a, g, and e+ for hhr
+    LA_hhr_ageplus_control = pd.concat([LA_worker_ge_control, LA_nonworker_ag_control])
+    logging.info('number of hh pop: ')
+    logging.info(LA_hhr_ageplus_control.people.sum())
+    LA_hhr_ageplus = LA_hhr_ageplus_control[['LA', 'a', 'g', 'e+', 'people']]
+    # LA_hhr_ageplus = LA_hhr_ageplus_control.groupby(['LA', 'a', 'g', 'e+'], as_index=False)['people'].sum
 
-    ctrl_ge = LA_worker_ge_control.copy()
-    ctrl_ge = ctrl_ge.rename(
-        columns={"LA": "d", "worker": "total"}).drop(columns={'2021_LA_name', '2021_LA_code'})
+    #output control file
+    seed_output_file = ''.join([ModelYear, '_seed', '.csv.bz2'])
+    seed_output_file_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                    process_dir,
+                                                    furness_hhr_dir,
+                                                    '00_seed',
+                                                    seed_output_file)
+    # seed.to_csv(seed_output_file_path)
+    LA_hhr_ageplus_control_file = ''.join([ModelYear, '_ctrl_dageplus', '.csv'])
+    LA_hhr_ageplus_control_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                    process_dir,
+                                                    furness_hhr_dir,
+                                                    '05_ctrl_dageplus',
+                                                    LA_hhr_ageplus_control_file)
+    LA_hhr_ageplus_control.to_csv(LA_hhr_ageplus_control_path)
+    LA_hhr_s_control_file = ''.join([ModelYear, '_ctrl_ds', '.csv'])
+    LA_hhr_s_control_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                    process_dir,
+                                                    furness_hhr_dir,
+                                                    '04_ctrl_ds',
+                                                    LA_hhr_s_control_file,)
+    LA_hhr_s_control.to_csv(LA_hhr_s_control_path)
+    z_hhr_ag_control_file = ''.join([ModelYear, '_ctrl_zag', '.csv'])
+    z_hhr_ag_control_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                    process_dir,
+                                                    furness_hhr_dir,
+                                                    '01_ctrl_zag',
+                                                    z_hhr_ag_control_file)
+    z_hhr_ag_control.to_csv(z_hhr_ag_control_path)
+    z_hhr_h_control_file = ''.join([ModelYear, '_ctrl_zh', '.csv'])
+    z_hhr_h_control_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                    process_dir,
+                                                    furness_hhr_dir,
+                                                    '02_ctrl_zh',
+                                                    z_hhr_h_control_file)
+    z_hhr_h_control.to_csv(z_hhr_h_control_path)
+    z_hhr_t_control_file = ''.join([ModelYear, '_ctrl_zt', '.csv'])
+    z_hhr_t_control_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                                    process_dir,
+                                                    furness_hhr_dir,
+                                                    '03_ctrl_zt',
+                                                    z_hhr_t_control_file)
+    z_hhr_t_control.to_csv(z_hhr_t_control_path)
 
-    ctrl_s = LA_worker_s_control.copy()
-    ctrl_s = ctrl_s.rename(
-        columns={"LA": "d", "worker": "total"}).drop(columns={'2021_LA_name', '2021_LA_code'})
+    # -----set up for loop for 1 -> Max d in data (363) to output control files and seed files by district ------
+    logging.info('Slice files by district')
+    print('Slice files by district')
+    district_upper_limit = LA_ID['LA'].max() + 1
+    for district in range(1, district_upper_limit):
+        dist_str = str(district)
+        # Main seed file#
+        # seed = pd.read_csv(seed_output_file_path)
+        z_hhr_ag_control = pd.read_csv(z_hhr_ag_control_path)
+        z_hhr_h_control = pd.read_csv(z_hhr_h_control_path)
+        z_hhr_t_control = pd.read_csv(z_hhr_t_control_path)
+        LA_hhr_s_control = pd.read_csv(LA_hhr_s_control_path)
+        LA_hhr_ageplus_control = pd.read_csv(LA_hhr_ageplus_control_path)
 
-    # Export seed_worker, then read it back in again. Failure to do so will result in the script crashing in ipfn
-    # It is unclear why this occurs.
-    seed_worker_name = '_'.join(['seed_gb_d_tfn_tt_agg_prt', ModelYear, 'wkrs.csv'])
-    seed_worker_full_path = os.path.join(by_lu_obj.out_paths['write_folder'],
-                                         process_dir,
-                                         la_level_adjustment_dir,
-                                         seed_worker_name)
-    seed_worker.to_csv(seed_worker_full_path, index=False)
-    seed = pd.read_csv(seed_worker_full_path)
+        seed_d = seed.loc[seed['LA'] == district]
+        # zonal control files
+        z_hhr_ag_control_d = z_hhr_ag_control.loc[z_hhr_ag_control['LA'] == district].reset_index()
+        z_hhr_ag_control_d_header = ['z', 'a', 'g', 'people']
+        z_hhr_ag_control_d = z_hhr_ag_control_d[z_hhr_ag_control_d_header]
+        z_hhr_h_control_d = z_hhr_h_control.loc[z_hhr_h_control['LA'] == district].reset_index()
+        z_hhr_h_control_d_header = ['z', 'h', 'people']
+        z_hhr_h_control_d = z_hhr_h_control_d[z_hhr_h_control_d_header]
+        z_hhr_t_control_d = z_hhr_t_control.loc[z_hhr_t_control['LA'] == district].reset_index()
+        z_hhr_t_control_d_header = ['z', 't', 'people']
+        z_hhr_t_control_d = z_hhr_t_control_d[z_hhr_t_control_d_header]
+        # district level control files
+        LA_hhr_s_control_d = LA_hhr_s_control.loc[LA_hhr_s_control['LA'] == district].reset_index()
+        LA_hhr_s_control_d_header = ['LA', 's', 'people']
+        LA_hhr_s_control_d = LA_hhr_s_control_d[LA_hhr_s_control_d_header]
+        LA_hhr_ageplus_control_d = LA_hhr_ageplus_control.loc[LA_hhr_ageplus_control['LA'] == district].reset_index()
+        LA_hhr_ageplus_control_d_header = ['LA', 'a', 'g', 'e+', 'people']
+        LA_hhr_ageplus_control_d = LA_hhr_ageplus_control_d[LA_hhr_ageplus_control_d_header]
 
-    ctrl_ge = ctrl_ge.groupby(['d', 'ge'])['total'].sum()
-    ctrl_s = ctrl_s.groupby(['d', 's'])['total'].sum()
+        # name files
+        seed_file_d = '_'.join([ModelYear, 'seed_d', dist_str, '.csv'])
+        ctrl_zag_file_d = '_'.join([ModelYear, 'ctrl_zag_d', dist_str, '.csv'])
+        ctrl_zh_file_d = '_'.join([ModelYear, 'ctrl_zh_d', dist_str, '.csv'])
+        ctrl_zt_file_d = '_'.join([ModelYear, 'ctrl_zt_d', dist_str, '.csv'])
+        ctrl_ds_file_d = '_'.join([ModelYear, 'ctrl_ds_d', dist_str, '.csv'])
+        ctrl_dageplus_file_d = '_'.join([ModelYear, 'ctrl_dageplus_d', dist_str, '.csv'])
+        # Name sub folders
+        seed_folder = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               furness_hhr_dir,
+                                               '00_seed',
+                                   seed_file_d)
+        ctrl_zag_folder = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               furness_hhr_dir,
+                                               '01_ctrl_zag',
+                                       ctrl_zag_file_d)
+        ctrl_zh_folder = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               furness_hhr_dir,
+                                               '02_ctrl_zh',
+                                      ctrl_zh_file_d)
+        ctrl_zt_folder = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               furness_hhr_dir,
+                                               '03_ctrl_zt',
+                                      ctrl_zt_file_d)
+        ctrl_ds_folder = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               furness_hhr_dir,
+                                               '04_ctrl_ds',
+                                      ctrl_ds_file_d)
+        ctrl_dageplus_folder = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               furness_hhr_dir,
+                                               '05_ctrl_dageplus',
+                                            ctrl_dageplus_file_d)
 
-    aggregates = [ctrl_ge, ctrl_s]
-    dimensions = [['d', 'ge'], ['d', 's']]
 
-    print('IPFN process started')
-    IPF = ipfn.ipfn(seed, aggregates, dimensions)
-    seed = IPF.iteration()
-    print('IPFN process complete')
+        # output seed and control files by district
+        seed_d.to_csv(seed_folder,index=False)
+        z_hhr_ag_control_d.to_csv(ctrl_zag_folder, index=False)
+        z_hhr_h_control_d.to_csv(ctrl_zh_folder, index=False)
+        z_hhr_t_control_d.to_csv(ctrl_zt_folder, index=False)
+        LA_hhr_s_control_d.to_csv(ctrl_ds_folder, index=False)
+        LA_hhr_ageplus_control_d.to_csv(ctrl_dageplus_folder, index=False)
+        # Print out every tenth row to check on progress
+        if district / 10 == district // 10:
+            print(district)
+    print('Done!')
 
-    # Following 2 lines not used, but keeping so they can be dumped for QA later if required
-    # Wk_ge = seed.groupby(['d', 'ge'])['total'].sum()
-    # Wk_s = seed.groupby(['d', 's'])['total'].sum()
+    logging.info('ipf process by districts')
+    print('ipf process by districts')
+    # calling function ipf_process to furness data by districts
 
-    HHpop_workers_LA = HHpop_workers_LA.merge(LA_ID, how='left', on='2021_LA_code').drop(columns={'2021_LA_name'})
-    HHpop_workers_LA = HHpop_workers_LA.rename(columns={'LA': 'd'})
-    furnessed_worker_LA = seed.copy()
-    furnessed_worker_LA_iterator = zip(furnessed_worker_LA['d'],
-                                       furnessed_worker_LA['ge'],
-                                       furnessed_worker_LA['s'],
-                                       furnessed_worker_LA['a'],
-                                       furnessed_worker_LA['h'],
-                                       furnessed_worker_LA['t'],
-                                       furnessed_worker_LA['n'])
-    furnessed_worker_LA['key'] = ['_'.join([str(d), str(ge), str(s), str(a), str(h), str(t), str(n)])
-                                  for d, ge, s, a, h, t, n in furnessed_worker_LA_iterator]
-    furnessed_worker_LA = furnessed_worker_LA[['key', 'total']]
-    HHpop_workers_LA_iterator = zip(HHpop_workers_LA['d'],
-                                    HHpop_workers_LA['ge'],
-                                    HHpop_workers_LA['s'],
-                                    HHpop_workers_LA['a'],
-                                    HHpop_workers_LA['h'],
-                                    HHpop_workers_LA['t'],
-                                    HHpop_workers_LA['n'])
-    HHpop_workers_LA['key'] = ['_'.join([str(d), str(ge), str(s), str(a), str(h), str(t), str(n)])
-                               for d, ge, s, a, h, t, n in HHpop_workers_LA_iterator]
-    HHpop_workers_LA = HHpop_workers_LA.merge(furnessed_worker_LA, how='left', on=['key'])
+    seed_path_start = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               furness_hhr_dir,
+                                               '00_seed',
+                                               '_'.join([ModelYear, 'seed_d']))
+    ctrl_zag_path_start = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               furness_hhr_dir,
+                                               '01_ctrl_zag',
+                                               '_'.join([ModelYear, 'ctrl_zag_d']))
+    ctrl_zh_path_start = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               furness_hhr_dir,
+                                               '02_ctrl_zh',
+                                               '_'.join([ModelYear, 'ctrl_zh_d']))
+    ctrl_zt_path_start = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               furness_hhr_dir,
+                                               '03_ctrl_zt',
+                                               '_'.join([ModelYear, 'ctrl_zt_d']))
+    ctrl_ds_path_start = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               furness_hhr_dir,
+                                               '04_ctrl_ds',
+                                               '_'.join([ModelYear, 'ctrl_ds_d']))
+    ctrl_dageplus_path_start = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                               process_dir,
+                                               furness_hhr_dir,
+                                               '05_ctrl_dageplus',
+                                               '_'.join([ModelYear, 'ctrl_dageplus_d']))
 
-    HHpop_workers_LA['wkr_aj_factor'] = HHpop_workers_LA['total'] / HHpop_workers_LA['people']
-    HHpop_workers_LA['wkr_aj_factor'] = HHpop_workers_LA['wkr_aj_factor'].fillna(1)
+    kwarg_list = list()
+    for district_num in range(1, district_upper_limit):
+        dist_str = str(district_num)
+        my_seed_path = '_'.join([seed_path_start, dist_str, '.csv'])
+        ctrl_zag_path = '_'.join([ctrl_zag_path_start, dist_str, '.csv'])
+        ctrl_zh_path = '_'.join([ctrl_zh_path_start, dist_str, '.csv'])
+        ctrl_zt_path = '_'.join([ctrl_zt_path_start, dist_str, '.csv'])
+        ctrl_ds_path = '_'.join([ctrl_ds_path_start, dist_str, '.csv'])
+        ctrl_dageplus_path = '_'.join([ctrl_dageplus_path_start, dist_str, '.csv'])
+        output_filename = '_'.join([dist_str, 'furnessed_hhpop.csv'])
+        output_path = os.path.join(by_lu_obj.out_paths['write_folder'], output_dir, 'furnessed', output_filename)
 
-    # New df called aj_HHpop_workers_LA copy of
-    #  HHpop_workers_LA[['2021_LA_code', 'a', 'g', 'h', 'e', 't', 'n', 's', 'total']]
-    aj_HHpop_workers_LA = HHpop_workers_LA.copy()
-    aj_HHpop_workers_LA = aj_HHpop_workers_LA[['2021_LA_code', 'a', 'g', 'h', 'e', 't', 'n', 's', 'total']]
+        kwarg_list.append({
+            "seed_path": my_seed_path,
+            "ctrl_zag_path": ctrl_zag_path,
+            "ctrl_zh_path": ctrl_zh_path,
+            "ctrl_zt_path": ctrl_zt_path,
+            "ctrl_ds_path": ctrl_ds_path,
+            "ctrl_dageplus_path": ctrl_dageplus_path,
+            "output_path": output_path,
+        })
 
-    wkrs_aj_factor_LA = HHpop_workers_LA[['2021_LA_code', 'a', 'g', 'h', 'e', 't', 'n', 's', 'wkr_aj_factor']]
-    logging.info('worker currently {}'.format(HHpop_workers_LA.total.sum()))
+    concurrency.multiprocess(
+        fn=ipf_process,
+        kwarg_list=kwarg_list,
+        pbar_kwargs={"disable": False}
+    )
 
-    HHpop_nwkrs_ag_LA = HHpop_nwkrs_ag_LA.merge(LA_nonworker_ag_control, how='left', on=['2021_LA_code', 'a', 'g'])
-    HHpop_nwkrs_ag_LA['nwkr_aj_factor'] = HHpop_nwkrs_ag_LA['nonworker'] / HHpop_nwkrs_ag_LA['people']
+    # -----Join the furnessed outputs by district to one single dataframe------
+    logging.info('Join files by district')
+    print('Join files by district')
+    input_directory = os.path.join(by_lu_obj.out_paths['write_folder'], output_dir, 'furnessed')
+    input_filename = 'furnessed_hhpop.csv'
+    list_of_df = []
+    # Loop over all districts and append to a master df.
+    for district in range(1, district_upper_limit):
+        dist_str = str(district)
+        input_path = os.path.join(input_directory, '_'.join([dist_str, input_filename]))
+        input_df = pd.read_csv(input_path)
+        input_df['LA'] = district
+        list_of_df.append(input_df)
+    print('All', str(district_upper_limit-1), 'files read in ok')
+    furnessed_hhr = pd.concat(list_of_df, axis=0, ignore_index=True)
 
-    nwkrs_aj_factor_LA = HHpop_nwkrs_ag_LA[['2021_LA_code', 'a', 'g', 'nwkr_aj_factor']]
-    logging.info('non_worker currently {}'.format(HHpop_nwkrs_ag_LA.nonworker.sum()))
 
-    # Fetches HHpop_non_workers_LA from Step 3.2.8. Merge on LA, a ,g with nwkrs_aj_factor_LA to get
-    #  'nwkr_aj_factor' in. Resulting df is aj_HHpop_non_workers_LA with heading 'total' in it. This heading is
-    #  the hhpop for nonworkers (i.e. column 'people') x 'nwkr_aj_factor'.
-    aj_HHpop_non_workers_LA = pd.merge(hhpop_non_workers_d, nwkrs_aj_factor_LA,
-                                       how='left', on=['2021_LA_code', 'a', 'g'])
-    aj_HHpop_non_workers_LA['total'] = aj_HHpop_non_workers_LA['people'] * aj_HHpop_non_workers_LA['nwkr_aj_factor']
 
-    # Append aj_HHpop_non_workers_LA to aj_HHpop_workers_LA to get full district level household pop with full
-    #  dimensions. Groupby on d (for 'total'). Compare to MYPE on household population. Dump file as audit. First line
-    #  of final Step 3.2.9 Audit bullet point. Groupby d, a ,g  (for 'total'). Compare to MYPE household population.
-    #  Dump as audit. Second line of final Step 3.2.9 bullet point. All comparisons should be very near 0.
-    audit_hhpop_by_d = aj_HHpop_workers_LA.copy()
-    audit_hhpop_by_d = audit_hhpop_by_d.append(aj_HHpop_non_workers_LA)
-    audit_hhpop_by_dag = audit_hhpop_by_d.copy()
-    audit_hhpop_by_d = audit_hhpop_by_d.groupby('2021_LA_code')['total'].sum().reset_index()
-    audit_hhpop_by_d = audit_hhpop_by_d.rename(columns={'total': 'Step_3.2.9_total_pop'})
-    audit_hhpop_by_d = pd.merge(audit_hhpop_by_d, pe_df, how='left', on='2021_LA_code')
-    audit_hhpop_by_d['%age_diff_in_pop'] = (audit_hhpop_by_d['Step_3.2.9_total_pop'] -
+    #---- check output against control values
+    logging.info('Check furnessed output against control values')
+    print('Check furnessed output against control values')
+    furnessed_hhr = pd.merge(furnessed_hhr, Zone_2021LA, how='left',
+                           left_on='z', right_on='NorMITs Zone').drop(columns={'NorMITs Zone'})
+    audit_hhpop = furnessed_hhr.copy()
+
+    audit_hhpop_by_zag = audit_hhpop.groupby(['z', 'a', 'g'], as_index=False)['people'].sum()
+    audit_hhpop_by_zh = audit_hhpop.groupby(['z', 'h'], as_index=False)['people'].sum()
+    audit_hhpop_by_zt = audit_hhpop.groupby(['z', 't'], as_index=False)['people'].sum()
+    audit_hhpop_by_dageplus = audit_hhpop.groupby(['LA', 'a', 'g', 'e+'], as_index=False)['people'].sum()
+    audit_hhpop_by_ds = audit_hhpop.groupby(['LA', 's'], as_index=False)['people'].sum()
+
+    audit_hhpop_by_zag = audit_hhpop_by_zag.rename(columns={'people': 'Step_3.2.7_total_pop'})
+    audit_hhpop_by_zh = audit_hhpop_by_zh.rename(columns={'people': 'Step_3.2.7_total_pop'})
+    audit_hhpop_by_zt = audit_hhpop_by_zt.rename(columns={'people': 'Step_3.2.7_total_pop'})
+    audit_hhpop_by_dageplus = audit_hhpop_by_dageplus.rename(columns={'people': 'Step_3.2.7_total_pop'})
+    audit_hhpop_by_ds = audit_hhpop_by_ds.rename(columns={'people': 'Step_3.2.7_total_pop'})
+
+
+    audit_hhpop_by_zag = pd.merge(audit_hhpop_by_zag, z_hhr_ag, how='left', on=['z', 'a', 'g'])
+    audit_hhpop_by_zh = pd.merge(audit_hhpop_by_zh, z_hhr_h, how='left', on=['z', 'h'])
+    audit_hhpop_by_zt = pd.merge(audit_hhpop_by_zt, z_hhr_t, how='left', on=['z', 't'])
+    audit_hhpop_by_dageplus = pd.merge(audit_hhpop_by_dageplus, LA_hhr_ageplus, how='left', on=['LA', 'a', 'g', 'e+'])
+    audit_hhpop_by_ds = pd.merge(audit_hhpop_by_ds, LA_hhr_s, how='left', on=['LA', 's'])
+    #Output audit file
+    audit_hhpop_by_zag_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                         audit_dir,
+                                         furness_hhr_dir,
+                                         '_'.join(['audit_a_gb_zag', ModelYear, 'pop_compare.csv']))
+    audit_hhpop_by_zh_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                         audit_dir,
+                                         furness_hhr_dir,
+                                         '_'.join(['audit_b_gb_zh', ModelYear, 'pop_compare.csv']))
+    audit_hhpop_by_zt_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                         audit_dir,
+                                         furness_hhr_dir,
+                                         '_'.join(['audit_c_gb_zt', ModelYear, 'pop_compare.csv']))
+    audit_hhpop_by_dageplus_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                         audit_dir,
+                                         furness_hhr_dir,
+                                         '_'.join(['audit_d_gb_dageplus', ModelYear, 'pop_compare.csv']))
+    audit_hhpop_by_ds_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                         audit_dir,
+                                         furness_hhr_dir,
+                                         '_'.join(['audit_e_gb_ds', ModelYear, 'pop_compare.csv']))
+
+    audit_hhpop_by_zag.to_csv(audit_hhpop_by_zag_path, index=False)
+    audit_hhpop_by_zh.to_csv(audit_hhpop_by_zh_path, index=False)
+    audit_hhpop_by_zt.to_csv(audit_hhpop_by_zt_path, index=False)
+    audit_hhpop_by_dageplus.to_csv(audit_hhpop_by_dageplus_path, index=False)
+    audit_hhpop_by_ds.to_csv(audit_hhpop_by_ds_path, index=False)
+
+    # check outputs against MYE value
+    audit_hhpop_by_z = audit_hhpop.groupby(['z'], as_index=False)['people'].sum()
+
+    audit_hhpop_by_d = audit_hhpop.groupby(['2021_LA_code'], as_index=False)['people'].sum()
+    audit_hhpop_by_dag = audit_hhpop.groupby(['2021_LA_code', 'a', 'g'], as_index=False)['people'].sum()
+
+    audit_hhpop_by_z = audit_hhpop_by_z.rename(columns={'people': 'Step_3.2.7_total_pop'})
+    audit_hhpop_by_z = pd.merge(audit_hhpop_by_z, z_hhr_control, how='left', on='z')
+    audit_hhpop_by_z['%age_diff_in_pop'] = (audit_hhpop_by_z['Step_3.2.7_total_pop'] -
+                                            audit_hhpop_by_z['people']) / audit_hhpop_by_z['people']
+    audit_hhpop_by_z_max = audit_hhpop_by_z['%age_diff_in_pop'].max()
+    audit_hhpop_by_z_min = audit_hhpop_by_z['%age_diff_in_pop'].min()
+    audit_hhpop_by_z_mean = audit_hhpop_by_z['%age_diff_in_pop'].mean()
+    audit_hhpop_by_z_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                         audit_dir,
+                                         furness_hhr_dir,
+                                         '_'.join(['audit_12_gb_z', ModelYear, 'pop_deviation.csv']))
+    audit_hhpop_by_z.to_csv(audit_hhpop_by_z_path, index=False)
+
+    audit_hhpop_by_d = audit_hhpop_by_d.rename(columns={'people': 'Step_3.2.7_total_pop'})
+    audit_hhpop_by_d = pd.merge(audit_hhpop_by_d, d_hhr_total, how='left', on='2021_LA_code')
+    audit_hhpop_by_d['%age_diff_in_pop'] = (audit_hhpop_by_d['Step_3.2.7_total_pop'] -
                                             audit_hhpop_by_d['Total_HHR']) / audit_hhpop_by_d['Total_HHR']
     audit_hhpop_by_d_max = audit_hhpop_by_d['%age_diff_in_pop'].max()
     audit_hhpop_by_d_min = audit_hhpop_by_d['%age_diff_in_pop'].min()
     audit_hhpop_by_d_mean = audit_hhpop_by_d['%age_diff_in_pop'].mean()
     audit_hhpop_by_d_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                          audit_dir,
-                                         la_level_adjustment_dir,
+                                         furness_hhr_dir,
                                          '_'.join(['audit_12_gb_d', ModelYear, 'pop_deviation.csv']))
     audit_hhpop_by_d.to_csv(audit_hhpop_by_d_path, index=False)
 
-    audit_hhpop_by_dag = audit_hhpop_by_dag.groupby(['2021_LA_code', 'a', 'g'])['total'].sum().reset_index()
-    audit_hhpop_by_dag = audit_hhpop_by_dag.rename(columns={'total': 'Step_3.2.9_total_pop'})
+    # audit_hhpop_by_dag = audit_hhpop_by_dag.groupby(['2021_LA_code', 'a', 'g'])['total'].sum().reset_index()
+    audit_hhpop_by_dag = audit_hhpop_by_dag.rename(columns={'people': 'Step_3.2.7_total_pop'})
     audit_hhpop_by_dag = pd.merge(audit_hhpop_by_dag, pe_dag_for_audit, how='left', on=['2021_LA_code', 'a', 'g'])
-    audit_hhpop_by_dag['%age_diff_in_pop'] = (audit_hhpop_by_dag['Step_3.2.9_total_pop'] -
+    audit_hhpop_by_dag['%age_diff_in_pop'] = (audit_hhpop_by_dag['Step_3.2.7_total_pop'] -
                                               audit_hhpop_by_dag['HHR_pop']) / audit_hhpop_by_dag['HHR_pop']
     audit_hhpop_by_dag_max = audit_hhpop_by_dag['%age_diff_in_pop'].max()
     audit_hhpop_by_dag_min = audit_hhpop_by_dag['%age_diff_in_pop'].min()
     audit_hhpop_by_dag_mean = audit_hhpop_by_dag['%age_diff_in_pop'].mean()
     audit_hhpop_by_dag_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                            audit_dir,
-                                           la_level_adjustment_dir,
+                                           furness_hhr_dir,
                                            '_'.join(['audit_13_gb_dag', ModelYear, 'pop_deviation.csv']))
     audit_hhpop_by_dag.to_csv(audit_hhpop_by_d_path, index=False)
 
-    audit_3_2_9_header = 'Audit for Step 3.2.9\nCreated ' + str(datetime.datetime.now())
-    audit_3_2_9_text = '\n'.join([' '.join(['The total', ModelYear, 'population is currently:',
-                                            str(HHpop_workers_LA.total.sum() + HHpop_nwkrs_ag_LA.nonworker.sum())]),
-                                  'Total HHR workers currently {}'.format(HHpop_workers_LA.total.sum()),
-                                  'Total non_workers currently {}'.format(HHpop_nwkrs_ag_LA.nonworker.sum()),
-                                  'Comparing LA level HH population original to present (worker + non-worker):',
+    audit_3_2_7_header = 'Audit for Step 3.2.7\nCreated ' + str(datetime.datetime.now())
+    audit_3_2_7_text = '\n'.join([' '.join(['The total', ModelYear, 'population is currently:',
+                                            str(furnessed_hhr.people.sum())]),
+                                  # 'Total HHR workers currently {}'.format(HHpop_workers_LA.total.sum()),
+                                  # 'Total non_workers currently {}'.format(HHpop_nwkrs_ag_LA.nonworker.sum()),
+                                  'Comparing LA level HH population original to present :',
+                                  '\tBy Zone only:',
+                                  '\t\tMax percentage difference: ' + str(audit_hhpop_by_z_max * 100) + '%',
+                                  '\t\tMin percentage difference: ' + str(audit_hhpop_by_z_min * 100) + '%',
+                                  '\t\tMean percentage difference: ' + str(audit_hhpop_by_z_mean * 100) + '%',
                                   '\tBy LA only:',
                                   '\t\tMax percentage difference: ' + str(audit_hhpop_by_d_max * 100) + '%',
                                   '\t\tMin percentage difference: ' + str(audit_hhpop_by_d_min * 100) + '%',
@@ -2626,75 +2835,21 @@ def la_level_adjustment(by_lu_obj):
                                   audit_hhpop_by_d_path,
                                   'A full breakdown of the LA, age and gender data is presented in:',
                                   audit_hhpop_by_dag_path])
-    audit_3_2_9_content = '\n'.join([audit_3_2_9_header, audit_3_2_9_text])
-    audit_3_2_9_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+    audit_3_2_7_content = '\n'.join([audit_3_2_7_header, audit_3_2_7_text])
+    audit_3_2_7_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                     audit_dir,
-                                    la_level_adjustment_dir,
-                                    ''.join(['Audit_3.2.9_', ModelYear, '.txt']))
-    with open(audit_3_2_9_path, 'w') as text_file:
-        text_file.write(audit_3_2_9_content)
+                                    furness_hhr_dir,
+                                    ''.join(['Audit_3.2.7_', ModelYear, '.txt']))
+    with open(audit_3_2_7_path, 'w') as text_file:
+        text_file.write(audit_3_2_7_content)
 
-    la_level_adjustment_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+    furness_hhr_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                             process_dir,
-                                            la_level_adjustment_dir)
-    la_level_adjustment_output_path = os.path.join(by_lu_obj.out_paths['write_folder'], output_dir)
-    furnessed_data_filename = '_'.join(['furnessed_gb_d_tfn_tt_agg_prt', ModelYear, 'wkrs.csv'])
-    nwkrs_aj_factor_LA_filename = '_'.join(['gb_lad_ag', ModelYear, 'nwkrs_aj_factor.csv'])
-    wkrs_aj_factor_LA_filename = '_'.join(['gb_lad_tfn_tt_agg_prt', ModelYear, 'wkrs_aj_factor.csv'])
-    verified_d_worker_filename = '_'.join(['output_1_resi_gb_lad_tfn_tt_agg_prt', ModelYear, 'wkrs'])
-    verified_d_non_worker_filename = '_'.join(['output_2_resi_gb_lad_tfn_tt_agg_prt', ModelYear, 'nwkrs'])
-
-    # Format output files to tfn tt instead of NorMITs segmentation
-    seg_to_tt_df = pd.read_csv(normits_seg_to_tfn_tt_file)
-    aj_HHpop_workers_LA_out = aj_HHpop_workers_LA.merge(seg_to_tt_df, on=['a', 'g', 'h', 'e', 'n', 's'])
-    aj_HHpop_workers_LA_out = aj_HHpop_workers_LA_out[['2021_LA_code', 'tfn_tt', 't', 'total']]
-    aj_HHpop_non_workers_LA_out = aj_HHpop_non_workers_LA.merge(seg_to_tt_df, on=['a', 'g', 'h', 'e', 'n', 's'])
-    aj_HHpop_non_workers_LA_out = aj_HHpop_non_workers_LA_out[
-        ['2021_LA_code', 'tfn_tt', 't', 'people', 'nwkr_aj_factor', 'total']]
-
-    # Export files
-    seed.to_csv(os.path.join(la_level_adjustment_path, furnessed_data_filename), index=False)
-    nwkrs_aj_factor_LA.to_csv(os.path.join(la_level_adjustment_path, nwkrs_aj_factor_LA_filename), index=False)
-    wkrs_aj_factor_LA.to_csv(os.path.join(la_level_adjustment_path, wkrs_aj_factor_LA_filename), index=False)
-    verified_d_worker_path = os.path.join(la_level_adjustment_output_path, verified_d_worker_filename)
-    verified_d_non_worker_path = os.path.join(la_level_adjustment_output_path, verified_d_non_worker_filename)
-    compress.write_out(aj_HHpop_workers_LA_out, verified_d_worker_path)
-    compress.write_out(aj_HHpop_non_workers_LA_out, verified_d_non_worker_path)
-    by_lu_obj.state['3.2.9 verify district level worker and non-worker'] = 1
-    logging.info('Step 3.2.9 completed')
-    print('Step 3.2.9 completed')
+                                            furness_hhr_dir)
+    furness_hhr_output_path = os.path.join(by_lu_obj.out_paths['write_folder'], output_dir)
 
 
-def adjust_zonal_workers_nonworkers(by_lu_obj):
-    logging.info('Running Step 3.2.10')
-    print('Running Step 3.2.10')
-    adjust_zonal_workers_nonworkers_name = 'adjust_zonal_workers_nonworkers'
-    # Had to save a copy of the xlsx as a csv as read_excel is annoying and doesn't support xlsx files anymore!
-    nomis_mye_base_year = pd.read_csv(os.path.join(inputs_directory_mye, nomis_mye_path), skiprows=6)
-    nomis_mye_base_year = nomis_mye_base_year[['local authority: district / unitary (as of April 2021)', 'All Ages']]
-    nomis_mye_base_year = nomis_mye_base_year.rename(
-        columns={'local authority: district / unitary (as of April 2021)': '2021_LA_Name',
-                 'All Ages': 'MYE_pop'})
-
-    # Call function for 3.2.8 to get HHpop_workers
-    # (because 3.2.8 is a quick to run function vs the file read/write time)
-    call_3_2_8 = subsets_worker_nonworker(by_lu_obj, adjust_zonal_workers_nonworkers_name)
-    HHpop_workers = call_3_2_8[0]
-    HHpop_non_workers = call_3_2_8[1]
-
-    # Read wkrs_aj_factor_LA from csv dumped by 3.2.9 (because IPFN can take a long time to run)
-    read_la_level_adjustment_output_dir = os.path.join(process_dir, la_level_adjustment_dir)
-    wkrs_aj_factor_LA_filename = '_'.join(['gb_lad_tfn_tt_agg_prt', ModelYear, 'wkrs_aj_factor.csv'])
-    nwkrs_aj_factor_LA_filename = '_'.join(['gb_lad_ag', ModelYear, 'nwkrs_aj_factor.csv'])
-    wkrs_aj_factor_LA_path = os.path.join(by_lu_obj.out_paths['write_folder'],
-                                          read_la_level_adjustment_output_dir,
-                                          wkrs_aj_factor_LA_filename)
-    nwkrs_aj_factor_LA_path = os.path.join(by_lu_obj.out_paths['write_folder'],
-                                           read_la_level_adjustment_output_dir,
-                                           nwkrs_aj_factor_LA_filename)
-
-    wkrs_aj_factor_LA = pd.read_csv(wkrs_aj_factor_LA_path)
-    nwkrs_aj_factor_LA = pd.read_csv(nwkrs_aj_factor_LA_path)
+    # Final output of ipf furnessed population
 
     # Read average uk hh occupancy from step 3.2.6
     uk_ave_hh_occ_lookup_path = os.path.join(by_lu_obj.out_paths['write_folder'],
@@ -2702,30 +2857,7 @@ def adjust_zonal_workers_nonworkers(by_lu_obj):
                                              pop_with_full_dims_dir,
                                              '_'.join(['gb_t', ModelYear, 'ave_hh_occ.csv']))
     uk_ave_hh_occ_lookup = pd.read_csv(uk_ave_hh_occ_lookup_path)
-
-    HHpop_workers = HHpop_workers.merge(wkrs_aj_factor_LA,
-                                        how='left',
-                                        on=['2021_LA_code', 'a', 'g', 'h', 'e', 't', 'n', 's'])
-    HHpop_workers['aj_worker'] = HHpop_workers['people'] * HHpop_workers['wkr_aj_factor']
-    # print(HHpop_workers.head(5))
-    # print(HHpop_workers.people.sum())
-    # print(HHpop_workers.aj_worker.sum())
-    HHpop_workers = HHpop_workers.drop(columns={'people'})
-    HHpop_workers = HHpop_workers.rename(columns={'aj_worker': 'people', 'wkr_aj_factor': 'scaling_factor'})
-
-    HHpop_non_workers = HHpop_non_workers.merge(nwkrs_aj_factor_LA, how='left', on=['2021_LA_code', 'a', 'g'])
-    HHpop_non_workers['aj_nonworker'] = HHpop_non_workers['people'] * HHpop_non_workers['nwkr_aj_factor']
-    # print(HHpop_non_workers.head(5))
-    # print(HHpop_non_workers.people.sum())
-    # print(HHpop_non_workers.aj_nonworker.sum())
-    HHpop_non_workers = HHpop_non_workers.drop(columns={'people'})
-    HHpop_non_workers = HHpop_non_workers.rename(columns={'aj_nonworker': 'people', 'nwkr_aj_factor': 'scaling_factor'})
-
-    hhpop_combined = HHpop_non_workers.copy()
-    hhpop_combined = hhpop_combined.append(HHpop_workers, ignore_index=True)
-    hhpop_combined = hhpop_combined.drop(columns=['properties', 'scaling_factor'])
-
-    final_zonal_hh_pop_by_t = hhpop_combined.groupby(['MSOA', 'z', 't'])['people'].sum()
+    final_zonal_hh_pop_by_t = furnessed_hhr.groupby(['2021_LA_code', '2021_LA_Name', 'MSOA', 'z', 't'])['people'].sum()
     final_zonal_hh_pop_by_t = final_zonal_hh_pop_by_t.reset_index()
     final_zonal_hh_pop_by_t_iterator = zip(final_zonal_hh_pop_by_t['z'], final_zonal_hh_pop_by_t['t'])
     final_zonal_hh_pop_by_t['z_t'] = ['_'.join([str(z), str(t)]) for z, t in final_zonal_hh_pop_by_t_iterator]
@@ -2748,11 +2880,111 @@ def adjust_zonal_workers_nonworkers(by_lu_obj):
         'final_hh_occ'] = final_zonal_hh_pop_by_t['t'].map(uk_ave_hh_occ_lookup.UK_average_hhocc)
     final_zonal_hh_pop_by_t['UPRN'].fillna(0, inplace=True)
     final_zonal_hh_pop_by_t.rename(columns={'UPRN': 'Properties'}, inplace=True)
-    final_zonal_hh_pop_by_t = final_zonal_hh_pop_by_t[['MSOA', 'z', 't', 'people', 'Properties', 'final_hh_occ']]
+    final_zonal_hh_pop_by_t = final_zonal_hh_pop_by_t[['2021_LA_code', '2021_LA_Name', 'z', 'MSOA', 't', 'people',
+                                                       'Properties', 'final_hh_occ']]
+
+    final_zonal_hh_pop_by_t_filename = '_'.join(['output_1_gb_t', ModelYear, 'property_hhr_occ'])
+
+    # Format output files to tfn tt instead of NorMITs segmentation
+    furnessed_hhr_out = furnessed_hhr.copy()
+    seg_to_tt_df = pd.read_csv(normits_seg_to_tfn_tt_file)
+    tfn_tt_aghens_iterator = zip(seg_to_tt_df['a'],
+                                 seg_to_tt_df['g'],
+                                 seg_to_tt_df['h'],
+                                 seg_to_tt_df['e'],
+                                 seg_to_tt_df['n'],
+                                 seg_to_tt_df['s'])
+    seg_to_tt_df['aghens'] = ['_'.join([str(a), str(g), str(h), str(e), str(n), str(s)])
+                                       for a, g, h, e, n, s in tfn_tt_aghens_iterator]
+    aghens_iterator = zip(furnessed_hhr['a'],
+                          furnessed_hhr['g'],
+                          furnessed_hhr['h'],
+                          furnessed_hhr['e'],
+                          furnessed_hhr['n'],
+                          furnessed_hhr['s'])
+    furnessed_hhr_out['aghens'] = ['_'.join([str(a), str(g), str(h), str(e), str(n), str(s)])
+                                       for a, g, h, e, n, s in aghens_iterator]
+    furnessed_hhr_out = furnessed_hhr_out.merge(seg_to_tt_df, on=['aghens'])
+    furnessed_hhr_out = furnessed_hhr_out[['2021_LA_code', '2021_LA_Name', 'z', 'MSOA', 'tfn_tt', 't', 'people']]
+    furnessed_hhr = furnessed_hhr[['2021_LA_code', '2021_LA_Name', 'z', 'MSOA', 'a', 'g', 'h', 'e', 't', 'n', 's', 'people']]
+    furnessed_hhr_out_filename = '_'.join(['output_2_gb_tfntt_t', ModelYear, '_hh_pop'])
+    furnessed_hhr_filename = '_'.join(['gb_z_aghetns', ModelYear, '_hh_pop'])
+
+    # Export files
+    # seed.to_csv(os.path.join(furness_hhr_path, furnessed_data_filename), index=False)
+    # nwkrs_aj_factor_LA.to_csv(os.path.join(furness_hhr_path, nwkrs_aj_factor_LA_filename), index=False)
+    # wkrs_aj_factor_LA.to_csv(os.path.join(furness_hhr_path, wkrs_aj_factor_LA_filename), index=False)
+    final_zonal_hh_pop_by_t_path = os.path.join(furness_hhr_output_path, final_zonal_hh_pop_by_t_filename)
+    furnessed_hhr_out_path = os.path.join(furness_hhr_output_path, furnessed_hhr_out_filename)
+    furnessed_hhr_path = os.path.join(furness_hhr_path, furnessed_hhr_filename)
+
+    final_zonal_hh_pop_by_t.to_csv(final_zonal_hh_pop_by_t_path)
+    compress.write_out(furnessed_hhr_out, furnessed_hhr_out_path)
+    compress.write_out(furnessed_hhr, furnessed_hhr_path)
+    by_lu_obj.state['3.2.7 Furness household population according to control values'] = 1
+    logging.info('Step 3.2.7 completed')
+    print('Step 3.2.7 completed')
+
+def ipf_process(
+        seed_path,
+        ctrl_zag_path,
+        ctrl_zh_path,
+        ctrl_zt_path,
+        ctrl_ds_path,
+        ctrl_dageplus_path,
+        output_path
+):
+    seed = pd.read_csv(seed_path)
+    seed_cols = ['z', 'LA', 'a', 'g', 'h', 'e', 't', 'n', 's', 'e+', 'people']
+    seed = seed[seed_cols]
+    ctrl_zag = pd.read_csv(ctrl_zag_path)
+    ctrl_zh = pd.read_csv(ctrl_zh_path)
+    ctrl_zt = pd.read_csv(ctrl_zt_path)
+    ctrl_ds = pd.read_csv(ctrl_ds_path)
+    ctrl_dageplus = pd.read_csv(ctrl_dageplus_path)
+    # prepare marginals
+    ctrl_zag = ctrl_zag.groupby(['z', 'a', 'g'])['people'].sum()
+    ctrl_zh = ctrl_zh.groupby(['z', 'h'])['people'].sum()
+    ctrl_zt = ctrl_zt.groupby(['z', 't'])['people'].sum()
+    ctrl_ds = ctrl_ds.groupby(['LA', 's'])['people'].sum()
+    ctrl_dageplus = ctrl_dageplus.groupby(['LA', 'a', 'g', 'e+'])['people'].sum()
+    marginals = [ctrl_zag, ctrl_zh, ctrl_zt, ctrl_ds, ctrl_dageplus]
+    furnessed_df, iters, conv = ipfn.ipf_dataframe(
+        seed_df=seed,
+        target_marginals=marginals,
+        value_col="people",
+        max_iterations=5000,
+        tol=1e-9,
+        min_tol_rate=1e-9,
+        show_pbar=False)
+    # logging.info('The iteration and convergence for district ' + dist_str + ' is: ', iters, conv)
+    furnessed_df.to_csv(output_path, index=False)
+
+
+def combine_hhr_cer(by_lu_obj):
+    logging.info('Running Step 3.2.8')
+    print('Running Step 3.2.8')
+    adjust_zonal_workers_nonworkers_name = 'adjust_zonal_workers_nonworkers'
+    # Had to save a copy of the xlsx as a csv as read_excel is annoying and doesn't support xlsx files anymore!
+    nomis_mye_base_year = pd.read_csv(os.path.join(inputs_directory_mye, nomis_mye_path), skiprows=6)
+    nomis_mye_base_year = nomis_mye_base_year[['local authority: district / unitary (as of April 2021)', 'All Ages']]
+    nomis_mye_base_year = nomis_mye_base_year.rename(
+        columns={'local authority: district / unitary (as of April 2021)': '2021_LA_Name',
+                 'All Ages': 'MYE_pop'})
+
+
+    furnessed_hhr_dir = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                            process_dir,
+                                            furness_hhr_dir)
+    furnessed_hhr_filename = '_'.join(['gb_z_aghetns', ModelYear, '_hh_pop'])
+
+    furnessed_hhr_filepath =os.path.join(furnessed_hhr_dir, furnessed_hhr_filename)
+
+    furnessed_hhr = compress.read_in(furnessed_hhr_filepath)
 
     # Check zonal total vs MYE HHpop at zonal level min, max, mean
     logging.info('Total hhpop is now:')
-    logging.info(hhpop_combined.people.sum())
+    logging.info(furnessed_hhr.people.sum())
 
     mye_msoa_pop = pd.read_csv(os.path.join(by_lu_obj.out_paths['write_folder'],
                                             process_dir,
@@ -2763,7 +2995,7 @@ def adjust_zonal_workers_nonworkers(by_lu_obj):
     logging.info('Original hhpop is:')
     logging.info(mye_hhr_pop.Total_HHR.sum())
 
-    hhpop_combined_check_z = hhpop_combined.copy()
+    hhpop_combined_check_z = furnessed_hhr.copy()
     hhpop_combined_check_z = hhpop_combined_check_z[['MSOA', 'people']]
     hhpop_combined_check_z = hhpop_combined_check_z.groupby(['MSOA']).sum()
     hhpop_combined_check_z = hhpop_combined_check_z.merge(mye_hhr_pop, how='outer', on='MSOA')
@@ -2787,7 +3019,7 @@ def adjust_zonal_workers_nonworkers(by_lu_obj):
     logging.info(hhpop_combined_pdiff_extremes)
 
     # Check LA total vs MYE HHpop - there should be 0% variance
-    la_2_z = hhpop_combined.copy()
+    la_2_z = furnessed_hhr.copy()
     la_2_z = la_2_z[['2021_LA_Name', 'MSOA']].drop_duplicates().reset_index().drop(columns=['index'])
     hhpop_combined_check_la = pd.merge(hhpop_combined_check_la, la_2_z, how='left', on='MSOA')
     hhpop_combined_check_la = hhpop_combined_check_la.drop(columns=['MSOA'])
@@ -2810,9 +3042,9 @@ def adjust_zonal_workers_nonworkers(by_lu_obj):
     hhpop_combined_check_z.to_csv(hhpop_combined_check_z_path)
     hhpop_combined_check_la.to_csv(hhpop_combined_check_la_path)
 
-    audit_3_2_10_header = 'Audit for Step 3.2.10\nCreated ' + str(datetime.datetime.now())
-    audit_3_2_10_text = '\n'.join([' '.join(['The total', ModelYear, 'population is currently:',
-                                             str(hhpop_combined.people.sum())]),
+    audit_3_2_8_header = 'Audit for Step 3.2.8\nCreated ' + str(datetime.datetime.now())
+    audit_3_2_8_text = '\n'.join([' '.join(['The total', ModelYear, 'population is currently:',
+                                             str(furnessed_hhr.people.sum())]),
                                    'Comparing z and d level HH population original to present:',
                                    '\tBy zone (z) - values will vary from 0. See Tech Note for expected values:',
                                    '\t\tMax percentage difference: ' + str(
@@ -2832,33 +3064,34 @@ def adjust_zonal_workers_nonworkers(by_lu_obj):
                                    hhpop_combined_check_z_path,
                                    'A full district breakdown of the data is presented in:',
                                    hhpop_combined_check_la_path])
-    audit_3_2_10_content = '\n'.join([audit_3_2_10_header, audit_3_2_10_text])
+    audit_3_2_8_content = '\n'.join([audit_3_2_8_header, audit_3_2_8_text])
 
-    running_dir_3_2_10 = os.getcwd()
+    running_dir_3_2_8 = os.getcwd()
     os.chdir(os.path.join(by_lu_obj.out_paths['write_folder'], audit_dir, further_adjustments_dir))
     hhpop_combined_pdiff_extremes.to_csv('_'.join(['audit_14_gb_msoa', ModelYear, 'min_max_hh_pop_percent_diff.csv']))
 
-    audit_3_2_10_path = ''.join(['Audit_3.2.10_', ModelYear, '.txt'])
-    with open(audit_3_2_10_path, 'w') as text_file:
-        text_file.write(audit_3_2_10_content)
-    os.chdir(running_dir_3_2_10)
+    audit_3_2_8_path = ''.join(['Audit_3.2.8_', ModelYear, '.txt'])
+    with open(audit_3_2_8_path, 'w') as text_file:
+        text_file.write(audit_3_2_8_content)
+    os.chdir(running_dir_3_2_8)
 
-    # Now call 3.2.11 directly from 3.2.10.
-    # This allows 3.2.10 to pass 3.2.11 to big main df directly and
+    # Now call CER process directly from 3.2.8.
+    # This allows 3.2.8 to pass CER process to big main df directly and
     # read the output back in and merge it to create the final output.
-    logging.info('Step 3.2.10 is calling step 3.2.11 to generate CER pop data')
-    print('Step 3.2.10 is calling Step 3.2.11')
-    expanded_cer_pop = process_cer_data(by_lu_obj, hhpop_combined, la_2_z)
-    logging.info('Step 3.2.11 completed, returning to step 3.2.10')
-    print('Step 3.2.10 has completed its call of Step 3.2.11')
+    logging.info('Step 3.2.8 is calling CER process to generate CER pop data')
+    print('Step 3.2.8 is calling function CER process')
+    expanded_cer_pop = process_cer_data(by_lu_obj, furnessed_hhr, la_2_z)
+    logging.info('CER process completed, returning to step 3.2.8')
+    print('Step 3.2.8 has completed its call of function CER process')
 
     # Append CER to the end of the HHpop table (with CER t=8)
     # So you have zaghetns population (i.e. no A - already dropped)
     # Dump this to compressed file in the pycharm script
-    all_pop = hhpop_combined.copy()
+    all_pop = furnessed_hhr.copy()
     all_pop = all_pop.drop(columns=['2021_LA_code'])
     cer_pop_expanded = expanded_cer_pop.rename(columns={'Zone': 'z', 'zaghetns_CER': 'people'})
-    all_pop = all_pop.append(cer_pop_expanded)
+    cer_pop_expanded = cer_pop_expanded[['2021_LA_Name', 'z', 'MSOA', 'a', 'g', 'h', 'e', 't', 'n', 's', 'people']]
+    all_pop = pd.concat([all_pop, cer_pop_expanded])
 
     all_pop_by_d_groupby_cols = ['2021_LA_Name']
     all_pop_by_d = all_pop.groupby(all_pop_by_d_groupby_cols)['people'].sum().reset_index()
@@ -2889,10 +3122,10 @@ def adjust_zonal_workers_nonworkers(by_lu_obj):
     all_pop_by_t_groupby_cols = [x for x in all_pop_by_t_groupby_cols if x != 't' and x != 'people']
     all_pop_by_t = all_pop.groupby(all_pop_by_t_groupby_cols)['people'].sum().reset_index()
 
-    # Auditing the bit of Step 3.2.11 that is carried out directly in the Step 3.2.10 function
-    audit_3_2_11_header = '\n'.join(['Audit for the parts of Step 3.2.11 carried out directly by Step 3.2.10',
+    # Auditing the bit of CER process that is carried out directly in the Step 3.2.8 function
+    audit_CER_header = '\n'.join(['Audit for the parts of CER process carried out directly by Step 3.2.8',
                                      'Created ' + str(datetime.datetime.now())])
-    audit_3_2_11_text = '\n'.join(['Note that the audit of CER pop is carried out in the Step 3.2.11 Audit directory.',
+    audit_CER_text = '\n'.join(['Note that the audit of CER pop is carried out in the CER process Audit directory.',
                                    'The total ' + ModelYear + ' population at the end of the running process is:',
                                    '\t' + str(all_pop_by_d['people'].sum()),
                                    'Checking final district total population against MYE district population:',
@@ -2908,22 +3141,23 @@ def adjust_zonal_workers_nonworkers(by_lu_obj):
                                    'All of the above values should be equal (or close) to 0.',
                                    'A full breakdown of the ' + ModelYear + 'population by d can be found at:',
                                    check_all_pop_by_d_path,
-                                   'The Step 3.2.11 Audits directory is located here:',
+                                   'The CER process Audits directory is located here:',
                                    os.path.join(by_lu_obj.out_paths['write_folder'],
                                                 audit_dir,
                                                 cer_dir),
-                                   'The Step 3.2.11 main audit file should be obvious in it.'])
-    audit_3_2_11_content = '\n'.join([audit_3_2_11_header, audit_3_2_11_text])
-    audit_3_2_11_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+                                   'The CER process main audit file should be obvious in it.'])
+    audit_CER_content = '\n'.join([audit_CER_header, audit_CER_text])
+    audit_CER_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                      audit_dir,
                                      further_adjustments_dir,
-                                     ''.join(['Audit_3.2.11_', ModelYear, '.txt']))
-    with open(audit_3_2_11_path, 'w') as text_file:
-        text_file.write(audit_3_2_11_content)
+                                     ''.join(['Audit_CER_', ModelYear, '.txt']))
+    with open(audit_CER_path, 'w') as text_file:
+        text_file.write(audit_CER_content)
 
     # Format ouputs
     seg_to_tt_df = pd.read_csv(normits_seg_to_tfn_tt_file)
-    hhpop_combined_out = hhpop_combined.merge(seg_to_tt_df, on=['a', 'g', 'h', 'e', 'n', 's'])
+    hhpop_combined_out = furnessed_hhr.copy()
+    hhpop_combined_out = hhpop_combined_out.merge(seg_to_tt_df, on=['a', 'g', 'h', 'e', 'n', 's'])
     hhpop_combined_out = hhpop_combined_out[['2021_LA_code', '2021_LA_Name', 'z', 'MSOA', 'tfn_tt', 't', 'people']]
     all_pop_out = all_pop.merge(seg_to_tt_df, on=['a', 'g', 'h', 'e', 'n', 's'])
     all_pop_out = all_pop_out[['2021_LA_Name', 'z', 'MSOA', 'tfn_tt', 't', 'people']]
@@ -2931,34 +3165,32 @@ def adjust_zonal_workers_nonworkers(by_lu_obj):
     all_pop_by_t_out = all_pop_by_t_out[['2021_LA_Name', 'z', 'MSOA', 'tfn_tt', 'people']]
 
     # Dump outputs
-    pre_3_2_10_dir = os.getcwd()
-    output_3_2_10_dir = os.path.join(by_lu_obj.out_paths['write_folder'], output_dir)
-    os.chdir(output_3_2_10_dir)
+    pre_3_2_8_dir = os.getcwd()
+    output_3_2_8_dir = os.path.join(by_lu_obj.out_paths['write_folder'], output_dir)
+    os.chdir(output_3_2_8_dir)
     logging.info('Dumping final outputs...')
-    compress.write_out(hhpop_combined_out, '_'.join(['output_3_resi_gb_lad_msoa_tfn_tt_agg_prt', ModelYear, 'hh_pop']))
-    logging.info('HH pop dumped')
-    final_zonal_hh_pop_by_t.to_csv('_'.join(['output_4_resi_gb_msoa_agg_prt', ModelYear, 'hh_pop+dwells+hh_occ.csv']))
-    logging.info('HH pop by property type dumped')
-    compress.write_out(all_pop_out, '_'.join(['output_6_resi_gb_msoa_tfn_tt_prt', ModelYear, 'pop']))
+    compress.write_out(hhpop_combined_out, '_'.join(['output_3_gb_zonal_tfntt_t', ModelYear, 'hh_pop']))
+    logging.info('HH pop dumped again- to check')
+    compress.write_out(all_pop_out, '_'.join(['output_5_gb_msoa_tfntt_t', ModelYear, 'tot_pop']))
     logging.info('Total pop (by z, a, g, h, e, t, n, s) dumped')
-    compress.write_out(all_pop_by_t_out, '_'.join(['output_7_resi_gb_msoa_tfn_tt', ModelYear, 'pop']))
+    compress.write_out(all_pop_by_t_out, '_'.join(['output_6_gb_msoa_tfntt', ModelYear, 'tot_pop']))
     logging.info('Total pop (by z, a, g, h, e, n, s) dumped')
-    os.chdir(pre_3_2_10_dir)
+    os.chdir(pre_3_2_8_dir)
 
-    by_lu_obj.state['3.2.10 adjust zonal pop with full dimensions'] = 1
-    logging.info('Step 3.2.10 completed')
+    by_lu_obj.state['3.2.8 adjust zonal pop with full dimensions'] = 1
+    logging.info('Step 3.2.8 completed')
     logging.info('If undertaking a full run through of the Base Year LU process,')
     logging.info('then this should have been the last function to run.')
     logging.info(' '.join(['So the', ModelYear, 'Base Year is DONE!']))
-    print('Step 3.2.10 completed')
-    print('So, in theory, all steps have been run (Step 3.2.11 via Step 3.2.10), so we are')
+    print('Step 3.2.8 completed')
+    print('So, in theory, all steps have been run (CER process via Step 3.2.8), so we are')
     print('DONE!')
 
 
-def process_cer_data(by_lu_obj, hhpop_combined_from_3_2_10, la_2_z_from_3_2_10):
-    # This function should ONLY be called by 3.2.10
-    logging.info('Running Step 3.2.11')
-    print('Running Step 3.2.11')
+def process_cer_data(by_lu_obj, hhpop_combined_from_3_2_8, la_2_z_from_3_2_8):
+    # This function should ONLY be called by 3.2.8
+    logging.info('Running Step 3.2.8 CER process')
+    print('Running Step 3.2.8 CER process')
 
     # Read the total pop data direct from 3.2.10 as it is ~26 million lines
     # In which case, call la_2_z from it too
@@ -2970,7 +3202,7 @@ def process_cer_data(by_lu_obj, hhpop_combined_from_3_2_10, la_2_z_from_3_2_10):
                                        mye_pop_compiled_dir,
                                        '_'.join(['gb', by_lu_obj.model_zoning.lower(),
                                                  ModelYear, 'pop+hh_pop.csv'])))
-    cer_pop = hhpop_combined_from_3_2_10.copy()
+    cer_pop = hhpop_combined_from_3_2_8.copy()
     cer_pop = cer_pop[['MSOA', 'people']]
     cer_pop = cer_pop.groupby(['MSOA']).sum()
     cer_pop = pd.merge(cer_pop, mye_pop, how='left', on='MSOA')
@@ -2980,7 +3212,7 @@ def process_cer_data(by_lu_obj, hhpop_combined_from_3_2_10, la_2_z_from_3_2_10):
     cer_pop['CER_pop'] = np.where(cer_pop['CER_pop'] < 0, 0, cer_pop['CER_pop'])
 
     # Use CER as weights to distribute LA level CER
-    cer_pop = pd.merge(cer_pop, la_2_z_from_3_2_10, how='left', on='MSOA')
+    cer_pop = pd.merge(cer_pop, la_2_z_from_3_2_8, how='left', on='MSOA')
     cer_pop_la = cer_pop.copy()
     cer_pop_la = cer_pop_la.drop(columns=['MSOA'])
     cer_pop_la = cer_pop_la.groupby(['2021_LA_Name']).sum()
@@ -2992,7 +3224,7 @@ def process_cer_data(by_lu_obj, hhpop_combined_from_3_2_10, la_2_z_from_3_2_10):
     cer_pop['CER_weight'] = cer_pop['CER_pop'] / cer_pop['CER_weight_denom']
     cer_pop['Zonal_CER'] = cer_pop['Total_CER'] * cer_pop['CER_weight']
 
-    uk_ave_pop_df = hhpop_combined_from_3_2_10.copy()
+    uk_ave_pop_df = hhpop_combined_from_3_2_8.copy()
     # Technically this should be done after the groupby,
     # but setting t = 8 here is still produces the desired output
     # and saves having to get a 'new' 't' column in the right place afterwards
@@ -3028,31 +3260,26 @@ def process_cer_data(by_lu_obj, hhpop_combined_from_3_2_10, la_2_z_from_3_2_10):
     # Dump cer_pop_expanded to compressed file for QA purposes
     cer_output_dir_path = os.path.join(by_lu_obj.out_paths['write_folder'], output_dir)
     cer_output_full_path = os.path.join(cer_output_dir_path,
-                                        '_'.join(['output_5_gb_msoa_tfn_tt', ModelYear, 'CER_pop']))
+                                        '_'.join(['output_4_gb_msoa_tfn_tt', ModelYear, 'CER_pop']))
     compress.write_out(cer_pop_expanded, cer_output_full_path)
 
     # Auditing
-    audit_3_2_11_header = 'Audit for Step 3.2.11\nCreated ' + str(datetime.datetime.now())
-    audit_3_2_11_text = '\n'.join(['The total CER population is: ' + str(cer_pop_expanded.zaghetns_CER.sum()),
-                                   'All other logging for this step is carried out in the Step 3.2.10 audit directory.',
-                                   'This is because the script for Step 3.2.10 carries out all of the processing that',
-                                   'is assigned to Step 3.2.11 in the Technical Note beyond the creation of CER pop.',
-                                   'The Step 3.2.10 Audits directory is located here:',
+    audit_3_2_8_CER_header = 'Audit for Step 3.2.11\nCreated ' + str(datetime.datetime.now())
+    audit_3_2_8_CER_text = '\n'.join(['The total CER population is: ' + str(cer_pop_expanded.zaghetns_CER.sum()),
+                                   'All other logging for this step is carried out in the Step 3.2.8 audit directory.',
+                                   'This is because the script for Step 3.2.8 carries out all of the processing that',
+                                   'is assigned to function CER process in the Technical Note beyond the creation of CER pop.',
+                                   'The Step 3.2.8 Audits directory is located here:',
                                    os.path.join(by_lu_obj.out_paths['write_folder'],
                                                 audit_dir,
                                                 further_adjustments_dir),
                                    'The Step 3.2.11 (in Step 3.2.10) main audit file should be obvious in it.'])
-    audit_3_2_11_content = '\n'.join([audit_3_2_11_header, audit_3_2_11_text])
-    audit_3_2_11_path = os.path.join(by_lu_obj.out_paths['write_folder'],
+    audit_3_2_8_CER_content = '\n'.join([audit_3_2_8_CER_header, audit_3_2_8_CER_text])
+    audit_3_2_8_CER_path = os.path.join(by_lu_obj.out_paths['write_folder'],
                                      audit_dir,
                                      cer_dir,
-                                     ''.join(['Audit_3.2.11_', ModelYear, '.txt']))
-    with open(audit_3_2_11_path, 'w') as text_file:
-        text_file.write(audit_3_2_11_content)
-
-    # Flagging and logging
-    by_lu_obj.state['3.2.11 process CER data'] = 1
-    logging.info('Step 3.2.11 completed')
-    print('Step 3.2.11 completed')
+                                     ''.join(['Audit_3.2.8_CER_', ModelYear, '.txt']))
+    with open(audit_3_2_8_CER_path, 'w') as text_file:
+        text_file.write(audit_3_2_8_CER_content)
 
     return cer_pop_expanded
