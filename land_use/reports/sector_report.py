@@ -26,7 +26,7 @@ class SectorReporter:
                  retain_cols: List = list(),
                  model_schema: str = None,  # PathLike
                  model_sectors: str = None,  # PathLike
-                 target_file_types: List = ['.csv', '.bz2']
+                 target_file_types: List = ['.csv', '.pbz2']
                  ):
 
         """

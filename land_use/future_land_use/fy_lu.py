@@ -197,6 +197,8 @@ class FutureYearLandUse:
                      reports=True):
         """
         """
+        # TODO: Replace with multi-dimensional control
+
         # Build population
         fy_pop, pop_reports = self._grow_pop(verbose=verbose)
 
@@ -403,6 +405,16 @@ class FutureYearLandUse:
         by_pop_report = utils.lu_out_report(base_year_pop,
                                             pop_var=self.base_year)
 
+        # TODO: Add the traveller type join back on
+        # TODO: use the normalise tts script
+        if 'tfn_traveller_type' in list(base_year_pop):
+            base_year_pop = utils.infill_traveller_types(
+                land_use_build=base_year_pop,
+                traveller_type_lookup=consts.TFN_TT_INDEX,
+                attribute_subset=None,
+                left_tt_col='tfn_traveller_type',
+                right_tt_col='tfn_traveller_type')
+
         # Audit population numbers
         print("Base Year Population: %d" % base_year_pop[self.base_year].sum())
 
@@ -418,6 +430,13 @@ class FutureYearLandUse:
                                                         drop_tt=True)
             merge_cols = utils.intersection(list(base_year_pop),
                                             list(population_growth))
+
+        # TODO: Check that I don't need this anymore
+        # Control data types
+        base_year_pop['soc'] = base_year_pop['soc'].astype(float).astype(int)
+        base_year_pop['ns'] = base_year_pop['ns'].astype(float).astype(int)
+        population_growth['soc'] = population_growth['soc'].astype(float).astype(int)
+        population_growth['ns'] = population_growth['ns'].astype(float).astype(int)
 
         population = self._grow_to_future_year(
             by_vector=base_year_pop,
@@ -467,24 +486,18 @@ class FutureYearLandUse:
             add_total=False,
             to_long=False)
 
+        # Used to have consistent future year col for var, but now may be people
+        # This will stop the growth working
+        if 'people' in base_year_emp:
+            base_year_emp = base_year_emp.rename(
+                columns={'people': self.base_year})
+
         # Print employment numbers
-        print(base_year_emp[base_year_emp[emp_cat_col] == 'E01'])
+        print('Base year employment total %d' % base_year_emp[self.base_year].sum())
+        print('Includes non-working segments \n \n')
 
         # ## FUTURE YEAR EMPLOYMENT ## #
-        print("Generating future year employment data...")
-        """
-        Pre processing for SOC, may be deprecated by importing
-        processed base year
-        
-        if 'soc' in employment_growth:
-            # Add Soc splits into the base year
-            base_year_emp = self._split_by_soc(
-                df=base_year_emp,
-                soc_weights=self._get_soc_weights(),
-                unique_col=self.base_year,
-                split_cols=[zone_col, emp_cat_col]
-            )
-        """
+        print('Generating future year employment data...')
 
         # Merge on all possible segmentations - not years
         merge_cols = utils.intersection(list(base_year_emp), list(employment_growth))
@@ -494,7 +507,7 @@ class FutureYearLandUse:
             fy_vector=employment_growth,
             merge_cols=merge_cols)
 
-        employment = employment.rename(columns={self.base_year: self.future_year})
+        employment = employment.rename(columns={self.base_year: 'people'})
 
         print(list(employment))
 

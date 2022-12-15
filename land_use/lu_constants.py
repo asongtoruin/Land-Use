@@ -23,6 +23,10 @@ FYLU_MR_ITER = 'iter4m'
 LU_IMPORTS = 'import'
 LU_REFS = 'Lookups'
 
+# TODO: Should probably lookup between iterations
+# Base year
+BASE_YEAR = '2018'
+
 # Inputs
 ZONE_NAME = 'MSOA'
 ZONES_FOLDER = 'I:/NorMITs Synthesiser/Zone Translation/'
@@ -42,7 +46,7 @@ RESI_LAND_USE_MSOA = os.path.join(
     BY_FOLDER,
     LU_MR_ITER,
     'outputs',
-    'land_use_output_safe_msoa.csv'
+    'land_use_output_msoa.csv'
 )
 
 NON_RESI_LAND_USE_MSOA = os.path.join(
@@ -139,7 +143,6 @@ SOC_BY_REGION = os.path.join(
     'SOC Mix',
     'hsl_3cat_summary.csv'
 )
-
 
 # REFERENCES
 # purposes to apply soc split to
