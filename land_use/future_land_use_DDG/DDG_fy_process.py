@@ -94,8 +94,7 @@ def base_year_pop(fy_lu_obj):
     # fy_output_folder = fy_lu_obj.fy_home_folder
     # Distrctory and file from base year population process
     output_working_dir_path = os.path.join(by_output_folder, output_dir)
-    BYpop_process_output_file = os.path.join(output_working_dir_path, ''.join(['output_6_resi_gb_msoa_tfn_tt_prt_',
-                                                                            base_year, '_pop']))
+    BYpop_process_output_file = os.path.join(output_working_dir_path, '_'.join(['output_5_gb_msoa_tfntt_t', base_year, 'tot_pop']))
     BYpop_MYE_pre = compress.read_in(BYpop_process_output_file)
     logging.info('Initial check on MYE complied population currently {}'.format(BYpop_MYE_pre.people.sum()))
     # get 2013 LA in
@@ -429,8 +428,8 @@ def DDGaligned_fy_pop_process(fy_lu_obj):
 
     #Dump outputs
     #DDG_aligned_pop_output_path = os.path.join(fy_lu_obj.out_paths['write_folder'], output_dir)
-    FYpop_DDG_pop_allsegs_filename = '_'.join(['output_1_DDG_gb_msoa_allsegs_', future_year, CAS_scen,'pop'])
-    FYpop_DDG_pop_tfn_tt_filename = '_'.join(['output_2_DDG_gb_msoa_tfn_tt', future_year, CAS_scen,'pop'])
+    FYpop_DDG_pop_allsegs_filename = '_'.join(['output_1_DDG_gb_msoa_allsegs_', future_year, CAS_scen,'pop.csv.bz2'])
+    FYpop_DDG_pop_tfn_tt_filename = '_'.join(['output_2_DDG_gb_msoa_tfn_tt', future_year, CAS_scen,'pop.csv.bz2'])
 
     FYpop_DDG_pop_allsegs_path = os.path.join(fy_lu_obj.out_paths['write_folder'],
                                   output_dir,
@@ -441,7 +440,9 @@ def DDGaligned_fy_pop_process(fy_lu_obj):
                                   scenario_name,
                                   FYpop_DDG_pop_tfn_tt_filename)
     # compress.write_out(FYpop_DDG_out, FYpop_DDG_pop_allsegs_path)
-    compress.write_out(FYpop_DDG_exc_t_out, FYpop_DDG_pop_tfn_tt_path)
+    # compress.write_out(FYpop_DDG_exc_t_out, FYpop_DDG_pop_tfn_tt_path)
+    # FYpop_DDG_out.to_csv(FYpop_DDG_pop_allsegs_path)
+    FYpop_DDG_exc_t_out.to_csv(FYpop_DDG_pop_tfn_tt_path)
     logging.info('Step completed-- processing fy pop to be aligned with DDG for ' + fy_lu_obj.future_year + fy_lu_obj.scenario_name)
     print('Step completed -- processing fy pop to be aligned with DDG for ' + fy_lu_obj.future_year + fy_lu_obj.scenario_name)
     return 0

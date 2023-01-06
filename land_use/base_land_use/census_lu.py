@@ -2,7 +2,7 @@ import logging
 import os
 import land_use.lu_constants as consts
 from land_use.utils import file_ops as utils
-from land_use.base_land_use import census2011_population_furness
+from land_use.base_land_use import census2011_population_process
 
 
 class CensusYearLandUse:
@@ -116,19 +116,19 @@ class CensusYearLandUse:
             logging.info('')
             print('\n' + '=' * 75)
             logging.info('Running step 3.1.1 derive 2011 population from NTEM and convert Scottish zones')
-            census2011_population_furness.ntem_pop_interpolation(self)
+            census2011_population_process.ntem_pop_interpolation(self)
 
         if self.state['3.1.2 expand population segmentation'] == 0:
             logging.info('')
             print('\n' + '=' * 75)
             logging.info('Running step 3.1.2 expand population segmentation')
-            census2011_population_furness.create_ipfn_inputs_2011(self)
+            census2011_population_process.create_ipfn_inputs_2011(self)
 
         if self.state['3.1.3 data synthesis'] == 0:
             logging.info('')
             print('\n' + '=' * 75)
             logging.info('Running step 3.1.3 data synthesis')
-            census2011_population_furness.ipfn_process_2011(self)
+            census2011_population_process.ipfn_process_2011(self)
 
     def _check_state(self):
 

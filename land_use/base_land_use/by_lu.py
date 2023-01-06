@@ -80,18 +80,26 @@ class BaseYearLandUse:
         # but does not have the step sub-directories
 
         list_of_step_folders = [
-            '3.2.1_read_in_core_property_data',
-            '3.2.2_filled_property_adjustment',
-            '3.2.3_apply_household_occupancy',
-            '3.2.4_land_use_formatting',
-            '3.2.5_uplifting_base_year_pop_base_year_MYPE',
-            '3.2.6_expand_NTEM_pop',
-            '3.2.7_verify_population_profile_by_dwelling_type',
-            '3.2.8_subsets_of_workers+nonworkers',
-            '3.2.9_verify_district_level_worker_and_nonworker',
-            '3.2.10_adjust_zonal_pop_with_full_dimensions',
-            '3.2.11_process_CER_data',
-            '3.2.12_process_DDG_data']
+            '3.2.1_Read_in_core_property_data',
+            '3.2.2_Filled_property_adjustment',
+            '3.2.3_Apply_household_occupancy',
+            '3.2.4_Land_use_formatting',
+            '3.2.5_Adjust_base_year_pop_from_MYPE',
+            '3.2.6_Expand_NTEM_pop',
+            '3.2.7_Furness_household_population',
+            '3.2.8_Combine_HHR_with_CER',
+            # '3.2.8_subsets_of_workers+nonworkers',
+            # '3.2.9_verify_population_according_to_control_values',
+            # '3.2.10_adjust_zonal_pop_with_full_dimensions',
+            # '3.2.11_process_CER_data',
+            '3.2.9_Process_DDG_data']
+        list_of_ipf_folders = [
+            '00_seed',
+            '01_ctrl_zag',
+            '02_ctrl_zh',
+            '03_ctrl_zt',
+            '04_ctrl_ds',
+            '05_ctrl_dageplus']
 
         # Build folders
         if not os.path.exists(write_folder):
@@ -108,6 +116,13 @@ class BaseYearLandUse:
         if not os.path.exists(os.path.join(write_folder, '00 Logging')):
             file_ops.create_folder(os.path.join(write_folder, '00 Logging'))
 
+        if not os.path.exists(os.path.join(write_folder, '03 Outputs', 'furnessed')):
+            file_ops.create_folder(os.path.join(write_folder, '03 Outputs', 'furnessed'))
+
+        for ipf_folder in list_of_ipf_folders:
+            if not os.path.exists(os.path.join(write_folder, '01 Process', '3.2.7_Furness_household_population', ipf_folder)):
+                file_ops.create_folder(os.path.join(write_folder, '01 Process', '3.2.7_Furness_household_population', ipf_folder))
+
         # Set object paths
         self.out_paths = {
             'write_folder': write_folder,
@@ -122,17 +137,15 @@ class BaseYearLandUse:
         # TODO: enable a way to init from a point part way through the process
 
         self.state = {
-            '3.2.1 read in core property data': 0,
-            '3.2.2 filled property adjustment': 0,
-            '3.2.3 household occupancy adjustment': 0,
-            '3.2.4 property type mapping': 0,
-            '3.2.5 Uplifting Base Year population according to Base Year MYPE': 0,
-            '3.2.6 and 3.2.7 expand NTEM population to full dimensions and verify pop profile': 0,
-            '3.2.8 get subsets of worker and non-worker': 0,
-            '3.2.9 verify district level worker and non-worker': 0,
-            '3.2.10 adjust zonal pop with full dimensions': 0,
-            '3.2.11 process CER data': 0,
-            '3.2.12 process DDG data': 0
+            '3.2.1 Read in core property data': 0,
+            '3.2.2 Filled property adjustment': 0,
+            '3.2.3 Household occupancy adjustment': 0,
+            '3.2.4 Property type mapping': 0,
+            '3.2.5 Adjust Base Year population according to Base Year MYPE': 0,
+            '3.2.6 Expand NTEM population to full dimensions': 0,
+            '3.2.7 Furness household population according to control values': 0,
+            '3.2.8 Combine HHR with CER to form total population': 0,
+            '3.2.9 Process DDG data': 0
         }
         # YZ--for DDG aligned process, NorCOM import step is skipped
         self.norcom = 'skip NorCOM'
@@ -174,72 +187,62 @@ class BaseYearLandUse:
         # Run through the Base Year Build process
         # Steps from main build
         # TODO: Decide if this is used for anything anymore
-        if self.state['3.2.1 read in core property data'] == 0:
+        if self.state['3.2.1 Read in core property data'] == 0:
             logging.info('')
             logging.info('\n' + '=' * 75)
             logging.info('Running step 3.2.1, reading in core property data')
             print('\n' + '=' * 75)
             base_year_population_process.copy_addressbase_files(self)
 
-        if self.state['3.2.2 filled property adjustment'] == 0:
+        if self.state['3.2.2 Filled property adjustment'] == 0:
             logging.info('')
             logging.info('\n' + '=' * 75)
             logging.info('Running step 3.2.2, calculating the filled property adjustment factors')
             print('\n' + '=' * 75)
             base_year_population_process.filled_properties(self)
 
-        if self.state['3.2.3 household occupancy adjustment'] == 0:
+        if self.state['3.2.3 Household occupancy adjustment'] == 0:
             logging.info('')
             logging.info('\n' + '=' * 75)
             print('\n' + '=' * 75)
             logging.info('Running step 3.2.3, household occupancy adjustment')
             base_year_population_process.apply_household_occupancy(self)
 
-        if self.state['3.2.4 property type mapping'] == 0:
+        if self.state['3.2.4 Property type mapping'] == 0:
             logging.info('')
             logging.info('\n' + '=' * 75)
             print('\n' + '=' * 75)
             logging.info('Running step 3.2.4, combining flat types')
             base_year_population_process.property_type_mapping(self)
 
-        if self.state['3.2.5 Uplifting Base Year population according to Base Year MYPE'] == 0:
+        if self.state['3.2.5 Adjust Base Year population according to Base Year MYPE'] == 0:
             logging.info('')
             logging.info('\n' + '=' * 75)
             print('\n' + '=' * 75)
-            logging.info('Running step 3.2.5, uplifting 2018 population according to 2018 MYPE')
+            logging.info('Running step 3.2.5, adjust 2018 population according to 2018 MYPE')
             base_year_population_process.mye_pop_compiled(self)
 
-        if self.state['3.2.6 and 3.2.7 expand NTEM population to full dimensions and verify pop profile'] == 0:
+        if self.state['3.2.6 Expand NTEM population to full dimensions'] == 0:
             logging.info('')
             logging.info('\n' + '=' * 75)
             print('\n' + '=' * 75)
             logging.info('Running step 3.2.6, expand NTEM population to full dimensions')
-            logging.info('Also running step 3.2.7, verify population profile by dwelling type')
             base_year_population_process.pop_with_full_dimensions(self)
 
-        if self.state['3.2.8 get subsets of worker and non-worker'] == 0:
+        if self.state['3.2.7 Furness household population according to control values'] == 0:
             logging.info('')
             logging.info('\n' + '=' * 75)
             print('\n' + '=' * 75)
-            logging.info('Running step 3.2.8, get subsets of worker and non-worker')
-            logging.info('Called from "census_lu.py" so saving outputs to files')
-            logging.info('but not saving any variables to memory')
-            logging.info('Note that this function will get called again by other functions')
-            base_year_population_process.subsets_worker_nonworker(self, 'census_and_by_lu')
+            logging.info('Running step 3.2.7, furness household population according to control values')
+            base_year_population_process.furness_hhr(self)
 
-        if self.state['3.2.9 verify district level worker and non-worker'] == 0:
+        if self.state['3.2.8 Combine HHR with CER to form total population'] == 0:
             logging.info('')
             logging.info('\n' + '=' * 75)
             print('\n' + '=' * 75)
-            logging.info('Running step 3.2.9, verify district level worker and non-worker')
-            base_year_population_process.la_level_adjustment(self)
+            logging.info('Running step 3.2.9, combine HHR with CER to form total population')
+            base_year_population_process.combine_hhr_cer(self)
 
-        if self.state['3.2.10 adjust zonal pop with full dimensions'] == 0:
-            logging.info('')
-            logging.info('\n' + '=' * 75)
-            print('\n' + '=' * 75)
-            logging.info('Running step 3.2.10, adjust zonal pop with full dimensions')
-            base_year_population_process.adjust_zonal_workers_nonworkers(self)
 
         # Step 3.2.11 should always be called from Step 3.2.10 (to save read/writing massive files)
         # Syntax for calling it is maintained here (albeit commented out) for QA purposes
@@ -250,11 +253,30 @@ class BaseYearLandUse:
         #     logging.info('Running step 3.2.11, process CER data')
         #     BaseYear2018_population_process.process_cer_data(self, hhpop_combined_from_3_2_10, la_2_z_from_3_2_10)
 
-        if self.state['3.2.12 process DDG data'] == 0:
+    def build_by_pop_DDG(self):
+        os.chdir(self.model_folder)
+        file_ops.create_folder(self.iteration, ch_dir=True)
+        os.chdir('00 Logging')
+        # Create log file without overwriting existing files
+        base_year_log_name = '_'.join([self.base_year, 'base_year_land_use_DDGaligned.log'])
+        base_year_log_dir = os.getcwd()
+        if os.path.exists(os.path.join(base_year_log_dir, base_year_log_name)):
+            log_v_count = 1
+            og_base_year_log_name = base_year_log_name[:-4]
+            while os.path.exists(os.path.join(base_year_log_dir, base_year_log_name)):
+                base_year_log_name = ''.join([og_base_year_log_name, '_', str(log_v_count), '.log'])
+                log_v_count = log_v_count + 1
+                print('The last log name I tried was already taken!')
+                print('Now trying log name: %s' % base_year_log_name)
+        logging.basicConfig(filename=base_year_log_name,
+                            level=logging.INFO,
+                            format='%(asctime)s: %(message)s')
+
+        if self.state['3.2.9 Process DDG data'] == 0:
             logging.info('')
             logging.info('\n' + '=' * 75)
             print('\n' + '=' * 75)
-            logging.info('Running step 3.2.12, adjust zonal pop to be aligned with DDG')
+            logging.info('Running step 3.2.9, adjust zonal pop to be aligned with DDG')
             DDG_process.DDGaligned_pop_process(self)
             #DDG_pop_process.DDGaligned_pop_process(self)
 

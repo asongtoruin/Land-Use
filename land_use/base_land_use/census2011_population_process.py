@@ -34,7 +34,9 @@ import os
 import itertools
 import datetime
 import pyodbc
-from ipfn import ipfn
+# from ipfn import ipfn
+from caf.toolkit import iterative_proportional_fitting as ipfn
+from caf.toolkit import concurrency
 import logging
 
 # TODO: These should come from a constants paths that a 3rd party user can parse
@@ -44,6 +46,7 @@ import logging
 _census_micro_path = 'I:/NorMITs Land Use/import/2011 Census Microdata'
 _QS_census_queries_path = 'I:/NorMITs Land Use/import/Nomis Census 2011 Head & Household'
 _lookup_tables_path = 'I:/NorMITs Land Use/import/2011 Census Micro lookups'
+_NTEM_input_path = r'I:\NorMITs Land Use\import\CTripEnd'
 
 # Read in data for the 2011 furness set up
 # 2011 Census micro data
@@ -76,6 +79,9 @@ lookup_geography = pd.read_csv(os.path.join(_lookup_tables_path, 'geography.csv'
 # ...and get rid of spaces in geography lookup table headers immediately
 lookup_geography.columns = lookup_geography.columns.str.replace(' ', '_')
 
+# read in 2011 NTEM and relevant lookup tables
+NTEM_pop_2011 = pd.read_csv(os.path.join(_NTEM_input_path, 'All_year', 'ntem_gb_z_areatype_ntem_tt_2011_pop.csv'))
+ntem_pop_segs = pd.read_csv(os.path.join(_NTEM_input_path, 'Pop_Segmentations.csv'))
 # Define model name and output folder
 # Note that output folder is IPFN input folder
 ModelName = 'NorMITs'
@@ -254,9 +260,27 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
     # .loc warnings especially are a no no
     # Location and functionality are good!
 
+    # Obtain 2011 NTEM data
+    NTEM_pop_path = r'I:\NorMITs Land Use\import\CTripEnd'
+    NTEM_pop_2011 = pd.read_csv(os.path.join(NTEM_pop_path, 'All_year', 'ntem_gb_z_areatype_ntem_tt_2011_pop.csv'))
+    ntem_pop_segs = pd.read_csv(os.path.join(NTEM_pop_path, 'Pop_Segmentations.csv'))
+    print(NTEM_pop_2011)
+    print('\n')
+    print(ntem_pop_segs)
+    NTEM_pop_2011 = NTEM_pop_2011.merge(ntem_pop_segs, left_on=['tt'], right_on=['NTEM_Traveller_Type'],
+                                        how='right').drop(columns={'NTEM_Traveller_Type'})
+    NTEM_pop_2011 = NTEM_pop_2011.rename(columns={'Age_code': 'a',
+                                                  'Gender_code': 'g',
+                                                  'Household_composition_code': 'h',
+                                                  'Employment_type_code': 'e',
+                                                  '2011': 'P_NTEM',
+                                                  'tt': 'ntem_tt'})
+    cols_chosen = ['z', 'A', 'ntem_tt', 'a', 'g', 'h', 'e', 'P_NTEM']
+    NTEM_pop_2011 = NTEM_pop_2011[cols_chosen]
+    # NTEM_pop_2011 = ntem_pop_interpolation(census_and_by_lu_obj)
+    NTEM_pop_2011 = NTEM_pop_2011[cols_chosen]
+    print('Total 2011 ntem household population is : ', NTEM_pop_2011.P_NTEM.sum())
     # Obtain 2011 Census data
-    NTEM_pop_2011 = ntem_pop_interpolation(census_and_by_lu_obj)
-
     # Start processing data
     # Only the following vairiables are required from the census micro data
     census_micro_trimmed = census_micro[['caseno',
@@ -588,23 +612,7 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
         print('ISSUE WITH f PROCESSING!')
 
     # Trim NTEM to just the useful cols
-    NTEM_pop_2011_trim = NTEM_pop_2011[['msoaZoneID',
-                                        'AreaType',
-                                        'TravellerType',
-                                        'Age_code',
-                                        'Gender_code',
-                                        'Household_composition_code',
-                                        'Employment_type_code',
-                                        'Population']]
-    NTEM_pop_2011_trim = NTEM_pop_2011_trim.rename(
-        columns = {'msoaZoneID':'z',
-                   'AreaType':'A',
-                   'TravellerType':'ntem_tt',
-                   'Age_code':'a',
-                   'Gender_code':'g',
-                   'Household_composition_code':'h',
-                   'Employment_type_code':'e',
-                   'Population':'P_NTEM'})
+    NTEM_pop_2011_trim = NTEM_pop_2011.copy()
 
     # Join the districts and regions to the zones
     lookup_geography_z2d2r = lookup_geography[['NorMITs_Zone',
@@ -784,15 +792,15 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
         NTEM_pop_2011_GB_for_dr_seeds['r'] == 'North West'].reset_index()
     seed_d_184 = NTEM_pop_2011_GB_for_dr_seeds.loc[
         NTEM_pop_2011_GB_for_dr_seeds['d'] == 184].reset_index()
-    seed_headers = ['z', 'ntem_tt', 't', 'n', 's', 'P_aghetns']
+    seed_headers = ['z', 'a', 'g', 'h', 'e', 't', 'n', 's', 'P_aghetns']
     seed_r_NW = seed_r_NW[seed_headers]
     seed_d_184 = seed_d_184[seed_headers]
     seed_r_NW = seed_r_NW.rename(columns = {'P_aghetns':'population'})
     seed_d_184 = seed_d_184.rename(columns = {'P_aghetns':'population'})
 
-    seed_df = NTEM_pop_2011_GB_for_seeds[['z', 'ntem_tt', 't', 'n', 's', 'P_aghetns']]
+    seed_df = NTEM_pop_2011_GB_for_seeds[['z', 'a', 'g', 'h', 'e', 't', 'n', 's', 'P_aghetns']]
     seed_df = seed_df.rename(columns = {'P_aghetns':'population'})
-    seed_df_dr = NTEM_pop_2011_GB_for_dr_seeds[['d', 'r', 'z', 'ntem_tt', 't', 'n', 's', 'P_aghetns']]
+    seed_df_dr = NTEM_pop_2011_GB_for_dr_seeds[['d', 'r', 'z', 'a', 'g', 'h', 'e', 't', 'n', 's', 'P_aghetns']]
     seed_df_dr = seed_df_dr.rename(columns = {'P_aghetns':'population'})
 
     headers_QS606 = list(QS606_raw_census)
@@ -997,6 +1005,9 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
                                                               right_on=['z', 'd'],
                                                               how = 'left')
     lookup_geography_z2d2r_with_S['r'] = lookup_geography_z2d2r_with_S['r'].fillna('Scotland')
+    lookup_geography_filename = 'lookup_geography_z2d2r.csv'
+    lookup_folder = r'I:\NorMITs Land Use\import\2011 Census Furness\04 Post processing\Lookups'
+    lookup_geography_z2d2r_with_S.to_csv(os.path.join(lookup_folder, lookup_geography_filename))
 
     # Apply districts to the seed and control file dataframes (including the Scottish 'districts'),
     # then produce the various IPFN input files at the district level, ensuring they are sensibly filed!
@@ -1017,7 +1028,7 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
     Ctrl1_NTEM = pd.merge(Ctrl1_NTEM,
                           lookup_geography_z2d2r_with_S,
                           on='z')
-    Ctrl1_NTEM = Ctrl1_NTEM.groupby(['d', 'r', 'z', 'ntem_tt'])['population'].sum().reset_index()
+    Ctrl1_NTEM = Ctrl1_NTEM.groupby(['d', 'r', 'z', 'a', 'g', 'h', 'e'])['population'].sum().reset_index()
 
     # set up for loop for 1 -> Max d in data (313)
     # str version of the number is to append to file names
@@ -1040,30 +1051,34 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
         #     Main seed file
         seed_d = NTEM_pop_2011_GB_for_dr_seeds.loc[
             NTEM_pop_2011_GB_for_dr_seeds['d'] == district].reset_index()
-        seed_headers = ['z', 'ntem_tt', 't', 'n', 's', 'P_aghetns']
+        seed_headers = ['z', 'a', 'g', 'h', 'e', 't', 'n', 's', 'P_aghetns']
         seed_d = seed_d[seed_headers]
         seed_d = seed_d.rename(columns={'P_aghetns': 'population'})
         #     Ctrl1 control file
         Ctrl1_NTEM_d = Ctrl1_NTEM.loc[
             Ctrl1_NTEM['d'] == district].reset_index()
-        Ctrl1_NTEM_headers = ['z', 'ntem_tt', 'population']
+        Ctrl1_NTEM_headers = ['z', 'a', 'g', 'h', 'e', 'population']
         Ctrl1_NTEM_d = Ctrl1_NTEM_d[Ctrl1_NTEM_headers]
 
         # Name outputs
-        seed_filename_d = ['01 Seed Files/2011', str(ModelName), 'seed_d', dist_str, 'v0.1.csv']
-        Ctrl1_NTEM_filename_d = [
-            '02 Ctrl1 NTEM Control Files/2011', str(ModelName), 'Ctrl1_NTEM_d', dist_str, 'v0.1.csv']
-        SOC_filename_d = ['03 SOC Control Files/2011', str(ModelName), 'Ctrl_SOC_d', dist_str, 'v0.1.csv']
-        NSSEC_filename_d = ['04 NSSEC Control Files/2011', str(ModelName), 'Ctrl_NSSEC_d', dist_str, 'v0.1.csv']
-        DT_filename_d = ['05 DT Control Files/2011', str(ModelName), 'Ctrl_DT_d', dist_str, 'v0.1.csv']
+        seed_file_path = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\01 Seed Files'
+        seed_filename = '_'.join(['2011', str(ModelName), 'seed_d', dist_str, 'v0.1.csv'])
+        NTEM_file_path = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\02 Ctrl1 NTEM Control Files'
+        Ctrl1_NTEM_filename = '_'.join(['2011', str(ModelName), 'Ctrl1_NTEM_d', dist_str, 'v0.1.csv'])
+        SOC_file_path = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\03 SOC Control Files'
+        SOC_filename = '_'.join(['2011', str(ModelName), 'Ctrl_SOC_d', dist_str, 'v0.1.csv'])
+        NSSEC_file_path = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\04 NSSEC Control Files'
+        NSSEC_filename = '_'.join(['2011', str(ModelName), 'Ctrl_NSSEC_d', dist_str, 'v0.1.csv'])
+        DT_file_path = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\05 DT Control Files'
+        DT_filename = '_'.join(['2011', str(ModelName), 'Ctrl_DT_d', dist_str, 'v0.1.csv'])
 
         # save outputs
         # TODO: Optimise writes, this is why it is so slow
-        QS606_working_d.to_csv('_'.join(SOC_filename_d), index=False)
-        QS609_working_d.to_csv('_'.join(NSSEC_filename_d), index=False)
-        QS401_working_d.to_csv('_'.join(DT_filename_d), index=False)
-        seed_d.to_csv('_'.join(seed_filename_d), index=False)
-        Ctrl1_NTEM_d.to_csv('_'.join(Ctrl1_NTEM_filename_d), index=False)
+        QS606_working_d.to_csv(os.path.join(SOC_file_path, SOC_filename), index=False)
+        QS609_working_d.to_csv(os.path.join(NSSEC_file_path, NSSEC_filename), index=False)
+        QS401_working_d.to_csv(os.path.join(DT_file_path, DT_filename), index=False)
+        seed_d.to_csv(os.path.join(seed_file_path, seed_filename), index=False)
+        Ctrl1_NTEM_d.to_csv(os.path.join(NTEM_file_path, Ctrl1_NTEM_filename), index=False)
 
         # Print out every tenth row to check on progress
         if district / 10 == district // 10:
@@ -1091,12 +1106,51 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
     QS_check_totals = pd.merge(QS_check_totals, Ctrl1_NTEM_zonal,
                                left_on = 'z', right_on = 'z', how = 'left')
 
-    os.chdir(Output_Folder)
-    QS_check_totals.to_csv(r'check_seed+control_totals.csv', index=False)
+    check_output_path = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs'
+    check_output_name = r'check_seed+control_totals.csv'
+    QS_check_totals.to_csv(os.path.join(check_output_path, check_output_name), index=False)
     print('Checks completed and dumped to csv')
 
     census_and_by_lu_obj.state['3.1.2 expand population segmentation'] = 1
     logging.info('3.1.2 expand population segmentation completed')
+
+def ipf_process(
+        seed_path,
+        ctrl_NTEM_p_path,
+        ctrl_dt_p_path,
+        ctrl_NSSEC_p_path,
+        ctrl_SOC_p_path,
+        output_path
+):
+    seed = pd.read_csv(seed_path)
+    # seed_cols = ['z', 'a', 'g', 'h', 'e', 't', 'n', 's', 'population']
+    # seed = seed[seed_cols]
+    ctrl_NTEM_p = pd.read_csv(ctrl_NTEM_p_path)
+    ctrl_dt_p = pd.read_csv(ctrl_dt_p_path)
+    ctrl_NSSEC_p = pd.read_csv(ctrl_NSSEC_p_path)
+    ctrl_SOC_p = pd.read_csv(ctrl_SOC_p_path)
+    # convert heading on population to total
+    # prepare marginals
+    seed.rename(columns={"population": "total"}, inplace=True)
+    ctrl_NTEM_p.rename(columns={"population": "total"}, inplace=True)
+    ctrl_dt_p.rename(columns={"Persons": "total"}, inplace=True)
+    ctrl_NSSEC_p.rename(columns={"Persons": "total"}, inplace=True)
+    ctrl_SOC_p.rename(columns={"Persons": "total"}, inplace=True)
+    ctrl_NTEM_p = ctrl_NTEM_p.groupby(['z', 'ntem_tt'])['total'].sum()
+    ctrl_dt_p = ctrl_dt_p.groupby(['z', 't'])['total'].sum()
+    ctrl_NSSEC_p = ctrl_NSSEC_p.groupby(['z', 'n'])['total'].sum()
+    ctrl_SOC_p = ctrl_SOC_p.groupby(['z', 's'])['total'].sum()
+    marginals = [ctrl_NTEM_p, ctrl_dt_p, ctrl_NSSEC_p,  ctrl_SOC_p]
+    furnessed_df, iters, conv = ipfn.ipf_dataframe(
+        seed_df=seed,
+        target_marginals=marginals,
+        value_col="total",
+        max_iterations=5000,
+        tol=1e-9,
+        min_tol_rate=1e-9,
+        show_pbar=False)
+    # logging.info('The iteration and convergence for district ' + dist_str + ' is: ', iters, conv)
+    furnessed_df.to_csv(output_path, index=False)
 
 def ipfn_process_2011(census_and_by_lu_obj):
     # TODO: Is this slow or not?
@@ -1119,151 +1173,88 @@ def ipfn_process_2011(census_and_by_lu_obj):
     # Note that these should be in range 1 to 313 inclusive
     # Setting range to 1 -> 313 inclusive will run ipfn on everything
     # In reality, use the Jupyter notebooks in parallel as mentioned above
-    min_d = 1
-    max_d = 313
 
-    # Set read in/out paths
-    ModelName = "NorMITs"
-    Output_Folder = r'I:\NorMITs Land Use\import\2011 Census Furness\03 Output'
-    seed_path_start = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\01 Seed Files\2011_NorMITs_seed_d'
-    ctrl_NTEM_p_path_start = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\02 Ctrl1 NTEM Control Files\2011_NorMITs_Ctrl1_NTEM_d'
-    ctrl_dt_p_path_start = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\05 DT Control Files\2011_NorMITs_Ctrl_DT_d'
-    ctrl_NSSEC_p_path_start = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\04 NSSEC Control Files\2011_NorMITs_Ctrl_NSSEC_d'
-    ctrl_SOC_p_path_start = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\03 SOC Control Files\2011_NorMITs_Ctrl_SOC_d'
-    # Review paths for these
-    t_ntemtt_code_path = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\06 Lookups\t_ntemtt_code.csv'
-    n_t_ntemtt_code_path = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\06 Lookups\n_t_ntemtt_code.csv'
-    t_ntemtt_code = pd.read_csv(t_ntemtt_code_path)
-    n_t_ntemtt_code = pd.read_csv(n_t_ntemtt_code_path)
+    start = 1
+    end = 313
+    # Output_Folder = r'I:\NorMITs Land Use\import\2011 Census Furness\03 Output'
+    # seed_path_start = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\01 Seed Files\2011_NorMITs_seed_d'
+    # ctrl_NTEM_p_path_start = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\02 Ctrl1 NTEM Control Files\2011_NorMITs_Ctrl1_NTEM_d'
+    # ctrl_dt_p_path_start = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\05 DT Control Files\2011_NorMITs_Ctrl_DT_d'
+    # ctrl_NSSEC_p_path_start = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\04 NSSEC Control Files\2011_NorMITs_Ctrl_NSSEC_d'
+    # ctrl_SOC_p_path_start = r'I:\NorMITs Land Use\import\2011 Census Furness\01 Inputs\03 SOC Control Files\2011_NorMITs_Ctrl_SOC_d'
 
-    # Run through the districts specified above in a for loop
-    # Note the 3 ipfn process in each iteration of the loop due to the 3 dimensions that need fitting
-    # TODO: Multi-processing
-    # TODO: Replace with native numpy ndim ipfn
-    # TODO: Psketti code
-    for district in range(min_d, max_d):
-        dist_str = str(district)
-        print('Working on District', dist_str)
-        # ----- Format input data ------
-        seed_path = '_'.join([seed_path_start, dist_str, 'v0.1.csv'])
-        ctrl_NTEM_p_path = '_'.join([ctrl_NTEM_p_path_start, dist_str, 'v0.1.csv'])
-        ctrl_dt_p_path = '_'.join([ctrl_dt_p_path_start, dist_str, 'v0.1.csv'])
-        ctrl_NSSEC_p_path = '_'.join([ctrl_NSSEC_p_path_start, dist_str, 'v0.1.csv'])
-        ctrl_SOC_p_path = '_'.join([ctrl_SOC_p_path_start, dist_str, 'v0.1.csv'])
-        seed = pd.read_csv(seed_path)
-        ctrl_NTEM_p = pd.read_csv(ctrl_NTEM_p_path)
-        ctrl_dt_p = pd.read_csv(ctrl_dt_p_path)
-        ctrl_NSSEC_p = pd.read_csv(ctrl_NSSEC_p_path)
-        ctrl_SOC_p = pd.read_csv(ctrl_SOC_p_path)
-        # convert heading on population to total
-        seed.rename(columns={"population": "total"}, inplace=True)
-        ctrl_NTEM_p.rename(columns={"population": "total"}, inplace=True)
-        ctrl_dt_p.rename(columns={"Persons": "total"}, inplace=True)
-        ctrl_NSSEC_p.rename(columns={"Persons": "total"}, inplace=True)
-        ctrl_SOC_p.rename(columns={"Persons": "total"}, inplace=True)
-        ctrl_NTEM_p = ctrl_NTEM_p.groupby(['z', 'ntem_tt'])['total'].sum()
-        ctrl_dt_p = ctrl_dt_p.groupby(['z', 't'])['total'].sum()
-        ctrl_NSSEC_p = ctrl_NSSEC_p.groupby(['z', 'n'])['total'].sum()
-        ctrl_SOC_p = ctrl_SOC_p.groupby(['z', 's'])['total'].sum()
-
-        # ----- ROUND 1 ------
-        print('Round 1')
-        aggregates = [ctrl_NTEM_p, ctrl_dt_p]
-        dimensions = [['z', 'ntem_tt'], ['z', 't']]
-        IPF = ipfn.ipfn(seed, aggregates, dimensions, convergence_rate=0.001)
-        seed = IPF.iteration()
-        ntem_p = seed.groupby(['z', 'ntem_tt'])['total'].sum()
-        dt_p = seed.groupby(['z', 't'])['total'].sum()
-
-        # ----- ROUND 2 ------
-        print('Round 2')
-        Popby_NTEMsegs_dt = seed.groupby(['z', 't', 'ntem_tt'])['total'].sum()
-        ctrl_NTEMsegs_plus_dt = pd.DataFrame(Popby_NTEMsegs_dt)
-        ctrl_NTEMsegs_plus_dt['z'] = ctrl_NTEMsegs_plus_dt.index.get_level_values(0)
-        ctrl_NTEMsegs_plus_dt['t'] = ctrl_NTEMsegs_plus_dt.index.get_level_values(1)
-        ctrl_NTEMsegs_plus_dt['ntem_tt'] = ctrl_NTEMsegs_plus_dt.index.get_level_values(2)
-        ctrl_NTEMsegs_plus_dt['t_ntemtt'] = ctrl_NTEMsegs_plus_dt['t'].astype(str) + "_" + ctrl_NTEMsegs_plus_dt[
-            'ntem_tt'].astype(str)
-        ctrl_NTEMsegs_plus_dt = ctrl_NTEMsegs_plus_dt.merge(t_ntemtt_code, how='left', on='t_ntemtt')
-        ctrl_NTEMsegs_plus_dt_cols = ['z', 't_ntemtt_code', 'total']
-        ctrl_NTEMsegs_plus_dt = ctrl_NTEMsegs_plus_dt[ctrl_NTEMsegs_plus_dt_cols]
-        ctrl_NTEMsegs_plus_dt = ctrl_NTEMsegs_plus_dt.rename(columns={'t_ntemtt_code': 't_ntemtt'})
-        ctrl_NTEM_dt_p = ctrl_NTEMsegs_plus_dt.groupby(['z', 't_ntemtt'])['total'].sum()
-        seed['t_ntemtt'] = seed['t'].astype(str) + "_" + seed['ntem_tt'].astype(str)
-        seed = seed.merge(t_ntemtt_code, how='left', on='t_ntemtt')
-        seed_cols = ['z', 't_ntemtt_code', 'n', 's', 'total']
-        seed = seed[seed_cols]
-        seed = seed.rename(columns={'t_ntemtt_code': 't_ntemtt'})
-        aggregates = [ctrl_NTEM_dt_p, ctrl_NSSEC_p]
-        dimensions = [['z', 't_ntemtt'], ['z', 'n']]
-        IPF = ipfn.ipfn(seed, aggregates, dimensions, convergence_rate=0.001)
-        seed = IPF.iteration()
-        t_ntem_p = seed.groupby(['z', 't_ntemtt'])['total'].sum()
-        nssec_p = seed.groupby(['z', 'n'])['total'].sum()
-
-        # ----- ROUND 3 ------
-        print('Round 3')
-        Popby_NTEMsegsdt_plus_nssec = seed.groupby(['z', 'n', 't_ntemtt'])['total'].sum()
-        ctrl_NTEMsegsdt_plus_nssec = pd.DataFrame(Popby_NTEMsegsdt_plus_nssec)
-        ctrl_NTEMsegsdt_plus_nssec['z'] = ctrl_NTEMsegsdt_plus_nssec.index.get_level_values(0)
-        ctrl_NTEMsegsdt_plus_nssec['n'] = ctrl_NTEMsegsdt_plus_nssec.index.get_level_values(1)
-        ctrl_NTEMsegsdt_plus_nssec['t_ntemtt'] = ctrl_NTEMsegsdt_plus_nssec.index.get_level_values(2)
-        ctrl_NTEMsegsdt_plus_nssec['n_t_ntemtt'] = ctrl_NTEMsegsdt_plus_nssec['n'].astype(str) + "_" + \
-                                                   ctrl_NTEMsegsdt_plus_nssec['t_ntemtt'].astype(str)
-        ctrl_NTEMsegsdt_plus_nssec = ctrl_NTEMsegsdt_plus_nssec.merge(n_t_ntemtt_code, how='left', on='n_t_ntemtt')
-        ctrl_NTEMsegsdt_plus_nssec_cols = ['z', 'n_t_ntemtt_code', 'total']
-        ctrl_NTEMsegsdt_plus_nssec = ctrl_NTEMsegsdt_plus_nssec[ctrl_NTEMsegsdt_plus_nssec_cols]
-        ctrl_NTEMsegsdt_plus_nssec = ctrl_NTEMsegsdt_plus_nssec.rename(columns={'n_t_ntemtt_code': 'n_t_ntemtt'})
-        ctrl_NTEM_dt_nssec_p = ctrl_NTEMsegsdt_plus_nssec.groupby(['z', 'n_t_ntemtt'])['total'].sum()
-        seed['n_t_ntemtt'] = seed['n'].astype(str) + "_" + seed['t_ntemtt'].astype(str)
-        seed = seed.merge(n_t_ntemtt_code, how='left', on='n_t_ntemtt')
-        seed_cols = ['z', 'n_t_ntemtt_code', 's', 'total']
-        seed = seed[seed_cols]
-        seed = seed.rename(columns={'n_t_ntemtt_code': 'n_t_ntemtt'})
-        aggregates = [ctrl_NTEM_dt_nssec_p, ctrl_SOC_p]
-        dimensions = [['z', 'n_t_ntemtt'], ['z', 's']]
-        IPF = ipfn.ipfn(seed, aggregates, dimensions, convergence_rate=0.001)
-        seed = IPF.iteration()
-
-        # ----- OUTPUT -----
-        print('Writing output files...')
-        os.chdir(Output_Folder)
-        output_filename = '_'.join([dist_str, 'furnessed_2011Pop.csv'])
-        seed.to_csv(output_filename, index=False)
+    # # Run through the districts specified above in a for loop
+    # # Note the 3 ipfn process in each iteration of the loop due to the 3 dimensions that need fitting
+    # # TODO: Multi-processing
+    # # TODO: Replace with native numpy ndim ipfn
+    # # TODO: Psketti code
+    # kwarg_list = list()
+    # for district_num in range(start, end+1):
+    #     dist_str = str(district_num)
+    #     print('Working on District', dist_str)
+    #     # ----- Format input data ------
+    #     seed_path = '_'.join([seed_path_start, dist_str, 'v0.1.csv'])
+    #     ctrl_NTEM_p_path = '_'.join([ctrl_NTEM_p_path_start, dist_str, 'v0.1.csv'])
+    #     ctrl_dt_p_path = '_'.join([ctrl_dt_p_path_start, dist_str, 'v0.1.csv'])
+    #     ctrl_NSSEC_p_path = '_'.join([ctrl_NSSEC_p_path_start, dist_str, 'v0.1.csv'])
+    #     ctrl_SOC_p_path = '_'.join([ctrl_SOC_p_path_start, dist_str, 'v0.1.csv'])
+    #     output_filename = '_'.join([dist_str, 'furnessed_2011Pop.csv'])
+    #     output_path = os.path.join(Output_Folder, output_filename)
+    #
+    #     kwarg_list.append({
+    #         "seed_path": seed_path,
+    #         "ctrl_NTEM_p_path": ctrl_NTEM_p_path,
+    #         "ctrl_dt_p_path": ctrl_dt_p_path,
+    #         "ctrl_NSSEC_p_path": ctrl_NSSEC_p_path,
+    #         "ctrl_SOC_p_path": ctrl_SOC_p_path,
+    #         "output_path": output_path,
+    #     })
+    #
+    # concurrency.multiprocess(
+    #     fn=ipf_process,
+    #     kwarg_list=kwarg_list,
+    #     pbar_kwargs={"disable": False}
+    # )
 
     # Read the IPFN output files back in,
     # processes them into a single df and calculates f for 2011,
     # then saves out a compressed file with the results
 
     # Set read in/out variables
-    n_t_ntemtt_lookup = pd.read_csv(r'Lookups\lookup_n_t_ntemtt_to_aghetns.csv')
-    output_directory = 'Outputs'
+    lookup_directory = r'I:\NorMITs Land Use\import\2011 Census Furness\04 Post processing\Lookups'
+    z2d2r_lookup_file = r'lookup_geography_z2d2r.csv'
+    n_t_ntemtt_lookup_file = r'lookup_ntemtt_to_aghe.csv'
+    n_t_ntemtt_lookup = pd.read_csv(os.path.join(lookup_directory, n_t_ntemtt_lookup_file))
+    z2d2r_lookup = pd.read_csv(os.path.join(lookup_directory, z2d2r_lookup_file))[['z', 'd']]
+    output_directory = r'I:\NorMITs Land Use\import\2011 Census Furness\04 Post processing\Outputs'
     model_name = 'NorMITs'
     model_year = '2011'
     input_directory = r'I:\NorMITs Land Use\import\2011 Census Furness\03 Output\\'
     input_filename = r'_furnessed_2011Pop.csv'
     # Edit these parameters to only read in part of the dataset as a test
-    start_reading_ipfn_output = 1
-    files_to_read_in = 313
+
 
     list_of_df = []
     # Loop over all districts and append to a master df.
-    for district in range(start_reading_ipfn_output, files_to_read_in + 1):
+    for district in range(start, end+1):
         dist_str = str(district)
         input_path = [input_directory, dist_str, input_filename]
         input_df = pd.read_csv(''.join(input_path))
         list_of_df.append(input_df)
-    print('All', str(files_to_read_in), 'files read in ok')
+    print('All', str(end), 'files read in ok')
     furnessed_df = pd.concat(list_of_df, axis=0, ignore_index=True)
 
     # Process to get f
     # Join the n_t_ntem_tt lookup and tidy
-    expanded_furnessed_df = pd.merge(furnessed_df,
+    expanded_furnessed_df = furnessed_df.copy()
+    expanded_furnessed_df = pd.merge(expanded_furnessed_df,
                                      n_t_ntemtt_lookup,
                                      how='left',
-                                     left_on='n_t_ntemtt',
-                                     right_on='n_t_ntemtt_code')
-    expanded_furnessed_df = expanded_furnessed_df.drop(columns=['n_t_ntemtt_x'])
+                                     on='ntem_tt')
+    expanded_furnessed_df = pd.merge(expanded_furnessed_df,
+                                     z2d2r_lookup,
+                                     how='left',
+                                     on='z')
     # Create P grouped by zone and a, g, h, e
     # Then reapply this to the main df and tidy
     grouped_P_df = expanded_furnessed_df.groupby(['z', 'a', 'g', 'h', 'e']
@@ -1274,7 +1265,7 @@ def ipfn_process_2011(census_and_by_lu_obj):
                                      how='left',
                                      on=['z', 'a', 'g', 'h', 'e'])
     expanded_furnessed_df = expanded_furnessed_df.rename(
-        columns={'total': 'P_zaghetns', 'n_t_ntemtt_y': 'n_t_ntemtt'})
+        columns={'total': 'P_zaghetns'})
     # Calculate f
     expanded_furnessed_df['f_tns|zaghe'] = expanded_furnessed_df['P_zaghetns'] / expanded_furnessed_df['P_zaghe']
 

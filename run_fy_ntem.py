@@ -5,9 +5,9 @@ import pandas as pd
 import os
 def main():
 
-    run_ntem = False
+    run_ntem = True
     join_ntem = False
-    extrapolate = True
+    extrapolate = False
 
     iteration = 'iter4m'
     by = '2018'
@@ -17,8 +17,8 @@ def main():
     ntem_2018_2070_file_name = r'I:\NorMITs Land Use\import\CTripEnd\All_year\ntem_gb_z_ntem_tt_allyear_pop.csv.bz2'
     ## scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
     # scenarios = ['Regional Scenario', 'High', 'Low']
-    # CAS_scen = ['CASReg', 'CASLo','CASHi']
-    all_ntem_fy = range(2019, 2052)
+    # CAS_scen = ['CASReg', 'CASHi', 'CASLo', 'Central']
+    all_ntem_fy = range(2018, 2051+1)
     # all_fy = range(2019, 2071)
     ntem_fy_extra = range(2052, 2071)
     ntem_future_years = list()

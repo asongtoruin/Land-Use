@@ -11,7 +11,8 @@ import pandas as pd
 
 starting_dir = os.getcwd()
 ModelYear = '2018'
-iteration = 'iter4m'
+iteration = 'iter4q'
+import_dir = r'I:\NorMITs Land Use\import\2011 Census Furness\04 Post processing\Outputs'
 process_working_dir = os.path.join(r'I:\NorMITs Land Use\base_land_use', iteration, '01 Process')
 audit_working_dir = os.path.join(r'I:\NorMITs Land Use\base_land_use', iteration, '02 Audits')
 output_working_dir = os.path.join(r'I:\NorMITs Land Use\base_land_use', iteration, '03 Outputs')
@@ -20,8 +21,8 @@ run_check_326 = False
 run_check_327 = False
 run_check_328 = False
 run_check_3210 = False
-run_check_3211 = False
-run_check_3212 = True
+run_check_3211 = True
+run_check_3212 = False
 
 manchester_zones = ['E02001045', 'E02001046', 'E02001047', 'E02001048', 'E02001049', 'E02001050', 'E02001051',
                     'E02001052', 'E02001053', 'E02001055', 'E02001056', 'E02001057', 'E02001059', 'E02001061',
@@ -35,6 +36,10 @@ manchester_zones = ['E02001045', 'E02001046', 'E02001047', 'E02001048', 'E020010
 
 manchester_la = ['E08000003']
 
+# def check_f():
+#     print('running check_f from census2011 pop process')
+#     s_f_testfile = os.path.join(import_dir, 'NorMITs_2011_post_ipfn_f_values.csv')
+#     s_f = pd.read_csv(s_f_testfile)
 
 def check_326():
     print('running check_326')
@@ -76,11 +81,11 @@ def check_328():
 
 def check_3210():
     print('running check_3210')
-    s3210_testfile = os.path.join(''.join(['output_3_resi_gb_lad_msoa_tfn_tt_agg_prt_', ModelYear, '_hh_pop']))
+    s3210_testfile = os.path.join(''.join(['output_3_gb_zonal_tfntt_t', ModelYear, 'hh_pop']))
     s3210_data = compress.read_in(s3210_testfile)
     manchester_s3210_data = s3210_data[s3210_data['2021_LA_code'].isin(manchester_la)]
-    manchester_s3210_dump_path = os.path.join(''.join(['output_3_resi_manchester_lad_msoa_tfn_tt_agg_prt_', ModelYear, '_hh_pop.csv']))
-    s3210_data_dump_path = os.path.join(''.join(['output_3_resi_lad_msoa_tfn_tt_agg_prt_', ModelYear, '_hh_pop.csv']))
+    manchester_s3210_dump_path = os.path.join(''.join(['output_3_manchester_lad_msoa_tfntt_t_', ModelYear, '_hh_pop.csv']))
+    s3210_data_dump_path = os.path.join(''.join(['output_3_lad_msoa_tfntt_t_', ModelYear, '_hh_pop.csv']))
     print('dumping to csv')
     manchester_s3210_data.to_csv(manchester_s3210_dump_path, index=False)
     s3210_data.to_csv(s3210_data_dump_path, index=False)
@@ -90,21 +95,21 @@ def check_3210():
 
 def check_3211():
     print('running check_3211')
-    s3211_testfile = os.path.join(''.join(['output_6_resi_gb_msoa_tfn_tt_prt_', ModelYear, '_pop']))
+    s3211_testfile = os.path.join(''.join(['output_5_gb_msoa_tfntt_t_', ModelYear, '_tot_pop']))
     s3211_data = compress.read_in(s3211_testfile)
     manchester_s3211_data = s3211_data[s3211_data['2021_LA_Name'].isin(['Manchester'])]
-    manchester_s3211_dump_path = os.path.join(''.join(['output_6_resi_manchester_msoa_tfn_tt_prt_',
+    manchester_s3211_dump_path = os.path.join(''.join(['output_6_manchester_msoa_tfntt_t_',
                                                        ModelYear, '_pop.csv']))
-    s3211_dump_path = os.path.join(''.join(['output_6_resi_gb_msoa_tfn_tt_prt_',
+    s3211_dump_path = os.path.join(''.join(['output_5_gb_msoa_tfntt_t_',
                                                        ModelYear, '_pop.csv']))
     print('dumping to csv')
     manchester_s3211_data.to_csv(manchester_s3211_dump_path, index=False)
-    s3211_data.to_csv(s3211_dump_path, index=False)
+    # s3211_data.to_csv(s3211_dump_path, index=False)
     print(manchester_s3211_data)
 
 def check_3212():
     print('running check_3212')
-    s3212_testfile = os.path.join(''.join(['output_8_DDG_resi_gb_msoa_tfn_tt_prt_', ModelYear, '_pop']))
+    s3212_testfile = os.path.join(''.join(['output_7_DDG_gb_msoa_tfntt_t_', ModelYear, '_pop']))
     s3212_data = compress.read_in(s3212_testfile)
     manchester_s3212_data = s3212_data[s3212_data['2013_LA_code'].isin(manchester_la)]
     manchester_s3212_dump_path = os.path.join(''.join(['output_8_DDG_resi_manchester_msoa_tfn_tt_prt_',
