@@ -1,0 +1,10 @@
+name: normits_lu
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - caf.toolkit=0.0.7
+  - pandas=1.5
+  - psycopg2=2.9
+  - pydantic=1.10
+  - python=3.10
