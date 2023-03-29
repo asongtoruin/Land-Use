@@ -2,12 +2,16 @@
 """Main module for performing ABP processing and analysis."""
 
 # Built-Ins
+from __future__ import annotations
+
 import datetime as dt
 import logging
 import pathlib
+from typing import Optional
 
 # Third Party
 import pandas as pd
+from psycopg2 import sql
 
 # Local Imports
 from land_use.abp_processing import config, database
@@ -60,56 +64,101 @@ def _initialise_logger(log_file: pathlib.Path) -> None:
     LOG.info("Initialised log file: %s", log_file)
 
 
-def testing_stuff(database_connection_parameters: database.ConnectionParameters, output_folder: pathlib.Path) -> None:
+def query_to_csv(
+    connected_db: database.Database,
+    query: str,
+    columns: list[str],
+    output_file: pathlib.Path,
+    query_params: Optional[tuple] = None,
+) -> pd.DataFrame:
+    data = connected_db.query_to_dataframe(query, columns, query_params)
+    data.to_csv(output_file, index=False)
+    LOG.info("Written: %s", output_file)
+
+
+def testing_stuff(
+    database_connection_parameters: database.ConnectionParameters,
+    output_folder: pathlib.Path,
+) -> None:
     # TODO(MB) Remove function for testing methodology
 
-    connected_db = database.ABPDatabase(database_connection_parameters)
+    with database.Database(database_connection_parameters) as connected_db:
 
-    LOG.info("Fetching table names")
-    connected_db.cursor.execute(
-        r"""
-        SELECT table_name
-            FROM information_schema.tables
-        """
-    )
+        LOG.info("Fetching table names")
+        columns = ["table_name", "table_type", "table_schema"]
+        query = sql.SQL(
+            r"""
+            SELECT {}
+                FROM information_schema.tables
+                WHERE table_type = 'BASE TABLE'
+                    AND table_schema NOT IN ('pg_catalog', 'information_schema', 'sde');
+            """
+        )
+        query_to_csv(
+            connected_db,
+            query.format(sql.SQL(",").join(sql.Identifier(i) for i in columns)),
+            columns,
+            output_folder / "database_tables.csv",
+        )
 
-    tables = "\n".join(" | ".join(i) for i in connected_db.cursor.fetchall())
-    LOG.info("Fetched table names\n%s", tables)
+        LOG.info("Fetching table schemas")
+        columns = ["table_name", "column_name", "is_nullable", "data_type"]
+        query = sql.SQL(
+            r"""
+            SELECT {}
+                FROM information_schema.columns
+                WHERE table_name IN (
+                    SELECT table_name
+                        FROM information_schema.tables
+                        WHERE table_type = 'BASE TABLE'
+                            AND table_schema NOT IN ('pg_catalog', 'information_schema', 'sde')
+                );
+            """
+        )
+        query_to_csv(
+            connected_db,
+            query.format(sql.SQL(",").join(sql.Identifier(i) for i in columns)),
+            columns,
+            output_folder / "database_table_columns.csv",
+        )
 
-    postcode = "CW12%"
-    classification_code = "CR%"
-    blpu_state = 2
-    sql = """
-    SELECT postcode_locator, abp_blpu.logical_status,
-        abp_blpu.blpu_state, string_agg (
-            distinct abp_classification.classification_code,
-            ' ' order by abp_classification.classification_code
-        ) as classy_code, abp_street_descriptor.street_description,
-        abp_blpu.latitude, abp_blpu.longitude
+        raise SystemExit()
 
-        FROM abp_blpu
-        JOIN abp_classification ON abp_blpu.UPRN=abp_classification.UPRN
-        JOIN abp_lpi ON abp_blpu.UPRN=abp_lpi.UPRN
-        JOIN abp_street_descriptor ON abp_lpi.USRN=abp_street_descriptor.USRN
-            AND class_scheme LIKE 'AddressBase Premium Classification Scheme'
-        
-        WHERE postcode_locator LIKE %s ESCAPE ''
-            AND classification_code LIKE %s ESCAPE ''
-            AND blpu_state= %s
+        postcode = "CW12%"
+        classification_code = "CR%"
+        blpu_state = 2
+        query = """
+        SELECT postcode_locator, abp_blpu.logical_status,
+            abp_blpu.blpu_state, string_agg (
+                distinct abp_classification.classification_code,
+                ' ' order by abp_classification.classification_code
+            ) as classy_code, abp_street_descriptor.street_description,
+            abp_blpu.latitude, abp_blpu.longitude
+
+            FROM abp_blpu
+            JOIN abp_classification ON abp_blpu.UPRN=abp_classification.UPRN
+            JOIN abp_lpi ON abp_blpu.UPRN=abp_lpi.UPRN
+            JOIN abp_street_descriptor ON abp_lpi.USRN=abp_street_descriptor.USRN
+                AND class_scheme LIKE 'AddressBase Premium Classification Scheme'
             
-        GROUP BY postcode_locator, abp_blpu.logical_status,
-            abp_blpu.blpu_state, abp_street_descriptor.street_description,
-            abp_blpu.latitude, abp_blpu.longitude;
-    """
+            WHERE postcode_locator LIKE %s ESCAPE ''
+                AND classification_code LIKE %s ESCAPE ''
+                AND blpu_state= %s
+                
+            GROUP BY postcode_locator, abp_blpu.logical_status,
+                abp_blpu.blpu_state, abp_street_descriptor.street_description,
+                abp_blpu.latitude, abp_blpu.longitude
+                
+            LIMIT 100;
+        """
 
+        LOG.info("Extracting ABP data")
+        connected_db.cursor.execute(query, (postcode, classification_code, blpu_state))
 
-    LOG.info("Extracting ABP data")
-    connected_db.cursor.execute(sql, (postcode, classification_code, blpu_state))
-    
-    data = pd.DataFrame(connected_db.cursor.fetchall())
-    output_path = output_folder / "ABP_data.csv"
-    data.to_csv(output_path)
-    LOG.info("Written: %s", output_path)
+        data = pd.DataFrame(connected_db.cursor.fetchall())
+        output_path = output_folder / "ABP_data.csv"
+        data.to_csv(output_path)
+        LOG.info("Written: %s", output_path)
 
 
 def main(parameters: config.ABPConfig) -> None:

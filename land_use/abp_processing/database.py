@@ -5,9 +5,12 @@
 # Standard imports
 from __future__ import annotations
 import logging
+from typing import Any, Mapping, Sequence, TypeAlias
 
 # Third party imports
+import pandas as pd
 import psycopg2
+from psycopg2 import sql
 from pydantic import dataclasses
 
 # Local imports
@@ -16,8 +19,14 @@ from pydantic import dataclasses
 LOG = logging.getLogger(__name__)
 
 ##### CLASSES #####
-@dataclasses.dataclass
+_Query: TypeAlias = str | sql.SQL
+_Vars: TypeAlias = Sequence[Any] | Mapping[str, Any] | None
+
+
+@dataclasses.dataclass  # pylint: disable=c-extension-no-member
 class ConnectionParameters:
+    """Parameters for connecting to the PostgreSQL database."""
+
     database: str
     user: str
     password: str
@@ -25,7 +34,8 @@ class ConnectionParameters:
     port: int
 
 
-class ABPDatabase:
+class Database:
+    """Manage connection and access to a PostgreSQL database."""
 
     def __init__(self, parameters: ConnectionParameters) -> None:
         self._connection = self._connect(parameters)
@@ -38,13 +48,13 @@ class ABPDatabase:
             password=parameters.password,
             host=parameters.host,
             port=parameters.port,
-            options="-c search_path=dbo,data_common"
+            options="-c search_path=dbo,data_common",
         )
         LOG.info("Connected to database: %s", parameters.database)
 
         return connection
 
-    def __enter__(self) -> ABPDatabase:
+    def __enter__(self) -> Database:
         """Initialise ABPDatabase."""
         return self
 
@@ -59,11 +69,23 @@ class ABPDatabase:
 
     @property
     def connection(self) -> psycopg2.connection:
+        """PostgreSQL database connection."""
         return self._connection
 
-    @property
-    def cursor(self) -> psycopg2.cursor:
-        return self._cursor
+    def execute(self, query: _Query, vars_: _Vars = None) -> None:
+        """Execute `query` on database."""
+        self._cursor.execute(query, vars_)
+
+    def query_fetch(self, query: _Query, vars_: _Vars = None) -> list[tuple[Any]]:
+        """Query database and return all rows found."""
+        self.execute(query, vars_)
+        return self._cursor.fetchall()
+
+    def query_to_dataframe(
+        self, query: _Query, columns: list[str], query_vars: _Vars = None
+    ) -> pd.DataFrame:
+        """Query database and convert rows to DataFrame."""
+        return pd.DataFrame(self.query_fetch(query, query_vars), columns=columns)
 
 
 ##### FUNCTIONS #####
