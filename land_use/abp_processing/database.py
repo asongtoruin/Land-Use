@@ -32,16 +32,22 @@ class ConnectionParameters:
     password: str
     host: str
     port: int
+    application_name: str | None = None
 
 
 class Database:
     """Manage connection and access to a PostgreSQL database."""
 
     def __init__(self, parameters: ConnectionParameters) -> None:
+        self._parameters = parameters
         self._connection = self._connect(parameters)
         self._cursor = self._connection.cursor()
 
     def _connect(self, parameters: ConnectionParameters) -> psycopg2.connection:
+        app_name = parameters.application_name
+        if app_name is None:
+            app_name = __name__
+
         connection = psycopg2.connect(
             database=parameters.database,
             user=parameters.user,
@@ -49,13 +55,14 @@ class Database:
             host=parameters.host,
             port=parameters.port,
             options="-c search_path=dbo,data_common",
+            application_name=app_name,
         )
         LOG.info("Connected to database: %s", parameters.database)
 
         return connection
 
     def __enter__(self) -> Database:
-        """Initialise ABPDatabase."""
+        """Initialise Database."""
         return self
 
     def __exit__(self, excepType, excepVal, traceback) -> None:
@@ -74,6 +81,11 @@ class Database:
 
     def execute(self, query: _Query, vars_: _Vars = None) -> None:
         """Execute `query` on database."""
+        LOG.debug(
+            "Executing query on %s:\n%s",
+            self._parameters.database,
+            self._cursor.mogrify(query, vars=vars_).decode(),
+        )
         self._cursor.execute(query, vars_)
 
     def query_fetch(self, query: _Query, vars_: _Vars = None) -> list[tuple[Any]]:
@@ -82,10 +94,13 @@ class Database:
         return self._cursor.fetchall()
 
     def query_to_dataframe(
-        self, query: _Query, columns: list[str], query_vars: _Vars = None
+        self, query: _Query, query_vars: _Vars = None
     ) -> pd.DataFrame:
         """Query database and convert rows to DataFrame."""
-        return pd.DataFrame(self.query_fetch(query, query_vars), columns=columns)
+        return pd.DataFrame(
+            self.query_fetch(query, query_vars),
+            columns=[desc[0] for desc in self._cursor.description],
+        )
 
 
 ##### FUNCTIONS #####

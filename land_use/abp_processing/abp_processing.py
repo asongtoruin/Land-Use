@@ -67,13 +67,90 @@ def _initialise_logger(log_file: pathlib.Path) -> None:
 def query_to_csv(
     connected_db: database.Database,
     query: str,
-    columns: list[str],
     output_file: pathlib.Path,
     query_params: Optional[tuple] = None,
 ) -> pd.DataFrame:
-    data = connected_db.query_to_dataframe(query, columns, query_params)
+    data = connected_db.query_to_dataframe(query, query_params)
     data.to_csv(output_file, index=False)
     LOG.info("Written: %s", output_file)
+
+
+def voa_code_count(connected_db: database.Database, output_folder: pathlib.Path):
+    LOG.info("Counting ABP classification codes")
+    query = """
+    SELECT class_scheme, count(*) AS "count"
+        FROM data_common.abp_classification
+        GROUP BY class_scheme;
+    """
+    class_counts = connected_db.query_to_dataframe(query)
+    class_counts.loc[:, "perc_count"] = (
+        class_counts["count"] / class_counts["count"].sum()
+    )
+    class_counts = class_counts.set_index("class_scheme")
+
+    query = """
+    SELECT classification_code AS voa_scat_code, count(*) AS "count"
+        FROM data_common.abp_classification
+        WHERE class_scheme = 'VOA Special Category'
+        GROUP BY classification_code;
+    """
+    scat_counts = connected_db.query_to_dataframe(query)
+    scat_counts.loc[:, "perc_count"] = scat_counts["count"] / scat_counts["count"].sum()
+    scat_counts = scat_counts.set_index("voa_scat_code")
+
+    excel_path = output_folder / "ABP_SCAT_counts.xlsx"
+    # pylint: disable=abstract-class-instantiated
+    with pd.ExcelWriter(excel_path) as excel:
+        # pylint: ensable=abstract-class-instantiated
+        class_counts.to_excel(excel, sheet_name="Class Counts")
+        scat_counts.to_excel(excel, sheet_name="SCAT Counts")
+    LOG.info("Written: %s", excel_path)
+
+
+def get_warehouses(connected_db: database.Database, output_folder: pathlib.Path):
+    query = """
+    SELECT cl.*, cr.cross_reference, mm.descriptiveterm,
+        mm.wkb_geometry, mm.calculatedareavalue AS area
+
+    FROM (
+        SELECT uprn, classification_code AS "scat_code", start_date
+            end_date, last_update_date, entry_date
+        FROM data_common.abp_classification
+        WHERE class_scheme = 'VOA Special Category'
+            AND classification_code IN ('217', '267')
+    ) cl
+
+    LEFT JOIN (
+        SELECT uprn, cross_reference
+        FROM data_common.abp_crossref
+        WHERE "version" IS NOT NULL
+    ) cr ON cl.uprn = cr.uprn
+    
+    LEFT JOIN data_common.mm_topographicarea mm ON cr.cross_reference = mm.fid;
+    """
+    LOG.info("Extracting warehouse geometries")
+    data = connected_db.query_to_dataframe(query)
+    out_file = output_folder / "warehouses.csv"
+    data.to_csv(out_file, index=False)
+    LOG.info("Written: %s", out_file)
+
+
+def get_mmdata(connected_db: database.Database, output_folder: pathlib.Path) -> None:
+    tables = [
+        # "mm_boundaryline",
+        # "mm_cartographicsymbol",
+        # "mm_cartographictext",
+        "mm_topographicarea",
+        "mm_topographicline",
+        "mm_topographicpoint",
+    ]
+    query = sql.SQL("SELECT * FROM {} LIMIT 1000;")
+    for table in tables:
+        LOG.info("Reading %s", table)
+        data = connected_db.query_to_dataframe(query.format(sql.Identifier(table)))
+        out_file = output_folder / f"{table}.csv"
+        data.to_csv(out_file, index=False)
+        LOG.info("Written: %s", out_file)
 
 
 def testing_stuff(
@@ -84,81 +161,9 @@ def testing_stuff(
 
     with database.Database(database_connection_parameters) as connected_db:
 
-        LOG.info("Fetching table names")
-        columns = ["table_name", "table_type", "table_schema"]
-        query = sql.SQL(
-            r"""
-            SELECT {}
-                FROM information_schema.tables
-                WHERE table_type = 'BASE TABLE'
-                    AND table_schema NOT IN ('pg_catalog', 'information_schema', 'sde');
-            """
-        )
-        query_to_csv(
-            connected_db,
-            query.format(sql.SQL(",").join(sql.Identifier(i) for i in columns)),
-            columns,
-            output_folder / "database_tables.csv",
-        )
-
-        LOG.info("Fetching table schemas")
-        columns = ["table_name", "column_name", "is_nullable", "data_type"]
-        query = sql.SQL(
-            r"""
-            SELECT {}
-                FROM information_schema.columns
-                WHERE table_name IN (
-                    SELECT table_name
-                        FROM information_schema.tables
-                        WHERE table_type = 'BASE TABLE'
-                            AND table_schema NOT IN ('pg_catalog', 'information_schema', 'sde')
-                );
-            """
-        )
-        query_to_csv(
-            connected_db,
-            query.format(sql.SQL(",").join(sql.Identifier(i) for i in columns)),
-            columns,
-            output_folder / "database_table_columns.csv",
-        )
-
-        raise SystemExit()
-
-        postcode = "CW12%"
-        classification_code = "CR%"
-        blpu_state = 2
-        query = """
-        SELECT postcode_locator, abp_blpu.logical_status,
-            abp_blpu.blpu_state, string_agg (
-                distinct abp_classification.classification_code,
-                ' ' order by abp_classification.classification_code
-            ) as classy_code, abp_street_descriptor.street_description,
-            abp_blpu.latitude, abp_blpu.longitude
-
-            FROM abp_blpu
-            JOIN abp_classification ON abp_blpu.UPRN=abp_classification.UPRN
-            JOIN abp_lpi ON abp_blpu.UPRN=abp_lpi.UPRN
-            JOIN abp_street_descriptor ON abp_lpi.USRN=abp_street_descriptor.USRN
-                AND class_scheme LIKE 'AddressBase Premium Classification Scheme'
-            
-            WHERE postcode_locator LIKE %s ESCAPE ''
-                AND classification_code LIKE %s ESCAPE ''
-                AND blpu_state= %s
-                
-            GROUP BY postcode_locator, abp_blpu.logical_status,
-                abp_blpu.blpu_state, abp_street_descriptor.street_description,
-                abp_blpu.latitude, abp_blpu.longitude
-                
-            LIMIT 100;
-        """
-
-        LOG.info("Extracting ABP data")
-        connected_db.cursor.execute(query, (postcode, classification_code, blpu_state))
-
-        data = pd.DataFrame(connected_db.cursor.fetchall())
-        output_path = output_folder / "ABP_data.csv"
-        data.to_csv(output_path)
-        LOG.info("Written: %s", output_path)
+        voa_code_count(connected_db, output_folder)
+        get_warehouses(connected_db, output_folder)
+        # get_mmdata(connected_db, output_folder)
 
 
 def main(parameters: config.ABPConfig) -> None:

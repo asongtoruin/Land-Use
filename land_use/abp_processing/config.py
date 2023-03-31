@@ -17,7 +17,9 @@ LOG = logging.getLogger(__name__)
 
 ##### CLASSES #####
 class ABPConfig(config_base.BaseConfig):
-    output_folder: pydantic.DirectoryPath
+    """Parameters for running the Address Base Premium data processing."""
+
+    output_folder: pydantic.DirectoryPath # pylint: disable=no-member
     database_connection_parameters: database.ConnectionParameters
 
 ##### FUNCTIONS #####
