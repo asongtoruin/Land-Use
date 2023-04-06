@@ -49,15 +49,21 @@ Talk to Isaac about using caf.viz libraries to map 'live'
 
 def _initialise_logger(log_file: pathlib.Path) -> None:
     # TODO(MB) Create a more complete class to handle initialising logging
-    streamhandler = logging.StreamHandler()
-    filehandler = logging.FileHandler(log_file)
 
-    logging.basicConfig(
-        level=logging.DEBUG,
-        handlers=[streamhandler, filehandler],
-        format="{asctime} [{levelname:^8.8}] {message}",
-        style="{",
+    logger = logging.getLogger("land_use.abp_processing")
+    logger.setLevel(logging.DEBUG)
+
+    streamhandler = logging.StreamHandler()
+    streamhandler.setFormatter(
+        logging.Formatter("[{levelname:^8.8}] {message}", style="{")
     )
+    logger.addHandler(streamhandler)
+
+    filehandler = logging.FileHandler(log_file)
+    filehandler.setFormatter(
+        logging.Formatter("{asctime} [{levelname:^8.8}] {message}", style="{")
+    )
+    logger.addHandler(filehandler)
     LOG.info("Initialised log file: %s", log_file)
 
 

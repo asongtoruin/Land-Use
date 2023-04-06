@@ -5,7 +5,7 @@
 # Standard imports
 from __future__ import annotations
 import logging
-from typing import Any, Mapping, Sequence, TypeAlias
+from typing import Any, Mapping, Optional, Sequence, Union
 
 # Third party imports
 import pandas as pd
@@ -19,8 +19,8 @@ from pydantic import dataclasses
 LOG = logging.getLogger(__name__)
 
 ##### CLASSES #####
-_Query: TypeAlias = str | sql.SQL
-_Vars: TypeAlias = Sequence[Any] | Mapping[str, Any] | None
+_Query = Union[str, sql.SQL]
+_Vars = Union[Sequence[Any], Mapping[str, Any], None]
 
 
 @dataclasses.dataclass  # pylint: disable=c-extension-no-member
@@ -32,7 +32,7 @@ class ConnectionParameters:
     password: str
     host: str
     port: int
-    application_name: str | None = None
+    application_name: Optional[str] = None
 
 
 class Database:
