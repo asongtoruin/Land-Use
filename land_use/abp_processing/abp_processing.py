@@ -11,7 +11,7 @@ import pathlib
 # Third Party
 
 # Local Imports
-from land_use.abp_processing import config, warehousing
+from land_use.abp_processing import config
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ Talk to Isaac about using caf.viz libraries to map 'live'
 """
 
 
-def _initialise_logger(log_file: pathlib.Path) -> None:
+def initialise_logger(log_file: pathlib.Path) -> None:
     # TODO(MB) Create a more complete class to handle initialising logging
 
     logger = logging.getLogger("land_use.abp_processing")
@@ -73,12 +73,8 @@ def main(parameters: config.ABPConfig) -> None:
     )
     output_folder.mkdir(exist_ok=True)
 
-    _initialise_logger(output_folder / LOG_FILE)
+    initialise_logger(output_folder / LOG_FILE)
     LOG.info("Outputs saved to: %s", output_folder)
-
-    warehousing.extract_warehouses(
-        parameters.database_connection_parameters, output_folder
-    )
 
 
 def _run() -> None:
