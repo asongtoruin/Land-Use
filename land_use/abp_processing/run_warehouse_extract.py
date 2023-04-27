@@ -21,6 +21,7 @@ CONFIG_FILE = pathlib.Path("abp_warehouse_config.yml")
 
 ##### FUNCTIONS #####
 def main(parameters: config.WarehouseConfig) -> None:
+    """Extract warehouse data from ABP database."""
     output_folder = (
         parameters.output_folder / f"{dt.date.today():%Y%m%d} ABP Warehouse Data"
     )

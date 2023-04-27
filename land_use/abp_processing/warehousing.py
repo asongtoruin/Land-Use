@@ -29,6 +29,15 @@ WEB_MERCATOR = "EPSG:4326"
 
 ##### FUNCTIONS #####
 def to_kepler_geojson(geodata: gpd.GeoDataFrame, out_file: pathlib.Path) -> None:
+    """Convert to Web mercator CRS and output to GeoJSON.
+
+    Parameters
+    ----------
+    geodata : gpd.GeoDataFrame
+        Data to output.
+    out_file : pathlib.Path
+        Path to GeoJSON file to create.
+    """
     if out_file.suffix.lower() != ".geojson":
         LOG.warning(
             "Unexpected suffix for saving GeoJSON (%s) using '.geojson' instead",
@@ -43,7 +52,18 @@ def to_kepler_geojson(geodata: gpd.GeoDataFrame, out_file: pathlib.Path) -> None
     LOG.info("Written: %s", out_file)
 
 
-def voa_code_count(connected_db: database.Database, output_folder: pathlib.Path):
+def voa_code_count(
+    connected_db: database.Database, output_folder: pathlib.Path
+) -> None:
+    """Count rows with VOA and ABP codes and output summary spreadsheet.
+
+    Parameters
+    ----------
+    connected_db : database.Database
+        Database to count rows in.
+    output_folder : pathlib.Path
+        Folder to save Excel workbook to.
+    """
     LOG.info("Counting ABP classification codes")
     query = """
     SELECT class_scheme, count(*) AS "count"
@@ -89,6 +109,7 @@ def voa_code_count(connected_db: database.Database, output_folder: pathlib.Path)
 
 
 def _positions_geodata(data: pd.DataFrame, out_file: pathlib.Path) -> gpd.GeoDataFrame:
+    """Convert `data` into GeoDataframe using X / Y coordinate columns."""
     missing = data["x_coordinate"].isna() | data["y_coordinate"].isna()
     if missing.sum() > 0:
         LOG.warning("Missing coordinates for %s rows", missing.sum())
@@ -115,6 +136,18 @@ def get_warehouse_positions(
     output_file: pathlib.Path,
     warehouse_select_query: sql.Composable,
 ) -> gpd.GeoDataFrame:
+    """Select warehouse data and join UPRN coordinates.
+
+    Parameters
+    ----------
+    connected_db : database.Database
+        ABP database to run query on.
+    output_file: pathlib.Path
+        GeoJSON file to save query results to.
+    warehouse_select_query: sql.Composable
+        Query to select warehouse data, must contain a 'uprn'
+        column for joining coordinates to.
+    """
     query = """
     SELECT q.*, blpu.x_coordinate, blpu.y_coordinate
 
@@ -135,6 +168,18 @@ def get_warehouse_floorspace(
     output_file: pathlib.Path,
     warehouse_select_query: sql.Composable,
 ) -> gpd.GeoDataFrame:
+    """Select warehouse data and join floorspace polygons.
+
+    Parameters
+    ----------
+    connected_db : database.Database
+        ABP database to run query on.
+    output_file: pathlib.Path
+        GeoJSON file to save query results to.
+    warehouse_select_query: sql.Composable
+        Query to select warehouse data, must contain a 'uprn'
+        column for joining polygons to.
+    """
     query = """
     SELECT q.*, cr.cross_reference, mm.descriptiveterm,
         public.ST_AsText(mm.wkb_geometry) AS geom_wkt,
@@ -184,19 +229,35 @@ def get_warehouse_floorspace(
 def classification_codes_query(
     voa_scat: Sequence[str] | None = None, abp: Sequence[str] = None
 ) -> sql.Composable:
+    """Select data from 'abp_classification' table with filters.
+
+    Parameters
+    ----------
+    voa_scat: Sequence[str], optional
+        VOA Scat codes for filtering, if not given uses
+        `CLASSIFICATION_CODES["VOA SCAT"]`.
+    abp: Sequence[str], optional
+        ABP classification code for filtering, if not given
+        uses `CLASSIFICATION_CODES["ABP"]`.
+
+    Returns
+    -------
+    sql.Composable
+        Select query.
+    """
     if voa_scat is None:
         voa_scat = CLASSIFICATION_CODES["VOA SCAT"]
     if abp is None:
         abp = CLASSIFICATION_CODES["ABP"]
 
     query = """
-        SELECT uprn, class_scheme, classification_code,
-            start_date, end_date, last_update_date, entry_date
-        FROM data_common.abp_classification
-        WHERE (
-            class_scheme = 'VOA Special Category'
-            AND classification_code IN ({scat})
-        ) OR classification_code IN ({abp})
+    SELECT uprn, class_scheme, classification_code,
+        start_date, end_date, last_update_date, entry_date
+    FROM data_common.abp_classification
+    WHERE (
+        class_scheme = 'VOA Special Category'
+        AND classification_code IN ({scat})
+    ) OR classification_code IN ({abp})
     """
     sql_query = sql.SQL(query).format(
         scat=sql.SQL(",").join(sql.Literal(i) for i in voa_scat),
@@ -205,7 +266,19 @@ def classification_codes_query(
     return sql_query
 
 
-def warehouse_organisations_query(organisation: str):
+def warehouse_organisations_query(organisation: str) -> sql.Composable:
+    """Select warehouse data for given `organisation`.
+
+    Parameters
+    ----------
+    organisation : str
+        Name of the organisation to filter warehouses on.
+
+    Returns
+    -------
+    sql.Composable
+        Select query.
+    """
     query = r"""
     SELECT cl.*, o.organisation
 
@@ -225,27 +298,10 @@ def warehouse_organisations_query(organisation: str):
     )
 
 
-def get_mmdata(connected_db: database.Database, output_folder: pathlib.Path) -> None:
-    tables = [
-        # "mm_boundaryline",
-        # "mm_cartographicsymbol",
-        # "mm_cartographictext",
-        "mm_topographicarea",
-        "mm_topographicline",
-        "mm_topographicpoint",
-    ]
-    query = sql.SQL("SELECT * FROM {} LIMIT 1000;")
-    for table in tables:
-        LOG.info("Reading %s", table)
-        data = connected_db.query_to_dataframe(query.format(sql.Identifier(table)))
-        out_file = output_folder / f"{table}.csv"
-        data.to_csv(out_file, index=False)
-        LOG.info("Written: %s", out_file)
-
-
 def get_classification_codes(
     connected_db: database.Database, output_folder: pathlib.Path
 ) -> None:
+    """Select ABP classification codes from database."""
     query = """
     SELECT "Concatenated", "Class_Desc", "Primary_Code", "Primary_Desc",
         "Secondary_Code", "Secondary_Desc", "Tertiary_Code",
@@ -262,6 +318,7 @@ def get_classification_codes(
 
 
 def load_shapefile(parameters: config.ShapefileParameters) -> gpd.GeoDataFrame:
+    """Load shapefile and set ID column as index."""
     LOG.info("Loading %s", parameters.path)
     data: gpd.GeoDataFrame = gpd.read_file(parameters.path)
     if parameters.id_column not in data.columns:
@@ -286,6 +343,34 @@ def warehouse_by_lsoa(
     lsoa_id_column: str,
     output_file: pathlib.Path,
 ) -> pd.DataFrame:
+    """Run select `query` and aggregate warehouse floorspace to LSOA.
+
+    Saves `query` results to the following files:
+    - {output_file}-floorspace.geojson
+    - {output_file}-floorspace_lsoa.csv
+    - {output_file}-floorspace_lsoa.geojson
+    - {output_file}-positions.geojson
+    - {output_file}-positions_with_lsoa.geojson
+
+    Parameters
+    ----------
+    connected_db : database.Database
+        ABP database to extract data from.
+    query : sql.Composable
+        Query for selecting warehouse data, this query
+        should include a 'uprn' column.
+    lsoas : gpd.GeoDataFrame
+        LSOA polygons data.
+    lsoa_id_column : str
+        Name of column containing LSOA IDs.
+    output_file : pathlib.Path
+        Base file path to save all outputs to.
+
+    Returns
+    -------
+    pd.DataFrame
+        Floorspace total aggregated to LSOAs.
+    """
     positions = get_warehouse_positions(
         connected_db,
         output_file.with_name(output_file.stem + "-positions.geojson"),
@@ -346,6 +431,20 @@ def extract_warehouses(
     output_folder: pathlib.Path,
     shapefile: config.ShapefileParameters,
 ) -> None:
+    """Extract warehouse data from database and aggregate floorspace to LSOA.
+
+    Saves warehouse data to various GeoJSON files and total LSOA
+    areas to CSVs.
+
+    Parameters
+    ----------
+    database_connection_parameters : database.ConnectionParameters
+        Parameters for connecting to the ABP database.
+    output_folder : pathlib.Path
+        Folder for saving outputs to.
+    shapefile : config.ShapefileParameters
+        Parameters for the LSOA shapefile.
+    """
     lsoa = load_shapefile(shapefile)
 
     with database.Database(database_connection_parameters) as connected_db:
