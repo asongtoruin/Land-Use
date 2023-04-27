@@ -34,6 +34,7 @@ def main(parameters: config.WarehouseConfig) -> None:
         parameters.database_connection_parameters,
         output_folder,
         parameters.lsoa_shapefile,
+        parameters.year_filter,
     )
 
 

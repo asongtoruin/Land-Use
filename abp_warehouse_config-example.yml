@@ -8,3 +8,4 @@ database_connection_parameters:
 lsoa_shapefile:
   path: Path to LSOA shapefile
   id_column: Name of column containing LSOA IDs
+year_filter: Optional year for filtering data

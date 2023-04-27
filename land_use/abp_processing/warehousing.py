@@ -5,6 +5,7 @@
 # Standard imports
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import pathlib
 from typing import Sequence
@@ -227,7 +228,9 @@ def get_warehouse_floorspace(
 
 
 def classification_codes_query(
-    voa_scat: Sequence[str] | None = None, abp: Sequence[str] = None
+    voa_scat: Sequence[str] | None = None,
+    abp: Sequence[str] = None,
+    year: int | None = None,
 ) -> sql.Composable:
     """Select data from 'abp_classification' table with filters.
 
@@ -239,6 +242,9 @@ def classification_codes_query(
     abp: Sequence[str], optional
         ABP classification code for filtering, if not given
         uses `CLASSIFICATION_CODES["ABP"]`.
+    year : int, optional
+        Year to use for filtering data, excludes rows which
+        have an end date before this or start date after this.
 
     Returns
     -------
@@ -255,24 +261,53 @@ def classification_codes_query(
         start_date, end_date, last_update_date, entry_date
     FROM data_common.abp_classification
     WHERE (
-        class_scheme = 'VOA Special Category'
-        AND classification_code IN ({scat})
-    ) OR classification_code IN ({abp})
+        (
+            class_scheme = 'VOA Special Category'
+            AND classification_code IN ({scat})
+        ) OR classification_code IN ({abp})
+    )
     """
     sql_query = sql.SQL(query).format(
         scat=sql.SQL(",").join(sql.Literal(i) for i in voa_scat),
         abp=sql.SQL(",").join(sql.Literal(i) for i in abp),
     )
+
+    if year is None:
+        return sql_query
+
+    date_query_str = [
+        "(start_date ISNULL OR DATE_TRUNC('year', start_date) <= {date})",
+        "(end_date ISNULL OR DATE_TRUNC('year', end_date) >= {date})",
+    ]
+    date = sql.Literal(dt.date(year, 1, 1).isoformat())
+    date_queries = [sql.SQL(q).format(date=date) for q in date_query_str]
+
+    sql_query = sql.SQL("AND").join([sql_query, *date_queries])
+
     return sql_query
 
 
-def warehouse_organisations_query(organisation: str) -> sql.Composable:
+def warehouse_organisations_query(
+    organisation: str,
+    voa_scat: Sequence[str] | None = None,
+    abp: Sequence[str] = None,
+    year: int | None = None,
+) -> sql.Composable:
     """Select warehouse data for given `organisation`.
 
     Parameters
     ----------
     organisation : str
         Name of the organisation to filter warehouses on.
+    voa_scat: Sequence[str], optional
+        VOA Scat codes for filtering, if not given uses
+        `CLASSIFICATION_CODES["VOA SCAT"]`.
+    abp: Sequence[str], optional
+        ABP classification code for filtering, if not given
+        uses `CLASSIFICATION_CODES["ABP"]`.
+    year : int, optional
+        Year to use for filtering data, excludes rows which
+        have an end date before this or start date after this.
 
     Returns
     -------
@@ -290,10 +325,12 @@ def warehouse_organisations_query(organisation: str) -> sql.Composable:
         WHERE organisation ILIKE {org}
     ) o ON cl.uprn = o.uprn
     """
+
+    if abp is None:
+        abp = CLASSIFICATION_CODES["ABP"] + (WAREHOUSE_ABP_CODE,)
+
     return sql.SQL(query).format(
-        abp_classification=classification_codes_query(
-            abp=CLASSIFICATION_CODES["ABP"] + (WAREHOUSE_ABP_CODE,)
-        ),
+        abp_classification=classification_codes_query(voa_scat, abp, year),
         org=sql.Literal(f"%{organisation}%"),
     )
 
@@ -430,6 +467,7 @@ def extract_warehouses(
     database_connection_parameters: database.ConnectionParameters,
     output_folder: pathlib.Path,
     shapefile: config.ShapefileParameters,
+    year: int | None = None,
 ) -> None:
     """Extract warehouse data from database and aggregate floorspace to LSOA.
 
@@ -444,6 +482,9 @@ def extract_warehouses(
         Folder for saving outputs to.
     shapefile : config.ShapefileParameters
         Parameters for the LSOA shapefile.
+    year : int, optional
+        Year to use for filtering data, excludes rows which
+        have an end date before this or start date after this.
     """
     lsoa = load_shapefile(shapefile)
 
@@ -453,8 +494,8 @@ def extract_warehouses(
         voa_code_count(connected_db, output_folder)
 
         queries = {
-            "warehouses": classification_codes_query(),
-            "warehouses_amazon": warehouse_organisations_query("amazon"),
+            "warehouses": classification_codes_query(year=year),
+            "warehouses_amazon": warehouse_organisations_query("amazon", year=year),
         }
 
         lsoa_warehouse_floorspace: list[pd.DataFrame] = []
@@ -463,7 +504,12 @@ def extract_warehouses(
             folder = output_folder / name
             folder.mkdir(exist_ok=True)
 
-            LOG.info("Extracting %s data")
+            if year is None:
+                LOG.info("Extracting %s data for all years", name)
+            else:
+                LOG.info("Extracting %s for %s", name, year)
+                name = f"{name}_{year}"
+
             lsoa_warehouse = warehouse_by_lsoa(
                 connected_db, query, lsoa, shapefile.id_column, folder / name
             )
@@ -475,6 +521,9 @@ def extract_warehouses(
             .sum()
         )
 
-        out_file = output_folder / "warehouse_floorspace_by_lsoa_inc_amazon.csv"
+        if year is None:
+            out_file = output_folder / "warehouse_floorspace_by_lsoa_inc_amazon.csv"
+        else:
+            out_file = output_folder / f"warehouse_floorspace_{year}_by_lsoa_inc_amazon.csv"
         lsoa_warehouse.to_csv(out_file, index=False)
         LOG.info("Written combined warehouse floorspace: %s", out_file)

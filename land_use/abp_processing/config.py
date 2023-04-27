@@ -3,7 +3,10 @@
 
 ##### IMPORTS #####
 # Standard imports
+from __future__ import annotations
+
 import logging
+from typing import Optional
 
 # Third party imports
 from caf.toolkit import config_base
@@ -39,6 +42,7 @@ class WarehouseConfig(config_base.BaseConfig):
     database_connection_parameters: database.ConnectionParameters
     output_folder: pydantic.DirectoryPath  # pylint: disable=no-member
     lsoa_shapefile: ShapefileParameters
+    year_filter: Optional[int] = None
 
 
 ##### FUNCTIONS #####
