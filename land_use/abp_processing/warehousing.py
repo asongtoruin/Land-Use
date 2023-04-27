@@ -279,12 +279,73 @@ def load_shapefile(parameters: config.ShapefileParameters) -> gpd.GeoDataFrame:
     return data.set_index(parameters.id_column)
 
 
+def warehouse_by_lsoa(
+    connected_db: database.Database,
+    query: sql.Composable,
+    lsoas: gpd.GeoDataFrame,
+    lsoa_id_column: str,
+    output_file: pathlib.Path,
+) -> pd.DataFrame:
+    positions = get_warehouse_positions(
+        connected_db,
+        output_file.with_name(output_file.stem + "-positions.geojson"),
+        query,
+    )
+    floorspace = get_warehouse_floorspace(
+        connected_db,
+        output_file.with_name(output_file.stem + "-floorspace.geojson"),
+        query,
+    )
+
+    positions: gpd.GeoDataFrame = positions.merge(
+        floorspace[["uprn", "area"]],
+        on="uprn",
+        how="outer",
+        indicator="floorspace_merge",
+    )
+    positions.loc[:, "floorspace_merge"] = positions["floorspace_merge"].replace(
+        {"left_only": "positions_only", "right_only": "floorspace_only"}
+    )
+
+    lsoa_positions: gpd.GeoDataFrame = gpd.sjoin(
+        positions, lsoas.reset_index(), how="left", op="within"
+    )
+
+    for column in lsoa_positions.select_dtypes("category").columns:
+        lsoa_positions.loc[:, column] = lsoa_positions[column].astype(str)
+
+    to_kepler_geojson(
+        lsoa_positions,
+        output_file.with_name(output_file.stem + "-positions_with_lsoa.geojson"),
+    )
+
+    duplicated = lsoa_positions["uprn"].duplicated().sum()
+    if duplicated > 0:
+        LOG.warning("%s duplicate UPRNs found", duplicated)
+
+    lsoa_warehouse: gpd.GeoDataFrame = (
+        lsoa_positions[[lsoa_id_column, "area"]]
+        .groupby(lsoa_id_column, as_index=False)
+        .sum()
+    )
+    lsoa_warehouse = lsoa_warehouse.merge(lsoas, on=lsoa_id_column, validate="1:1")
+    lsoa_warehouse = gpd.GeoDataFrame(
+        lsoa_warehouse, geometry="geometry", crs=lsoas.crs
+    )
+    out_file = output_file.with_name(output_file.stem + "-floorspace_lsoa.geojson")
+    to_kepler_geojson(lsoa_warehouse, out_file)
+
+    columns = [lsoa_id_column, "area"]
+    lsoa_warehouse.loc[:, columns].to_csv(out_file.with_suffix(".csv"), index=False)
+
+    return lsoa_warehouse[columns]
+
+
 def extract_warehouses(
     database_connection_parameters: database.ConnectionParameters,
     output_folder: pathlib.Path,
     shapefile: config.ShapefileParameters,
 ) -> None:
-    # TODO(MB) Refactor with finalised SQL queries
     lsoa = load_shapefile(shapefile)
 
     with database.Database(database_connection_parameters) as connected_db:
@@ -297,56 +358,24 @@ def extract_warehouses(
             "warehouses_amazon": warehouse_organisations_query("amazon"),
         }
 
+        lsoa_warehouse_floorspace: list[pd.DataFrame] = []
+
         for name, query in queries.items():
             folder = output_folder / name
             folder.mkdir(exist_ok=True)
 
             LOG.info("Extracting %s data")
-            positions = get_warehouse_positions(
-                connected_db, folder / f"{name}-positions.geojson", query
+            lsoa_warehouse = warehouse_by_lsoa(
+                connected_db, query, lsoa, shapefile.id_column, folder / name
             )
-            floorspace = get_warehouse_floorspace(
-                connected_db, folder / f"{name}-floorspace.geojson", query
-            )
+            lsoa_warehouse_floorspace.append(lsoa_warehouse)
 
-            positions: gpd.GeoDataFrame = positions.merge(
-                floorspace[["uprn", "area"]],
-                on="uprn",
-                how="outer",
-                indicator="floorspace_merge",
-            )
-            positions.loc[:, "floorspace_merge"] = positions[
-                "floorspace_merge"
-            ].replace({"left_only": "positions_only", "right_only": "floorspace_only"})
+        lsoa_warehouse = (
+            pd.concat(lsoa_warehouse_floorspace)
+            .groupby(shapefile.id_column, as_index=False)
+            .sum()
+        )
 
-            lsoa_positions: gpd.GeoDataFrame = gpd.sjoin(
-                positions, lsoa.reset_index(), how="left", op="within"
-            )
-
-            for column in lsoa_positions.select_dtypes("category").columns:
-                lsoa_positions.loc[:, column] = lsoa_positions[column].astype(str)
-
-            out_file = folder / f"{name}_positions_with_lsoa.geojson"
-            to_kepler_geojson(lsoa_positions, out_file)
-
-            duplicated = lsoa_positions["uprn"].duplicated().sum()
-            if duplicated > 0:
-                LOG.warning("%s duplicate UPRNs found", duplicated)
-
-            lsoa_warehouse: gpd.GeoDataFrame = (
-                lsoa_positions[[shapefile.id_column, "area"]]
-                .groupby(shapefile.id_column, as_index=False)
-                .sum()
-            )
-            lsoa_warehouse = lsoa_warehouse.merge(
-                lsoa, on=shapefile.id_column, validate="1:1"
-            )
-            lsoa_warehouse = gpd.GeoDataFrame(
-                lsoa_warehouse, geometry="geometry", crs=lsoa.crs
-            )
-            out_file = folder / f"{name}_floorspace-lsoa.geojson"
-            to_kepler_geojson(lsoa_warehouse, out_file)
-
-            lsoa_warehouse.loc[:, ["LSOA11CD", "area"]].to_csv(
-                out_file.with_suffix(".csv"), index=False
-            )
+        out_file = output_folder / "warehouse_floorspace_by_lsoa_inc_amazon.csv"
+        lsoa_warehouse.to_csv(out_file, index=False)
+        LOG.info("Written combined warehouse floorspace: %s", out_file)
