@@ -406,7 +406,8 @@ def warehouse_by_lsoa(
     Returns
     -------
     pd.DataFrame
-        Floorspace total aggregated to LSOAs.
+        Floorspace area by LSOA ID and UPRN with columns:
+        `lsoa_id_column`, 'uprn' and 'area'.
     """
     positions = get_warehouse_positions(
         connected_db,
@@ -460,7 +461,40 @@ def warehouse_by_lsoa(
     columns = [lsoa_id_column, "area"]
     lsoa_warehouse.loc[:, columns].to_csv(out_file.with_suffix(".csv"), index=False)
 
-    return lsoa_warehouse[columns]
+    return lsoa_positions[[lsoa_id_column, "uprn", "area"]]
+
+
+def combine_lsoa_areas(
+    lsoa_data: list[pd.DataFrame], lsoa_id_column: str, output_file: pathlib.Path
+) -> None:
+    """Combine the output from `warehouse_by_lsoa` and aggregate to LSOA.
+
+    Any duplicate UPRNs are dropped to avoid double counting.
+
+    Parameters
+    ----------
+    lsoa_data : list[pd.DataFrame]
+        Warehouse floorspace area from `warehouse_by_lsoa`.
+    lsoa_id_column : str
+        Name of column containing LSOA IDs.
+    output_file : pathlib.Path
+        Path to CSV to save output to.
+    """
+    lsoa_warehouse = pd.concat(lsoa_data)
+
+    before = len(lsoa_warehouse)
+    lsoa_warehouse.drop_duplicates("uprn", inplace=True)
+    after = len(lsoa_warehouse)
+    difference = before - after
+    msg = (
+        f"Dropped {difference:,.0f} ({difference / before:.1%}) rows "
+        f"with duplicate UPRNs ({after:,.0f} remaining)"
+    )
+    LOG.info(msg)
+
+    lsoa_warehouse = lsoa_warehouse.groupby(lsoa_id_column, as_index=False).sum()
+    lsoa_warehouse.to_csv(output_file, index=False)
+    LOG.info("Written combined warehouse floorspace: %s", output_file)
 
 
 def extract_warehouses(
@@ -515,15 +549,11 @@ def extract_warehouses(
             )
             lsoa_warehouse_floorspace.append(lsoa_warehouse)
 
-        lsoa_warehouse = (
-            pd.concat(lsoa_warehouse_floorspace)
-            .groupby(shapefile.id_column, as_index=False)
-            .sum()
-        )
-
         if year is None:
             out_file = output_folder / "warehouse_floorspace_by_lsoa_inc_amazon.csv"
         else:
-            out_file = output_folder / f"warehouse_floorspace_{year}_by_lsoa_inc_amazon.csv"
-        lsoa_warehouse.to_csv(out_file, index=False)
-        LOG.info("Written combined warehouse floorspace: %s", out_file)
+            out_file = (
+                output_folder / f"warehouse_floorspace_{year}_by_lsoa_inc_amazon.csv"
+            )
+
+        combine_lsoa_areas(lsoa_warehouse_floorspace, shapefile.id_column, out_file)
