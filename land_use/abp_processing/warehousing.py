@@ -102,7 +102,7 @@ def voa_code_count(
     excel_path = output_folder / "ABP_SCAT_counts.xlsx"
     # pylint: disable=abstract-class-instantiated
     with pd.ExcelWriter(excel_path) as excel:
-        # pylint: ensable=abstract-class-instantiated
+        # pylint: enable=abstract-class-instantiated
         class_counts.to_excel(excel, sheet_name="Class Schame Counts")
         scat_counts.to_excel(excel, sheet_name="SCAT Counts")
         filtered_class_counts.to_excel(excel, sheet_name="Filtered Codes")
@@ -152,7 +152,9 @@ def get_warehouse_positions(
     query = """
     SELECT q.*, blpu.x_coordinate, blpu.y_coordinate
 
-    FROM ({query}) q
+    FROM (
+    {query}
+    ) q
 
     LEFT JOIN data_common.abp_blpu blpu ON q.uprn = blpu.uprn
     """
@@ -186,7 +188,9 @@ def get_warehouse_floorspace(
         public.ST_AsText(mm.wkb_geometry) AS geom_wkt,
         mm.calculatedareavalue AS area
 
-    FROM ({query}) q
+    FROM (
+    {query}
+    ) q
 
     LEFT JOIN (
         SELECT uprn, cross_reference, "version"
@@ -267,7 +271,7 @@ def classification_codes_query(
         ) OR classification_code IN ({abp})
     )
     """
-    sql_query = sql.SQL(query).format(
+    sql_query = sql.SQL(query.strip()).format(
         scat=sql.SQL(",").join(sql.Literal(i) for i in voa_scat),
         abp=sql.SQL(",").join(sql.Literal(i) for i in abp),
     )
@@ -282,7 +286,7 @@ def classification_codes_query(
     date = sql.Literal(dt.date(year, 1, 1).isoformat())
     date_queries = [sql.SQL(q).format(date=date) for q in date_query_str]
 
-    sql_query = sql.SQL("AND").join([sql_query, *date_queries])
+    sql_query = sql.SQL("\n\tAND ").join([sql_query, *date_queries])
 
     return sql_query
 
@@ -317,7 +321,9 @@ def warehouse_organisations_query(
     query = r"""
     SELECT cl.*, o.organisation
 
-    FROM ({abp_classification}) cl
+    FROM (
+    {abp_classification}
+    ) cl
 
     JOIN (
         SELECT uprn, organisation
@@ -492,7 +498,9 @@ def combine_lsoa_areas(
     )
     LOG.info(msg)
 
-    lsoa_warehouse = lsoa_warehouse.groupby(lsoa_id_column, as_index=False).sum()
+    lsoa_warehouse = lsoa_warehouse.groupby(lsoa_id_column, as_index=False)[
+        "area"
+    ].sum()
     lsoa_warehouse.to_csv(output_file, index=False)
     LOG.info("Written combined warehouse floorspace: %s", output_file)
 
