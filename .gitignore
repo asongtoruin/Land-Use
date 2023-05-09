@@ -132,3 +132,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Config containing database connection parameters
+abp_processing_config.yml
+abp_warehouse_config.yml
