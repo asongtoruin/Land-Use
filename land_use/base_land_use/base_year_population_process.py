@@ -55,7 +55,8 @@ _default_zone_ref_folder = 'Y:/Data Strategy/GIS Shapefiles/'
 _default_lsoaRef = _default_zone_ref_folder + 'UK LSOA and Data Zone Clipped 2011/uk_ew_lsoa_s_dz.shp'
 _default_ladRef = os.path.join(
     _default_zone_ref_folder,
-    'LAD GB 2017/Local_Authority_Districts_December_2017_Full_Clipped_Boundaries_in_Great_Britain.shp')
+    'LAD_2017', 
+    'Local_Authority_Districts_December_2017_Full_Clipped_Boundaries_in_Great_Britain.shp')
 _default_msoaRef = _default_zone_ref_folder + 'UK MSOA and Intermediate Zone Clipped 2011/uk_ew_msoa_s_iz.shp'
 
 # Other paths
