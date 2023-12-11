@@ -3,10 +3,10 @@ from land_use.base_land_use import census_lu, by_lu
 
 def main():
 
-    run_census = False
-    run_pop = False
+    run_census = True
+    run_pop = True
     run_pop_DDG = True
-    run_emp = False
+    run_emp = True
 
     iteration = 'iter4q'
     census_year = '2011'
@@ -18,7 +18,7 @@ def main():
 
     if run_census:
         census_run = census_lu.CensusYearLandUse(iteration=iteration)
-        census_run.state['3.1.1 derive 2011 population from NTEM and convert Scottish zones'] = 1
+        census_run.state['3.1.1 derive 2011 population from NTEM and convert Scottish zones'] = 0
         census_run.state['3.1.2 expand population segmentation'] = 0
         census_run.state['3.1.3 data synthesis'] = 0
 
@@ -31,13 +31,13 @@ def main():
 
     lu_run = by_lu.BaseYearLandUse(iteration=iteration, base_year=base_year)
 
-    lu_run.state['3.2.1 Read in core property data'] = 1
-    lu_run.state['3.2.2 Filled property adjustment'] = 1
-    lu_run.state['3.2.3 Household occupancy adjustment'] = 1
-    lu_run.state['3.2.4 Property type mapping'] = 1
-    lu_run.state['3.2.5 Adjust Base Year population according to Base Year MYPE'] = 1
-    lu_run.state['3.2.6 Expand NTEM population to full dimensions'] = 1
-    lu_run.state['3.2.7 Furness household population according to control values'] = 1
+    lu_run.state['3.2.1 Read in core property data'] = 0
+    lu_run.state['3.2.2 Filled property adjustment'] = 0
+    lu_run.state['3.2.3 Household occupancy adjustment'] = 0
+    lu_run.state['3.2.4 Property type mapping'] = 0
+    lu_run.state['3.2.5 Adjust Base Year population according to Base Year MYPE'] = 0
+    lu_run.state['3.2.6 Expand NTEM population to full dimensions'] = 0
+    lu_run.state['3.2.7 Furness household population according to control values'] = 0
     lu_run.state['3.2.8 Combine HHR with CER to form total population'] = 0
 
 
