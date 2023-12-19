@@ -992,7 +992,7 @@ def mye_aps_process(by_lu_obj,
     aps_soc_props_to_add = aps_soc_props['LAD'] == 'UK wide total'
     aps_soc_props_to_add = aps_soc_props[aps_soc_props_to_add]
     aps_soc_props_to_add = aps_soc_props_to_add.replace('UK wide total', 'Isles of Scilly')
-    aps_soc_props = pd.concat([aps_soc_props, [aps_soc_props_to_add]])
+    aps_soc_props = pd.concat([aps_soc_props, aps_soc_props_to_add])
     aps_soc_props_to_merge = aps_soc_props.copy()
     aps_soc_props_to_merge = aps_soc_props_to_merge.drop(columns=['Total_Workers', 'Checksum'])
 
@@ -1038,7 +1038,10 @@ def mye_aps_process(by_lu_obj,
     aps_ftpt_gender_to_add = aps_ftpt_gender_base_year_props[aps_ftpt_gender_to_add]
     aps_ftpt_gender_to_add = aps_ftpt_gender_to_add.replace('UK wide total', 'Isles of Scilly')
     aps_ftpt_gender_to_add = aps_ftpt_gender_to_add.replace('All_UK001', 'E06000053')
-    aps_ftpt_gender_base_year_props = pd.concat([aps_ftpt_gender_base_year_props, aps_ftpt_gender_to_add], ignore_index=Trues)
+    aps_ftpt_gender_base_year_props = pd.concat(
+        [aps_ftpt_gender_base_year_props, aps_ftpt_gender_to_add],
+        ignore_index=True
+    )
     aps_ftpt_gender_base_year_props_to_merge = aps_ftpt_gender_base_year_props.copy()
     aps_ftpt_gender_base_year_props_to_merge.drop(columns=['Total Worker 16-64', 'Checksum'], inplace=True)
 
