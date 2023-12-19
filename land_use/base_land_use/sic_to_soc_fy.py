@@ -279,13 +279,13 @@ def quals_to_soc(scenario):
             summarise = summarise.to_frame()
             summarise.reset_index(inplace=True)
             summarise = summarise.rename(columns={'index':'soc', 0:year})
-            g.append(summarise)
+            g = pd.concat([g, summarise])
             # work out splits for each
             splits = summarise.copy()
             splits['total'] = splits[(year)].sum()
             splits['splits'] = splits[(year)]/splits['total']
             splits = splits.drop(columns={(year), 'total'}).rename(columns={'splits':(year)})
-            s.append(splits)
+            s = pd.concat([s, splits])
         
         soc_quals_fy = reduce(lambda x, summarise : pd.merge(x, summarise, on = 'soc'), g)
         soc_quals_fy.to_csv(_home_dir+'soc_quals_fy.csv', index = False)
@@ -316,13 +316,13 @@ def quals_to_soc(scenario):
             summarise = summarise.to_frame()
             summarise.reset_index(inplace=True)
             summarise = summarise.rename(columns={'index':'soc', 0:year})
-            g.append(summarise)
+            g = pd.concat([g, summarise])
            
             splits = summarise.copy()
             splits['total'] = splits[(year)].sum()
             splits['splits'] = splits[(year)]/splits['total']
             splits = splits.drop(columns={(year), 'total'}).rename(columns={'splits':(year)})
-            s.append(splits)
+            s = pd.concat([s, splits])
         
         soc_quals_fy = reduce(lambda x, summarise : pd.merge(x, summarise, on = 'soc'), g)
         soc_quals_fy.to_csv(_home_dir+'soc_quals_fy.csv', index = False)
@@ -460,7 +460,7 @@ def balance_msoa_fy_soc_splits(scenario):
         by_socs_out = by_socs_out.drop(columns={'emp_'+str(year)})
  
     #zone_socs = zone_socs.drop(columns={'North_x', 'North_y'})
-    zone_socs_all = zone_socs.append(by_socs_out)
+    zone_socs_all = pd.concat([zone_socs, by_socs_out])
     if scenario == sc01_jam: 
         sc = 'sc01_jam'
     elif scenario == sc02_pp:

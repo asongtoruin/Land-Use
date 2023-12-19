@@ -74,7 +74,7 @@ def format_scottish_mype(by_lu_obj):
 
     scot_females = pd.read_csv(by_lu_obj.import_folder + _mypeScot_females)
     scot_males = pd.read_csv(by_lu_obj.import_folder + _mypeScot_males)
-    scot_mype = scot_males.append(scot_females)
+    scot_mype = pd.concat([scot_males, scot_females])
     scot_mype = scot_mype.rename(columns={'Area code': 'lad17cd'})
     scot_mype = pd.melt(scot_mype, id_vars=['lad17cd', 'Gender'], value_vars=['under 16', '16-74', '75 or over'])
     scot_mype = scot_mype.rename(columns={'variable': 'Age', 'value': '2018pop'})
@@ -132,7 +132,7 @@ def get_ew_population(by_lu_obj):
     mype_males = pd.read_csv(by_lu_obj.import_folder + _mype_males)
     mype_females = pd.read_csv(by_lu_obj.import_folder + _mype_females)
 
-    mype = mype_males.append(mype_females)
+    mype = pd.concat([mype_males, mype_females])
     mype = mype.rename(columns={'Area Codes': 'ZoneID'})
     mype = pd.melt(mype, id_vars=['ZoneID', 'gender'], value_vars=['under_16', '16-74', '75 or over'])
     mype = mype.rename(columns={'variable': 'Age', 'value': '2018pop'})
@@ -302,7 +302,7 @@ def adjust_landuse_to_specific_yr(by_lu_obj, writeOut=True):
         ewmype['newpop'] = ewmype['pop'] - ewmype['communal_mype']
         ewmype = ewmype[['ZoneID', 'Gender', 'Age', 'newpop']].rename(columns={'newpop': 'pop'})
 
-        mype_gb = ewmype.append(scot_mype)
+        mype_gb = pd.concat([ewmype, scot_mype])
         mype_gb['gender'] = mype_gb['Gender'].map(gender_nt).drop(columns={'Gender'})
         mype_gb['age_code'] = mype_gb['Age'].map(age_nt).drop(columns={'Age'})
 
@@ -362,7 +362,7 @@ def adjust_landuse_to_specific_yr(by_lu_obj, writeOut=True):
         communal_pop = communal_pop.drop(columns={'people', 'pop_factor'}).rename(columns={'newpop': 'people'})
         communal_pop = communal_pop[landuse_cols]
         # need to retain the missing MSOAs for both population landuse outputs and HOPs  
-        gb_adjusted = landuse.append(communal_pop)
+        gb_adjusted = pd.concat([landuse, communal_pop])
 
         # checks:
         # TODO: put these checks into logging file rather than console
@@ -563,7 +563,7 @@ def adjust_soc_gb(by_lu_obj):
 
     # join to the rest
     not_employed = land_use_segments[~land_use_segments.emp.isin([1, 2])]  # neither fte nor pte
-    npr_segmentation = not_employed.append(soc_revised)
+    npr_segmentation = pd.concat([not_employed, soc_revised])
 
     logging.info('Population currently {}'.format(npr_segmentation.people.sum()))
     compress.write_out(npr_segmentation, by_lu_obj.home_folder + '/landuse_adjustedSOCs')
@@ -834,7 +834,7 @@ def control_to_lad_employment_ag(by_lu_obj):
     inactive_land_use2 = inactive_land_use2[gb_cols]
     inactive_land_use2['newpop'].sum()
     active_land_use2 = active_land_use2[gb_cols]
-    gb_land_use_controlled = inactive_land_use2.append(active_land_use2)
+    gb_land_use_controlled = pd.concat([inactive_land_use2, active_land_use2])
 
     # bring back the children to make the full GB population again
     nowa_all = land_use[land_use.emp == 5]
@@ -844,7 +844,7 @@ def control_to_lad_employment_ag(by_lu_obj):
     # check the total of children - should be about 17.6m in 2018
     print('Bring back the children, should be ~17.6m in 2018', nowa_all['newpop'].sum())
 
-    gb_land_use_controlled = gb_land_use_controlled.append(nowa_all)
+    gb_land_use_controlled = pd.concat([gb_land_use_controlled, nowa_all])
     gb_land_use_controlled = gb_land_use_controlled.rename(columns={'newpop': 'people'})
     print('People in jobs are now adjusted. Total population should be back to ~64.5m, and is',
           gb_land_use_controlled['people'].sum(), 'Now saving the new landuse dataset.')
@@ -936,7 +936,7 @@ def country_emp_control(by_lu_obj):
     gb_cols = ['ZoneID', 'age_code', 'emp', 'area_type', 'property_type',
                'household_composition', 'gender', 'ns_sec', 'SOC_category', 'people']
     # append the new employed population adjusted for Scotland, England and Wales
-    active_adj = eng_active.append(scott_active)
+    active_adj = pd.concat([eng_active, scott_active])
     active_adj = active_adj.rename(columns={'newpop': 'people'})
     active_adj = active_adj[gb_cols]
     active_new_total = active_adj.groupby('ZoneID', as_index=False).sum()[['ZoneID', 'people']]
@@ -965,14 +965,14 @@ def country_emp_control(by_lu_obj):
     inactive3['people'].sum()
 
     # inactive plus active people appending
-    adjusted_gb_land_use = inactive3.append(active_adj)
+    adjusted_gb_land_use = pd.concat([inactive3, active_adj])
     adjusted_gb_land_use['people'].sum()
     # get the children by MSOA too
     children = land_use[land_use.emp == 5]
     children = children[gb_cols]
     # children['people'].sum() # should be ~17m
     # append children
-    adjusted_gb_land_use = adjusted_gb_land_use.append(children)
+    adjusted_gb_land_use = pd.concat([adjusted_gb_land_use, children])
     # adjusted_gb_land_use['people'].sum() # should be 64.5m
     # audit the msoa population totals
     check_msoa_totals(by_lu_obj, adjusted_gb_land_use, function_name='country_control')
