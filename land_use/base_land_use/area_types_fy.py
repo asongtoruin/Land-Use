@@ -89,16 +89,16 @@ def get_scenario_data(year):
     
     gc.collect()
     #combine them
-    data = jam_data.append(pp_data).append(dd_data).append(uzc_data)
+    data = pd.concat([jam_data, pp_data, dd_data, uzc_data])
     return (data)
 
 def classify_areas(year):
     
     data = get_scenario_data(year)
     start_points =  data[(data["msoa_zone_id"] == "E02006917")&(data["scenario"]==1)]
-    start_points = start_points.append (data[((data["msoa_zone_id"] == "E02001063")&(data["scenario"]==1))])
-    start_points = start_points.append (data[((data["msoa_zone_id"] == "E02001050")&(data["scenario"]==1))])
-    start_points = start_points.append (data[((data["msoa_zone_id"] == "E02001036")&(data["scenario"]==1))])
+    start_points = pd.concat([start_points, data[((data["msoa_zone_id"] == "E02001063")&(data["scenario"]==1))]])
+    start_points = pd.concat([start_points, data[((data["msoa_zone_id"] == "E02001050")&(data["scenario"]==1))]])
+    start_points = pd.concat([start_points, data[((data["msoa_zone_id"] == "E02001036")&(data["scenario"]==1))]])
     
     data = data.set_index(keys = "msoa_zone_id")
     start_points = start_points.set_index(keys = "msoa_zone_id")

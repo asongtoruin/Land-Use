@@ -691,7 +691,10 @@ def mye_aps_process(by_lu_obj,
 
     # Append rows from scotland onto the end of the E&W df
     # Also check max zone = max index + 1 (+1 due to 0 indexing)
-    uk_2011_z2la_for_qs101 = englandwales_2011_z2la_for_qs101.append(scottish_2011_z2la_for_qs101).reset_index()
+    uk_2011_z2la_for_qs101 = pd.concat(
+        [englandwales_2011_z2la_for_qs101, scottish_2011_z2la_for_qs101]
+        )
+    uk_2011_z2la_for_qs101.reset_index(inplace=True)
     uk_2011_z2la_for_qs101.drop(columns=['index'], inplace=True)
     max_z_uk_2011_z2la_for_qs101 = uk_2011_z2la_for_qs101['Zone'].max()
     max_i_uk_2011_z2la_for_qs101 = uk_2011_z2la_for_qs101.shape
@@ -882,7 +885,9 @@ def mye_aps_process(by_lu_obj,
     aps_ftpt_gender_base_year_summary_percent['Checksum'] = aps_ftpt_gender_base_year_summary_percent.iloc[
                                                             :, -4:].sum(axis=1)
     aps_ftpt_gender_base_year_summary_percent['Checksum'] = aps_ftpt_gender_base_year_summary_percent['Checksum'] - 1
-    aps_ftpt_gender_base_year_summary_percent = aps_ftpt_gender_base_year_summary_percent.append(scilly_rows)
+    aps_ftpt_gender_base_year_summary_percent = pd.concat(
+        [aps_ftpt_gender_base_year_summary_percent, scilly_rows]
+        )
     if abs(aps_ftpt_gender_base_year_summary_percent['Checksum'].sum()) < 0.000000001:
         logging.info('Sum of gender %ages across categories is close enough to 1 for all rows')
     else:
@@ -962,8 +967,7 @@ def mye_aps_process(by_lu_obj,
     aps_soc_props = aps_soc_props[
         aps_soc_props.columns.drop(list(aps_soc_props.filter(regex='SOC')))]
     aps_soc_props.drop(columns=['Aged_16+'], inplace=True)
-    aps_soc_props = aps_soc_props.append(
-        aps_soc_props.sum(numeric_only=True), ignore_index=True)
+    aps_soc_props = pd.concat([aps_soc_props, aps_soc_props.sum(numeric_only=True)], ignore_index=True)
     aps_soc_props['LAD'].fillna("UK wide total", inplace=True)
     aps_soc_props['higher'] = aps_soc_props['higher'] / aps_soc_props['Total_Workers']
     aps_soc_props['medium'] = aps_soc_props['medium'] / aps_soc_props['Total_Workers']
@@ -988,14 +992,16 @@ def mye_aps_process(by_lu_obj,
     aps_soc_props_to_add = aps_soc_props['LAD'] == 'UK wide total'
     aps_soc_props_to_add = aps_soc_props[aps_soc_props_to_add]
     aps_soc_props_to_add = aps_soc_props_to_add.replace('UK wide total', 'Isles of Scilly')
-    aps_soc_props = aps_soc_props.append([aps_soc_props_to_add], ignore_index=True)
+    aps_soc_props = pd.concat([aps_soc_props, [aps_soc_props_to_add]])
     aps_soc_props_to_merge = aps_soc_props.copy()
     aps_soc_props_to_merge = aps_soc_props_to_merge.drop(columns=['Total_Workers', 'Checksum'])
 
     # Turn gender/ftpt employment data into proportions by 2021 LA
     aps_ftpt_gender_base_year_props = aps_ftpt_gender_base_year_summary.copy()
-    aps_ftpt_gender_base_year_props = aps_ftpt_gender_base_year_props.append(
-        aps_ftpt_gender_base_year_props.sum(numeric_only=True), ignore_index=True)
+    aps_ftpt_gender_base_year_props = pd.concat(
+        [aps_ftpt_gender_base_year_props, aps_ftpt_gender_base_year_props.sum(numeric_only=True)],
+        ignore_index=True
+        )
     aps_ftpt_gender_base_year_props['LAD'].fillna("UK wide total", inplace=True)
     aps_ftpt_gender_base_year_props['2021_LA'].fillna("All_UK001", inplace=True)
     aps_ftpt_gender_base_year_props['male fte'] = (aps_ftpt_gender_base_year_props['male fte'] /
@@ -1032,8 +1038,7 @@ def mye_aps_process(by_lu_obj,
     aps_ftpt_gender_to_add = aps_ftpt_gender_base_year_props[aps_ftpt_gender_to_add]
     aps_ftpt_gender_to_add = aps_ftpt_gender_to_add.replace('UK wide total', 'Isles of Scilly')
     aps_ftpt_gender_to_add = aps_ftpt_gender_to_add.replace('All_UK001', 'E06000053')
-    aps_ftpt_gender_base_year_props = aps_ftpt_gender_base_year_props.append(
-        [aps_ftpt_gender_to_add], ignore_index=True)
+    aps_ftpt_gender_base_year_props = pd.concat([aps_ftpt_gender_base_year_props, aps_ftpt_gender_to_add], ignore_index=Trues)
     aps_ftpt_gender_base_year_props_to_merge = aps_ftpt_gender_base_year_props.copy()
     aps_ftpt_gender_base_year_props_to_merge.drop(columns=['Total Worker 16-64', 'Checksum'], inplace=True)
 
@@ -1161,7 +1166,7 @@ def mye_aps_process(by_lu_obj,
 
     # Need to add Scotland to all_residents before adding it to hhr
     scotland_data_for_hhr = all_residents_scotland.copy()
-    uk_data_for_hhr = ew_data_for_hhr.append(scotland_data_for_hhr)
+    uk_data_for_hhr = pd.concat([ew_data_for_hhr, scotland_data_for_hhr])
 
     # Merge the dta for hhr with the initial hhr setup and apply the % of HHR factor
     hhr_by_z = pd.merge(hhr_by_z, uk_data_for_hhr, how='left', on='MSOA')
@@ -1201,8 +1206,11 @@ def mye_aps_process(by_lu_obj,
                                         on='LAD')
 
     # Get totals to help solve Scilly
-    working_age_pop_by_la_uk = working_age_pop_by_la_uk.append(
-        working_age_pop_by_la_uk.sum(numeric_only=True), ignore_index=True)
+    working_age_pop_by_la_uk = pd.concat([
+        working_age_pop_by_la_uk, 
+        working_age_pop_by_la_uk.sum(numeric_only=True), 
+        ignore_index=True
+        ])
     working_age_pop_by_la_uk['LAD'].fillna("UK wide total", inplace=True)
     working_age_pop_by_la_uk['2021_LA'].fillna("All_UK001", inplace=True)
     # Now the total column is added, populate this column
@@ -3017,7 +3025,7 @@ def combine_hhr_cer(by_lu_obj):
         hhpop_combined_check_z.percentage_diff.idxmax()]
     hhpop_combined_pdiff_min = pd.DataFrame(hhpop_combined_pdiff_min).transpose()
     hhpop_combined_pdiff_max = pd.DataFrame(hhpop_combined_pdiff_max).transpose()
-    hhpop_combined_pdiff_extremes = hhpop_combined_pdiff_min.append(hhpop_combined_pdiff_max)
+    hhpop_combined_pdiff_extremes = pd.concat([hhpop_combined_pdiff_min, hhpop_combined_pdiff_max])
     logging.info(hhpop_combined_pdiff_extremes)
 
     # Check LA total vs MYE HHpop - there should be 0% variance

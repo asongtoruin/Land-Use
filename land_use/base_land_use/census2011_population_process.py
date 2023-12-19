@@ -492,8 +492,9 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
                                                                                             'g', 'h',
                                                                                             'e'])
 
-    all_pop_aghetns_combos = all_workers_tt_t_n_s.append(
-        all_non_workers_tt_t_n_s, ignore_index=True)
+    all_pop_aghetns_combos = pd.concat(
+        [all_workers_tt_t_n_s, all_non_workers_tt_t_n_s], ignore_index=True
+        )
 
     # Find and replace missing zonal Census micro NTEM traveller types with EW averages
     # Find missing NTEM_tts.
@@ -526,8 +527,12 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
 
     # START - Formula from next (original f creating) cell
     # Create function that relates tns to aghe
-    census_micro_hh_pop_pivot_aghe = census_micro_hh_pop_pivot_workers.append(
-        census_micro_hh_pop_pivot_non_workers, ignore_index=True)
+    census_micro_hh_pop_pivot_aghe = pd.concat([
+        census_micro_hh_pop_pivot_workers,
+        census_micro_hh_pop_pivot_non_workers
+        ], 
+        ignore_index=True
+        )
     census_micro_hh_pop_pivot_aghe = census_micro_hh_pop_pivot_aghe.rename(
         columns = {'caseno':'Persons'})
     census_micro_hh_pop_pivot_aghe = pd.merge(census_micro_hh_pop_pivot_aghe,
@@ -594,8 +599,7 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
 
     # Append all the rows we flagged as being required to fill in missing values to the df
     #     where we first noted they were missing.
-    fill_missing_aghe = fill_missing_aghe.append(
-        missing_aghe, ignore_index = True)
+    fill_missing_aghe = pd.concat([fill_missing_aghe, missing_aghe], ignore_index = True)
     fill_missing_aghe.sort_values(by = ['d', 'aghe_key', 't', 'n', 's',], inplace = True)
     fill_missing_aghe = fill_missing_aghe.reset_index().drop(columns = ['index'])
     fill_missing_aghe = fill_missing_aghe[census_micro_hh_pop_pivot_aghe.columns]
@@ -702,7 +706,7 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
                                'ntem_tt', 'P_NTEM', 'f_tns/aghe']
     NTEM_pop_2011_EW = NTEM_pop_2011_EW[NTEM_pop_2011_col_order]
     NTEM_pop_2011_S = NTEM_pop_2011_S[NTEM_pop_2011_col_order]
-    NTEM_pop_2011_GB = NTEM_pop_2011_EW.append(NTEM_pop_2011_S, ignore_index=True)
+    NTEM_pop_2011_GB = pd.concat([NTEM_pop_2011_EW, NTEM_pop_2011_S], ignore_index=True)
 
     # Print some totals out to check...
     print('Actual EW tot:' + str(test_tot_EW))
@@ -998,7 +1002,7 @@ def create_ipfn_inputs_2011(census_and_by_lu_obj):
 
     lookup_geography_GB = lookup_geography_GB[['NorMITs_Zone', 'd']]
     lookup_geography_GB = lookup_geography_GB.rename(columns = {'NorMITs_Zone':'z', 'Grouped_LA':'d'})
-    lookup_geography_GB = lookup_geography_GB.append(lookup_geography_S, ignore_index=True)
+    lookup_geography_GB = pd.concat([lookup_geography_GB, lookup_geography_S], ignore_index=True)
 
     lookup_geography_z2d2r_with_S = lookup_geography_GB.merge(lookup_geography_z2d2r,
                                                               left_on=['z', 'd'],

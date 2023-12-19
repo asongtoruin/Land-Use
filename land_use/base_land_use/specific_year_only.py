@@ -1,6 +1,8 @@
 
 # TODO: Deprecated, remove
 
+import pandas as pd
+
 def adjust_landuse_to_specific_yr(landusePath = _landuse_segments,
                                   midyear = True, 
                                   verbose: bool = True):
@@ -55,7 +57,7 @@ def adjust_landuse_to_specific_yr(landusePath = _landuse_segments,
         Scot_adjust = get_scotpopulation()
         ewmype = adjust_mype()  # adjust_mype removes the population in communal establishments. Handled separately later on
         
-        mype_gb = ewmype.append(Scot_adjust)
+        mype_gb = pd.concat([ewmype, Scot_adjust])
         mype_gb['gender'] = mype_gb['Gender'].map(gender_nt)
         mype_gb['age_code'] = mype_gb['Age'].map(age_nt)
         mype_gb = mype_gb.drop(columns={'Gender', 'Age'})
@@ -109,7 +111,7 @@ def adjust_landuse_to_specific_yr(landusePath = _landuse_segments,
         
         # TODO: ensure communal pop or landuse columns is the same as Scottish
         # Append the communal establishment entries to the rest of the land use data
-        gb_adjusted = landuse.append(communal_pop)
+        gb_adjusted = pd.concat([landuse, communal_pop])
         isnull_any(gb_adjusted)
         
         # Add back any missing MSOAs
@@ -117,7 +119,7 @@ def adjust_landuse_to_specific_yr(landusePath = _landuse_segments,
         # this might not be needed but there were some zones that weren't behaving properly before
         check_zones = gb_adjusted['ZoneID'].drop_duplicates()   
         missingMSOAs = landusesegments[~landusesegments.ZoneID.isin(check_zones)]
-        fullGBadjustment = gb_adjusted.append(missingMSOAs)
+        fullGBadjustment = pd.concat([gb_adjusted, missingMSOAs])
 
         print('Full population for 2018 is now =', 
               fullGBadjustment['people'].sum())

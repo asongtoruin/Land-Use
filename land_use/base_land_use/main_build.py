@@ -231,7 +231,7 @@ def create_employment_segmentation(by_lu_obj, bsq):
         columns={'w_pop_factor': 'pop_factor'})
 
     # Append the non working age entries and select the required columns
-    bsq = bsq_working_age.append(bsq_non_working_age, sort=True)
+    bsq = pd.concat([bsq_working_age, bsq_non_working_age], sort=True)
     bsq = bsq[['msoaZoneID', 'Age', 'Gender', 'employment_type',
                'household_composition', 'property_type', 'B', 'R',
                'Zone_Desc', 'pop_factor']]
@@ -517,7 +517,8 @@ def Process_bsq(by_lu_obj):
     missing_zones = missing_zones.merge(genericNorthTypeBsq, how='left', on='R')
     missing_zones.to_csv('missing_zones.csv', index=False)
     bsq = bsq[list(missing_zones)]
-    bsq = bsq.append(missing_zones).reset_index(drop=True)
+    bsq = pd.concat([bsq, missing_zones])
+    bsq = bsq.reset_index(drop=True)
     bsq.to_csv('bsq_includeScotland.csv', index=False)
     print('Number of unique MSOA zones:', len(bsq.msoaZoneID.unique()), 'should be 8480 with Scotland')
 
@@ -972,7 +973,7 @@ def join_establishments(by_lu_obj):
     CommunalEstActive['comm_people'] = CommunalEstActive['communal_total'] * CommunalEstActive['emp_factor']
     CommunalEstActive = CommunalEstActive.drop(columns={'communal_total', 'CommunalFactor', 'emp_factor'})
     CommunalEstActive = CommunalEstActive.rename(columns={'comm_people': 'people'})
-    communal_establishments = CommunalEstActive.append(CommunalNonWork, sort=True)
+    communal_establishments = pd.concat([CommunalEstActive, CommunalNonWork], sort=True)
     print('Communal Establishment total for 2018 should be ~1.1m and is ',
           communal_establishments['people'].sum() / 1000000)
 
@@ -1013,7 +1014,7 @@ def join_establishments(by_lu_obj):
             'household_composition', 'people']
     CommunalEstablishments = CommunalEstablishments[cols]
     landuse = landuse[cols]
-    landusewComm = landuse.append(CommunalEstablishments)
+    landusewComm = pd.concat([landuse, CommunalEstablishments])
     print('Joined communal communities. Total pop for GB is now', landusewComm['people'].sum())
     logging.info('Population currently {}'.format(landusewComm.people.sum()))
     compress.write_out(landusewComm,
