@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - caf.toolkit>=0.0.7
-  - pandas>=1
+  - pandas>=1.4.0, <2
   - psycopg2>=2
   - pydantic>=1
   - python=3.10
