@@ -8,7 +8,7 @@ def main():
     run_pop_DDG = True
     run_emp = True
 
-    iteration = 'iter4q'
+    iteration = 'iter4q_validation_20231218'
     census_year = '2011'
     base_year = '2018'
 
@@ -42,13 +42,19 @@ def main():
 
 
     if run_pop:
+        print('running build by pop')
         lu_run.build_by_pop()
+        print('completed build by pop')
 
     if run_pop_DDG:
+        print('running build by pop ddg')
         lu_run.build_by_pop_DDG()
+        print('completed build by pop ddg')
 
     if run_emp:
+        print('running build by emp')
         lu_run.build_by_emp()
+        print('completed build by emp')
 
     return 0
 
