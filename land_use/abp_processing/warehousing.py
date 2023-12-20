@@ -555,9 +555,7 @@ def extract_warehouses(
             lsoa_warehouse = warehouse_by_lsoa(
                 connected_db, query, lsoa, shapefile.id_column, folder / name
             )
-            lsoa_warehouse_floorspace = pd.concat(
-                [lsoa_warehouse_floorspace, lsoa_warehouse]
-                )
+            lsoa_warehouse_floorspace.append(lsoa_warehouse)
 
         if year is None:
             out_file = output_folder / "warehouse_floorspace_by_lsoa_inc_amazon.csv"
