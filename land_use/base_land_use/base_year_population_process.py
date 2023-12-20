@@ -1209,11 +1209,14 @@ def mye_aps_process(by_lu_obj,
                                         on='LAD')
 
     # Get totals to help solve Scilly
-    working_age_pop_by_la_uk = pd.concat([
-        working_age_pop_by_la_uk, 
-        working_age_pop_by_la_uk.sum(numeric_only=True), 
-        ignore_index=True
-        ])
+    working_age_pop_by_la_uk = pd.concat(
+        [
+            working_age_pop_by_la_uk,
+            working_age_pop_by_la_uk.sum(numeric_only=True).to_frame().T,
+        ],
+        ignore_index=True,
+    )
+    
     working_age_pop_by_la_uk['LAD'].fillna("UK wide total", inplace=True)
     working_age_pop_by_la_uk['2021_LA'].fillna("All_UK001", inplace=True)
     # Now the total column is added, populate this column
