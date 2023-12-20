@@ -95,10 +95,14 @@ def get_scenario_data(year):
 def classify_areas(year):
     
     data = get_scenario_data(year)
-    start_points =  data[(data["msoa_zone_id"] == "E02006917")&(data["scenario"]==1)]
-    start_points = pd.concat([start_points, data[((data["msoa_zone_id"] == "E02001063")&(data["scenario"]==1))]])
-    start_points = pd.concat([start_points, data[((data["msoa_zone_id"] == "E02001050")&(data["scenario"]==1))]])
-    start_points = pd.concat([start_points, data[((data["msoa_zone_id"] == "E02001036")&(data["scenario"]==1))]])
+
+    starting_msoas = ["E02006917", "E02001063", "E02001050", "E02001036"]
+    start_points = data[data["msoa_area_code"].isin(starting_msoas)]
+
+    start_points = data[
+        data["msoa_area_code"].isin(starting_msoas) 
+        & data["scenario"].eq(1)
+    ]
     
     data = data.set_index(keys = "msoa_zone_id")
     start_points = start_points.set_index(keys = "msoa_zone_id")

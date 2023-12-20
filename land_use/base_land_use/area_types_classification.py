@@ -40,10 +40,8 @@ def classify_area_types(midyear = True):
          
         
         #define starting points
-        start_points =  data[(data["msoa_area_code"] == "E02006917")]
-        start_points = pd.concat([start_points, data[(data["msoa_area_code"] == "E02001063")])
-        start_points = pd.concat([start_points, data[(data["msoa_area_code"] == "E02001050")])
-        start_points = pd.concat([start_points, data[(data["msoa_area_code"] == "E02001036")])
+        starting_msoas = ["E02006917", "E02001063", "E02001050", "E02001036"]
+        start_points = data[data["msoa_area_code"].isin(starting_msoas)]
         
         data = data.set_index(keys = "msoa_area_code")
         start_points = start_points.set_index(keys = "msoa_area_code")
