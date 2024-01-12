@@ -1905,49 +1905,41 @@ def pop_with_full_dimensions(by_lu_obj):
         logging.info('Any further functions that are called from this Land Use process are highly likely to be wrong!')
         # TODO - Call NorCOM script directly here? Then could remove if/else statement?
         #  Waiting for NorCOM to be refined enough that it doesn't take 3 days to run...
-    elif how_to_run == 'import from NorCOM':
-        logging.info('Reading in file from NorCOM')
-        # Make sure this read in and is picking up an actual file and actual columns
-        NorCOM_NTEM_HHpop = pd.read_csv(input_NTEM_HHpop_filepath)
-        NorCOM_NTEM_HHpop = NorCOM_NTEM_HHpop[['msoa11cd', 'lu_TravellerType', 'NorCOM_result']]
-
-        # Sort out df prior to merger
-        NTEM_HHpop_trim = NTEM_HHpop[['msoaZoneID',
-                                      'msoa11cd',
-                                      'TravellerType',
-                                      'Age_code',
-                                      'Gender_code',
-                                      'Household_composition_code',
-                                      'Household_size',
-                                      'Household_car',
-                                      'Employment_type_code']]
-        NTEM_HHpop_trim.groupby(['msoaZoneID',
-                                 'msoa11cd',
-                                 'TravellerType',
-                                 'Age_code',
-                                 'Gender_code',
-                                 'Household_composition_code',
-                                 'Household_size',
-                                 'Household_car',
-                                 'Employment_type_code'])
-
-        NTEM_HHpop_trim = pd.merge(NTEM_HHpop_trim,
-                                   NorCOM_NTEM_HHpop,
-                                   how='right',
-                                   left_on=['msoa11cd', 'TravellerType'],
-                                   right_on=['msoa11cd', 'lu_TravellerType'])
     else:
-        logging.info('Skipping importing NorCOM')
-        NTEM_HHpop_trim = NTEM_HHpop[['msoaZoneID',
-                                      'msoa11cd',
-                                      'TravellerType',
-                                      'Age_code',
-                                      'Gender_code',
-                                      'Household_composition_code',
-                                      'Household_size',
-                                      'Household_car',
-                                      'Employment_type_code',
-                                      'pop_aj']]
+        if how_to_run == 'import from NorCOM':
+            logging.info('Reading in file from NorCOM')
+            # Make sure this read in and is picking up an actual file and actual columns
+            NorCOM_NTEM_HHpop = pd.read_csv(input_NTEM_HHpop_filepath)
+            NorCOM_NTEM_HHpop = NorCOM_NTEM_HHpop[['msoa11cd', 'lu_TravellerType', 'NorCOM_result']]
+
+            # Sort out df prior to merger
+            NTEM_HHpop_trim = NTEM_HHpop[['msoaZoneID',
+                                          'msoa11cd',
+                                          'TravellerType',
+                                          'Age_code',
+                                          'Gender_code',
+                                          'Household_composition_code',
+                                          'Household_size',
+                                          'Household_car',
+                                          'Employment_type_code']]
+
+            NTEM_HHpop_trim = pd.merge(NTEM_HHpop_trim,
+                                       NorCOM_NTEM_HHpop,
+                                       how='right',
+                                       left_on=['msoa11cd', 'TravellerType'],
+                                       right_on=['msoa11cd', 'lu_TravellerType'])
+        else:
+            logging.info('Skipping importing NorCOM')
+            NTEM_HHpop_trim = NTEM_HHpop[['msoaZoneID',
+                                          'msoa11cd',
+                                          'TravellerType',
+                                          'Age_code',
+                                          'Gender_code',
+                                          'Household_composition_code',
+                                          'Household_size',
+                                          'Household_car',
+                                          'Employment_type_code',
+                                          'pop_aj']]
 
         NTEM_HHpop_trim = NTEM_HHpop_trim.rename(
             columns={'msoaZoneID': 'z',
@@ -1956,6 +1948,7 @@ def pop_with_full_dimensions(by_lu_obj):
                      'Gender_code': 'g',
                      'Household_composition_code': 'h',
                      'Employment_type_code': 'e',
+                     'NorCOM_result': 'P_NTEM',
                      'pop_aj': 'P_NTEM'})
 
         NTEM_HHpop_trim['z'] = NTEM_HHpop_trim['z'].astype(int)
