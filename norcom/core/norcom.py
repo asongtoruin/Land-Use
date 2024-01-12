@@ -25,7 +25,6 @@ by estimating the probability of car ownership referred to as 'pcar'.
 """
 
 start = time.time()
-tt = pd.DataFrame()
 
 ######################### MODEL SPECS #########################
 
@@ -617,6 +616,8 @@ for msoa in msoa_list:
     
     probs = synthetic_data.copy()
     exponents = synthetic_data.copy()
+
+    all_traveller_types = []
     
     for model_type in range(1,3):
 
@@ -740,8 +741,8 @@ for msoa in msoa_list:
             traveller_types_1plus = calculate_traveller_types(probs_1plus, msoa, '1plus')
             traveller_types_0 = calculate_traveller_types(probs_0, msoa, '0')
             
-            tt = pd.concat([tt, traveller_types_1plus])
-            tt = pd.concat([tt, traveller_types_0])
+            all_traveller_types.append(traveller_types_1plus)
+            all_traveller_types.append(traveller_types_0)
                     
         elif model_type == 2:
             probs_2plusgiven1plus = probs.copy()
@@ -751,8 +752,10 @@ for msoa in msoa_list:
             traveller_types_2plus = calculate_traveller_types(probs_2plusgiven1plus, msoa,'2plus')
             traveller_types_1 = calculate_traveller_types(probs_1, msoa,'1')
 
-            tt = pd.concat([tt, traveller_types_2plus])
-            tt = pd.concat([tt, traveller_types_1])
+            all_traveller_types.append(traveller_types_2plus)
+            all_traveller_types.append(traveller_types_1)
+
+    tt = pd.concat(all_traveller_types)
             
     # create categroeis for grouping
     tt['NorCOM_TravellerType_desc'] = (tt['PersonType'].astype(str) + '_' 
