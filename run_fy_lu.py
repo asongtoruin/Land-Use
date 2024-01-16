@@ -9,13 +9,13 @@ import land_use.lu_constants as consts
 
 if __name__ == '__main__':
 
-    fy_iter = 'iter4m'
+    fy_iter = 'iter4m_20240109_validation'
 
     by_resi_lu_path = r'I:\NorMITs Land Use\base_land_use\iter3e\outputs\land_use_output_msoa.csv'
     by_non_resi_lu_path = r'I:\NorMITs Land Use\base_land_use\iter3e\outputs\land_use_2018_emp.csv'
 
-    # scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
-    scenarios = ['Regional Scenario', 'High', 'Low']
+    scenarios = ['SC01_JAM', 'SC02_PP', 'SC03_DD', 'SC04_UZC']
+    # scenarios = ['Regional Scenario', 'High', 'Low']
     CAS_scen = ['CASReg', 'CASLo','CASHi']
     all_fy = range(2019, 2051)
     future_years = list()
@@ -24,7 +24,7 @@ if __name__ == '__main__':
     # future_years = ['2019', '2033', '2035', '2040', '2050']
 
 
-    pop = False
+    pop = True
     emp = True
     export = True
     balance_demographics = True
@@ -38,7 +38,7 @@ if __name__ == '__main__':
                 future_year=fy,
                 scenario_name=scenario,
                 iteration=fy_iter,
-                base_resi_land_use_path=base_land_use,
+                base_resi_land_use_path=consts.RESI_LAND_USE_MSOA,
                 base_non_resi_land_use_path=consts.NON_RESI_LAND_USE_MSOA,
                 sub_for_defaults=False)
 
