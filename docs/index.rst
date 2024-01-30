@@ -8,26 +8,8 @@ given base year, and can also build a range of scenario specific forecasts.
 We are open to collaboration and sharing of outputs,
 see `support <Sharing>`_ for more information.
 
-
-Contents
-========
-
- - `Summary`_
- - `Quick Start Guide <quick-start-guide_>`_
- - `Required Data <required-data_>`_
-
-   - `Base Year Population Model <base-year-population-model_>`_
-   - `Base Year Employment Model <base-year-employment-model_>`_
-   - `Future Year Population Model <future-year-population-model_>`_
-   - `Future Year Employment Model <future-year-employment-model_>`_
-
- - `Documentation`_
- - `Planned Improvements <planned-improvements_>`_
-
- - `Sharing`_
-
-   - `Sharing Models <sharing-models_>`_
-   - `Sharing Requests <sharing-requests_>`_
+.. contents:: Contents
+   :depth: 2
 
    
 Summary
