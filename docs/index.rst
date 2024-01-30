@@ -1,8 +1,5 @@
-Welcome to Land-Use's documentation!
-=======================================
-
 NorMITS Land Use
-------------------
+================
 
 NorMITs Land Use is Transport for the North's (TfN) mainland GB population and 
 employment model. It builds detailed population and employment vectors for a 
@@ -13,7 +10,7 @@ see `support <Sharing>`_ for more information.
 
 
 Contents
-------------------
+========
 
  - `Summary`_
  - `Quick Start Guide <quick-start-guide_>`_
@@ -34,7 +31,7 @@ Contents
 
    
 Summary
-=======================================
+=======
 
 NorMITs Land Use breaks down into five models, each with smaller substeps.
 Specifically:
@@ -60,14 +57,14 @@ units of functionality to provide a desired modelling outcome.
 .. _quick-start-guide:
 
 Quick Start Guide
-=======================================
+=================
 
 To be written.
 
 .. _required-data:
 
 Required Data
-=======================================
+=============
 
 The NorMITS Land Use Base Land Use tool was initially designed to be able to run 
 with publically available data.
@@ -90,7 +87,7 @@ For more information on how to get hold of this data, please see the `sharing <s
 .. _base-year-population-model:
 
 Base Year Population Model
-----------------------------------------------
+--------------------------
 
 Base year population model is designed to:
 
@@ -116,7 +113,7 @@ Units are in people, households are also provided as a secondary output.
 .. _base-year-employment-model:
 
 Base Year Employment Model
-----------------------------------------------
+--------------------------
 
 Base year employment model is simple model designed to:
 
@@ -134,7 +131,7 @@ Base year employment model is simple model designed to:
 .. _future-year-population-model:
 
 Future Year Population Model
-----------------------------------------------
+----------------------------
 
 Future year population model is a model designed to:
 - Grow (or shrink) zonal population to a given future year
@@ -155,7 +152,7 @@ Future year population model is a model designed to:
 .. _future-year-employment-model:
 
 Future Year Employment Model
-----------------------------------------------
+----------------------------
 
 Future year employment model is a model designed to:
 
@@ -175,7 +172,7 @@ Future year employment model is a model designed to:
 .. _northern-car-ownership-model:
 
 Northern Car Ownership Model
-=============================================================
+============================
 
 The (**NorCOM**) takes data from 2011 Census and 
 (`National Travel Survey <https://www.gov.uk/government/collections/national-travel-survey-statistics>`_)
@@ -195,7 +192,7 @@ for a given base population year.
 - Household and property type counts
 
 Documentation
-=============================================================
+=============
 
 Current code documentation can only be found in the codebase.
 Planned improvements include hosting this online, so it's easily accessible!
@@ -206,7 +203,7 @@ TAME's `Sharing Requests <Sharing>`_ process.
 .. _planned-improvements:
 
 Planned Improvements
-=============================================================
+====================
 
 This section is a work in progress and will be updated with more detail.
 Planned updates include:
@@ -227,7 +224,7 @@ Planned updates include:
 
 
 Sharing
-=============================================================
+=======
 
 TfN's Technical Assurance, Modelling and Economics (**TAME**) team have done
 a great deal of work to develop TfN’s Analytical Framework.
@@ -239,27 +236,27 @@ models and outputs available for local and non-TfN pan-northern schemes and rese
 .. _sharing-models:
 
 Sharing Models
----------------------------------------------
+--------------
 
 We've categorised out ways of sharing into 3 different profiles, each with a distinct 
 risk/reward profile.  
 
 1. Utilisation of Open Source tools and casual TfN support.
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This includes forking our repository and mostly working without TfN support.
 This profile would be facilitated though submitting issues and TfN clarification
 supporting where possible.
 
 2. TfN Builds outputs *for* requester
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Data requests will be submitted using the `Sharing Requests <Sharing>`_ process.
 TfN will then assess the feasibility, and aim to build and hand over the
 required outputs.
 
 3. TfN Builds outputs *with* requester 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Data requests will be submitted using the `Sharing Requests <Sharing>`_ process.
 TfN will then assess the feasibility, and a discussion will begin to decide how
@@ -268,7 +265,7 @@ best to work together to produce the required output.
 .. _sharing-requests:
 
 Sharing Requests
----------------------------------------------------------------------
+----------------
 
 If you are interested in acquiring any of the data, or would like some support
 in utilising NorMITs Land Use, please submit your requests to
