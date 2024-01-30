@@ -18,16 +18,16 @@ Summary
 NorMITs Land Use breaks down into five models, each with smaller substeps.
 Specifically:
 
-- `Base Year Population Model <base-year-population-model_>`_ - 
-  Synthesises a highly segmented GB population, by person in household.
-- `Base Year Employment Model <base-year-employment-model_>`_ -
-  Synthesises a GB employment profile, including employment types and skill levels.
-- `Future Year Population Model <future-year-population-model_>`_ - 
-  Forecasts a future GB population, by base segmentation.
-- `Future Year Employment Model <future-year-employment-model_>`_ - 
-  Forecasts a future GB employment profile, by base segmentation.
-- `Northern Car Ownership Model <northern-car-ownership-model_>`_ - 
-  A collection of tools for manipulating matrices that underpins much of the work done by TMS and EFS.
+- `Base Year Population Model`_ - Synthesises a highly segmented GB population, 
+  by person in household.
+- `Base Year Employment Model`_ - Synthesises a GB employment profile, including 
+  employment types and skill levels.
+- `Future Year Population Model`_ - Forecasts a future GB population, by base 
+  segmentation.
+- `Future Year Employment Model`_ - Forecasts a future GB employment profile, by
+  base segmentation.
+- `Northern Car Ownership Model`_ - A collection of tools for manipulating 
+  matrices that underpins much of the work done by TMS and EFS.
 
 NorMITs Land Use is designed to be modular, in that it should be possible to swap out
 units of functionality to provide a desired modelling outcome.
@@ -36,14 +36,11 @@ units of functionality to provide a desired modelling outcome.
 .. image:: ../docs/land_use_op_model.png
     :alt: op_flow
 
-.. _quick-start-guide:
 
 Quick Start Guide
 =================
 
 To be written.
-
-.. _required-data:
 
 Required Data
 =============
@@ -64,9 +61,7 @@ from the University of Durham's
 Core forecasts come from NPIER population and employment forecasts, with ONS forecasts providing demographic detail.
 This is currently fairly flexible, improvements will be made to ensure the tool is robust whichever forecast vectors it has to deal with.
 
-For more information on how to get hold of this data, please see the `sharing <sharing-requests_>`_ section.
-
-.. _base-year-population-model:
+For more information on how to get hold of this data, please see the `sharing <Sharing Requests_>`_ section.
 
 Base Year Population Model
 --------------------------
@@ -92,7 +87,6 @@ a household income proxy (Ns-SeC) for the household reference person to
 household characteristics, giving 760 unique traveller types.
 Units are in people, households are also provided as a secondary output.
 
-.. _base-year-employment-model:
 
 Base Year Employment Model
 --------------------------
@@ -110,7 +104,6 @@ Base year employment model is simple model designed to:
 
 - Employment by e-category and skill level
 
-.. _future-year-population-model:
 
 Future Year Population Model
 ----------------------------
@@ -131,7 +124,6 @@ Future year population model is a model designed to:
 
 - Future year population, segmented as `base <base-year-population-model>`_
 
-.. _future-year-employment-model:
 
 Future Year Employment Model
 ----------------------------
@@ -148,10 +140,8 @@ Future year employment model is a model designed to:
 
 *Outputs*
 
-- Future year employment, segmented as `base <base-year-employment-model_>`_
+- Future year employment, segmented as `base <Base Year Employment Model_>`_
 
-
-.. _northern-car-ownership-model:
 
 Northern Car Ownership Model
 ============================
@@ -181,8 +171,6 @@ Planned improvements include hosting this online, so it's easily accessible!
 Development reports and technical notes are available on request through 
 TAME's `Sharing Requests <Sharing>`_ process.
 
-
-.. _planned-improvements:
 
 Planned Improvements
 ====================
@@ -215,7 +203,6 @@ including making
 models and outputs available for local and non-TfN pan-northern schemes and research.
 
 
-.. _sharing-models:
 
 Sharing Models
 --------------
@@ -244,7 +231,6 @@ Data requests will be submitted using the `Sharing Requests <Sharing>`_ process.
 TfN will then assess the feasibility, and a discussion will begin to decide how
 best to work together to produce the required output.
 
-.. _sharing-requests:
 
 Sharing Requests
 ----------------
