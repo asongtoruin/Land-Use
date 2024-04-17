@@ -137,5 +137,7 @@ dmypy.json
 abp_processing_config.yml
 abp_warehouse_config.yml
 
-# directories of testing data caches
-testing_cache/
+# directories of testing data caches and outputs and inputs
+TESTING/INPUTS/
+TESTING/OUTPUTS/
+TESTING/CACHE/
