@@ -136,3 +136,6 @@ dmypy.json
 # Config containing database connection parameters
 abp_processing_config.yml
 abp_warehouse_config.yml
+
+# directories of testing data caches
+testing_cache/
