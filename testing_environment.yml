@@ -1,0 +1,17 @@
+name: tfn_lu_sandbox
+channels:
+  - conda-forge
+dependencies:
+  - pip=24.0=pyhd8ed1ab_0
+  - python=3.11.8=h2628c8c_0_cpython
+  - jupyterlab=4.1.6
+  - jupytext
+  - ipywidgets
+  - loguru=0.7.2
+  - pandas>2
+  - pip:
+      # "-" to install as editable, in case we want to test module modifications
+      # this is the pandas_2 branch of caf.core which we have pushed edits to
+      # on the iteration_5_testing branch
+      - -e C:/Code/caf.core
+      - git+https://github.com/Transport-for-the-North/caf.space
