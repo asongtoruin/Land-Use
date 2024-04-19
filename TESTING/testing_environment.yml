@@ -10,8 +10,5 @@ dependencies:
   - loguru=0.7.2
   - pandas>2
   - pip:
-      # "-" to install as editable, in case we want to test module modifications
-      # this is the pandas_2 branch of caf.core which we have pushed edits to
-      # on the iteration_5_testing branch
-      - -e C:/Code/caf.core
+      - git+https://github.com/asongtoruin/caf.core@iteration_5_testing
       - git+https://github.com/Transport-for-the-North/caf.space

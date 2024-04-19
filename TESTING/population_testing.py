@@ -78,7 +78,7 @@ all_properties = unoccupied_properties + occupied_properties
 
 # Calculate adjustment factors by zone to get proportion of households occupied by dwelling type by zone
 non_empty_proportion = occupied_properties / all_properties
-non_empty_proportion._data = non_empty_proportion.data.fillna(0)
+non_empty_proportion.data = non_empty_proportion.data.fillna(0)
 
 # average occupancy for all dwellings
 occupancy = (census_population / occupied_properties) * non_empty_proportion
@@ -86,7 +86,7 @@ occupancy = (census_population / occupied_properties) * non_empty_proportion
 
 # infill missing occupancies with average value of other properties in the LSOA
 # i.e. based on column
-occupancy._data = occupancy._data.fillna(occupancy._data.mean(axis=0), axis=0)
+occupancy.data = occupancy.data.fillna(occupancy.data.mean(axis=0), axis=0)
 
 # multiply occupancy by the addressbase dwellings to get total population by zone
 addressbase_population = occupancy * addressbase_dwellings
