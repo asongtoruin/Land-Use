@@ -66,10 +66,14 @@ def read_ons_custom(file_path: Path, zoning: str, skip_rows: int = 9, **kwargs) 
         data_sheets = [sheet for sheet in excel_file.sheet_names if 'meta' not in sheet.lower()]
 
         all_data = pd.concat([
-            pd.read_excel(excel_file, sheet_name=sheet, skiprows=skip_rows, index_col=0, **kwargs).dropna()
+            pd.read_excel(excel_file, sheet_name=sheet, skiprows=skip_rows, **kwargs).dropna()
             for sheet in data_sheets
-        ]).reset_index()
+        ])
 
+    if isinstance(all_data.columns, pd.MultiIndex):
+        all_data = all_data.melt(value_vars=all_data.columns.tolist(), ignore_index=False).reset_index()
+    else:
+        all_data = all_data.reset_index()
     all_data.columns.values[0] = zoning
 
     return all_data
