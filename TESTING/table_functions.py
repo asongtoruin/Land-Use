@@ -189,3 +189,44 @@ def read_abp(file_path: Path, zoning: str, tab: str = 'ClassificationTable') -> 
     df.columns = df.columns.get_level_values(zoning)
 
     return df
+
+
+def convert_ons_table_2(df: pd.DataFrame, dwelling_segmentation: dict, adults_segmentation: dict,
+                        children_segmentation: dict, car_segmentation: dict, zoning: str) -> pd.DataFrame:
+    """
+
+    Parameters
+    ----------
+    df : Output of read_ons_custom()
+    dwelling_segmentation : dictionary of {1: category1, 2: category2, ...} where the segmentation categories are
+        the column values of 'dwelling' types in the ONS custom download dataset
+    adults_segmentation : dictionary of {1: category1, 2: category2, ...} where the segmentation categories are
+        the column values of 'number of adults in the household' types in the ONS custom download dataset
+    children_segmentation : dictionary of {1: category1, 2: category2, ...} where the segmentation categories are
+        the column values of 'number of children in the household' types in the ONS custom download dataset
+    car_segmentation : dictionary of {1: category1, 2: category2, ...} where the segmentation categories are
+        the column values of 'car availability' types in the ONS custom download dataset
+    zoning : the zoning level of the input data (e.g. 'lsoa2021') which should match the relevant zoning
+        in the ZONING_CACHE
+
+    Returns
+    -------
+        pd.DataFrame with index of 'h', 'a', 'c', 'car' and column headers of 'zoning' in the correct format to convert to DVector
+    """
+
+    # convert to required format for DVec
+    df[zoning] = df[zoning].str.split(' ', expand=True)[0]
+
+    # remap segmentation variables to be consistent with other mappings
+    df['h'] = df['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
+    df['a'] = df['level_2'].map({v: k for k, v in adults_segmentation.items()})
+    df['c'] = df['variable_0'].map({v: k for k, v in children_segmentation.items()})
+    df['car'] = df['variable_1'].map({v: k for k, v in car_segmentation.items()})
+    df['households'] = df['value'].astype(int)
+
+    # convert to required format for DVector
+    df = df.loc[:, [zoning, 'h', 'a', 'c', 'car', 'households']]
+    df = df.set_index([zoning, 'h', 'a', 'c', 'car']).unstack(level=[zoning])
+    df.columns = df.columns.get_level_values(zoning)
+
+    return df.fillna(0)
