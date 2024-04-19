@@ -127,6 +127,10 @@ addressbase_population = occupancy * addressbase_dwellings
 addressbase_population.save(OUTPUT_DIR / 'Output 1.hdf')
 util.output_csv(df=addressbase_population.data, output_path=OUTPUT_DIR, file='Output 1.csv', index=True)
 
+# TODO
+# Move processing beyond this point to a separate script / process that can be run in isolation following the export
+# of Output 1 above
+
 # read in excel format, preprocess, and reformat for DVector
 # NOTE that ONS Table 2 is at MSOA level not LSOA
 df = tf.read_ons_custom(ons_tab_2, zoning='msoa_2021', index_col=[0, 1, 2], header=[0, 1])
