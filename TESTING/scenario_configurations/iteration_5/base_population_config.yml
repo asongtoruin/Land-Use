@@ -1,0 +1,18 @@
+# Configuration file specifying the segmentation and geographical level of the input data.
+# All files here are assumed to be in a format ready for DVectors.
+
+occupied_households:
+    file_path: I:\NorMITs Land Use\2023\import\RM002 accom type by household size\2072764328175065 zero.csv
+    geographical_level: LSOA2021
+    input_segments: [h]
+    # IDEALLY we might also have a "desired_segments" here, in case the input data is at an unrequired level of detail
+
+unoccupied_households:
+    file_path: I:\NorMITs Land Use\2023\import\RM002 accom type by household size\2672385425907310 all.csv
+    geographical_level: LSOA2021
+    input_segments: [h]
+
+census_population:
+    file_path: I:\NorMITs Land Use\2023\import\ONS custom\ct210212census2021.xlsx
+    geographical_level: LSOA2021
+    input_segments: [h]
