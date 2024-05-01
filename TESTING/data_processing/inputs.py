@@ -1,14 +1,19 @@
 from pathlib import Path
 from warnings import warn
 
-import pandas as pd
-
 from caf.core.data_structures import DVector
 from caf.core.segmentation import Segmentation, SegmentationInput
-import TESTING.constants as cn
+import pandas as pd
+
+from TESTING import constants
 
 
-def read_dvector_data(file_path: Path, geographical_level: str, input_segments: list, **params) -> DVector:
+def read_dvector_data(
+        file_path: Path, 
+        geographical_level: str, 
+        input_segments: list, 
+        **params
+    ) -> DVector:
     """Read DVector friendly data
 
     Parameters
@@ -31,22 +36,39 @@ def read_dvector_data(file_path: Path, geographical_level: str, input_segments: 
         warn('Unexpected parameters passed, please check.\n'
              f'{params.keys()}.')
 
-    # Get params from the arguments passed from the yaml file
-    input_file = file_path
     zoning = geographical_level
-    segmentation = input_segments
 
     # Read in the file, with the correct geography and segments.
-    df = pd.read_hdf(input_file)
+    df = pd.read_hdf(file_path)
     df = pd.DataFrame(df)
 
-    # TODO this needs thinking about, some segmentations will be lists, some strings, some existing, some not
-    # Dislike this
-    custom_segmentation = [Segment(name=segmentation[0], values=model_segmentation)]
-    # TODO split segments into standard and not standard
-    # TODO get non-standard ones from dictionary in segments
-    # TODO checks
-    segmentation_input = SegmentationInput(enum_segments=[], naming_order=segmentation, custom_segments=custom_segmentation)
+
+    segment_flags = constants.segments.split_input_segments(input_segments)
+
+    # "False" are our custom segments - check they exist, error if they don't
+    missing_segments = [
+        seg for seg in segment_flags[False] 
+        if seg not in constants.segments.CUSTOM_SEGMENTS.keys()
+    ]
+    if missing_segments:
+        raise ValueError(f'Undefined segments provided: {",".join(missing_segments)}')
+
+    # Get the hydrated segment objects
+    custom_segments = [
+        constants.segments.CUSTOM_SEGMENTS.get(seg) 
+        for seg in segment_flags[False]
+    ]
+
+    # Configure the segmentation
+    segmentation_input = SegmentationInput(
+        enum_segments=segment_flags[True], 
+        custom_segments=custom_segments,
+        naming_order=input_segments
+    )
     resulting_segmentation = Segmentation(segmentation_input)
 
-    return DVector(segmentation=resulting_segmentation, zoning_system=cn.geographies.get(zoning), import_data=df)
+    return DVector(
+        segmentation=resulting_segmentation, 
+        zoning_system=constants.geographies.get(zoning), 
+        import_data=df
+    )
