@@ -220,15 +220,15 @@ def convert_ons_table_2(df: pd.DataFrame, dwelling_segmentation: dict, adults_se
     df[zoning] = df[zoning].str.split(' ', expand=True)[0]
 
     # remap segmentation variables to be consistent with other mappings
-    df['h'] = df['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
-    df['a'] = df['level_2'].map({v: k for k, v in adults_segmentation.items()})
-    df['c'] = df['variable_0'].map({v: k for k, v in children_segmentation.items()})
+    df['hr'] = df['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
+    df['ha'] = df['level_2'].map({v: k for k, v in adults_segmentation.items()})
+    df['hc'] = df['variable_0'].map({v: k for k, v in children_segmentation.items()})
     df['car'] = df['variable_1'].map({v: k for k, v in car_segmentation.items()})
     df['households'] = df['value'].astype(int)
 
     # convert to required format for DVector
-    df = df.loc[:, [zoning, 'h', 'a', 'c', 'car', 'households']]
-    df = df.set_index([zoning, 'h', 'a', 'c', 'car']).unstack(level=[zoning])
+    df = df.loc[:, [zoning, 'hr', 'ha', 'hc', 'car', 'households']]
+    df = df.set_index([zoning, 'hr', 'ha', 'hc', 'car']).unstack(level=[zoning])
     df.columns = df.columns.get_level_values(zoning)
 
     return df.fillna(0)

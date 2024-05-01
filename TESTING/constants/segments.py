@@ -57,7 +57,23 @@ _CUSTOM_SEGMENT_CATEGORIES = {
           3: "Whole house or bungalow: Terraced",
           4: "Flat, maisonette or apartment",
           5: "A caravan or other mobile or temporary structure"
-          }
+          },
+    'hr': {1: 'Whole house or bungalow: Detached',
+           2: 'Whole house or bungalow: Semi-detached',
+           3: 'Whole house or bungalow: Terraced',
+           4: 'Flat, maisonette or apartment'
+           },
+    'ha': {1: 'No adults or 1 adult in household',
+           2: '2 adults in household',
+           3: '3 or more adults in household',
+           },
+    'hc': {1: 'Household with no children or all children non-dependent',
+           2: 'Household with one or more dependent children',
+           },
+    'car': {1: 'No cars or vans in household',
+            2: '1 car or van in household',
+            3: '2 or more cars or vans in household',
+            }
 }
 
 CUSTOM_SEGMENTS = {
