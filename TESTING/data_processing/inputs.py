@@ -1,15 +1,15 @@
 from pathlib import Path
+from warnings import warn
 
 import pandas as pd
 
 from caf.core.data_structures import DVector
-from caf.core.segments import Segment
 from caf.core.segmentation import Segmentation, SegmentationInput
 import TESTING.constants as cn
 
 
-def read_dvector_data(file_path: Path, geographical_level: str, input_segments: list) -> DVector:
-    """
+def read_dvector_data(file_path: Path, geographical_level: str, input_segments: list, **params) -> DVector:
+    """Read DVector friendly data
 
     Parameters
     ----------
@@ -26,6 +26,11 @@ def read_dvector_data(file_path: Path, geographical_level: str, input_segments: 
         DVector
 
     """
+    # warn if extra stuff is passed unexpedtedly from yaml file
+    if params:
+        warn('Unexpected parameters passed, please check.\n'
+             f'{params.keys()}.')
+
     # Get params from the arguments passed from the yaml file
     input_file = file_path
     zoning = geographical_level
@@ -35,18 +40,12 @@ def read_dvector_data(file_path: Path, geographical_level: str, input_segments: 
     df = pd.read_hdf(input_file)
     df = pd.DataFrame(df)
 
-    # TODO need to think about how to bring this in for different segmentation definitions
-    # This is the default segmentation dictionary for the two RM002 tables
-    model_segmentation = {1: "Whole house or bungalow: Detached",
-                          2: "Whole house or bungalow: Semi-detached",
-                          3: "Whole house or bungalow: Terraced",
-                          4: "Flat, maisonette or apartment",
-                          5: "A caravan or other mobile or temporary structure"
-                          }
-
     # TODO this needs thinking about, some segmentations will be lists, some strings, some existing, some not
     # Dislike this
     custom_segmentation = [Segment(name=segmentation[0], values=model_segmentation)]
+    # TODO split segments into standard and not standard
+    # TODO get non-standard ones from dictionary in segments
+    # TODO checks
     segmentation_input = SegmentationInput(enum_segments=[], naming_order=segmentation, custom_segments=custom_segmentation)
     resulting_segmentation = Segmentation(segmentation_input)
 
