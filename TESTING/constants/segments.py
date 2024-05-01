@@ -52,7 +52,7 @@ def split_input_segments(input_segments: List[str]) -> Dict[bool, List[str]]:
 
 
 _CUSTOM_SEGMENT_CATEGORIES = {
-    'H': {1: "Whole house or bungalow: Detached",
+    'h': {1: "Whole house or bungalow: Detached",
           2: "Whole house or bungalow: Semi-detached",
           3: "Whole house or bungalow: Terraced",
           4: "Flat, maisonette or apartment",

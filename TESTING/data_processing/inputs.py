@@ -14,7 +14,7 @@ def read_dvector_data(
         input_segments: list, 
         **params
     ) -> DVector:
-    """Read DVector friendly data
+    """Read DVector friendly data in hdf format
 
     Parameters
     ----------
@@ -22,7 +22,7 @@ def read_dvector_data(
         path to input file in DVector friendly format to read in
     geographical_level : str
         specification of the zone system of the input file,
-        TODO this needs to match or be consistent with the geographies defined in constants\geographies.py
+        TODO this needs to match or be consistent with the KNOWN_GEOGRAPHIES defined in constants\geographies.py
     input_segments : list
         segmentation definition of the data to create the zone segmentation with for DVectors
 
@@ -42,7 +42,7 @@ def read_dvector_data(
     df = pd.read_hdf(file_path)
     df = pd.DataFrame(df)
 
-
+    # get flags for segments that are or are not TfN standard super segments
     segment_flags = constants.segments.split_input_segments(input_segments)
 
     # "False" are our custom segments - check they exist, error if they don't
@@ -69,6 +69,6 @@ def read_dvector_data(
 
     return DVector(
         segmentation=resulting_segmentation, 
-        zoning_system=constants.geographies.get(zoning), 
+        zoning_system=constants.KNOWN_GEOGRAPHIES.get(zoning),
         import_data=df
     )

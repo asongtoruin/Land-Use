@@ -1,2 +1,2 @@
 from .geographies import *
-from .segments_ss import *
+from .segments import *

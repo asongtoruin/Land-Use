@@ -18,7 +18,7 @@ MSOA_ZONING_SYSTEM = ZoningSystem.get_zoning(MSOA, search_dir=CACHE_FOLDER)
 
 # Dictionary of references for the yaml file
 # TODO link with definitions above
-geographies = {
+KNOWN_GEOGRAPHIES = {
     'LSOA2021': MODEL_ZONING_SYSTEM,
     'MSOA2021': MSOA_ZONING_SYSTEM
 }
