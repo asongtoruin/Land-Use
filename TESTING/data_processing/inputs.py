@@ -29,13 +29,9 @@ def read_dvector_data(**params) -> DVector:
     zoning = params.get('geographical_level')
     segmentation = params.get('input_segments')
 
-    # get file path from name
-    parent_directory = input_file.parent
-    file_name = input_file.name.split('.')[0]
-
     # Read in the file, with the correct geography and segments.
     # read in the DVector data
-    df = pd.read_hdf(parent_directory / 'preprocessing' / f'{file_name}.hdf')
+    df = pd.read_hdf(input_file)
     df = pd.DataFrame(df)
 
     # TODO need to think about how to bring this in for different segmentation definitions
