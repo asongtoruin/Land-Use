@@ -8,16 +8,15 @@ from caf.core.segmentation import Segmentation, SegmentationInput
 import TESTING.constants as cn
 
 
-def read_dvector_data(**params) -> DVector:
+def read_dvector_data(file_path, geographical_level, input_segments) -> DVector:
     """
 
     Parameters
     ----------
-    params : Dict
-        file_path : path to input file in DVector friendly format to read in
-        geographical_level : specification of the zone system of the input file,
-            TODO this needs to match or be consistent with the geographies defined in constants\geographies.py
-        input_segments : segmentation definition of the data to create the zone segmentation with for DVectors
+    file_path : path to input file in DVector friendly format to read in
+    geographical_level : specification of the zone system of the input file,
+        TODO this needs to match or be consistent with the geographies defined in constants\geographies.py
+    input_segments : segmentation definition of the data to create the zone segmentation with for DVectors
 
     Returns
     -------
@@ -25,12 +24,11 @@ def read_dvector_data(**params) -> DVector:
 
     """
     # Get params from the arguments passed from the yaml file
-    input_file = Path(params.get('file_path'))
-    zoning = params.get('geographical_level')
-    segmentation = params.get('input_segments')
+    input_file = Path(file_path)
+    zoning = geographical_level
+    segmentation = input_segments
 
     # Read in the file, with the correct geography and segments.
-    # read in the DVector data
     df = pd.read_hdf(input_file)
     df = pd.DataFrame(df)
 
