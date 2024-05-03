@@ -2,6 +2,7 @@ from pathlib import Path
 import yaml
 
 import data_processing as dp
+import constants as cn
 import util
 
 # load configuration file
@@ -16,6 +17,8 @@ occupied_households = dp.read_dvector_data(**config['occupied_households'])
 unoccupied_households = dp.read_dvector_data(**config['unoccupied_households'])
 census_population = dp.read_dvector_data(**config['census_population'])
 addressbase_dwellings = dp.read_dvector_data(**config['addressbase_dwellings'])
+# TODO dont like this naming convention, what do we want to do?
+census_hhs_by_hh_adult_car_children = dp.read_dvector_data(**config['census_hhs_by_hh_adult_car_children'])
 
 # Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
 all_properties = unoccupied_households + occupied_households
@@ -39,3 +42,22 @@ addressbase_population = occupancy * addressbase_dwellings
 addressbase_population.save(OUTPUT_DIR / 'Output 1.hdf')
 output = dp.dvector_to_dataframe(dvec=addressbase_population, value_name='population')
 util.output_csv(df=output, output_path=OUTPUT_DIR, file='Output 1.csv', index=False)
+
+# calculate splits of households with or without children and by car availability by
+# dwelling type and number of adults by MSOA
+total_hh_by_hh = census_hhs_by_hh_adult_car_children.aggregate(segs=['h'])
+proportion_hh_by_hh_and_adults_by_car_and_child = census_hhs_by_hh_adult_car_children / total_hh_by_hh
+
+# convert the MSOA based factors to LSOAs (duplicate MSOA factor for relevant LSOAs)
+# TODO Need to set up an existing translation to stop it being run everytime
+proportions_by_lsoa = proportion_hh_by_hh_and_adults_by_car_and_child.translate_zoning(new_zoning=cn.MODEL_ZONING_SYSTEM,
+                                                                                       cache_path=cn.CACHE_FOLDER)
+# multiply the total population by the derived proportions at LSOA level
+# TODO here we're applying household based proportions to population, inconsistent?
+abpop_by_hh_and_adults_by_car_and_child = addressbase_population * proportions_by_lsoa
+
+# TODO Read in and control to 2022 age and gender distributions for full output 2
+# save output to hdf and csv for readablity
+abpop_by_hh_and_adults_by_car_and_child.save(OUTPUT_DIR / 'Output 2.hdf')
+output = dp.dvector_to_dataframe(dvec=abpop_by_hh_and_adults_by_car_and_child, value_name='population')
+util.output_csv(df=output, output_path=OUTPUT_DIR, file='Output 2.csv', index=False)
