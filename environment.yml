@@ -1,11 +1,10 @@
 name: normits_lu
 channels:
-  - defaults
   - conda-forge
 dependencies:
-  - caf.toolkit>=0.0.7
-  - pandas>=1
-  - psycopg2>=2
-  - pydantic>=1
-  - python=3.10
-  - geopandas>=0.8
+  - pip=24.0
+  - python=3.11.8
+  - pandas>2
+  - pip:
+      - git+https://github.com/asongtoruin/caf.core@iteration_5_testing
+      - git+https://github.com/Transport-for-the-North/caf.space
