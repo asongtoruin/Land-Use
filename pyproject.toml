@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=64.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "land_use"
+dynamic = ["version"]
+description = "Land-Use processing"
+readme = "README.md"
+license = {"file"= "LICENSE"}
+requires-python = ">=3.9"
+authors = [
+    { name = "Transport for the North" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+# TODO: Link to environment.yml somehow?
+dependencies = [
+    "fiona>=1.9.5",
+    "geopandas>=0.14.4",
+    "openpyxl>=3.1.2",
+    "pandas>2",
+    "caf.core @ git+https://github.com/asongtoruin/caf.core@iteration_5_testing",
+    "caf.space @ git+https://github.com/Transport-for-the-North/caf.space",
+]
+
+[tool.setuptools.packages.find]
+include = ["land_use"]

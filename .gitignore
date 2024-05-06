@@ -141,3 +141,4 @@ abp_warehouse_config.yml
 CACHE/
 TEMP_SHAPEFILES/
 OUTPUTS/
+docs/api

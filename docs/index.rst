@@ -255,3 +255,11 @@ Please note that the TAME team are in high demand with limited resources so
 responses to requests may not be immediate.
 However, the team will endeavour to provide you with an estimate of how long
 it would take to share the data.
+
+Contents
+========
+
+.. toctree::
+   :maxdepth: 2
+   
+   reference
