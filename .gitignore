@@ -140,3 +140,4 @@ abp_warehouse_config.yml
 # Iteration 5: folders to skip
 CACHE/
 TEMP_SHAPEFILES/
+OUTPUTS/
