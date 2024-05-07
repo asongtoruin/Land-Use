@@ -52,7 +52,7 @@ df = pp.read_ons_custom(
 
 df = pp.convert_ons_table_2(
     df=df, 
-    dwelling_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['hr'],
+    dwelling_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['h'],
     adults_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['ha'],
     children_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['hc'],
     car_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['car'],
