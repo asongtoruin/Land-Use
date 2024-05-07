@@ -22,3 +22,8 @@ addressbase_dwellings:
     file_path: I:\NorMITs Land Use\2023\import\ABP\ABP2021\preprocessing\output_results_all_2021(no red).hdf
     geographical_level: LSOA2021
     input_segments: [h]
+
+census_hhs_by_hh_adult_car_children:
+    file_path: I:\NorMITs Land Use\2023\import\ONS custom\preprocessing\ct210213census2021.hdf
+    geographical_level: MSOA2021
+    input_segments: [h, ha, hc, car]
