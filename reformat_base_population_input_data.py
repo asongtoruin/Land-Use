@@ -69,3 +69,18 @@ file_path = Path(
 # read in addressbase data and reformat for DVector
 df = pp.read_abp(file_path=file_path, zoning=geographies.LSOA_NAME)
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# ****** MYPE
+# MYPE database
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\MYPE'
+    r'\sapelsoasyoatablefinal.xlsx'
+)
+# read in mype data and reformat for DVector
+df = pp.read_mype(
+    file_path=file_path,
+    zoning=geographies.LSOA_NAME,
+    age_mapping=segments._CUSTOM_SEGMENT_CATEGORIES['age'],
+    gender_mapping=segments._CUSTOM_SEGMENT_CATEGORIES['gender']
+)
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)

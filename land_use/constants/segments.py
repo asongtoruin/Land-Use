@@ -79,6 +79,21 @@ _CUSTOM_SEGMENT_CATEGORIES = {
         2: "1 car or van in household",
         3: "2 or more cars or vans in household",
     },
+    "age": {
+        1: "0 to 4 years",
+        2: "5 to 9 years",
+        3: "10 to 15 years",
+        4: "16 to 19 years",
+        5: "20 to 34 years",
+        6: "35 to 49 years",
+        7: "50 to 64 years",
+        8: "65 to 74 years",
+        9: "75+ years",
+    },
+    "gender": {
+        1: "male",
+        2: "female"
+    }
 }
 
 CUSTOM_SEGMENTS = {
