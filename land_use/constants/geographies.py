@@ -62,7 +62,6 @@ def generate_zoning_system(
     )
     reformatted = reformatted[['zone_id', 'descriptions']]
 
-
     meta = ZoningSystemMetaData(
         name=name, shapefile_id_col=id_col, shapefile_path=shapefile_path,
     )
@@ -73,10 +72,11 @@ def generate_zoning_system(
 
     return zs
 
+
 # Define location of zoning cache folder
 CACHE_FOLDER = Path(r'.\CACHE')
 CACHE_FOLDER.mkdir(exist_ok=True)
-SHAPEFILE_DIRECTORY = Path(r'TEMP_SHAPEFILES')
+SHAPEFILE_DIRECTORY = Path(r'.\TEMP_SHAPEFILES')
 
 # Define the name of the model zoning to be consistent with the cache file.
 # The model zoning is the zone system the outputs of the population / employment
@@ -103,3 +103,9 @@ KNOWN_GEOGRAPHIES = {
     LSOA_NAME: LSOA_ZONING_SYSTEM,
     MSOA_NAME: MSOA_ZONING_SYSTEM
 }
+# TODO This generated zone translations on I drive no matter the cache_path specified. It works, just needs changing in caf.core.
+# if __name__ == '__main__':
+#     from itertools import combinations
+#
+#     for zone_system_1, zone_system_2 in combinations(KNOWN_GEOGRAPHIES.values(), 2):
+#         zone_system_1.translate(zone_system_2, cache_path=CACHE_FOLDER, weighting='spatial')
