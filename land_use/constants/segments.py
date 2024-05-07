@@ -86,7 +86,7 @@ CUSTOM_SEGMENTS = {
 }
 
 
-if __name__ ==  '__main__':
+if __name__ == '__main__':
     example = ['p', 'tp', 'TfN', 'm', 'Land-Use', 'g']
 
     print(split_input_segments(example))
