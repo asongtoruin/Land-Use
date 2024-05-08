@@ -14,13 +14,13 @@ with open(r'scenario_configurations\iteration_5\base_population_config.yml', 'r'
 OUTPUT_DIR = Path(config['output_directory'])
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-# read in the data to calculate average occupancy, accounting for unoccupied households
+# read in the data from the config file
 occupied_households = dp.read_dvector_data(**config['occupied_households'])
 unoccupied_households = dp.read_dvector_data(**config['unoccupied_households'])
-census_population = dp.read_dvector_data(**config['census_population'])
+ons_table_1 = dp.read_dvector_data(**config['ons_table_1'])
 addressbase_dwellings = dp.read_dvector_data(**config['addressbase_dwellings'])
 # TODO dont like this naming convention, what do we want to do?
-hhs_by_h_hc_ha_car = dp.read_dvector_data(**config['census_hhs_by_hh_adult_car_children'])
+ons_table_2 = dp.read_dvector_data(**config['ons_table_2'])
 mype_2022 = dp.read_dvector_data(**config['mype_2022'])
 
 # Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
@@ -31,7 +31,7 @@ non_empty_proportion = occupied_households / all_properties
 non_empty_proportion.data = non_empty_proportion.data.fillna(0)
 
 # average occupancy for all dwellings
-occupancy = (census_population / occupied_households) * non_empty_proportion
+occupancy = (ons_table_1 / occupied_households) * non_empty_proportion
 # occ_2 = population / all_properties
 
 # infill missing occupancies with average value of other properties in the LSOA
@@ -48,8 +48,8 @@ output.to_csv(OUTPUT_DIR / 'Output 1.csv', index=False)
 
 # calculate splits of households with or without children and by car availability by
 # dwelling type and number of adults by MSOA
-total_hh_by_hh = hhs_by_h_hc_ha_car.aggregate(segs=['h'])
-proportion_hhs_by_h_hc_ha_car = hhs_by_h_hc_ha_car / total_hh_by_hh
+total_hh_by_hh = ons_table_2.aggregate(segs=['h'])
+proportion_hhs_by_h_hc_ha_car = ons_table_2 / total_hh_by_hh
 
 # convert the MSOA based factors to LSOAs (duplicate MSOA factor for relevant LSOAs)
 proportions_by_lsoa = proportion_hhs_by_h_hc_ha_car.translate_zoning(
