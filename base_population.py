@@ -15,13 +15,12 @@ OUTPUT_DIR = Path(config['output_directory'])
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 # read in the data from the config file
-occupied_households = dp.read_dvector_data(**config['occupied_households'])
-unoccupied_households = dp.read_dvector_data(**config['unoccupied_households'])
-ons_table_1 = dp.read_dvector_data(**config['ons_table_1'])
-addressbase_dwellings = dp.read_dvector_data(**config['addressbase_dwellings'])
-# TODO dont like this naming convention, what do we want to do?
-ons_table_2 = dp.read_dvector_data(**config['ons_table_2'])
-mype_2022 = dp.read_dvector_data(**config['mype_2022'])
+occupied_households = dp.read_dvector_data(input_root_directory=config['input_root_directory'], **config['occupied_households'])
+unoccupied_households = dp.read_dvector_data(input_root_directory=config['input_root_directory'], **config['unoccupied_households'])
+ons_table_1 = dp.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_1'])
+addressbase_dwellings = dp.read_dvector_data(input_root_directory=config['input_root_directory'], **config['addressbase_dwellings'])
+ons_table_2 = dp.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_2'])
+mype_2022 = dp.read_dvector_data(input_root_directory=config['input_root_directory'], **config['mype_2022'])
 
 # Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
 all_properties = unoccupied_households + occupied_households

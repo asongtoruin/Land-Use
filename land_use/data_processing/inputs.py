@@ -10,19 +10,25 @@ from land_use.constants.geographies import KNOWN_GEOGRAPHIES
 
 
 def read_dvector_data(
+        input_root_directory: Path,
         file_path: Path, 
         geographical_level: str, 
         input_segments: list, 
         **params
     ) -> DVector:
-    """Read DVector data from an HDF file formatted for input (i.e. "wide")
+    """Read DVector data from an HDF file formatted for input (i.e. "wide").
+    File the is read in is `input_root_directory / file_path`.
 
     Parameters
     ----------
+    input_root_directory : Path
+        Main path directory where *all* inputs defined in the config will pivot from. This
+        encourages the storage of data in one specific location to help with maintenance and
+        traceability.
     file_path : Path
-        path to input file in to read in. This must be an HDF file, and should
+        Path to input file in to read in. This must be an HDF file, and should
         be in a suitable structure to be directly passed to `DVector`, i.e. 
-        "wide"
+        "wide".
     geographical_level : str
         specification of the zone system of the input file
     input_segments : list
@@ -51,7 +57,7 @@ def read_dvector_data(
     zoning = geographical_level
 
     # Read in the file, with the correct geography and segments.
-    df = pd.read_hdf(file_path)
+    df = pd.read_hdf(Path(input_root_directory) / Path(file_path))
     df = pd.DataFrame(df)
 
     # get flags for segments that are or are not TfN standard super segments
