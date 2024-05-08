@@ -76,3 +76,18 @@ abpop_by_h_hc_ha_car.save(OUTPUT_DIR / 'Output 2.hdf')
 output = dp.dvector_to_long(dvec=abpop_by_h_hc_ha_car, value_name='population')
 output.to_csv(OUTPUT_DIR / 'Output 2.csv', index=False)
 
+# calculate NS-SeC splits of households by
+# dwelling type by LSOA
+total_hh_by_hh = ons_table_4.aggregate(segs=['h'])
+proportion_ns_sec = ons_table_4 / total_hh_by_hh
+# fill missing proportions with 1 as they are where the total is zero
+# don't think it matters what this is infilled with, but this will work for now
+proportion_ns_sec.data = proportion_ns_sec.data.fillna(1)
+
+# multiply the total population by the derived proportions at LSOA level
+abpop_by_h_hc_ha_car_nssec = abpop_by_h_hc_ha_car * proportion_ns_sec
+
+# save output to hdf and csv for readablity
+abpop_by_h_hc_ha_car.save(OUTPUT_DIR / 'Output 3.hdf')
+output = dp.dvector_to_long(dvec=abpop_by_h_hc_ha_car_nssec, value_name='population')
+output.to_csv(OUTPUT_DIR / 'Output 3.csv', index=False)
