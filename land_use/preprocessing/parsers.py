@@ -382,3 +382,64 @@ def read_mype(
 
     return df
 
+
+def convert_ons_table_4(
+        df: pd.DataFrame,
+        dwelling_segmentation: dict,
+        ns_sec_segmentation: dict,
+        zoning: str
+    ) -> pd.DataFrame:
+    """
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Ideally, the output of a `read_ons_custom` call.
+    dwelling_segmentation : dict
+        {1: category1, 2: category2, ...} where the segmentation categories are
+        the column values of 'dwelling' types in the ONS custom download dataset
+    ns_sec_segmentation : dict
+        {1: category1, 2: category2, ...} where the segmentation categories are
+        the column values of 'HRP NS-SeC' types in the
+        ONS custom download dataset
+    zoning : str
+        the zoning level of the input data (e.g. 'lsoa2021') which should match
+        the relevant zoning in the ZONING_CACHE
+
+    Returns
+    -------
+    pd.DataFrame
+        with index of 'h', 'ns_sec' and column headers of 'zoning' in the
+        correct format to convert to DVector
+    """
+
+    # convert to required format for DVec
+    df[zoning] = df[zoning].str.split(' ', expand=True)[0]
+
+    # remap segmentation variables to be consistent with other mappings
+    melted = df.melt(
+        id_vars=[zoning, 'level_1'],
+        value_vars=[col for col in df.columns if col != zoning if col != 'level_1'],
+        value_name='hh_ref_persons',
+        var_name='ns_sec_category'
+    )
+    melted['h'] = melted['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
+    melted['ns_sec'] = melted['ns_sec_category'].map({v: k for k, v in ns_sec_segmentation.items()})
+    melted['hh_ref_persons'] = melted['hh_ref_persons'].astype(int)
+
+    # convert to required format for DVector
+    dvec = melted.loc[:, [zoning, 'h', 'ns_sec', 'hh_ref_persons']]
+    dvec = dvec.set_index([zoning, 'h', 'ns_sec']).unstack(level=[zoning])
+    dvec.columns = dvec.columns.get_level_values(zoning)
+
+    # add in the missing segmentation category and fill with zeros
+    # TODO this should be genericised, adding in a missing combination of indicies
+    missing = dvec[dvec.index.get_level_values('h') == 1].reset_index()
+    missing['h'] = 5
+    missing = missing.set_index(['h', 'ns_sec'])
+    missing.loc[:] = np.nan
+
+    # combine with df for all segments
+    df = pd.concat([dvec, missing])
+
+    return df.fillna(0)

@@ -93,6 +93,13 @@ _CUSTOM_SEGMENT_CATEGORIES = {
     "gender": {
         1: "male",
         2: "female"
+    },
+    "ns_sec": {
+        1: "HRP managerial / professional",
+        2: "HRP managerial / professional",
+        3: "HRP semi-routine / routine",
+        4: "HRP never worked / long-term unemployed",
+        5: "HRP full-time student"
     }
 }
 

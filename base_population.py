@@ -21,6 +21,7 @@ ons_table_1 = dp.read_dvector_data(input_root_directory=config['input_root_direc
 addressbase_dwellings = dp.read_dvector_data(input_root_directory=config['input_root_directory'], **config['addressbase_dwellings'])
 ons_table_2 = dp.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_2'])
 mype_2022 = dp.read_dvector_data(input_root_directory=config['input_root_directory'], **config['mype_2022'])
+ons_table_4 = dp.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_4'])
 
 # Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
 all_properties = unoccupied_households + occupied_households

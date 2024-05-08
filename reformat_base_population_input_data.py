@@ -46,7 +46,8 @@ pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 file_path = Path(r'I:\NorMITs Land Use\2023\import\ONS custom\ct210213census2021.xlsx')
 # read in excel format, preprocess, and reformat for DVector
 df = pp.read_ons_custom(
-    file_path, zoning=geographies.MSOA_NAME, 
+    file_path,
+    zoning=geographies.MSOA_NAME,
     index_col=[0, 1, 2], header=[0, 1]
 )
 
@@ -57,6 +58,30 @@ df = pp.convert_ons_table_2(
     children_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['hc'],
     car_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['car'],
     zoning=geographies.MSOA_NAME
+)
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# define path to ONS table 4
+file_path = Path(r'I:\NorMITs Land Use\2023\import\ONS custom\ct210215census2021.xlsx')
+# read in excel format, preprocess, and reformat for DVector
+df = pp.read_ons_custom(
+    file_path, zoning=geographies.LSOA_NAME,
+    index_col=[0, 1]
+)
+
+ons_segmentation = {
+    1: "NS-SeC of HRP: 1. Higher managerial, administrative and professional occupations; 2. Lower managerial, administrative and professional occupations",
+    2: "NS-SeC of HRP: 3. Intermediate occupations; 4. Small employers and own account workers; 5. Lower supervisory and technical occupations",
+    3: "NS-SeC of HRP: 6. Semi-routine occupations; 7. Routine occupations",
+    4: "NS-SeC of HRP: 8. Never worked or long-term unemployed*",
+    5: "NS-SeC of HRP: L15: Full-time student"
+}
+
+df = pp.convert_ons_table_4(
+    df=df,
+    dwelling_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['h'],
+    ns_sec_segmentation=ons_segmentation,
+    zoning=geographies.LSOA_NAME
 )
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 

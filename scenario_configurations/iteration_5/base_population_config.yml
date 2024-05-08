@@ -33,3 +33,8 @@ mype_2022:
     file_path: MYPE\preprocessing\sapelsoasyoatablefinal.hdf
     geographical_level: LSOA2021
     input_segments: [gender, age]
+
+ons_table_4:
+    file_path: ONS custom\preprocessing\ct210215census2021.hdf
+    geographical_level: LSOA2021
+    input_segments: [h, ns_sec]
