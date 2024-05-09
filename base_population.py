@@ -62,19 +62,33 @@ proportions_by_lsoa = proportion_hhs_by_h_hc_ha_car.translate_zoning(
 # TODO here we're applying household based proportions to population, inconsistent?
 abpop_by_h_hc_ha_car = addressbase_population * proportions_by_lsoa
 
-# TODO Control to 2022 age and gender distributions for full output 2. Need a better way to aggregate a DVector based on no segmentation (i.e. just total by zone, no segmentation)
-# calculate age and gender factors by LSOA
-# total_lsoa_population = mype_2022.data.sum().sum()
-# age_gender_proportions = mype_2022.data.div(total_lsoa_population)
+# convert 2022 MYPE to MSOA
+mype_2022_msoa = mype_2022.translate_zoning(
+    new_zoning=cn.MSOA_ZONING_SYSTEM,
+    cache_path=cn.CACHE_FOLDER
+)
 
-# TODO Segmentation doesn't match - need to re-segment the abpop data to have at least overlapping segments with age and gender. Needs a bit of thinking.
-# multiply population by age / gender constraints
-# this fails!
-# test = abpop_by_h_hc_ha_car * age_gender_proportions
+# calculate age band proportions by MSOA and gender from 2022 MYPE
+mype_proportions_by_msoa = mype_2022_msoa / mype_2022_msoa.aggregate(segs=['gender'])
+# apply these proportions to the 2021 gender and dwelling types, effectively controlling 2021-based gender/dwelling
+# splits to the age dimension from mype_2022. Total is still 2021 number.
+hh_age_gender_adjusted = mype_proportions_by_msoa * hh_age_gender_2021.aggregate(segs=['h', 'gender'])
+
+# calculate age and gender based factors based on this adjusted output
+hh_age_gender_adjusted_proportions = hh_age_gender_adjusted / hh_age_gender_adjusted.aggregate(segs=['age', 'gender'])
+
+# expand this back out to lsoa level to apply to the population (same factors for all LSOAs in same MSOA)
+proportions_by_lsoa = hh_age_gender_adjusted_proportions.translate_zoning(
+    new_zoning=cn.LSOA_ZONING_SYSTEM,
+    cache_path=cn.CACHE_FOLDER
+)
+
+# apply the factors
+abpop_by_h_hc_ha_car_age_gender = abpop_by_h_hc_ha_car * proportions_by_lsoa
 
 # save output to hdf and csv for readablity
-abpop_by_h_hc_ha_car.save(OUTPUT_DIR / 'Output 2.hdf')
-output = dp.dvector_to_long(dvec=abpop_by_h_hc_ha_car, value_name='population')
+abpop_by_h_hc_ha_car_age_gender.save(OUTPUT_DIR / 'Output 2.hdf')
+output = dp.dvector_to_long(dvec=abpop_by_h_hc_ha_car_age_gender, value_name='population')
 output.to_csv(OUTPUT_DIR / 'Output 2.csv', index=False)
 
 # calculate NS-SeC splits of households by
@@ -86,9 +100,10 @@ proportion_ns_sec = ons_table_4 / total_hh_by_hh
 proportion_ns_sec.data = proportion_ns_sec.data.fillna(1)
 
 # multiply the total population by the derived proportions at LSOA level
-abpop_by_h_hc_ha_car_nssec = abpop_by_h_hc_ha_car * proportion_ns_sec
+abpop_by_h_hc_ha_car_age_gender_nssec = abpop_by_h_hc_ha_car_age_gender * proportion_ns_sec
 
 # save output to hdf and csv for readablity
 abpop_by_h_hc_ha_car.save(OUTPUT_DIR / 'Output 3.hdf')
-output = dp.dvector_to_long(dvec=abpop_by_h_hc_ha_car_nssec, value_name='population')
-output.to_csv(OUTPUT_DIR / 'Output 3.csv', index=False)
+# runs out of space to save, TODO implement summary outputs
+# output = dp.dvector_to_long(dvec=abpop_by_h_hc_ha_car_age_gender_nssec, value_name='population')
+# output.to_csv(OUTPUT_DIR / 'Output 3.csv', index=False)
