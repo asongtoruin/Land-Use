@@ -90,6 +90,13 @@ _CUSTOM_SEGMENT_CATEGORIES = {
         8: "65 to 74 years",
         9: "75+ years",
     },
+    "agg_age": {
+        1: "aged 15 years and under",
+        2: "aged 16 to 24 years",
+        3: "aged 25 to 34 years",
+        4: "aged 35 to 49 years",
+        5: "aged 50 years and over"
+    },
     "gender": {
         1: "male",
         2: "female"

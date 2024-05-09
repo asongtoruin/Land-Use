@@ -448,3 +448,67 @@ def convert_ons_table_4(
     df = pd.concat([dvec, missing])
 
     return df.fillna(0)
+
+
+def read_ons(
+        file_path: Path,
+        zoning: str,
+        zoning_column: str,
+        segment_mappings: dict,
+        obs_column: str = 'Observation'
+    ) -> pd.DataFrame:
+    """Reading in a generic ONS data download csv.
+
+    These are *typically* a similar format with no leading or trailing lines, and various categories of segmentation
+    defined by the user when downloaded.
+
+    The 'value' column of the downloads (i.e. maybe population, or households, or whatever the unit of observations is)
+    is assumed to be "Observation". This will raise an error if this column does not exist and hasn't been provided as
+    something else by the user.
+
+    Parameters
+    ----------
+    file_path : Path
+        csv file of the downloaded data
+    zoning : str
+        zoning as in constants/segments.py which the zoning_column will be renamed to
+    zoning_column : str
+        column to rename to standard zoning
+    segment_mappings : dict
+        dictionary of   {
+                        column_name_1: [segment_ref, {value1: mapping1, value2: mapping2, ...}],
+                        column_name_2: [segment_ref, {value1: mapping1, value2: mapping2, ...}],
+                        ...}
+        to map various columns to different segmentations.
+    obs_column : str, optional
+        column name containing the unit of the data (e.g. population or households or whatever), by default 'Observation'
+
+    Returns
+    -------
+    pd.DataFrame
+        DVector friendly format with multi index based on the segment_refs and columns defined by zoning
+    """
+    # read in csv
+    df = pd.read_csv(file_path)
+
+    # check obs_column exists in the data before trying to do anything else
+    if obs_column not in df.columns:
+        raise RuntimeError(f'{obs_column} is not in the input data. '
+                           f'Please check your data and provide a custom column name if required.')
+
+    # rename zoning_column based on the constant zoning provided
+    df[zoning] = df[zoning_column]
+
+    # go through the dictionary and remap all the values based on the segmentation provided
+    # columns are named based on the segment_ref provided
+    refs = [zoning]
+    for column, [ref, remapping] in segment_mappings.items():
+        df[ref] = df[column].str.lower().map({v.lower(): k for k, v in remapping.items()})
+        refs.append(ref)
+
+    # convert to required format for DVector
+    dvec = df.loc[:, refs + [obs_column]]
+    dvec = dvec.set_index(refs).unstack(level=[zoning])
+    dvec.columns = dvec.columns.get_level_values(zoning)
+
+    return dvec

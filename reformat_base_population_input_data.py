@@ -109,3 +109,26 @@ df = pp.read_mype(
     gender_mapping=segments._CUSTOM_SEGMENT_CATEGORIES['gender']
 )
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# ****** ONS Data Downloads
+# ONS age and gender by dwelling type
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\ONS\population_hh_age5_gender_MSOA'
+    r'\MSOA_age5_gender_hh_EnglandWales.csv'
+)
+
+# define dictionary of columns in the input data and segments to map to
+segment_mappings = {
+    'Accommodation type (5 categories)': ['h', segments._CUSTOM_SEGMENT_CATEGORIES['h']],
+    'Age (5 categories)': ['agg_age', segments._CUSTOM_SEGMENT_CATEGORIES['agg_age']],
+    'Sex (2 categories)': ['gender', segments._CUSTOM_SEGMENT_CATEGORIES['gender']]
+}
+
+# read in ons data and reformat for DVector
+df = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.MSOA_NAME,
+    zoning_column='Middle layer Super Output Areas Code',
+    segment_mappings=segment_mappings
+)
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
