@@ -363,7 +363,12 @@ def read_mype(
     age_groups = [0, 5, 10, 16, 20, 35, 50, 65, 75, 999]
     labels = ["0 to 4 years", "5 to 9 years", "10 to 15 years", "16 to 19 years", "20 to 34 years", "35 to 49 years",
               "50 to 64 years", "65 to 74 years", "75+ years"]
-    melted['age_band'] = pd.cut(melted['age'], age_groups, labels=labels, include_lowest=True).astype(str)
+    melted['age_band'] = pd.cut(
+        melted['age'],
+        age_groups,
+        labels=labels,
+        include_lowest=True
+    ).astype(str)
 
     # remap male and female to definitions in the segments
     melted.loc[melted['gender'] == 'F', 'gender_seg'] = 'female'
