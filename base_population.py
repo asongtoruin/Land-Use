@@ -42,10 +42,14 @@ occupancy.data = occupancy.data.fillna(occupancy.data.mean(axis=0), axis=0)
 # multiply occupancy by the addressbase dwellings to get total population by zone
 addressbase_population = occupancy * addressbase_dwellings
 
-# save output to hdf and csv for readablity
+# save output to hdf and csvs for checking
 addressbase_population.save(OUTPUT_DIR / 'Output 1.hdf')
-output = dp.dvector_to_long(dvec=addressbase_population, value_name='population')
-output.to_csv(OUTPUT_DIR / 'Output 1.csv', index=False)
+dp.summarise_dvector(
+    dvector=addressbase_population,
+    output_directory=OUTPUT_DIR,
+    output_reference='Output1',
+    value_name='population'
+)
 
 # calculate splits of households with or without children and by car availability by
 # dwelling type and number of adults by MSOA
@@ -88,8 +92,12 @@ abpop_by_h_hc_ha_car_age_gender = abpop_by_h_hc_ha_car * proportions_by_lsoa
 
 # save output to hdf and csv for readablity
 abpop_by_h_hc_ha_car_age_gender.save(OUTPUT_DIR / 'Output 2.hdf')
-output = dp.dvector_to_long(dvec=abpop_by_h_hc_ha_car_age_gender, value_name='population')
-output.to_csv(OUTPUT_DIR / 'Output 2.csv', index=False)
+dp.summarise_dvector(
+    dvector=abpop_by_h_hc_ha_car_age_gender,
+    output_directory=OUTPUT_DIR,
+    output_reference='Output2',
+    value_name='population'
+)
 
 # calculate NS-SeC splits of households by
 # dwelling type by LSOA
@@ -104,6 +112,9 @@ abpop_by_h_hc_ha_car_age_gender_nssec = abpop_by_h_hc_ha_car_age_gender * propor
 
 # save output to hdf and csv for readablity
 abpop_by_h_hc_ha_car.save(OUTPUT_DIR / 'Output 3.hdf')
-# runs out of space to save, TODO implement summary outputs
-# output = dp.dvector_to_long(dvec=abpop_by_h_hc_ha_car_age_gender_nssec, value_name='population')
-# output.to_csv(OUTPUT_DIR / 'Output 3.csv', index=False)
+dp.summarise_dvector(
+    dvector=abpop_by_h_hc_ha_car,
+    output_directory=OUTPUT_DIR,
+    output_reference='Output3',
+    value_name='population'
+)
