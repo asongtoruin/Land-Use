@@ -70,7 +70,7 @@ hh_by_nssec_hc_ha_car = hh_by_nssec * proportion_hhs_by_h_hc_ha_car_lsoa
 check = hh_by_nssec_hc_ha_car.aggregate(segs=['h'])
 
 # save output to hdf and csvs for checking
-hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output 1.hdf')
+hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output A.hdf')
 data_processing.summarise_dvector(
     dvector=hh_by_nssec_hc_ha_car,
     output_directory=OUTPUT_DIR,
