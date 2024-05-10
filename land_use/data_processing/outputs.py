@@ -83,6 +83,17 @@ def summarise_dvector(
     write_folder = output_directory / 'verifications'
     write_folder.mkdir(exist_ok=True)
 
+    # get summary distribution of segmentations across all zones
+    df = dvector_to_long(dvec=dvector, value_name=value_name)
+    group_cols = [f'{col}_description' for col in dvector.segmentation.naming_order]
+    summary = df.groupby(group_cols).agg({value_name: ['sum', 'mean', 'max']})
+    summary.columns = summary.columns.droplevel(0)
+
+    # write cross-tab distribution summary to verifications folder
+    summary.to_csv(
+        write_folder / f'{output_reference}_{dvector.zoning_system.name}_all.csv'
+    )
+
     # loop through all segmentations in the DVector
     for segment in dvector.segmentation.seg_dict.keys():
         disaggregate_total = dvector.aggregate([segment])
