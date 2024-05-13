@@ -67,7 +67,7 @@ proportion_hhs_by_h_hc_ha_car_lsoa = proportion_hhs_by_h_hc_ha_car.translate_zon
 hh_by_nssec_hc_ha_car = hh_by_nssec * proportion_hhs_by_h_hc_ha_car_lsoa
 
 # check against original addressbase data
-check = hh_by_nssec_hc_ha_car.aggregate(segs=['h'])
+# check = hh_by_nssec_hc_ha_car.aggregate(segs=['h'])
 
 # save output to hdf and csvs for checking
 hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output A.hdf')
@@ -79,57 +79,51 @@ data_processing.summarise_dvector(
 )
 
 # --- Step 3 --- #
-# TODO Calculate average occupancy
+# Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
+all_properties = unoccupied_households + occupied_households
+
+# Calculate adjustment factors by zone to get proportion of households occupied by dwelling type by zone
+non_empty_proportion = occupied_households / all_properties
+non_empty_proportion.data = non_empty_proportion.data.fillna(0)
+
+# average occupancy for all dwellings
+occupancy = (ons_table_1 / occupied_households) * non_empty_proportion
+# occ_2 = population / all_properties
+
+# infill missing occupancies with average value of other properties in the LSOA
+# i.e. based on column
+occupancy.data = occupancy.data.fillna(occupancy.data.mean(axis=0), axis=0)
+
+# multiply occupancy by the addressbase dwellings to get total population by zone
+addressbase_population = occupancy * addressbase_dwellings
+
+# save output to hdf and csvs for checking
+addressbase_population.save(OUTPUT_DIR / 'Output B.hdf')
+data_processing.summarise_dvector(
+    dvector=addressbase_population,
+    output_directory=OUTPUT_DIR,
+    output_reference='OutputB',
+    value_name='population'
+)
+
+# --- Step 4 --- #
+# Apply average occupancy by dwelling type to the households by NS-SeC, car availability, number of adults
+# and number of children
+# TODO Do we want to do this in a "smarter" way? The occupancy of 1 adult households (for example) should not be more than 1
+# TODO and households with 2+ children should be more than 3 - is this a place for IPF?
+pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * addressbase_population
+
+# save output to hdf and csvs for checking
+pop_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output C.hdf')
+data_processing.summarise_dvector(
+    dvector=pop_by_nssec_hc_ha_car,
+    output_directory=OUTPUT_DIR,
+    output_reference='OutputC',
+    value_name='population'
+)
 
 
-
-
-
 #
-#
-#
-# # Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
-# all_properties = unoccupied_households + occupied_households
-#
-# # Calculate adjustment factors by zone to get proportion of households occupied by dwelling type by zone
-# non_empty_proportion = occupied_households / all_properties
-# non_empty_proportion.data = non_empty_proportion.data.fillna(0)
-#
-# # average occupancy for all dwellings
-# occupancy = (ons_table_1 / occupied_households) * non_empty_proportion
-# # occ_2 = population / all_properties
-#
-# # infill missing occupancies with average value of other properties in the LSOA
-# # i.e. based on column
-# occupancy.data = occupancy.data.fillna(occupancy.data.mean(axis=0), axis=0)
-#
-# # multiply occupancy by the addressbase dwellings to get total population by zone
-# addressbase_population = occupancy * addressbase_dwellings
-#
-# # save output to hdf and csvs for checking
-# addressbase_population.save(OUTPUT_DIR / 'Output 1.hdf')
-# data_processing.summarise_dvector(
-#     dvector=addressbase_population,
-#     output_directory=OUTPUT_DIR,
-#     output_reference='Output1',
-#     value_name='population'
-# )
-#
-# # calculate splits of households with or without children and by car availability by
-# # dwelling type and number of adults by MSOA
-# total_hh_by_hh = ons_table_2.aggregate(segs=['h'])
-# proportion_hhs_by_h_hc_ha_car = ons_table_2 / total_hh_by_hh
-#
-# # convert the MSOA based factors to LSOAs (duplicate MSOA factor for relevant LSOAs)
-# proportions_by_lsoa = proportion_hhs_by_h_hc_ha_car.translate_zoning(
-#     new_zoning=constants.LSOA_ZONING_SYSTEM,
-#     cache_path=constants.CACHE_FOLDER,
-#     weighting='no_weighting'
-# )
-#
-# # multiply the total population by the derived proportions at LSOA level
-# # TODO here we're applying household based proportions to population, inconsistent?
-# abpop_by_h_hc_ha_car = addressbase_population * proportions_by_lsoa
 #
 # # convert 2022 MYPE to MSOA
 # mype_2022_msoa = mype_2022.translate_zoning(
