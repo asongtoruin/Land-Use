@@ -23,6 +23,7 @@ ons_table_2 = data_processing.read_dvector_data(input_root_directory=config['inp
 mype_2022 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['mype_2022'])
 ons_table_4 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_4'])
 hh_age_gender_2021 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['hh_age_gender_2021'])
+ons_table_3 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_3'])
 
 # --- Step 1 --- #
 # calculate NS-SeC splits of households by

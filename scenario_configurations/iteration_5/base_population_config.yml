@@ -43,3 +43,8 @@ hh_age_gender_2021:
     file_path: ONS\population_hh_age5_gender_MSOA\preprocessing\MSOA_age5_gender_hh_EnglandWales.hdf
     geographical_level: MSOA2021
     input_segments: [h, agg_age, gender]
+
+ons_table_3:
+    file_path: ONS custom\preprocessing\ct210214census2021.hdf
+    geographical_level: MSOA2021
+    input_segments: [h, ns_sec, pop_soc]

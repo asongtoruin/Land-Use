@@ -499,7 +499,17 @@ def convert_ons_table_3(
     dvec = dvec.set_index([zoning, 'h', 'ns_sec', 'pop_soc']).unstack(level=[zoning])
     dvec.columns = dvec.columns.get_level_values(zoning)
 
-    return dvec
+    # add in the missing segmentation category and fill with zeros
+    # TODO this should be genericised, adding in a missing combination of indicies
+    missing = dvec[dvec.index.get_level_values('h') == 1].reset_index()
+    missing['h'] = 5
+    missing = missing.set_index(['h', 'ns_sec', 'pop_soc'])
+    missing.loc[:] = np.nan
+
+    # combine with df for all segments
+    df = pd.concat([dvec, missing])
+
+    return df.fillna(0)
 
 
 def read_ons(
