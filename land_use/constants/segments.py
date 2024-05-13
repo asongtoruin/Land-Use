@@ -52,6 +52,9 @@ def split_input_segments(input_segments: List[str]) -> Dict[bool, List[str]]:
 
 
 _CUSTOM_SEGMENT_CATEGORIES = {
+    "total": {
+        1: "all"
+    },
     "h": {
         1: "Whole house or bungalow: Detached",
         2: "Whole house or bungalow: Semi-detached",
@@ -107,6 +110,18 @@ _CUSTOM_SEGMENT_CATEGORIES = {
         3: "HRP semi-routine / routine",
         4: "HRP never worked / long-term unemployed",
         5: "HRP full-time student"
+    },
+    "pop_soc": {
+        1: "SOC1 - Part Time",
+        2: "SOC2 - Part Time",
+        3: "SOC3 - Part Time",
+        4: "SOC1 - Full Time",
+        5: "SOC2 - Full Time",
+        6: "SOC3 - Full Time",
+        7: "Unemployed",
+        8: "Retired",
+        9: "Full-Time Students",
+        10: "Economically inactive: Other"
     }
 }
 
