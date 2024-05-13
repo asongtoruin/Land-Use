@@ -123,6 +123,31 @@ data_processing.summarise_dvector(
     value_name='population'
 )
 
+# --- Step 5 --- #
+# Calculate splits by dwelling type, SOC/econ, and NS-SeC of HRP
+# TODO This is *officially* population over 16, somehow need to account for children
+econ_soc_splits = ons_table_3 / ons_table_3.aggregate(segs=['h', 'ns_sec'])
+# fill missing proportions with 0 as they are where the total hh is zero in the census data
+econ_soc_splits.data = econ_soc_splits.data.fillna(0)
+
+# convert the factors back to LSOA
+econ_soc_splits_lsoa = econ_soc_splits.translate_zoning(
+    new_zoning=constants.LSOA_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.NO_WEIGHT
+)
+
+# apply the splits at LSOA level to main population table
+pop_by_nssec_hc_ha_car_soc = econ_soc_splits_lsoa * pop_by_nssec_hc_ha_car
+
+# save output to hdf and csvs for checking
+pop_by_nssec_hc_ha_car_soc.save(OUTPUT_DIR / 'Output D.hdf')
+data_processing.summarise_dvector(
+    dvector=pop_by_nssec_hc_ha_car_soc,
+    output_directory=OUTPUT_DIR,
+    output_reference='OutputD',
+    value_name='population'
+)
 
 #
 #
