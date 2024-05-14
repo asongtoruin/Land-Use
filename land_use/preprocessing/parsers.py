@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import logging
 from pathlib import Path
 import re
@@ -454,9 +457,9 @@ def convert_ons_table_3(
         df: pd.DataFrame,
         dwelling_segmentation: dict,
         ns_sec_segmentation: dict,
-        soc_segmentation: dict,
+        all_segmentation: dict,
         zoning: str
-    ) -> pd.DataFrame:
+    ) -> dict:
     """
 
     Parameters
@@ -470,7 +473,7 @@ def convert_ons_table_3(
         {1: category1, 2: category2, ...} where the segmentation categories are
         the column values of 'HRP NS-SeC' types in the
         ONS custom download dataset
-    soc_segmentation : dict
+    all_segmentation : dict
         {1: category1, 2: category2, ...} where the segmentation categories are
         the column values of 'SOC' types in the
         ONS custom download dataset
@@ -480,36 +483,48 @@ def convert_ons_table_3(
 
     Returns
     -------
-    pd.DataFrame
-        with index of 'h', 'ns_sec', 'SOC' and column headers of 'zoning' in the
+    dict
+        Dictionary of three dataframes with index of 'h', 'ns_sec', and 'pop_soc' or 'pop_emp' or 'pop_econ' and column headers of 'zoning' in the
         correct format to convert to DVector
     """
 
     # convert to required format for DVec
     df[zoning] = df[zoning].str.split(' ', expand=True)[0]
 
-    # remap segmentation variables to be consistent with other mappings
+    # remap dwelling and ns-sec segmentation variables to be consistent with other mappings
     df['h'] = df['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
     df['ns_sec'] = df['variable_1'].map({v: k for k, v in ns_sec_segmentation.items()})
-    df['pop_soc'] = df['variable_0'].map({v: k for k, v in soc_segmentation.items()})
-    df['population'] = df['value'].astype(int)
 
-    # convert to required format for DVector
-    dvec = df.loc[:, [zoning, 'h', 'ns_sec', 'pop_soc', 'population']]
-    dvec = dvec.set_index([zoning, 'h', 'ns_sec', 'pop_soc']).unstack(level=[zoning])
-    dvec.columns = dvec.columns.get_level_values(zoning)
+    # convert all segmentation to dataframe and merge with original data frame
+    tmp = pd.DataFrame(all_segmentation).transpose()
+    merged = pd.merge(df, tmp, left_on='variable_0', right_index=True, how='left')
 
-    # add in the missing segmentation category and fill with zeros
-    # TODO this should be genericised, adding in a missing combination of indicies
-    missing = dvec[dvec.index.get_level_values('h') == 1].reset_index()
-    missing['h'] = 5
-    missing = missing.set_index(['h', 'ns_sec', 'pop_soc'])
-    missing.loc[:] = np.nan
+    # set observation column to numeric
+    merged['population'] = merged['value'].astype(int)
 
-    # combine with df for all segments
-    df = pd.concat([dvec, missing])
+    return_dict = {}
+    for col in tmp.columns:
+        grouped = merged.groupby([zoning, 'h', 'ns_sec', col]).agg({'population': 'sum'}).reset_index()
 
-    return df.fillna(0)
+        # convert to required format for DVector
+        dvec = grouped.loc[:, [zoning, 'h', 'ns_sec', col, 'population']]
+        dvec = dvec.set_index([zoning, 'h', 'ns_sec', col]).unstack(level=[zoning])
+        dvec.columns = dvec.columns.get_level_values(zoning)
+
+        # add in the missing segmentation category and fill with zeros
+        # TODO this should be genericised, adding in a missing combination of indicies
+        missing = dvec[dvec.index.get_level_values('h') == 1].reset_index()
+        missing['h'] = 5
+        missing = missing.set_index(['h', 'ns_sec', col])
+        missing.loc[:] = np.nan
+
+        # combine with df for all segments
+        grouped = pd.concat([dvec, missing])
+
+        # add to output
+        return_dict[col] = grouped.fillna(0)
+
+    return return_dict
 
 
 def read_ons(
@@ -569,7 +584,7 @@ def read_ons(
         refs.append(ref)
 
     # convert to required format for DVector
-    dvec = df.loc[:, refs + [obs_column]]
+    dvec = df.loc[:, refs + [obs_column]].dropna()
     dvec = dvec.set_index(refs).unstack(level=[zoning])
     dvec.columns = dvec.columns.get_level_values(zoning)
 
