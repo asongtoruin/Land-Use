@@ -44,7 +44,17 @@ hh_age_gender_2021:
     geographical_level: MSOA2021
     input_segments: [h, agg_age, gender]
 
-ons_table_3:
-    file_path: ONS custom\preprocessing\ct210214census2021.hdf
+ons_table_3_econ:
+    file_path: ONS custom\preprocessing\ct210214census2021_pop_econ.hdf
+    geographical_level: MSOA2021
+    input_segments: [h, ns_sec, pop_econ]
+
+ons_table_3_emp:
+    file_path: ONS custom\preprocessing\ct210214census2021_pop_emp.hdf
+    geographical_level: MSOA2021
+    input_segments: [h, ns_sec, pop_emp]
+
+ons_table_3_soc:
+    file_path: ONS custom\preprocessing\ct210214census2021_pop_soc.hdf
     geographical_level: MSOA2021
     input_segments: [h, ns_sec, pop_soc]

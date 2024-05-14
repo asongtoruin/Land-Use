@@ -23,7 +23,9 @@ ons_table_2 = data_processing.read_dvector_data(input_root_directory=config['inp
 mype_2022 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['mype_2022'])
 ons_table_4 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_4'])
 hh_age_gender_2021 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['hh_age_gender_2021'])
-ons_table_3 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_3'])
+ons_table_3_econ = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_3_econ'])
+ons_table_3_emp = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_3_emp'])
+ons_table_3_soc = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_3_soc'])
 
 # --- Step 1 --- #
 # calculate NS-SeC splits of households by
@@ -40,6 +42,14 @@ hh_by_nssec = addressbase_dwellings * proportion_ns_sec
 
 # check against original addressbase data
 # check = hh_by_nssec.aggregate(segs=['h'])
+
+hh_by_nssec.save(OUTPUT_DIR / 'Output A.hdf')
+data_processing.summarise_dvector(
+    dvector=hh_by_nssec,
+    output_directory=OUTPUT_DIR,
+    output_reference='OutputA',
+    value_name='households'
+)
 
 # --- Step 2 --- #
 # calculate splits of households with or without children and by car availability and by number of adults by
@@ -71,11 +81,11 @@ hh_by_nssec_hc_ha_car = hh_by_nssec * proportion_hhs_by_h_hc_ha_car_lsoa
 # check = hh_by_nssec_hc_ha_car.aggregate(segs=['h'])
 
 # save output to hdf and csvs for checking
-hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output A.hdf')
+hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output B.hdf')
 data_processing.summarise_dvector(
     dvector=hh_by_nssec_hc_ha_car,
     output_directory=OUTPUT_DIR,
-    output_reference='OutputA',
+    output_reference='OutputB',
     value_name='households'
 )
 
@@ -99,11 +109,11 @@ occupancy.data = occupancy.data.fillna(occupancy.data.mean(axis=0), axis=0)
 addressbase_population = occupancy * addressbase_dwellings
 
 # save output to hdf and csvs for checking
-addressbase_population.save(OUTPUT_DIR / 'Output B.hdf')
+addressbase_population.save(OUTPUT_DIR / 'Output C.hdf')
 data_processing.summarise_dvector(
     dvector=addressbase_population,
     output_directory=OUTPUT_DIR,
-    output_reference='OutputB',
+    output_reference='OutputC',
     value_name='population'
 )
 
@@ -115,39 +125,68 @@ data_processing.summarise_dvector(
 pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * addressbase_population
 
 # save output to hdf and csvs for checking
-pop_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output C.hdf')
+pop_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output D.hdf')
 data_processing.summarise_dvector(
     dvector=pop_by_nssec_hc_ha_car,
     output_directory=OUTPUT_DIR,
-    output_reference='OutputC',
+    output_reference='OutputD',
     value_name='population'
 )
 
 # --- Step 5 --- #
-# Calculate splits by dwelling type, SOC/econ, and NS-SeC of HRP
+# Calculate splits by dwelling type, econ, and NS-SeC of HRP
 # TODO This is *officially* population over 16, somehow need to account for children
-econ_soc_splits = ons_table_3 / ons_table_3.aggregate(segs=['h', 'ns_sec'])
+econ_splits = ons_table_3_econ / ons_table_3_econ.aggregate(segs=['h', 'ns_sec'])
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
-econ_soc_splits.data = econ_soc_splits.data.fillna(0)
+econ_splits.data = econ_splits.data.fillna(0)
+
+# Calculate splits by dwelling type, employment, and NS-SeC of HRP
+# TODO This is *officially* population over 16, somehow need to account for children
+emp_splits = ons_table_3_emp / ons_table_3_emp.aggregate(segs=['h', 'ns_sec'])
+# fill missing proportions with 0 as they are where the total hh is zero in the census data
+emp_splits.data = emp_splits.data.fillna(0)
+
+# Calculate splits by dwelling type, soc, and NS-SeC of HRP
+# TODO This is *officially* population over 16, somehow need to account for children
+soc_splits = ons_table_3_soc / ons_table_3_soc.aggregate(segs=['h', 'ns_sec'])
+# fill missing proportions with 0 as they are where the total hh is zero in the census data
+soc_splits.data = soc_splits.data.fillna(0)
 
 # convert the factors back to LSOA
-econ_soc_splits_lsoa = econ_soc_splits.translate_zoning(
+econ_splits_lsoa = econ_splits.translate_zoning(
+    new_zoning=constants.LSOA_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.NO_WEIGHT
+)
+emp_splits_lsoa = emp_splits.translate_zoning(
+    new_zoning=constants.LSOA_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.NO_WEIGHT
+)
+soc_splits_lsoa = soc_splits.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
     weighting=TranslationWeighting.NO_WEIGHT
 )
 
 # apply the splits at LSOA level to main population table
-pop_by_nssec_hc_ha_car_soc = econ_soc_splits_lsoa * pop_by_nssec_hc_ha_car
+pop_by_nssec_hc_ha_car_econ = econ_splits_lsoa * pop_by_nssec_hc_ha_car
+pop_by_nssec_hc_ha_car_econ_emp = emp_splits_lsoa * pop_by_nssec_hc_ha_car_econ
+pop_by_nssec_hc_ha_car_econ_emp_soc = soc_splits_lsoa * pop_by_nssec_hc_ha_car_econ_emp
 
 # save output to hdf and csvs for checking
-pop_by_nssec_hc_ha_car_soc.save(OUTPUT_DIR / 'Output D.hdf')
-data_processing.summarise_dvector(
-    dvector=pop_by_nssec_hc_ha_car_soc,
-    output_directory=OUTPUT_DIR,
-    output_reference='OutputD',
-    value_name='population'
-)
+# TODO Output E hdf is big!
+pop_by_nssec_hc_ha_car_econ_emp_soc.save(OUTPUT_DIR / 'Output E.hdf')
+# TODO Memory crashes when converting to long, ideally need to stick in wide format for summaries!
+#   File "C:\Code\Land-Use\land_use\data_processing\outputs.py", line 33, in dvector_to_long
+#     data = dvec.data.T.melt(ignore_index=False)
+#   numpy.core._exceptions._ArrayMemoryError: Unable to allocate 9.57 GiB for an array with shape (1284192000,) and data type int64
+# data_processing.summarise_dvector(
+#     dvector=pop_by_nssec_hc_ha_car_econ_emp_soc,
+#     output_directory=OUTPUT_DIR,
+#     output_reference='OutputE',
+#     value_name='population'
+# )
 
 #
 #
