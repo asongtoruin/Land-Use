@@ -2,6 +2,7 @@
 # All files here are assumed to be in a format ready for DVectors.
 input_root_directory: I:\NorMITs Land Use\2023\import
 output_directory: OUTPUTS
+output_intermediate_outputs: False
 
 occupied_households:
     file_path: RM002 accom type by household size\preprocessing\2072764328175065 zero.hdf

@@ -14,6 +14,9 @@ with open(r'scenario_configurations\iteration_5\base_population_config.yml', 'r'
 OUTPUT_DIR = Path(config['output_directory'])
 OUTPUT_DIR.mkdir(exist_ok=True)
 
+# Define whether to output intermediate outputs, recommended to not output loads if debugging
+generate_summary_outputs = bool(config['output_intermediate_outputs'])
+
 # read in the data from the config file
 occupied_households = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['occupied_households'])
 unoccupied_households = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['unoccupied_households'])
@@ -44,12 +47,13 @@ hh_by_nssec = addressbase_dwellings * proportion_ns_sec
 # check = hh_by_nssec.aggregate(segs=['h'])
 
 hh_by_nssec.save(OUTPUT_DIR / 'Output A.hdf')
-data_processing.summarise_dvector(
-    dvector=hh_by_nssec,
-    output_directory=OUTPUT_DIR,
-    output_reference='OutputA',
-    value_name='households'
-)
+if generate_summary_outputs:
+    data_processing.summarise_dvector(
+        dvector=hh_by_nssec,
+        output_directory=OUTPUT_DIR,
+        output_reference='OutputA',
+        value_name='households'
+    )
 
 # --- Step 2 --- #
 # calculate splits of households with or without children and by car availability and by number of adults by
@@ -82,12 +86,13 @@ hh_by_nssec_hc_ha_car = hh_by_nssec * proportion_hhs_by_h_hc_ha_car_lsoa
 
 # save output to hdf and csvs for checking
 hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output B.hdf')
-data_processing.summarise_dvector(
-    dvector=hh_by_nssec_hc_ha_car,
-    output_directory=OUTPUT_DIR,
-    output_reference='OutputB',
-    value_name='households'
-)
+if generate_summary_outputs:
+    data_processing.summarise_dvector(
+        dvector=hh_by_nssec_hc_ha_car,
+        output_directory=OUTPUT_DIR,
+        output_reference='OutputB',
+        value_name='households'
+    )
 
 # --- Step 3 --- #
 # Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
@@ -110,12 +115,13 @@ addressbase_population = occupancy * addressbase_dwellings
 
 # save output to hdf and csvs for checking
 addressbase_population.save(OUTPUT_DIR / 'Output C.hdf')
-data_processing.summarise_dvector(
-    dvector=addressbase_population,
-    output_directory=OUTPUT_DIR,
-    output_reference='OutputC',
-    value_name='population'
-)
+if generate_summary_outputs:
+    data_processing.summarise_dvector(
+        dvector=addressbase_population,
+        output_directory=OUTPUT_DIR,
+        output_reference='OutputC',
+        value_name='population'
+    )
 
 # --- Step 4 --- #
 # Apply average occupancy by dwelling type to the households by NS-SeC, car availability, number of adults
@@ -126,12 +132,13 @@ pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * addressbase_population
 
 # save output to hdf and csvs for checking
 pop_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output D.hdf')
-data_processing.summarise_dvector(
-    dvector=pop_by_nssec_hc_ha_car,
-    output_directory=OUTPUT_DIR,
-    output_reference='OutputD',
-    value_name='population'
-)
+if generate_summary_outputs:
+    data_processing.summarise_dvector(
+        dvector=pop_by_nssec_hc_ha_car,
+        output_directory=OUTPUT_DIR,
+        output_reference='OutputD',
+        value_name='population'
+    )
 
 # --- Step 5 --- #
 # Calculate splits by dwelling type, econ, and NS-SeC of HRP
@@ -181,10 +188,10 @@ pop_by_nssec_hc_ha_car_econ_emp_soc.save(OUTPUT_DIR / 'Output E.hdf')
 #   File "C:\Code\Land-Use\land_use\data_processing\outputs.py", line 33, in dvector_to_long
 #     data = dvec.data.T.melt(ignore_index=False)
 #   numpy.core._exceptions._ArrayMemoryError: Unable to allocate 9.57 GiB for an array with shape (1284192000,) and data type int64
-# data_processing.summarise_dvector(
-#     dvector=pop_by_nssec_hc_ha_car_econ_emp_soc,
-#     output_directory=OUTPUT_DIR,
-#     output_reference='OutputE',
-#     value_name='population'
-# )
+# if generate_summary_outputs:
+#     data_processing.summarise_dvector(
+#         dvector=pop_by_nssec_hc_ha_car_econ_emp_soc,
+#         output_directory=OUTPUT_DIR,
+#         output_reference='OutputE',
+#     )
 
