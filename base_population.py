@@ -140,7 +140,33 @@ if generate_summary_outputs:
         value_name='population'
     )
 
-# --- Step 5 --- #
+# --- Step 6 --- #
+# Calculate splits by dwelling type, age, and gender
+gender_age_splits = hh_age_gender_2021 / hh_age_gender_2021.aggregate(segs=['h'])
+# fill missing proportions with 0 as they are where the total hh is zero in the census data
+gender_age_splits.data = gender_age_splits.data.fillna(0)
+
+# convert the factors back to LSOA
+gender_age_splits_lsoa = gender_age_splits.translate_zoning(
+    new_zoning=constants.LSOA_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.NO_WEIGHT
+)
+
+# apply the splits at LSOA level to main population table
+pop_by_nssec_hc_ha_car_gender_age = pop_by_nssec_hc_ha_car * gender_age_splits_lsoa
+
+# save output to hdf and csvs for checking
+# TODO Output E hdf is big!
+pop_by_nssec_hc_ha_car_gender_age.save(OUTPUT_DIR / 'Output E.hdf')
+# if generate_summary_outputs:
+#     data_processing.summarise_dvector(
+#         dvector=pop_by_nssec_hc_ha_car_gender_age,
+#         output_directory=OUTPUT_DIR,
+#         output_reference='OutputE',
+#     )
+
+# --- Step 6 --- #
 # Calculate splits by dwelling type, econ, and NS-SeC of HRP
 # TODO This is *officially* population over 16, somehow need to account for children
 econ_splits = ons_table_3_econ / ons_table_3_econ.aggregate(segs=['h', 'ns_sec'])
@@ -176,14 +202,17 @@ soc_splits_lsoa = soc_splits.translate_zoning(
     weighting=TranslationWeighting.NO_WEIGHT
 )
 
+
+
+
 # apply the splits at LSOA level to main population table
-pop_by_nssec_hc_ha_car_econ = econ_splits_lsoa * pop_by_nssec_hc_ha_car
-pop_by_nssec_hc_ha_car_econ_emp = emp_splits_lsoa * pop_by_nssec_hc_ha_car_econ
-pop_by_nssec_hc_ha_car_econ_emp_soc = soc_splits_lsoa * pop_by_nssec_hc_ha_car_econ_emp
+# pop_by_nssec_hc_ha_car_econ = econ_splits_lsoa * pop_by_nssec_hc_ha_car
+# pop_by_nssec_hc_ha_car_econ_emp = emp_splits_lsoa * pop_by_nssec_hc_ha_car_econ
+# pop_by_nssec_hc_ha_car_econ_emp_soc = soc_splits_lsoa * pop_by_nssec_hc_ha_car_econ_emp
 
 # save output to hdf and csvs for checking
-# TODO Output E hdf is big!
-pop_by_nssec_hc_ha_car_econ_emp_soc.save(OUTPUT_DIR / 'Output E.hdf')
+# TODO Output F hdf is big!
+# pop_by_nssec_hc_ha_car_econ_emp_soc.save(OUTPUT_DIR / 'Output F.hdf')
 # TODO Memory crashes when converting to long, ideally need to stick in wide format for summaries!
 #   File "C:\Code\Land-Use\land_use\data_processing\outputs.py", line 33, in dvector_to_long
 #     data = dvec.data.T.melt(ignore_index=False)
