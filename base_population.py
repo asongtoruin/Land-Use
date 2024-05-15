@@ -202,13 +202,49 @@ soc_splits_lsoa = soc_splits.translate_zoning(
     weighting=TranslationWeighting.NO_WEIGHT
 )
 
+# expand the segmentation to include age (assuming the same weights for all age categories)
+econ_splits_lsoa_age = data_processing.expand_segmentation(
+    dvector=econ_splits_lsoa,
+    segmentation_to_add=constants.CUSTOM_SEGMENTS['age']
+)
+emp_splits_lsoa_age = data_processing.expand_segmentation(
+    dvector=emp_splits_lsoa,
+    segmentation_to_add=constants.CUSTOM_SEGMENTS['age']
+)
+soc_splits_lsoa_age = data_processing.expand_segmentation(
+    dvector=soc_splits_lsoa,
+    segmentation_to_add=constants.CUSTOM_SEGMENTS['age']
+)
 
+# TODO this is all messy I dont like it
+# set children to have economic status proportions to 1 for students only (stops under 16s being allocated working statuses)
+econ_splits_lsoa_age.data.loc[:, :, 1, 1] = 0
+econ_splits_lsoa_age.data.loc[:, :, 2, 1] = 0
+econ_splits_lsoa_age.data.loc[:, :, 3, 1] = 0
+econ_splits_lsoa_age.data.loc[:, :, 4, 1] = 1
 
+# set children to have employment status proportions to 1 for non-working age only (stops under 16s being allocated employment statuses)
+emp_splits_lsoa_age.data.loc[:, :, 1, 1] = 0
+emp_splits_lsoa_age.data.loc[:, :, 2, 1] = 0
+emp_splits_lsoa_age.data.loc[:, :, 3, 1] = 0
+emp_splits_lsoa_age.data.loc[:, :, 4, 1] = 0
+emp_splits_lsoa_age.data.loc[:, :, 5, 1] = 1
+
+# set children to have SOC grouping proportions to 1 for SOC4 only (stops under 16s being allocated other SOC groupings)
+soc_splits_lsoa_age.data.loc[:, :, 1, 1] = 0
+soc_splits_lsoa_age.data.loc[:, :, 2, 1] = 0
+soc_splits_lsoa_age.data.loc[:, :, 3, 1] = 0
+soc_splits_lsoa_age.data.loc[:, :, 4, 1] = 1
+
+# check proportions sum to one
+# TODO some zeros in here that maybe shouldnt be? Need to check
+# tmp = soc_splits_lsoa_age.aggregate(segs=['h', 'age', 'ns_sec'])
 
 # apply the splits at LSOA level to main population table
-# pop_by_nssec_hc_ha_car_econ = econ_splits_lsoa * pop_by_nssec_hc_ha_car
-# pop_by_nssec_hc_ha_car_econ_emp = emp_splits_lsoa * pop_by_nssec_hc_ha_car_econ
-# pop_by_nssec_hc_ha_car_econ_emp_soc = soc_splits_lsoa * pop_by_nssec_hc_ha_car_econ_emp
+pop_by_nssec_hc_ha_car_gender_age_econ = econ_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age
+# TODO memory error here
+pop_by_nssec_hc_ha_car_gender_age_econ_emp = emp_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age_econ
+pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc = soc_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age_econ_emp
 
 # save output to hdf and csvs for checking
 # TODO Output F hdf is big!
