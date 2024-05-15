@@ -184,55 +184,36 @@ pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 # ONS age and gender by dwelling type
 file_path = Path(
     r'I:\NorMITs Land Use\2023\import\ONS'
-    r'\population_age11_gender_occupation_MSOA.csv'
+    r'\population_hh_age11_gender_MSOA.csv'
 )
 
 # define dictionary of columns in the input data and segments to map to
-age = {1: 'Aged 4 years and under',
-       2: 'Aged 5 to 9 years',
-       3: 'Aged 10 to 15 years',
-       4: 'Aged 16 to 19 years',
-       5: 'Aged 20 to 24 years',
-       6: 'Aged 25 to 34 years',
-       7: 'Aged 35 to 49 years',
-       8: 'Aged 50 to 64 years',
-       9: 'Aged 65 to 74 years',
-       10: 'Aged 75 to 84 years',
-       11: 'Aged 85 years and over'}
-occ = {1: '1. Managers, directors and senior officials',
-       2: '2. Professional occupations',
-       3: '3. Associate professional and technical occupations',
-       4: '4. Administrative and secretarial occupations',
-       5: '5. Skilled trades occupations',
-       6: '6. Caring, leisure and other service occupations',
-       7: '7. Sales and customer service occupations',
-       8: '8. Process, plant and machine operatives',
-       9: '9. Elementary occupations'}
-
 segment_mappings = {
-    'Occupation (current) (10 categories)': ['occ', occ],
-    'Age (11 categories)': ['age', age],
-    'Sex (2 categories)': ['gender', segments._CUSTOM_SEGMENT_CATEGORIES['gender']]
+    'Age (11 categories)': ['age', segments._CUSTOM_SEGMENT_CATEGORIES['age']],
+    'Sex (2 categories)': ['gender', segments._CUSTOM_SEGMENT_CATEGORIES['gender']],
+    'Accommodation type (5 categories)': ['h', segments._CUSTOM_SEGMENT_CATEGORIES['h']]
 }
+
+aggregations = {'Age (11 categories)': {
+    'Aged 4 years and under': '0 to 4 years',
+    'Aged 5 to 9 years': '5 to 9 years',
+    'Aged 10 to 15 years': '10 to 15 years',
+    'Aged 16 to 19 years': '16 to 19 years',
+    'Aged 20 to 24 years': '20 to 34 years',
+    'Aged 25 to 34 years': '20 to 34 years',
+    'Aged 35 to 49 years': '35 to 49 years',
+    'Aged 50 to 64 years': '50 to 64 years',
+    'Aged 65 to 74 years': '65 to 74 years',
+    'Aged 75 to 84 years': '75+ years',
+    'Aged 85 years and over': '75+ years'}}
 
 # read in ons data and reformat for DVector
 df = pp.read_ons(
     file_path=file_path,
     zoning=geographies.MSOA_NAME,
     zoning_column='Middle layer Super Output Areas Code',
-    segment_mappings=segment_mappings
+    segment_mappings=segment_mappings,
+    segment_aggregations=aggregations
 )
-
-aggregations = {'age': ['age', {1: 1,
-                                2: 2,
-                                3: 3,
-                                4: 4,
-                                5: 5,
-                                6: 5,
-                                7: 6,
-                                8: 7,
-                                9: 8,
-                                10: 9,
-                                11: 9}]}
 
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)

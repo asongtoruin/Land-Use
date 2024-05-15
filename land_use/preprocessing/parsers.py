@@ -532,7 +532,8 @@ def read_ons(
         zoning: str,
         zoning_column: str,
         segment_mappings: dict,
-        obs_column: str = 'Observation'
+        obs_column: str = 'Observation',
+        segment_aggregations: dict = None
     ) -> pd.DataFrame:
     """Reading in a generic ONS data download csv.
 
@@ -559,6 +560,17 @@ def read_ons(
         to map various columns to different segmentations.
     obs_column : str, optional
         column name containing the unit of the data (e.g. population or households or whatever), by default 'Observation'
+    segment_aggregations : dict, optional
+        Dictionary of column aggregations to get the values provided in the input data aggregated to the same segmentation
+        as required by the population model. For example, if the input file had age in 11 categories, whereas the population
+        model requires them at 9 categories, then the below dictionary would be provided where, for the age column value, the
+        keys of the dictionary are the values provided in the input data and the values of the dictionary are the values
+        in the population segmentation that the keys should be aggregated to.
+        dictionary of   {
+                        column_name_1: {disaggregate_value_1: aggregate_value_1,
+                                        disaggregate_value_2: aggregate_value_2, ...}
+                        column_name_2: {...}
+                        ...}
 
     Returns
     -------
@@ -576,12 +588,23 @@ def read_ons(
     # rename zoning_column based on the constant zoning provided
     df[zoning] = df[zoning_column]
 
+    # replace the values in the specific columns of data with the values required for the default segmentations
+    # if they are provided (i.e. if aggregation of some variables are needed to get to the tfn population segments)
+    if segment_aggregations is not None:
+        for col, mappings in segment_aggregations.items():
+            df[col] = df[col].map(mappings)
+
     # go through the dictionary and remap all the values based on the segmentation provided
     # columns are named based on the segment_ref provided
     refs = [zoning]
     for column, [ref, remapping] in segment_mappings.items():
         df[ref] = df[column].str.lower().map({v.lower(): k for k, v in remapping.items()})
         refs.append(ref)
+
+    # if some remapping of aggregations has been done, then group the data to these new aggregations before
+    # converting to DVector format
+    if segment_aggregations is not None:
+        df = df.groupby(refs).agg({obs_column: 'sum'}).reset_index()
 
     # convert to required format for DVector
     dvec = df.loc[:, refs + [obs_column]].dropna()
