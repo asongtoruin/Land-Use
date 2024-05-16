@@ -217,3 +217,25 @@ df = pp.read_ons(
 )
 
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# ONS population in communal establishments
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\TS048  CERs by type'
+    r'\2741727163807526.csv'
+)
+
+# read in ons data and reformat for DVector
+df, zone_col = pp.read_headered_csv(
+    file_path=file_path,
+    header_string='middle'
+)
+df[geographies.MSOA_NAME] = df[zone_col].str.split(' ', expand=True)[0]
+df['ce'] = 1
+df = pp.pivot_to_dvector(
+    data=df,
+    zoning_column=geographies.MSOA_NAME,
+    index_cols=['ce'],
+    value_column='Total: All usual residents in communal establishments'
+)
+
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
