@@ -36,19 +36,18 @@ def read_rm002(
     Returns
     -------
     pd.DataFrame 
-        with index of 'h' and column headers of 'zoning' in the correct format 
-        to convert to DVector
+        with index of 'h' and column headers of 'zoning' type, 
+        given by the first entry for each row in the column which includes 'header_string'
+        in the correct format to convert to DVector
     """
 
     df, col_name = read_headered_csv(
         file_path=file_path, header_string=header_string, on_bad_lines='warn'
     )
 
+    # TODO: explain why Whole house or bungalow is dropped here.
     df = df.drop(columns=['Whole house or bungalow'])
-    df = df.melt(
-        id_vars=[col_name],
-        value_vars=[col for col in df.columns if col != col_name]
-    )
+    df = df.melt(id_vars=[col_name])
 
     # define dictionary of segmentation mapping
     inv_seg = {v: k for k, v in segmentation.items()}
@@ -59,7 +58,13 @@ def read_rm002(
     df = df.dropna(subset='h')
     df['h'] = df['h'].astype(int)
     df['households'] = df['value'].astype(int)
+
+    # take first 'word' within the col_name as the zone
     df[zoning] = df[col_name].str.split(' ', expand=True)[0]
+
+    # TODO: consider switching this to a pivot table
+    # df = df.pivot(index='h', columns=[zoning], values='households')
+    # df.columns = df.columns.get_level_values(zoning)
     df = df.loc[:, [zoning, 'h', 'households']]
     df = df.set_index([zoning, 'h']).unstack(level=[zoning])
     df.columns = df.columns.get_level_values(zoning)
@@ -95,7 +100,7 @@ def read_ons_custom(
     logging.info(f'Reading in {file_path}')
 
     with pd.ExcelFile(file_path) as excel_file:
-        data_sheets = [sheet for sheet in excel_file.sheet_names if 'meta' not in sheet.lower()]
+        data_sheets = [sheet for sheet in excel_file.sheet_names if 'meta' not in str(sheet).lower()]
 
         all_data = pd.concat([
             pd.read_excel(excel_file, sheet_name=sheet, skiprows=skip_rows, **kwargs).dropna()
@@ -136,9 +141,6 @@ def convert_ons_table_1(
         to convert to DVector
     """
 
-    # define dictionary of segmentation mapping
-    inv_segmentation = {v: k for k, v in segmentation.items()}
-
     # convert to required format for DVec
     df[zoning] = df[zoning].str.split(' ', expand=True)[0]
     # split the shared dwellings across the non-shared building types maintaining zone totals
@@ -155,12 +157,17 @@ def convert_ons_table_1(
         value_vars=[col for col in df.columns if col != zoning]
     )
 
+    # define dictionary of segmentation mapping
+    inv_segmentation = {v: k for k, v in segmentation.items()}
+    
     # create column of DVector segmentation
     df['h'] = df['variable'].map(inv_segmentation)
     df = df.dropna(subset='h')
 
     # setting to int here will drop the redistribution of shared dwellings we've done above, maybe not necessary?
     df['population'] = df['value'].astype(int)
+    # consider switching to pivot call
+    # df = df.pivot(index='h', columns=[zoning], values='population')
     df = df.loc[:, [zoning, 'h', 'population']]
     df = df.set_index([zoning, 'h']).unstack(level=[zoning])
     df.columns = df.columns.get_level_values(zoning)
@@ -204,10 +211,12 @@ def read_abp(
 
     # keep only rows which are explicitly `zoning` based data, there seems to be an `Averages` row lumped on the end
     # also exclude scotland from this
+    # TODO: consider what happens if this doesn't match any records?
     pattern = r'([EW]\d{8})'
     df = df.loc[df[zoning_col].str.match(pattern)]
 
     # redistribute the unallocated dwelling types to the distribution of the other dwelling types by zone
+    # TODO: consider what happens if this doesn't match any records?
     pattern = r'RD\d{2}'
     cols = [col for col in df.columns if re.search(pattern, col)]
     for col in cols:
@@ -236,6 +245,8 @@ def read_abp(
     # setting to int here will drop the redistribution of shared dwellings we've done above, maybe not necessary?
     df['dwellings'] = df['value'].astype(int)
     df[zoning] = df[zoning_col]
+    # TODO: consider switching to pivot call, which I think is?
+    # df = df.pivot_table(index='h', columns=[zoning], values='dwellings', aggfunc='sum')
     df = df.groupby([zoning, 'h']).agg({'dwellings': 'sum'}).reset_index()
     df = df.set_index([zoning, 'h']).unstack(level=[zoning])
     df.columns = df.columns.get_level_values(zoning)
@@ -294,6 +305,9 @@ def convert_ons_table_2(
     df['households'] = df['value'].astype(int)
 
     # convert to required format for DVector
+    # Altenative using pivot_wider
+    # index_cols = ["h", "ha", "hc", "car"]
+    # df = df.pivot(index=index_cols, columns=["zoning"], values="households")
     df = df.loc[:, [zoning, 'h', 'ha', 'hc', 'car', 'households']]
     df = df.set_index([zoning, 'h', 'ha', 'hc', 'car']).unstack(level=[zoning])
     df.columns = df.columns.get_level_values(zoning)
@@ -303,6 +317,8 @@ def convert_ons_table_2(
     missing = df[df.index.get_level_values('h') == 1].reset_index()
     missing['h'] = 5
     missing = missing.set_index(['h', 'ha', 'hc', 'car'])
+    # Is .loc needed? As I think this would work instead?
+    # missing[:] = np.nan
     missing.loc[:] = np.nan
 
     # combine with df for all segments
