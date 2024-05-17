@@ -40,7 +40,7 @@ def split_input_segments(input_segments: List[str]) -> Dict[bool, List[str]]:
     """
     # Could do this with a defaultdict but it's simple enough to not care, and
     # this way we *definitely* get both keys every time
-    output_dict = {
+    output_dict : dict[bool, list] = {
         True: [], False: []
     }
 
