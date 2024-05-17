@@ -1,0 +1,11 @@
+# Configuration file specifying the segmentation and geographical level of the input data.
+# All files here are assumed to be in a format ready for DVectors.
+input_root_directory: I:\NorMITs Land Use\2023\import
+output_directory: OUTPUTS
+output_intermediate_outputs: False
+
+# Currently not implemented as LSOA2011 has not been read into geographies
+# bres_2022_employees:
+#     file_path: BRES2022\preprocessing\264980261866694_employees.hdf
+#     geographical_level: LSOA2011
+#     input_segments: [big]
