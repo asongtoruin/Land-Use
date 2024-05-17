@@ -91,7 +91,8 @@ def summarise_dvector(
 
     # write cross-tab distribution summary to verifications folder
     summary.to_csv(
-        write_folder / f'{output_reference}_{dvector.zoning_system.name}_all.csv'
+        write_folder / f'{output_reference}_{dvector.zoning_system.name}_all.csv',
+        float_format='%.5f'
     )
 
     # loop through all segmentations in the DVector
@@ -109,11 +110,13 @@ def summarise_dvector(
         # Write both out to a check folder
         disaggregate_seg_long.to_csv(
             write_folder / f'{output_reference}_{dvector.zoning_system.name}_{segment}.csv',
-            index=False
+            index=False,
+            float_format='%.5f'
         )
         lad_seg_long.to_csv(
             write_folder / f'{output_reference}_{lad_total.zoning_system.name}_{segment}.csv',
-            index=False
+            index=False,
+            float_format='%.5f'
         )
 
     # store the disaggregate and LAD based dataframes to total across all zones
@@ -139,5 +142,6 @@ def summarise_dvector(
         # calculate and output total summary by zone
         total = long_frame.groupby(zone_system).agg({value_name: 'sum'})
         total.to_csv(
-            write_folder / f'{output_reference}_{zone_system}.csv'
+            write_folder / f'{output_reference}_{zone_system}.csv',
+            float_format='%.5f'
         )

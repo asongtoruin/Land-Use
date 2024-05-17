@@ -105,25 +105,33 @@ ns_sec_segmentation = {
     5: "NS-SeC of HRP: L15: Full-time student"
 }
 
-soc_segmentation = {1: 'Economically active (excluding full-time students): In employment: part-time: Occupation: 1. Managers, directors and senior officials; 2. Professional occupations; 3. Associate professional and technical occupations',
-                    2: 'Economically active (excluding full-time students): In employment: part-time: Occupation: 4. Administrative and secretarial occupations; 5. Skilled trades occupations; 6. Caring, leisure and other service occupations; 7. Sales and customer service occupations',
-                    3: 'Economically active (excluding full-time students): In employment: part-time: Occupation: 8. Process, plant and machine operatives; 9. Elementary occupations',
-                    4: 'Economically active (excluding full-time students): In employment: full-time: Occupation: 1. Managers, directors and senior officials; 2. Professional occupations; 3. Associate professional and technical occupations',
-                    5: 'Economically active (excluding full-time students): In employment: full-time: Occupation: 4. Administrative and secretarial occupations; 5. Skilled trades occupations; 6. Caring, leisure and other service occupations; 7. Sales and customer service occupations',
-                    6: 'Economically active (excluding full-time students): In employment: full-time: Occupation: 8. Process, plant and machine operatives; 9. Elementary occupations',
-                    7: 'Economically active (excluding full-time students): Unemployed',
-                    8: 'Economically inactive: Retired',
-                    9: 'Full-time students',
-                    10: 'Economically inactive: Other'}
+# order of list is pop_econ, pop_emp, pop_soc
+all_segmentation = {'Economically active (excluding full-time students): In employment: part-time: Occupation: 1. Managers, '
+                    'directors and senior officials; 2. Professional occupations; 3. Associate professional and technical occupations': {'pop_econ': 1, 'pop_emp': 2, 'pop_soc': 1},
+                    'Economically active (excluding full-time students): In employment: part-time: Occupation: 4. Administrative and secretarial occupations; '
+                    '5. Skilled trades occupations; 6. Caring, leisure and other service occupations; 7. Sales and customer service occupations': {'pop_econ': 1, 'pop_emp': 2, 'pop_soc': 2},
+                    'Economically active (excluding full-time students): In employment: part-time: Occupation: 8. Process, plant and machine operatives; '
+                    '9. Elementary occupations': {'pop_econ': 1, 'pop_emp': 2, 'pop_soc': 3},
+                    'Economically active (excluding full-time students): In employment: full-time: Occupation: 1. Managers, '
+                    'directors and senior officials; 2. Professional occupations; 3. Associate professional and technical occupations': {'pop_econ': 1, 'pop_emp': 1, 'pop_soc': 1},
+                    'Economically active (excluding full-time students): In employment: full-time: Occupation: 4. Administrative and secretarial occupations; '
+                    '5. Skilled trades occupations; 6. Caring, leisure and other service occupations; 7. Sales and customer service occupations': {'pop_econ': 1, 'pop_emp': 1, 'pop_soc': 2},
+                    'Economically active (excluding full-time students): In employment: full-time: Occupation: 8. Process, plant and machine operatives; '
+                    '9. Elementary occupations': {'pop_econ': 1, 'pop_emp': 1, 'pop_soc': 3},
+                    'Economically active (excluding full-time students): Unemployed': {'pop_econ': 2, 'pop_emp': 3, 'pop_soc': 4},
+                    'Economically inactive: Retired': {'pop_econ': 3, 'pop_emp': 5, 'pop_soc': 4},
+                    'Full-time students': {'pop_econ': 4, 'pop_emp': 4, 'pop_soc': 4},
+                    'Economically inactive: Other': {'pop_econ': 3, 'pop_emp': 3, 'pop_soc': 4}}
 
-df = pp.convert_ons_table_3(
+dfs = pp.convert_ons_table_3(
     df=df,
     dwelling_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['h'],
     ns_sec_segmentation=ns_sec_segmentation,
-    soc_segmentation=soc_segmentation,
+    all_segmentation=all_segmentation,
     zoning=geographies.MSOA_NAME
 )
-pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+for ref, df in dfs.items():
+    pp.save_preprocessed_hdf(source_file_path=file_path, df=df, multiple_output_ref=ref)
 
 # ****** AddressBase 
 # AddressBase database
@@ -171,4 +179,63 @@ df = pp.read_ons(
     zoning_column='Middle layer Super Output Areas Code',
     segment_mappings=segment_mappings
 )
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# ONS age and gender by dwelling type
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\ONS'
+    r'\population_hh_age11_gender_MSOA.csv'
+)
+
+# define dictionary of columns in the input data and segments to map to
+segment_mappings = {
+    'Age (11 categories)': ['age', segments._CUSTOM_SEGMENT_CATEGORIES['age']],
+    'Sex (2 categories)': ['gender', segments._CUSTOM_SEGMENT_CATEGORIES['gender']],
+    'Accommodation type (5 categories)': ['h', segments._CUSTOM_SEGMENT_CATEGORIES['h']]
+}
+
+aggregations = {'Age (11 categories)': {
+    'Aged 4 years and under': '0 to 4 years',
+    'Aged 5 to 9 years': '5 to 9 years',
+    'Aged 10 to 15 years': '10 to 15 years',
+    'Aged 16 to 19 years': '16 to 19 years',
+    'Aged 20 to 24 years': '20 to 34 years',
+    'Aged 25 to 34 years': '20 to 34 years',
+    'Aged 35 to 49 years': '35 to 49 years',
+    'Aged 50 to 64 years': '50 to 64 years',
+    'Aged 65 to 74 years': '65 to 74 years',
+    'Aged 75 to 84 years': '75+ years',
+    'Aged 85 years and over': '75+ years'}}
+
+# read in ons data and reformat for DVector
+df = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.MSOA_NAME,
+    zoning_column='Middle layer Super Output Areas Code',
+    segment_mappings=segment_mappings,
+    segment_aggregations=aggregations
+)
+
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# ONS population in communal establishments
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\TS048  CERs by type'
+    r'\2741727163807526.csv'
+)
+
+# read in ons data and reformat for DVector
+df, zone_col = pp.read_headered_csv(
+    file_path=file_path,
+    header_string='middle'
+)
+df[geographies.MSOA_NAME] = df[zone_col].str.split(' ', expand=True)[0]
+df['ce'] = 1
+df = pp.pivot_to_dvector(
+    data=df,
+    zoning_column=geographies.MSOA_NAME,
+    index_cols=['ce'],
+    value_column='Total: All usual residents in communal establishments'
+)
+
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)

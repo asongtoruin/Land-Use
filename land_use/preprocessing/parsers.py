@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import logging
 from pathlib import Path
 import re
@@ -454,9 +457,9 @@ def convert_ons_table_3(
         df: pd.DataFrame,
         dwelling_segmentation: dict,
         ns_sec_segmentation: dict,
-        soc_segmentation: dict,
+        all_segmentation: dict,
         zoning: str
-    ) -> pd.DataFrame:
+    ) -> dict:
     """
 
     Parameters
@@ -470,7 +473,7 @@ def convert_ons_table_3(
         {1: category1, 2: category2, ...} where the segmentation categories are
         the column values of 'HRP NS-SeC' types in the
         ONS custom download dataset
-    soc_segmentation : dict
+    all_segmentation : dict
         {1: category1, 2: category2, ...} where the segmentation categories are
         the column values of 'SOC' types in the
         ONS custom download dataset
@@ -480,36 +483,48 @@ def convert_ons_table_3(
 
     Returns
     -------
-    pd.DataFrame
-        with index of 'h', 'ns_sec', 'SOC' and column headers of 'zoning' in the
+    dict
+        Dictionary of three dataframes with index of 'h', 'ns_sec', and 'pop_soc' or 'pop_emp' or 'pop_econ' and column headers of 'zoning' in the
         correct format to convert to DVector
     """
 
     # convert to required format for DVec
     df[zoning] = df[zoning].str.split(' ', expand=True)[0]
 
-    # remap segmentation variables to be consistent with other mappings
+    # remap dwelling and ns-sec segmentation variables to be consistent with other mappings
     df['h'] = df['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
     df['ns_sec'] = df['variable_1'].map({v: k for k, v in ns_sec_segmentation.items()})
-    df['pop_soc'] = df['variable_0'].map({v: k for k, v in soc_segmentation.items()})
-    df['population'] = df['value'].astype(int)
 
-    # convert to required format for DVector
-    dvec = df.loc[:, [zoning, 'h', 'ns_sec', 'pop_soc', 'population']]
-    dvec = dvec.set_index([zoning, 'h', 'ns_sec', 'pop_soc']).unstack(level=[zoning])
-    dvec.columns = dvec.columns.get_level_values(zoning)
+    # convert all segmentation to dataframe and merge with original data frame
+    tmp = pd.DataFrame(all_segmentation).transpose()
+    merged = pd.merge(df, tmp, left_on='variable_0', right_index=True, how='left')
 
-    # add in the missing segmentation category and fill with zeros
-    # TODO this should be genericised, adding in a missing combination of indicies
-    missing = dvec[dvec.index.get_level_values('h') == 1].reset_index()
-    missing['h'] = 5
-    missing = missing.set_index(['h', 'ns_sec', 'pop_soc'])
-    missing.loc[:] = np.nan
+    # set observation column to numeric
+    merged['population'] = merged['value'].astype(int)
 
-    # combine with df for all segments
-    df = pd.concat([dvec, missing])
+    return_dict = {}
+    for col in tmp.columns:
+        grouped = merged.groupby([zoning, 'h', 'ns_sec', col]).agg({'population': 'sum'}).reset_index()
 
-    return df.fillna(0)
+        # convert to required format for DVector
+        dvec = grouped.loc[:, [zoning, 'h', 'ns_sec', col, 'population']]
+        dvec = dvec.set_index([zoning, 'h', 'ns_sec', col]).unstack(level=[zoning])
+        dvec.columns = dvec.columns.get_level_values(zoning)
+
+        # add in the missing segmentation category and fill with zeros
+        # TODO this should be genericised, adding in a missing combination of indicies
+        missing = dvec[dvec.index.get_level_values('h') == 1].reset_index()
+        missing['h'] = 5
+        missing = missing.set_index(['h', 'ns_sec', col])
+        missing.loc[:] = np.nan
+
+        # combine with df for all segments
+        grouped = pd.concat([dvec, missing])
+
+        # add to output
+        return_dict[col] = grouped.fillna(0)
+
+    return return_dict
 
 
 def read_ons(
@@ -517,7 +532,8 @@ def read_ons(
         zoning: str,
         zoning_column: str,
         segment_mappings: dict,
-        obs_column: str = 'Observation'
+        obs_column: str = 'Observation',
+        segment_aggregations: dict = None
     ) -> pd.DataFrame:
     """Reading in a generic ONS data download csv.
 
@@ -544,6 +560,17 @@ def read_ons(
         to map various columns to different segmentations.
     obs_column : str, optional
         column name containing the unit of the data (e.g. population or households or whatever), by default 'Observation'
+    segment_aggregations : dict, optional
+        Dictionary of column aggregations to get the values provided in the input data aggregated to the same segmentation
+        as required by the population model. For example, if the input file had age in 11 categories, whereas the population
+        model requires them at 9 categories, then the below dictionary would be provided where, for the age column value, the
+        keys of the dictionary are the values provided in the input data and the values of the dictionary are the values
+        in the population segmentation that the keys should be aggregated to.
+        dictionary of   {
+                        column_name_1: {disaggregate_value_1: aggregate_value_1,
+                                        disaggregate_value_2: aggregate_value_2, ...}
+                        column_name_2: {...}
+                        ...}
 
     Returns
     -------
@@ -561,6 +588,12 @@ def read_ons(
     # rename zoning_column based on the constant zoning provided
     df[zoning] = df[zoning_column]
 
+    # replace the values in the specific columns of data with the values required for the default segmentations
+    # if they are provided (i.e. if aggregation of some variables are needed to get to the tfn population segments)
+    if segment_aggregations is not None:
+        for col, mappings in segment_aggregations.items():
+            df[col] = df[col].map(mappings)
+
     # go through the dictionary and remap all the values based on the segmentation provided
     # columns are named based on the segment_ref provided
     refs = [zoning]
@@ -568,8 +601,13 @@ def read_ons(
         df[ref] = df[column].str.lower().map({v.lower(): k for k, v in remapping.items()})
         refs.append(ref)
 
+    # if some remapping of aggregations has been done, then group the data to these new aggregations before
+    # converting to DVector format
+    if segment_aggregations is not None:
+        df = df.groupby(refs).agg({obs_column: 'sum'}).reset_index()
+
     # convert to required format for DVector
-    dvec = df.loc[:, refs + [obs_column]]
+    dvec = df.loc[:, refs + [obs_column]].dropna()
     dvec = dvec.set_index(refs).unstack(level=[zoning])
     dvec.columns = dvec.columns.get_level_values(zoning)
 

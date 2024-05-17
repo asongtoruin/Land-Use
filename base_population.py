@@ -14,6 +14,9 @@ with open(r'scenario_configurations\iteration_5\base_population_config.yml', 'r'
 OUTPUT_DIR = Path(config['output_directory'])
 OUTPUT_DIR.mkdir(exist_ok=True)
 
+# Define whether to output intermediate outputs, recommended to not output loads if debugging
+generate_summary_outputs = bool(config['output_intermediate_outputs'])
+
 # read in the data from the config file
 occupied_households = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['occupied_households'])
 unoccupied_households = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['unoccupied_households'])
@@ -23,7 +26,9 @@ ons_table_2 = data_processing.read_dvector_data(input_root_directory=config['inp
 mype_2022 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['mype_2022'])
 ons_table_4 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_4'])
 hh_age_gender_2021 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['hh_age_gender_2021'])
-ons_table_3 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_3'])
+ons_table_3_econ = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_3_econ'])
+ons_table_3_emp = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_3_emp'])
+ons_table_3_soc = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_3_soc'])
 
 # --- Step 1 --- #
 # calculate NS-SeC splits of households by
@@ -40,6 +45,15 @@ hh_by_nssec = addressbase_dwellings * proportion_ns_sec
 
 # check against original addressbase data
 # check = hh_by_nssec.aggregate(segs=['h'])
+
+hh_by_nssec.save(OUTPUT_DIR / 'Output A.hdf')
+if generate_summary_outputs:
+    data_processing.summarise_dvector(
+        dvector=hh_by_nssec,
+        output_directory=OUTPUT_DIR,
+        output_reference='OutputA',
+        value_name='households'
+    )
 
 # --- Step 2 --- #
 # calculate splits of households with or without children and by car availability and by number of adults by
@@ -71,13 +85,14 @@ hh_by_nssec_hc_ha_car = hh_by_nssec * proportion_hhs_by_h_hc_ha_car_lsoa
 # check = hh_by_nssec_hc_ha_car.aggregate(segs=['h'])
 
 # save output to hdf and csvs for checking
-hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output A.hdf')
-data_processing.summarise_dvector(
-    dvector=hh_by_nssec_hc_ha_car,
-    output_directory=OUTPUT_DIR,
-    output_reference='OutputA',
-    value_name='households'
-)
+hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output B.hdf')
+if generate_summary_outputs:
+    data_processing.summarise_dvector(
+        dvector=hh_by_nssec_hc_ha_car,
+        output_directory=OUTPUT_DIR,
+        output_reference='OutputB',
+        value_name='households'
+    )
 
 # --- Step 3 --- #
 # Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
@@ -99,13 +114,14 @@ occupancy.data = occupancy.data.fillna(occupancy.data.mean(axis=0), axis=0)
 addressbase_population = occupancy * addressbase_dwellings
 
 # save output to hdf and csvs for checking
-addressbase_population.save(OUTPUT_DIR / 'Output B.hdf')
-data_processing.summarise_dvector(
-    dvector=addressbase_population,
-    output_directory=OUTPUT_DIR,
-    output_reference='OutputB',
-    value_name='population'
-)
+addressbase_population.save(OUTPUT_DIR / 'Output C.hdf')
+if generate_summary_outputs:
+    data_processing.summarise_dvector(
+        dvector=addressbase_population,
+        output_directory=OUTPUT_DIR,
+        output_reference='OutputC',
+        value_name='population'
+    )
 
 # --- Step 4 --- #
 # Apply average occupancy by dwelling type to the households by NS-SeC, car availability, number of adults
@@ -115,91 +131,132 @@ data_processing.summarise_dvector(
 pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * addressbase_population
 
 # save output to hdf and csvs for checking
-pop_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output C.hdf')
-data_processing.summarise_dvector(
-    dvector=pop_by_nssec_hc_ha_car,
-    output_directory=OUTPUT_DIR,
-    output_reference='OutputC',
-    value_name='population'
-)
+pop_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output D.hdf')
+if generate_summary_outputs:
+    data_processing.summarise_dvector(
+        dvector=pop_by_nssec_hc_ha_car,
+        output_directory=OUTPUT_DIR,
+        output_reference='OutputD',
+        value_name='population'
+    )
 
-# --- Step 5 --- #
-# Calculate splits by dwelling type, SOC/econ, and NS-SeC of HRP
-# TODO This is *officially* population over 16, somehow need to account for children
-econ_soc_splits = ons_table_3 / ons_table_3.aggregate(segs=['h', 'ns_sec'])
+# --- Step 6 --- #
+# Calculate splits by dwelling type, age, and gender
+gender_age_splits = hh_age_gender_2021 / hh_age_gender_2021.aggregate(segs=['h'])
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
-econ_soc_splits.data = econ_soc_splits.data.fillna(0)
+gender_age_splits.data = gender_age_splits.data.fillna(0)
 
 # convert the factors back to LSOA
-econ_soc_splits_lsoa = econ_soc_splits.translate_zoning(
+gender_age_splits_lsoa = gender_age_splits.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
     weighting=TranslationWeighting.NO_WEIGHT
 )
 
 # apply the splits at LSOA level to main population table
-pop_by_nssec_hc_ha_car_soc = econ_soc_splits_lsoa * pop_by_nssec_hc_ha_car
+pop_by_nssec_hc_ha_car_gender_age = pop_by_nssec_hc_ha_car * gender_age_splits_lsoa
 
 # save output to hdf and csvs for checking
-pop_by_nssec_hc_ha_car_soc.save(OUTPUT_DIR / 'Output D.hdf')
-data_processing.summarise_dvector(
-    dvector=pop_by_nssec_hc_ha_car_soc,
-    output_directory=OUTPUT_DIR,
-    output_reference='OutputD',
-    value_name='population'
+# TODO Output E hdf is big!
+pop_by_nssec_hc_ha_car_gender_age.save(OUTPUT_DIR / 'Output E.hdf')
+# if generate_summary_outputs:
+#     data_processing.summarise_dvector(
+#         dvector=pop_by_nssec_hc_ha_car_gender_age,
+#         output_directory=OUTPUT_DIR,
+#         output_reference='OutputE',
+#     )
+
+# --- Step 6 --- #
+# Calculate splits by dwelling type, econ, and NS-SeC of HRP
+# TODO This is *officially* population over 16, somehow need to account for children
+econ_splits = ons_table_3_econ / ons_table_3_econ.aggregate(segs=['h', 'ns_sec'])
+# fill missing proportions with 0 as they are where the total hh is zero in the census data
+econ_splits.data = econ_splits.data.fillna(0)
+
+# Calculate splits by dwelling type, employment, and NS-SeC of HRP
+# TODO This is *officially* population over 16, somehow need to account for children
+emp_splits = ons_table_3_emp / ons_table_3_emp.aggregate(segs=['h', 'ns_sec'])
+# fill missing proportions with 0 as they are where the total hh is zero in the census data
+emp_splits.data = emp_splits.data.fillna(0)
+
+# Calculate splits by dwelling type, soc, and NS-SeC of HRP
+# TODO This is *officially* population over 16, somehow need to account for children
+soc_splits = ons_table_3_soc / ons_table_3_soc.aggregate(segs=['h', 'ns_sec'])
+# fill missing proportions with 0 as they are where the total hh is zero in the census data
+soc_splits.data = soc_splits.data.fillna(0)
+
+# convert the factors back to LSOA
+econ_splits_lsoa = econ_splits.translate_zoning(
+    new_zoning=constants.LSOA_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.NO_WEIGHT
+)
+emp_splits_lsoa = emp_splits.translate_zoning(
+    new_zoning=constants.LSOA_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.NO_WEIGHT
+)
+soc_splits_lsoa = soc_splits.translate_zoning(
+    new_zoning=constants.LSOA_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.NO_WEIGHT
 )
 
-#
-#
-# # convert 2022 MYPE to MSOA
-# mype_2022_msoa = mype_2022.translate_zoning(
-#     new_zoning=constants.MSOA_ZONING_SYSTEM,
-#     cache_path=constants.CACHE_FOLDER
-# )
-#
-# # calculate age band proportions by MSOA and gender from 2022 MYPE
-# mype_proportions_by_msoa = mype_2022_msoa / mype_2022_msoa.aggregate(segs=['gender'])
-# # apply these proportions to the 2021 gender and dwelling types, effectively controlling 2021-based gender/dwelling
-# # splits to the age dimension from mype_2022. Total is still 2021 number.
-# hh_age_gender_adjusted = mype_proportions_by_msoa * hh_age_gender_2021.aggregate(segs=['h', 'gender'])
-#
-# # calculate age and gender based factors based on this adjusted output
-# hh_age_gender_adjusted_proportions = hh_age_gender_adjusted / hh_age_gender_adjusted.aggregate(segs=['age', 'gender'])
-#
-# # expand this back out to lsoa level to apply to the population (same factors for all LSOAs in same MSOA)
-# proportions_by_lsoa = hh_age_gender_adjusted_proportions.translate_zoning(
-#     new_zoning=constants.LSOA_ZONING_SYSTEM,
-#     cache_path=constants.CACHE_FOLDER
-# )
-#
-# # apply the factors
-# abpop_by_h_hc_ha_car_age_gender = abpop_by_h_hc_ha_car * proportions_by_lsoa
-#
-# # save output to hdf and csv for readablity
-# abpop_by_h_hc_ha_car_age_gender.save(OUTPUT_DIR / 'Output 2.hdf')
-# data_processing.summarise_dvector(
-#     dvector=abpop_by_h_hc_ha_car_age_gender,
-#     output_directory=OUTPUT_DIR,
-#     output_reference='Output2',
-#     value_name='population'
-# )
-#
-# # calculate NS-SeC splits of households by
-# # dwelling type by LSOA
-# total_hh_by_hh = ons_table_4.aggregate(segs=['h'])
-# proportion_ns_sec = ons_table_4 / total_hh_by_hh
-# # fill missing proportions with 1 as they are where the total is zero
-# # don't think it matters what this is infilled with, but this will work for now
-# proportion_ns_sec.data = proportion_ns_sec.data.fillna(1)
-#
-# # multiply the total population by the derived proportions at LSOA level
-# abpop_by_h_hc_ha_car_age_gender_nssec = abpop_by_h_hc_ha_car_age_gender * proportion_ns_sec
-#
-# # save output to hdf and csv for readablity
-# abpop_by_h_hc_ha_car.save(OUTPUT_DIR / 'Output 3.hdf')
-# data_processing.summarise_dvector(
-#     dvector=abpop_by_h_hc_ha_car,
-#     output_directory=OUTPUT_DIR,
-#     output_reference='Output3',
-#     value_name='population'
-# )
+# expand the segmentation to include age (assuming the same weights for all age categories)
+econ_splits_lsoa_age = data_processing.expand_segmentation(
+    dvector=econ_splits_lsoa,
+    segmentation_to_add=constants.CUSTOM_SEGMENTS['age']
+)
+emp_splits_lsoa_age = data_processing.expand_segmentation(
+    dvector=emp_splits_lsoa,
+    segmentation_to_add=constants.CUSTOM_SEGMENTS['age']
+)
+soc_splits_lsoa_age = data_processing.expand_segmentation(
+    dvector=soc_splits_lsoa,
+    segmentation_to_add=constants.CUSTOM_SEGMENTS['age']
+)
+
+# TODO this is all messy I dont like it
+# set children to have economic status proportions to 1 for students only (stops under 16s being allocated working statuses)
+econ_splits_lsoa_age.data.loc[:, :, 1, 1] = 0
+econ_splits_lsoa_age.data.loc[:, :, 2, 1] = 0
+econ_splits_lsoa_age.data.loc[:, :, 3, 1] = 0
+econ_splits_lsoa_age.data.loc[:, :, 4, 1] = 1
+
+# set children to have employment status proportions to 1 for non-working age only (stops under 16s being allocated employment statuses)
+emp_splits_lsoa_age.data.loc[:, :, 1, 1] = 0
+emp_splits_lsoa_age.data.loc[:, :, 2, 1] = 0
+emp_splits_lsoa_age.data.loc[:, :, 3, 1] = 0
+emp_splits_lsoa_age.data.loc[:, :, 4, 1] = 0
+emp_splits_lsoa_age.data.loc[:, :, 5, 1] = 1
+
+# set children to have SOC grouping proportions to 1 for SOC4 only (stops under 16s being allocated other SOC groupings)
+soc_splits_lsoa_age.data.loc[:, :, 1, 1] = 0
+soc_splits_lsoa_age.data.loc[:, :, 2, 1] = 0
+soc_splits_lsoa_age.data.loc[:, :, 3, 1] = 0
+soc_splits_lsoa_age.data.loc[:, :, 4, 1] = 1
+
+# check proportions sum to one
+# TODO some zeros in here that maybe shouldnt be? Need to check
+# tmp = soc_splits_lsoa_age.aggregate(segs=['h', 'age', 'ns_sec'])
+
+# apply the splits at LSOA level to main population table
+pop_by_nssec_hc_ha_car_gender_age_econ = econ_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age
+# TODO memory error here
+pop_by_nssec_hc_ha_car_gender_age_econ_emp = emp_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age_econ
+pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc = soc_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age_econ_emp
+
+# save output to hdf and csvs for checking
+# TODO Output F hdf is big!
+# pop_by_nssec_hc_ha_car_econ_emp_soc.save(OUTPUT_DIR / 'Output F.hdf')
+# TODO Memory crashes when converting to long, ideally need to stick in wide format for summaries!
+#   File "C:\Code\Land-Use\land_use\data_processing\outputs.py", line 33, in dvector_to_long
+#     data = dvec.data.T.melt(ignore_index=False)
+#   numpy.core._exceptions._ArrayMemoryError: Unable to allocate 9.57 GiB for an array with shape (1284192000,) and data type int64
+# if generate_summary_outputs:
+#     data_processing.summarise_dvector(
+#         dvector=pop_by_nssec_hc_ha_car_econ_emp_soc,
+#         output_directory=OUTPUT_DIR,
+#         output_reference='OutputE',
+#     )
+

@@ -132,16 +132,23 @@ _CUSTOM_SEGMENT_CATEGORIES = {
         18: "18 : Arts, entertainment, recreation & other services (R,S,T and U)",
     },
     "pop_soc": {
-        1: "SOC1 - Part Time",
-        2: "SOC2 - Part Time",
-        3: "SOC3 - Part Time",
-        4: "SOC1 - Full Time",
-        5: "SOC2 - Full Time",
-        6: "SOC3 - Full Time",
-        7: "Unemployed",
-        8: "Retired",
-        9: "Full-Time Students",
-        10: "Economically inactive: Other"
+        1: "SOC1",
+        2: "SOC2",
+        3: "SOC3",
+        4: "SOC4"
+    },
+    'pop_emp': {
+        1: 'full_time',
+        2: 'part_time',
+        3: 'unemployed',
+        4: 'students',
+        5: 'non-working_age'
+    },
+    'pop_econ': {
+        1: 'Economically active employees',
+        2: 'Economically active unemployed',
+        3: 'Economically inactive',
+        4: 'Students'
     }
 }
 

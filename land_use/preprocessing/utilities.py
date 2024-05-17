@@ -155,7 +155,7 @@ def read_in_excel(file: Path, tab: str, names: list = None) -> pd.DataFrame:
     return df
 
 
-def save_preprocessed_hdf(source_file_path: Path, df: pd.DataFrame):
+def save_preprocessed_hdf(source_file_path: Path, df: pd.DataFrame, multiple_output_ref: str = None):
     """Save a dataframe to HDF5 format, in a "preprocessing" subfolder.
 
     The output file location will be a subfolder in the file_path location named 'preprocessing'
@@ -173,6 +173,10 @@ def save_preprocessed_hdf(source_file_path: Path, df: pd.DataFrame):
     df : pd.DataFrame
         Data to be saved in HDF5 format with the same name as file_path.
 
+    multiple_output_ref : str, default None
+        This is a reference to include if multiple outputs will be output from the same input file. Instead
+        of the hdf being named exactly as the input file, it will be named as the {input_file}_{multiple_output_ref}.hdf
+
     Returns
     -------
 
@@ -180,6 +184,42 @@ def save_preprocessed_hdf(source_file_path: Path, df: pd.DataFrame):
     output_folder = source_file_path.parent / 'preprocessing'
     output_folder.mkdir(exist_ok=True)
 
-    filename = source_file_path.with_suffix('.hdf').name
+    if multiple_output_ref is None:
+        filename = source_file_path.with_suffix('.hdf').name
+    else:
+        filename = f'{source_file_path.with_suffix("").name}_{multiple_output_ref}.hdf'
     logging.info(f'Writing to {output_folder / filename}')
     df.to_hdf(output_folder / filename, key='df', mode='w')
+
+
+def pivot_to_dvector(data: pd.DataFrame, zoning_column: str, index_cols: list, value_column: str) -> pd.DataFrame:
+    """Function to pivot a long format dataframe into DVector format, where the column headers are the zone
+    names and index is a segmentation definition.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Data you wish to pivot to DVector format. This is assumed to be in long format with columns of (at least)
+        [zoning_column] + index_cols
+    zoning_column : str
+        Name of the column containing the zone names. This should be non-duplicated!
+    index_cols :
+        List of columns to define as the segmentation index in the DVector.
+    value_column :
+        Name of the column containing the actual values of the data.
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe with column names as the zoning_column values, and index of index_cols, with values from value_col
+    """
+    # restrict to columns of interest
+    # TODO put in checks for duplicates in the data
+    dropped = data.loc[:, [zoning_column] + index_cols + [value_column]]
+
+    # set the index value to be the index cols plus the zoning col and unstack
+    reindexed = dropped.set_index([zoning_column] + index_cols).unstack(level=[zoning_column])
+
+    # set column names to be the zoning column values
+    reindexed.columns = reindexed.columns.get_level_values(zoning_column)
+
+    return reindexed

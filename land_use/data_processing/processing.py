@@ -50,4 +50,78 @@ def add_total_segmentation(dvector: DVector) -> DVector:
     # set new index
     df = df.set_index(names_list)
 
-    return DVector(segmentation=new_segmentation, zoning_system=zoning, import_data=df)
+    return DVector(
+        segmentation=new_segmentation,
+        zoning_system=zoning,
+        import_data=df
+    )
+
+
+def expand_segmentation(
+        dvector: DVector,
+        segmentation_to_add: Segment
+    ) -> DVector:
+    """Function to basically copy the values in the existing segmentation of dvector and replicate the values for all
+    segmentations within the segmentation to add.
+
+    If dvector has segmentation of two categories, like
+    {   'index': [1, 2],
+        'zone1': [10, 20],
+        'zone2': [50, 40]
+    }
+
+    and we want to expand the segmentation to another segmentation, with definition A B, then the expanded DVector
+    will have the form of
+    {   'index': [(1, a), (1, b), (2, a), (2, b)],
+        'zone1': [10, 10, 20, 20],
+        'zone2': [50, 50, 40, 40]
+    }
+
+    Parameters
+    ----------
+    dvector : DVector
+        DVector of a given segmentation
+    segmentation_to_add : Segment
+        This should be a defined segment, either in the constants\segments.py, or in TfN's SuperSegment
+
+    Returns
+    -------
+    DVector
+        DVector with expanded segmentation
+    """
+    # get segmentation values from the segmentation_to_add
+    val_dict = segmentation_to_add.values
+
+    # get current segmentation names of dvector
+    current_seg_names = dvector.segmentation.names
+
+    # get current data of dvector
+    data = dvector.data.reset_index()
+
+    # add the segment definitions from the segmentation to add
+    dfs = []
+    for value in val_dict.keys():
+        df = data.copy()
+        df[segmentation_to_add.name] = value
+        dfs.append(df)
+
+    # create output data with the additional segmentation
+    output = pd.concat(dfs)
+
+    # convert to data ready for DVector
+    dvec = output.set_index(current_seg_names + [segmentation_to_add.name])
+
+    # create DVector with the same segmentation, plus the segmentation_to_add segmentation, in the same zone system
+    # TODO this wont work with default TfN super segments so needs rethinking, this is good enough for now?
+    names_list = current_seg_names + [segmentation_to_add.name]
+    segment_list = [segmentation_to_add] + [seg for seg in dvector.segmentation.segments]
+
+    new_segmentation_input = SegmentationInput(enum_segments=[], naming_order=names_list, custom_segments=segment_list)
+    new_segmentation = Segmentation(new_segmentation_input)
+
+    return DVector(
+        segmentation=new_segmentation,
+        zoning_system=dvector.zoning_system,
+        import_data=dvec
+    )
+
