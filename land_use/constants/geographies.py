@@ -106,12 +106,20 @@ LAD_ZONING_SYSTEM = generate_zoning_system(
     id_col='LAD21CD', desc_col='LAD21NM'
 )
 
+LSOA_2011_NAME = 'LSOA2011'
+LSOA_2011_ZONING_SYSTEM = generate_zoning_system(
+    name=LSOA_2011_NAME, 
+    shapefile_path=SHAPEFILE_DIRECTORY / 'LSOA (2011)' / 'infuse_lsoa_lyr_2011.shp',
+    id_col='geo_code', desc_col='name'
+)
+
 # Dictionary of references for the yaml file
 # TODO link with definitions above
 KNOWN_GEOGRAPHIES = {
     LSOA_NAME: LSOA_ZONING_SYSTEM,
     MSOA_NAME: MSOA_ZONING_SYSTEM,
-    LAD_NAME: LAD_ZONING_SYSTEM
+    LAD_NAME: LAD_ZONING_SYSTEM,
+    LSOA_2011_NAME: LSOA_2011_ZONING_SYSTEM
 }
 # TODO This generated zone translations on I drive no matter the cache_path specified. It works, just needs changing in caf.core.
 # if __name__ == '__main__':
@@ -119,3 +127,5 @@ KNOWN_GEOGRAPHIES = {
 #
 #     for zone_system_1, zone_system_2 in combinations(KNOWN_GEOGRAPHIES.values(), 2):
 #         zone_system_1.translate(zone_system_2, cache_path=CACHE_FOLDER, weighting='spatial')
+
+
