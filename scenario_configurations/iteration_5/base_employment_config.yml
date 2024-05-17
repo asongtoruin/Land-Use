@@ -4,8 +4,23 @@ input_root_directory: I:\NorMITs Land Use\2023\import
 output_directory: OUTPUTS
 output_intermediate_outputs: False
 
-# Currently not implemented as LSOA2011 has not been read into geographies
-# bres_2022_employees:
-#     file_path: BRES2022\preprocessing\264980261866694_employees.hdf
-#     geographical_level: LSOA2011
-#     input_segments: [big]
+# Currently bres data only includes England and Wales
+bres_2022_employees:
+    file_path: BRES2022\preprocessing\264980261866694_employees.hdf
+    geographical_level: LSOA2011
+    input_segments: [big]
+
+bres_2022_employment:
+    file_path: BRES2022\preprocessing\264980261866694_employment.hdf
+    geographical_level: LSOA2011
+    input_segments: [big]
+
+bres_2022_full_time_employees:
+    file_path: BRES2022\preprocessing\264980261866694_full-time-employees.hdf
+    geographical_level: LSOA2011
+    input_segments: [big]
+
+bres_2022_part_time_employees:
+    file_path: BRES2022\preprocessing\264980261866694_part-time-employees.hdf
+    geographical_level: LSOA2011
+    input_segments: [big]

@@ -106,21 +106,32 @@ LAD_ZONING_SYSTEM = generate_zoning_system(
     id_col='LAD21CD', desc_col='LAD21NM'
 )
 
-LSOA_2011_NAME = 'LSOA2011'
-LSOA_2011_ZONING_SYSTEM = generate_zoning_system(
-    name=LSOA_2011_NAME, 
-    shapefile_path=SHAPEFILE_DIRECTORY / 'LSOA (2011)' / 'infuse_lsoa_lyr_2011.shp',
-    id_col='geo_code', desc_col='name'
-)
+# TODO: think about a different way to implement generate_zoning_system possibly on the fly as needed?
+try:
+    LSOA_2011_NAME = 'LSOA2011'
+    LSOA_2011_ZONING_SYSTEM = generate_zoning_system(
+        name=LSOA_2011_NAME, 
+        shapefile_path=SHAPEFILE_DIRECTORY / 'LSOA (2011)' / 'infuse_lsoa_lyr_2011.shp',
+        id_col='geo_code', desc_col='name'
+    )
+except FileNotFoundError:
+    pass
 
 # Dictionary of references for the yaml file
-# TODO link with definitions above
-KNOWN_GEOGRAPHIES = {
-    LSOA_NAME: LSOA_ZONING_SYSTEM,
-    MSOA_NAME: MSOA_ZONING_SYSTEM,
-    LAD_NAME: LAD_ZONING_SYSTEM,
-    LSOA_2011_NAME: LSOA_2011_ZONING_SYSTEM
-}
+try:
+    # TODO link with definitions above
+    KNOWN_GEOGRAPHIES = {
+        LSOA_NAME: LSOA_ZONING_SYSTEM,
+        MSOA_NAME: MSOA_ZONING_SYSTEM,
+        LAD_NAME: LAD_ZONING_SYSTEM,
+        LSOA_2011_NAME: LSOA_2011_ZONING_SYSTEM,
+    }
+except NameError:
+    KNOWN_GEOGRAPHIES = {
+        LSOA_NAME: LSOA_ZONING_SYSTEM,
+        MSOA_NAME: MSOA_ZONING_SYSTEM,
+        LAD_NAME: LAD_ZONING_SYSTEM,
+    }
 # TODO This generated zone translations on I drive no matter the cache_path specified. It works, just needs changing in caf.core.
 # if __name__ == '__main__':
 #     from itertools import combinations
