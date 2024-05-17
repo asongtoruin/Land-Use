@@ -34,9 +34,8 @@ def find_header_line(
     -------
     Tuple[int, str]
         (0-indexed) number of the first line within the file that begins with
-        `header_start`, and SOME STRING
+        `header_start`, and the first column entry that contains header_string.
     """
-    # TODO: Update the docstring, I don't know what "col_name" is meant to be.
 
     if len(header_string) < 2:
         warn(
@@ -102,9 +101,8 @@ def read_headered_csv(
     -------
     Tuple[pd.DataFrame, str]:
         tuple of the dataframe of the data found after the header row, with the 
-        header row as column names and SOME OTHER STRING
+        index of the header row and the first column entry that contains header_string.
     """
-    # TODO: Update the docstring, I don't know what "col_name" is meant to be.
 
     logging.info(f'Reading in {file_path}')
     skip_rows, col_name = find_header_line(file_path, header_string)
@@ -112,7 +110,7 @@ def read_headered_csv(
     return pd.read_csv(file_path, skiprows=skip_rows, **kwargs).dropna(), col_name
 
 
-def read_in_excel(file: Path, tab: str, names: list = None) -> pd.DataFrame:
+def read_in_excel(file: Path, tab: str, names: list|None = None) -> pd.DataFrame:
     """Reads in a spreadsheet worksheet based on the tab name provided
 
     Parameters
@@ -145,17 +143,15 @@ def read_in_excel(file: Path, tab: str, names: list = None) -> pd.DataFrame:
     if not file.is_file():
         raise FileNotFoundError(f'{file} cannot be found')
 
-    if names is not None:
-        df = pd.read_excel(
-            file, sheet_name=tab, engine='openpyxl', skiprows=1, names=names
-        )
-    else:
-        df = pd.read_excel(file, sheet_name=tab, engine='openpyxl', header=0)
-
-    return df
+    if names:
+        return pd.read_excel(
+        file, sheet_name=tab, engine='openpyxl', skiprows=1, names=names
+    )
+    
+    return pd.read_excel(file, sheet_name=tab, engine='openpyxl', header=0)
 
 
-def save_preprocessed_hdf(source_file_path: Path, df: pd.DataFrame, multiple_output_ref: str = None):
+def save_preprocessed_hdf(source_file_path: Path, df: pd.DataFrame, multiple_output_ref: str|None = None):
     """Save a dataframe to HDF5 format, in a "preprocessing" subfolder.
 
     The output file location will be a subfolder in the file_path location named 'preprocessing'
@@ -184,10 +180,11 @@ def save_preprocessed_hdf(source_file_path: Path, df: pd.DataFrame, multiple_out
     output_folder = source_file_path.parent / 'preprocessing'
     output_folder.mkdir(exist_ok=True)
 
-    if multiple_output_ref is None:
-        filename = source_file_path.with_suffix('.hdf').name
-    else:
+    if multiple_output_ref:
         filename = f'{source_file_path.with_suffix("").name}_{multiple_output_ref}.hdf'
+    else:
+        filename = source_file_path.with_suffix('.hdf').name
+        
     logging.info(f'Writing to {output_folder / filename}')
     df.to_hdf(output_folder / filename, key='df', mode='w')
 
