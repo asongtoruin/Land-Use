@@ -50,7 +50,7 @@ def generate_zoning_system(
 
     # TODO: should use this line, but something in caf.core seems to break geopandas. Using pandas *temporarily*, once this is fixed we should use the following and csv_path will no longer be needed
     # layer_info = gpd.read_file(str(shapefile_path))
-    csv_path = shapefile_path.with_suffix('.csv')
+    csv_path = Path(shapefile_path).with_suffix('.csv')
     layer_info = pd.read_csv(csv_path)
 
     # Rename columns and filter down
@@ -63,7 +63,7 @@ def generate_zoning_system(
     reformatted = reformatted[['zone_id', 'descriptions']]
 
     meta = ZoningSystemMetaData(
-        name=name, shapefile_id_col=id_col, shapefile_path=shapefile_path,
+        name=name, shapefile_id_col=id_col, shapefile_path=Path(shapefile_path),
     )
 
     # Create and save the object
