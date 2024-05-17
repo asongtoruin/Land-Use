@@ -48,7 +48,8 @@ file_path = Path(r'I:\NorMITs Land Use\2023\import\ONS custom\ct210213census2021
 df = pp.read_ons_custom(
     file_path,
     zoning=geographies.MSOA_NAME,
-    index_col=[0, 1, 2], header=[0, 1]
+    index_col=[0, 1, 2],
+    header=[0, 1]
 )
 
 df = pp.convert_ons_table_2(
@@ -65,7 +66,8 @@ pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 file_path = Path(r'I:\NorMITs Land Use\2023\import\ONS custom\ct210215census2021.xlsx')
 # read in excel format, preprocess, and reformat for DVector
 df = pp.read_ons_custom(
-    file_path, zoning=geographies.LSOA_NAME,
+    file_path,
+    zoning=geographies.LSOA_NAME,
     index_col=[0, 1]
 )
 
@@ -82,6 +84,44 @@ df = pp.convert_ons_table_4(
     dwelling_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['h'],
     ns_sec_segmentation=ons_segmentation,
     zoning=geographies.LSOA_NAME
+)
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# define path to ONS table 3
+file_path = Path(r'I:\NorMITs Land Use\2023\import\ONS custom\ct210214census2021.xlsx')
+# read in excel format, preprocess, and reformat for DVector
+df = pp.read_ons_custom(
+    file_path,
+    zoning=geographies.MSOA_NAME,
+    index_col=[0, 1],
+    header=[0, 1]
+)
+
+ns_sec_segmentation = {
+    1: "NS-SeC of HRP: 1. Higher managerial, administrative and professional occupations; 2. Lower managerial, administrative and professional occupations",
+    2: "NS-SeC of HRP: 3. Intermediate occupations; 4. Small employers and own account workers; 5. Lower supervisory and technical occupations",
+    3: "NS-SeC of HRP: 6. Semi-routine occupations; 7. Routine occupations",
+    4: "NS-SeC of HRP: 8. Never worked and long-term unemployed*",
+    5: "NS-SeC of HRP: L15: Full-time student"
+}
+
+soc_segmentation = {1: 'Economically active (excluding full-time students): In employment: part-time: Occupation: 1. Managers, directors and senior officials; 2. Professional occupations; 3. Associate professional and technical occupations',
+                    2: 'Economically active (excluding full-time students): In employment: part-time: Occupation: 4. Administrative and secretarial occupations; 5. Skilled trades occupations; 6. Caring, leisure and other service occupations; 7. Sales and customer service occupations',
+                    3: 'Economically active (excluding full-time students): In employment: part-time: Occupation: 8. Process, plant and machine operatives; 9. Elementary occupations',
+                    4: 'Economically active (excluding full-time students): In employment: full-time: Occupation: 1. Managers, directors and senior officials; 2. Professional occupations; 3. Associate professional and technical occupations',
+                    5: 'Economically active (excluding full-time students): In employment: full-time: Occupation: 4. Administrative and secretarial occupations; 5. Skilled trades occupations; 6. Caring, leisure and other service occupations; 7. Sales and customer service occupations',
+                    6: 'Economically active (excluding full-time students): In employment: full-time: Occupation: 8. Process, plant and machine operatives; 9. Elementary occupations',
+                    7: 'Economically active (excluding full-time students): Unemployed',
+                    8: 'Economically inactive: Retired',
+                    9: 'Full-time students',
+                    10: 'Economically inactive: Other'}
+
+df = pp.convert_ons_table_3(
+    df=df,
+    dwelling_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['h'],
+    ns_sec_segmentation=ns_sec_segmentation,
+    soc_segmentation=soc_segmentation,
+    zoning=geographies.MSOA_NAME
 )
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 

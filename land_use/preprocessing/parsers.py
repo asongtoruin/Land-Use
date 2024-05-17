@@ -450,6 +450,68 @@ def convert_ons_table_4(
     return df.fillna(0)
 
 
+def convert_ons_table_3(
+        df: pd.DataFrame,
+        dwelling_segmentation: dict,
+        ns_sec_segmentation: dict,
+        soc_segmentation: dict,
+        zoning: str
+    ) -> pd.DataFrame:
+    """
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Ideally, the output of a `read_ons_custom` call.
+    dwelling_segmentation : dict
+        {1: category1, 2: category2, ...} where the segmentation categories are
+        the column values of 'dwelling' types in the ONS custom download dataset
+    ns_sec_segmentation : dict
+        {1: category1, 2: category2, ...} where the segmentation categories are
+        the column values of 'HRP NS-SeC' types in the
+        ONS custom download dataset
+    soc_segmentation : dict
+        {1: category1, 2: category2, ...} where the segmentation categories are
+        the column values of 'SOC' types in the
+        ONS custom download dataset
+    zoning : str
+        the zoning level of the input data (e.g. 'lsoa2021') which should match
+        the relevant zoning in the ZONING_CACHE
+
+    Returns
+    -------
+    pd.DataFrame
+        with index of 'h', 'ns_sec', 'SOC' and column headers of 'zoning' in the
+        correct format to convert to DVector
+    """
+
+    # convert to required format for DVec
+    df[zoning] = df[zoning].str.split(' ', expand=True)[0]
+
+    # remap segmentation variables to be consistent with other mappings
+    df['h'] = df['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
+    df['ns_sec'] = df['variable_1'].map({v: k for k, v in ns_sec_segmentation.items()})
+    df['pop_soc'] = df['variable_0'].map({v: k for k, v in soc_segmentation.items()})
+    df['population'] = df['value'].astype(int)
+
+    # convert to required format for DVector
+    dvec = df.loc[:, [zoning, 'h', 'ns_sec', 'pop_soc', 'population']]
+    dvec = dvec.set_index([zoning, 'h', 'ns_sec', 'pop_soc']).unstack(level=[zoning])
+    dvec.columns = dvec.columns.get_level_values(zoning)
+
+    # add in the missing segmentation category and fill with zeros
+    # TODO this should be genericised, adding in a missing combination of indicies
+    missing = dvec[dvec.index.get_level_values('h') == 1].reset_index()
+    missing['h'] = 5
+    missing = missing.set_index(['h', 'ns_sec', 'pop_soc'])
+    missing.loc[:] = np.nan
+
+    # combine with df for all segments
+    df = pd.concat([dvec, missing])
+
+    return df.fillna(0)
+
+
 def read_ons(
         file_path: Path,
         zoning: str,
