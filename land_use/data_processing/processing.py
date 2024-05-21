@@ -197,7 +197,7 @@ def replace_segment_combination(
         combination_method = np.add
 
     # check for any np.inf values in the frame before this
-    if data.isnull().values.sum() > 0:
+    if data.replace(np.inf, np.nan).isnull().values.sum() > 0:
         raise ValueError(
             'There are null values in your data, please sort before '
             'calling replace_segment_combination()'
