@@ -56,8 +56,8 @@ if generate_summary_outputs:
     )
 
 # --- Step 2 --- #
-# calculate splits of households with or without children and by car availability and by number of adults by
-# dwelling types by MSOA
+# calculate splits of households with or without children and by car availability
+# and by number of adults by dwelling types by MSOA
 total_hh_by_hh = ons_table_2.aggregate(segs=['h'])
 proportion_hhs_by_h_hc_ha_car = ons_table_2 / total_hh_by_hh
 
@@ -124,8 +124,8 @@ if generate_summary_outputs:
     )
 
 # --- Step 4 --- #
-# Apply average occupancy by dwelling type to the households by NS-SeC, car availability, number of adults
-# and number of children
+# Apply average occupancy by dwelling type to the households by NS-SeC,
+# car availability, number of adults and number of children
 # TODO Do we want to do this in a "smarter" way? The occupancy of 1 adult households (for example) should not be more than 1
 # TODO and households with 2+ children should be more than 3 - is this a place for IPF?
 pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * addressbase_population
