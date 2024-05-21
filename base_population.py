@@ -216,25 +216,44 @@ soc_splits_lsoa_age = data_processing.expand_segmentation(
     segmentation_to_add=constants.CUSTOM_SEGMENTS['age']
 )
 
-# TODO this is all messy I dont like it
-# set children to have economic status proportions to 1 for students only (stops under 16s being allocated working statuses)
-econ_splits_lsoa_age.data.loc[:, :, 1, 1] = 0
-econ_splits_lsoa_age.data.loc[:, :, 2, 1] = 0
-econ_splits_lsoa_age.data.loc[:, :, 3, 1] = 0
-econ_splits_lsoa_age.data.loc[:, :, 4, 1] = 1
+# set children to have economic status proportions to 1 for students
+# only (stops under 16s being allocated working statuses)
+econ_splits_lsoa_age.data = data_processing.replace_segment_combination(
+    data=econ_splits_lsoa_age.data,
+    segment_combination={'pop_econ': [1, 2, 3], 'age': [1]},
+    value=0
+)
+econ_splits_lsoa_age.data = data_processing.replace_segment_combination(
+    data=econ_splits_lsoa_age.data,
+    segment_combination={'pop_econ': [4], 'age': [1]},
+    value=1
+)
 
-# set children to have employment status proportions to 1 for non-working age only (stops under 16s being allocated employment statuses)
-emp_splits_lsoa_age.data.loc[:, :, 1, 1] = 0
-emp_splits_lsoa_age.data.loc[:, :, 2, 1] = 0
-emp_splits_lsoa_age.data.loc[:, :, 3, 1] = 0
-emp_splits_lsoa_age.data.loc[:, :, 4, 1] = 0
-emp_splits_lsoa_age.data.loc[:, :, 5, 1] = 1
+# set children to have employment status proportions to 1 for non-working age
+# only (stops under 16s being allocated employment statuses)
+emp_splits_lsoa_age.data = data_processing.replace_segment_combination(
+    data=emp_splits_lsoa_age.data,
+    segment_combination={'pop_emp': [1, 2, 3, 4], 'age': [1]},
+    value=0
+)
+emp_splits_lsoa_age.data = data_processing.replace_segment_combination(
+    data=emp_splits_lsoa_age.data,
+    segment_combination={'pop_emp': [5], 'age': [1]},
+    value=1
+)
 
-# set children to have SOC grouping proportions to 1 for SOC4 only (stops under 16s being allocated other SOC groupings)
-soc_splits_lsoa_age.data.loc[:, :, 1, 1] = 0
-soc_splits_lsoa_age.data.loc[:, :, 2, 1] = 0
-soc_splits_lsoa_age.data.loc[:, :, 3, 1] = 0
-soc_splits_lsoa_age.data.loc[:, :, 4, 1] = 1
+# set children to have SOC grouping proportions to 1 for SOC4
+# only (stops under 16s being allocated other SOC groupings)
+soc_splits_lsoa_age.data = data_processing.replace_segment_combination(
+    data=soc_splits_lsoa_age.data,
+    segment_combination={'pop_soc': [1, 2, 3], 'age': [1]},
+    value=0
+)
+soc_splits_lsoa_age.data = data_processing.replace_segment_combination(
+    data=soc_splits_lsoa_age.data,
+    segment_combination={'pop_soc': [4], 'age': [1]},
+    value=1
+)
 
 # check proportions sum to one
 # TODO some zeros in here that maybe shouldnt be? Need to check
