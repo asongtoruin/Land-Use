@@ -30,4 +30,4 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["land_use"]
+include = ["land_use*"]
