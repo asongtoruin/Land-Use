@@ -10,7 +10,7 @@ from land_use import data_processing
 
 # set up logging
 log_formatter = logging.Formatter(
-    fmt='[%(asctime)-15s %(levelname)s] - [%(filename)s#%(lineno)d::%(funcName)s]: %(message)s',
+    fmt='[%(asctime)-15s] %(levelname)s - [%(filename)s#%(lineno)d::%(funcName)s]: %(message)s',
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
