@@ -1,7 +1,7 @@
 Reference
 =========
 
-.. automodapi:: land_use.constants
+.. automodapi:: land_use.constants.segments
     :no-inheritance-diagram:
 
 .. automodapi:: land_use.data_processing
