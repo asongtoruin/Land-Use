@@ -1,10 +1,20 @@
 from pathlib import Path
+import logging
 
 import yaml
 from caf.core.zoning import TranslationWeighting
 
 from land_use import constants
 from land_use import data_processing
+
+
+# set up logging
+log_formatter = logging.Formatter(
+    fmt='[%(asctime)-15s %(levelname)s] - [%(filename)s#%(lineno)d::%(funcName)s]: %(message)s',
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+
+LOGGER = logging.getLogger('land_use')
 
 # load configuration file
 with open(r'scenario_configurations\iteration_5\base_population_config.yml', 'r') as text_file:
@@ -17,7 +27,19 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 # Define whether to output intermediate outputs, recommended to not output loads if debugging
 generate_summary_outputs = bool(config['output_intermediate_outputs'])
 
+# define logging path based on config file
+logging.basicConfig(
+    format=log_formatter._fmt,
+    datefmt=log_formatter.datefmt,
+    level=logging.INFO,
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(OUTPUT_DIR / 'population.log', mode='w')
+    ],
+)
+
 # read in the data from the config file
+LOGGER.info('Importing data from config file')
 occupied_households = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['occupied_households'])
 unoccupied_households = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['unoccupied_households'])
 ons_table_1 = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_1'])
@@ -31,6 +53,7 @@ ons_table_3_emp = data_processing.read_dvector_data(input_root_directory=config[
 ons_table_3_soc = data_processing.read_dvector_data(input_root_directory=config['input_root_directory'], **config['ons_table_3_soc'])
 
 # --- Step 1 --- #
+LOGGER.info('--- Step 1 ---')
 # calculate NS-SeC splits of households by
 # dwelling type by LSOA
 total_hh_by_hh = ons_table_4.aggregate(segs=['h'])
@@ -46,6 +69,7 @@ hh_by_nssec = addressbase_dwellings * proportion_ns_sec
 # check against original addressbase data
 # check = hh_by_nssec.aggregate(segs=['h'])
 
+LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output A.hdf')
 hh_by_nssec.save(OUTPUT_DIR / 'Output A.hdf')
 if generate_summary_outputs:
     data_processing.summarise_dvector(
@@ -56,6 +80,7 @@ if generate_summary_outputs:
     )
 
 # --- Step 2 --- #
+LOGGER.info('--- Step 2 ---')
 # calculate splits of households with or without children and by car availability
 # and by number of adults by dwelling types by MSOA
 total_hh_by_hh = ons_table_2.aggregate(segs=['h'])
@@ -85,6 +110,7 @@ hh_by_nssec_hc_ha_car = hh_by_nssec * proportion_hhs_by_h_hc_ha_car_lsoa
 # check = hh_by_nssec_hc_ha_car.aggregate(segs=['h'])
 
 # save output to hdf and csvs for checking
+LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output B.hdf')
 hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output B.hdf')
 if generate_summary_outputs:
     data_processing.summarise_dvector(
@@ -95,6 +121,7 @@ if generate_summary_outputs:
     )
 
 # --- Step 3 --- #
+LOGGER.info('--- Step 3 ---')
 # Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
 all_properties = unoccupied_households + occupied_households
 
@@ -114,6 +141,7 @@ occupancy.data = occupancy.data.fillna(occupancy.data.mean(axis=0), axis=0)
 addressbase_population = occupancy * addressbase_dwellings
 
 # save output to hdf and csvs for checking
+LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output C.hdf')
 addressbase_population.save(OUTPUT_DIR / 'Output C.hdf')
 if generate_summary_outputs:
     data_processing.summarise_dvector(
@@ -124,6 +152,7 @@ if generate_summary_outputs:
     )
 
 # --- Step 4 --- #
+LOGGER.info('--- Step 4 ---')
 # Apply average occupancy by dwelling type to the households by NS-SeC,
 # car availability, number of adults and number of children
 # TODO Do we want to do this in a "smarter" way? The occupancy of 1 adult households (for example) should not be more than 1
@@ -131,6 +160,7 @@ if generate_summary_outputs:
 pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * addressbase_population
 
 # save output to hdf and csvs for checking
+LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output D.hdf')
 pop_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output D.hdf')
 if generate_summary_outputs:
     data_processing.summarise_dvector(
@@ -140,7 +170,8 @@ if generate_summary_outputs:
         value_name='population'
     )
 
-# --- Step 6 --- #
+# --- Step 5 --- #
+LOGGER.info('--- Step 5 ---')
 # Calculate splits by dwelling type, age, and gender
 gender_age_splits = hh_age_gender_2021 / hh_age_gender_2021.aggregate(segs=['h'])
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
@@ -158,6 +189,7 @@ pop_by_nssec_hc_ha_car_gender_age = pop_by_nssec_hc_ha_car * gender_age_splits_l
 
 # save output to hdf and csvs for checking
 # TODO Output E hdf is big!
+LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output E.hdf')
 pop_by_nssec_hc_ha_car_gender_age.save(OUTPUT_DIR / 'Output E.hdf')
 # if generate_summary_outputs:
 #     data_processing.summarise_dvector(
@@ -167,6 +199,7 @@ pop_by_nssec_hc_ha_car_gender_age.save(OUTPUT_DIR / 'Output E.hdf')
 #     )
 
 # --- Step 6 --- #
+LOGGER.info('--- Step 6 ---')
 # Calculate splits by dwelling type, econ, and NS-SeC of HRP
 # TODO This is *officially* population over 16, somehow need to account for children
 econ_splits = ons_table_3_econ / ons_table_3_econ.aggregate(segs=['h', 'ns_sec'])
@@ -267,6 +300,7 @@ pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc = soc_splits_lsoa_age * pop_by_ns
 
 # save output to hdf and csvs for checking
 # TODO Output F hdf is big!
+# LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output F.hdf')
 # pop_by_nssec_hc_ha_car_econ_emp_soc.save(OUTPUT_DIR / 'Output F.hdf')
 # TODO Memory crashes when converting to long, ideally need to stick in wide format for summaries!
 #   File "C:\Code\Land-Use\land_use\data_processing\outputs.py", line 33, in dvector_to_long

@@ -1,9 +1,12 @@
 from pathlib import Path
+import logging
 
 import pandas as pd
 from caf.core.data_structures import DVector
 
 from land_use.constants import geographies
+
+LOGGER = logging.getLogger(__name__)
 
 
 def dvector_to_long(dvec: DVector, value_name: str = 'value') -> pd.DataFrame:
@@ -79,6 +82,7 @@ def summarise_dvector(
     -------
 
     """
+    LOGGER.info(fr'Generating output summaries of {output_reference}')
     # create directory to write outputs to if it doesn't already exist
     write_folder = output_directory / 'verifications'
     write_folder.mkdir(exist_ok=True)
@@ -141,6 +145,7 @@ def summarise_dvector(
 
         # calculate and output total summary by zone
         total = long_frame.groupby(zone_system).agg({value_name: 'sum'})
+        LOGGER.info(fr'Writing to {write_folder}\{output_reference}_{zone_system}.csv')
         total.to_csv(
             write_folder / f'{output_reference}_{zone_system}.csv',
             float_format='%.5f'

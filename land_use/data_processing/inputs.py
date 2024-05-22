@@ -1,5 +1,6 @@
 from pathlib import Path
 from warnings import warn
+import logging
 
 from caf.core.data_structures import DVector
 from caf.core.segmentation import Segmentation, SegmentationInput
@@ -7,6 +8,8 @@ import pandas as pd
 
 from land_use.constants import segments
 from land_use.constants.geographies import KNOWN_GEOGRAPHIES
+
+LOGGER = logging.getLogger(__name__)
 
 
 def read_dvector_data(
@@ -57,6 +60,7 @@ def read_dvector_data(
     zoning = geographical_level
 
     # Read in the file, with the correct geography and segments.
+    LOGGER.info(f'Reading in {Path(input_root_directory) / Path(file_path)}')
     df = pd.read_hdf(Path(input_root_directory) / Path(file_path))
     df = pd.DataFrame(df)
 

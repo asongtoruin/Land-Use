@@ -6,6 +6,8 @@ from caf.core.zoning import ZoningSystem, ZoningSystemMetaData
 # import geopandas as gpd
 import pandas as pd
 
+LOGGER = logging.getLogger(__name__)
+
 
 def generate_zoning_system(
         name: str, 
@@ -35,7 +37,7 @@ def generate_zoning_system(
     """
     # TODO: use of CACHE_FOLDER in this feels a bit clunky
     try:
-        logging.info(
+        LOGGER.info(
             f'Reading ZoningSystem for {name} from cache'
         )
         zs = ZoningSystem.get_zoning(name, search_dir=CACHE_FOLDER)
@@ -43,7 +45,7 @@ def generate_zoning_system(
         return zs
     
     except FileNotFoundError:
-        logging.info(
+        LOGGER.info(
             f'Could not find "{name}" in zone system cache folder '
             f'({CACHE_FOLDER.absolute()}), attempting to generate'
         )
