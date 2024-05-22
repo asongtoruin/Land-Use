@@ -1,6 +1,7 @@
 from pathlib import Path
 from warnings import warn
 import logging
+from typing import Union
 
 from caf.core.data_structures import DVector
 from caf.core.segmentation import Segmentation, SegmentationInput
@@ -96,3 +97,28 @@ def read_dvector_data(
         zoning_system=KNOWN_GEOGRAPHIES.get(zoning),
         import_data=df
     )
+
+
+def try_loading_dvector(
+        input_file: Path
+    ) -> Union[None, DVector]:
+    """Function to attempt to load a DVector from a given input file.
+
+    Parameters
+    ----------
+    input_file : Path
+        File path to the input file (assumed to be hdf) to load as a DVector
+
+    Returns
+    -------
+    None, DVector
+        None if the file does not exist
+        DVector if the file does exist
+    """
+    LOGGER.info(f'Attempting to load {input_file} as a DVector')
+    # try loading
+    try:
+        return DVector.load(in_path=input_file)
+    except FileNotFoundError:
+        return None
+
