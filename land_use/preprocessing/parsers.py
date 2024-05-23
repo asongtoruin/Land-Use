@@ -8,7 +8,7 @@ import re
 import numpy as np
 import pandas as pd
 
-from .utilities import read_headered_csv, read_in_excel
+from .utilities import read_headered_csv, read_in_excel, pivot_to_dvector
 
 
 def read_rm002(
@@ -45,7 +45,7 @@ def read_rm002(
         file_path=file_path, header_string=header_string, on_bad_lines='warn'
     )
 
-    # TODO: explain why Whole house or bungalow is dropped here.
+    # drop total row (sum of all the other columns we're interested in)
     df = df.drop(columns=['Whole house or bungalow'])
     df = df.melt(id_vars=[col_name])
 
@@ -62,12 +62,12 @@ def read_rm002(
     # take first 'word' within the col_name as the zone
     df[zoning] = df[col_name].str.split(' ', expand=True)[0]
 
-    # TODO: consider switching this to a pivot table
-    # df = df.pivot(index='h', columns=[zoning], values='households')
-    # df.columns = df.columns.get_level_values(zoning)
-    df = df.loc[:, [zoning, 'h', 'households']]
-    df = df.set_index([zoning, 'h']).unstack(level=[zoning])
-    df.columns = df.columns.get_level_values(zoning)
+    df = pivot_to_dvector(
+        data=df,
+        zoning_column=zoning,
+        index_cols=['h'],
+        value_column='households'
+    )
 
     return df
 
@@ -166,11 +166,12 @@ def convert_ons_table_1(
 
     # setting to int here will drop the redistribution of shared dwellings we've done above, maybe not necessary?
     df['population'] = df['value'].astype(int)
-    # consider switching to pivot call
-    # df = df.pivot(index='h', columns=[zoning], values='population')
-    df = df.loc[:, [zoning, 'h', 'population']]
-    df = df.set_index([zoning, 'h']).unstack(level=[zoning])
-    df.columns = df.columns.get_level_values(zoning)
+    df = pivot_to_dvector(
+        data=df,
+        zoning_column=zoning,
+        index_cols=['h'],
+        value_column='population'
+    )
 
     return df
 
@@ -229,7 +230,7 @@ def read_abp(
     )
 
     # map the addressbase dwellings to the ons dwellings
-    # TODO: explain why RD05 and RD09 are missing here
+    # categories RD05 and RD09 are just not in data input
     mapping = {
         'RD01': 5,
         'RD02': 1,
@@ -245,11 +246,13 @@ def read_abp(
     # setting to int here will drop the redistribution of shared dwellings we've done above, maybe not necessary?
     df['dwellings'] = df['value'].astype(int)
     df[zoning] = df[zoning_col]
-    # TODO: consider switching to pivot call, which I think is?
-    # df = df.pivot_table(index='h', columns=[zoning], values='dwellings', aggfunc='sum')
     df = df.groupby([zoning, 'h']).agg({'dwellings': 'sum'}).reset_index()
-    df = df.set_index([zoning, 'h']).unstack(level=[zoning])
-    df.columns = df.columns.get_level_values(zoning)
+    df = pivot_to_dvector(
+        data=df,
+        zoning_column=zoning,
+        index_cols=['h'],
+        value_column='dwellings'
+    )
 
     return df
 
@@ -308,17 +311,21 @@ def convert_ons_table_2(
     # Altenative using pivot_wider
     # index_cols = ["h", "ha", "hc", "car"]
     # df = df.pivot(index=index_cols, columns=["zoning"], values="households")
-    df = df.loc[:, [zoning, 'h', 'ha', 'hc', 'car', 'households']]
-    df = df.set_index([zoning, 'h', 'ha', 'hc', 'car']).unstack(level=[zoning])
-    df.columns = df.columns.get_level_values(zoning)
+    # df = df.loc[:, [zoning, 'h', 'ha', 'hc', 'car', 'households']]
+    # df = df.set_index([zoning, 'h', 'ha', 'hc', 'car']).unstack(level=[zoning])
+    # df.columns = df.columns.get_level_values(zoning)
+    df = pivot_to_dvector(
+        data=df,
+        zoning_column=zoning,
+        index_cols=['h', 'ha', 'hc', 'car'],
+        value_column='households'
+    )
 
     # add in the missing segmentation category and fill with zeros
     # TODO this should be genericised, adding in a missing combination of indicies
     missing = df[df.index.get_level_values('h') == 1].reset_index()
     missing['h'] = 5
     missing = missing.set_index(['h', 'ha', 'hc', 'car'])
-    # Is .loc needed? As I think this would work instead?
-    # missing[:] = np.nan
     missing.loc[:] = np.nan
 
     # combine with df for all segments
@@ -381,8 +388,8 @@ def read_mype(
 
     # define age groups to match with the "age" segments
     age_groups = [0, 5, 10, 16, 20, 35, 50, 65, 75, 999]
-    labels = ["0 to 4 years", "5 to 9 years", "10 to 15 years", "16 to 19 years", "20 to 34 years", "35 to 49 years",
-              "50 to 64 years", "65 to 74 years", "75+ years"]
+    labels = ["0 to 4 years", "5 to 9 years", "10 to 15 years", "16 to 19 years",
+              "20 to 34 years", "35 to 49 years", "50 to 64 years", "65 to 74 years", "75+ years"]
     melted['age_band'] = pd.cut(
         melted['age'],
         age_groups,
@@ -453,9 +460,12 @@ def convert_ons_table_4(
     melted['hh_ref_persons'] = melted['hh_ref_persons'].astype(int)
 
     # convert to required format for DVector
-    dvec = melted.loc[:, [zoning, 'h', 'ns_sec', 'hh_ref_persons']]
-    dvec = dvec.set_index([zoning, 'h', 'ns_sec']).unstack(level=[zoning])
-    dvec.columns = dvec.columns.get_level_values(zoning)
+    dvec = pivot_to_dvector(
+        data=melted,
+        zoning_column=zoning,
+        index_cols=['h', 'ns_sec'],
+        value_column='hh_ref_persons'
+    )
 
     # add in the missing segmentation category and fill with zeros
     # TODO this should be genericised, adding in a missing combination of indicies
@@ -524,9 +534,12 @@ def convert_ons_table_3(
         grouped = merged.groupby([zoning, 'h', 'ns_sec', col]).agg({'population': 'sum'}).reset_index()
 
         # convert to required format for DVector
-        dvec = grouped.loc[:, [zoning, 'h', 'ns_sec', col, 'population']]
-        dvec = dvec.set_index([zoning, 'h', 'ns_sec', col]).unstack(level=[zoning])
-        dvec.columns = dvec.columns.get_level_values(zoning)
+        dvec = pivot_to_dvector(
+            data=grouped,
+            zoning_column=zoning,
+            index_cols=['h', 'ns_sec', col],
+            value_column='population'
+        )
 
         # add in the missing segmentation category and fill with zeros
         # TODO this should be genericised, adding in a missing combination of indicies
