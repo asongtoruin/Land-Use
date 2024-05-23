@@ -112,7 +112,8 @@ def summarise_dvector(
     # write cross-tab distribution summary to verifications folder
     df.loc[:, group_cols + ['total', 'average', 'max']].to_csv(
         write_folder / f'{output_reference}_{dvector.zoning_system.name}_all.csv',
-        float_format='%.5f'
+        float_format='%.5f',
+        index=False
     )
 
     # loop through all segmentations in the DVector
@@ -172,3 +173,26 @@ def summarise_dvector(
             write_folder / f'{output_reference}_{zone_system}.csv',
             float_format='%.5f'
         )
+
+
+def summary_reporting(
+        dvector: DVector,
+        dimension: str
+    ):
+    """Function to log matrix totals to the log file (and prompt)
+
+    Parameters
+    ----------
+    dvector : DVector
+        DVector to summarise
+    dimension : str
+        Dimension of the DVector.data (e.g. maybe 'households' or 'population'),
+        something to help the user know what totals are being logged.
+
+    """
+    # log information
+    LOGGER.info(f'Data has segmentation of {dvector.segmentation.naming_order}')
+    LOGGER.info(f'Total {dimension} in data: {dvector.total:,.0f}')
+
+    # todo
+    # for each of the levels of segmentation, whats the total by segment

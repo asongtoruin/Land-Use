@@ -70,6 +70,10 @@ hh_by_nssec = addressbase_dwellings * proportion_ns_sec
 # check = hh_by_nssec.aggregate(segs=['h'])
 
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output A.hdf')
+data_processing.summary_reporting(
+    dvector=hh_by_nssec,
+    dimension='households'
+)
 hh_by_nssec.save(OUTPUT_DIR / 'Output A.hdf')
 if generate_summary_outputs:
     data_processing.summarise_dvector(
@@ -111,6 +115,10 @@ hh_by_nssec_hc_ha_car = hh_by_nssec * proportion_hhs_by_h_hc_ha_car_lsoa
 
 # save output to hdf and csvs for checking
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output B.hdf')
+data_processing.summary_reporting(
+    dvector=hh_by_nssec_hc_ha_car,
+    dimension='households'
+)
 hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output B.hdf')
 if generate_summary_outputs:
     data_processing.summarise_dvector(
@@ -142,6 +150,10 @@ addressbase_population = occupancy * addressbase_dwellings
 
 # save output to hdf and csvs for checking
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output C.hdf')
+data_processing.summary_reporting(
+    dvector=addressbase_population,
+    dimension='population'
+)
 addressbase_population.save(OUTPUT_DIR / 'Output C.hdf')
 if generate_summary_outputs:
     data_processing.summarise_dvector(
@@ -157,10 +169,14 @@ LOGGER.info('--- Step 4 ---')
 # car availability, number of adults and number of children
 # TODO Do we want to do this in a "smarter" way? The occupancy of 1 adult households (for example) should not be more than 1
 # TODO and households with 2+ children should be more than 3 - is this a place for IPF?
-pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * addressbase_population
+pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * occupancy
 
 # save output to hdf and csvs for checking
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output D.hdf')
+data_processing.summary_reporting(
+    dvector=pop_by_nssec_hc_ha_car,
+    dimension='population'
+)
 pop_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output D.hdf')
 if generate_summary_outputs:
     data_processing.summarise_dvector(
@@ -190,13 +206,17 @@ pop_by_nssec_hc_ha_car_gender_age = pop_by_nssec_hc_ha_car * gender_age_splits_l
 # save output to hdf and csvs for checking
 # TODO Output E hdf is big!
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output E.hdf')
+data_processing.summary_reporting(
+    dvector=pop_by_nssec_hc_ha_car_gender_age,
+    dimension='population'
+)
 pop_by_nssec_hc_ha_car_gender_age.save(OUTPUT_DIR / 'Output E.hdf')
-# if generate_summary_outputs:
-#     data_processing.summarise_dvector(
-#         dvector=pop_by_nssec_hc_ha_car_gender_age,
-#         output_directory=OUTPUT_DIR,
-#         output_reference='OutputE',
-#     )
+if generate_summary_outputs:
+    data_processing.summarise_dvector(
+        dvector=pop_by_nssec_hc_ha_car_gender_age,
+        output_directory=OUTPUT_DIR,
+        output_reference='OutputE',
+    )
 
 # --- Step 6 --- #
 LOGGER.info('--- Step 6 ---')
