@@ -78,6 +78,13 @@ def read_dvector_data(
             f'Undefined segments provided: {",".join(missing_segments)}'
         )
 
+    # flag which segments are custom
+    if segment_flags[False]:
+        LOGGER.warning(
+            f'Custom segments defined are: {segment_flags[False]}. '
+            f'Please check this is what you were expecting.'
+        )
+
     # Get the hydrated segment objects
     custom_segments = [
         segments.CUSTOM_SEGMENTS.get(seg) 
