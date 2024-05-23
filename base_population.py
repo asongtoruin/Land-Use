@@ -72,7 +72,8 @@ hh_by_nssec = addressbase_dwellings * proportion_ns_sec
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output A.hdf')
 data_processing.summary_reporting(
     dvector=hh_by_nssec,
-    dimension='households'
+    dimension='households',
+    detailed_logs=True
 )
 hh_by_nssec.save(OUTPUT_DIR / 'Output A.hdf')
 if generate_summary_outputs:
@@ -117,7 +118,8 @@ hh_by_nssec_hc_ha_car = hh_by_nssec * proportion_hhs_by_h_hc_ha_car_lsoa
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output B.hdf')
 data_processing.summary_reporting(
     dvector=hh_by_nssec_hc_ha_car,
-    dimension='households'
+    dimension='households',
+    detailed_logs=True
 )
 hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output B.hdf')
 if generate_summary_outputs:
@@ -152,7 +154,8 @@ addressbase_population = occupancy * addressbase_dwellings
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output C.hdf')
 data_processing.summary_reporting(
     dvector=addressbase_population,
-    dimension='population'
+    dimension='population',
+    detailed_logs=True
 )
 addressbase_population.save(OUTPUT_DIR / 'Output C.hdf')
 if generate_summary_outputs:
@@ -175,7 +178,8 @@ pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * occupancy
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output D.hdf')
 data_processing.summary_reporting(
     dvector=pop_by_nssec_hc_ha_car,
-    dimension='population'
+    dimension='population',
+    detailed_logs=True
 )
 pop_by_nssec_hc_ha_car.save(OUTPUT_DIR / 'Output D.hdf')
 if generate_summary_outputs:
@@ -208,7 +212,8 @@ pop_by_nssec_hc_ha_car_gender_age = pop_by_nssec_hc_ha_car * gender_age_splits_l
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output E.hdf')
 data_processing.summary_reporting(
     dvector=pop_by_nssec_hc_ha_car_gender_age,
-    dimension='population'
+    dimension='population',
+    detailed_logs=True
 )
 pop_by_nssec_hc_ha_car_gender_age.save(OUTPUT_DIR / 'Output E.hdf')
 if generate_summary_outputs:

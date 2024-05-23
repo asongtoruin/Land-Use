@@ -177,7 +177,8 @@ def summarise_dvector(
 
 def summary_reporting(
         dvector: DVector,
-        dimension: str
+        dimension: str,
+        detailed_logs: bool = False
     ):
     """Function to log matrix totals to the log file (and prompt)
 
@@ -188,11 +189,34 @@ def summary_reporting(
     dimension : str
         Dimension of the DVector.data (e.g. maybe 'households' or 'population'),
         something to help the user know what totals are being logged.
+    detailed_logs : bool, default False
+        If this is set to True then detailed logs (still LOGGER.info) are also
+        output, detailing totals by segment type and the proportional split
+        between the different segmentation categories.
 
     """
     # log information
     LOGGER.info(f'Data has segmentation of {dvector.segmentation.naming_order}')
     LOGGER.info(f'Total {dimension} in data: {dvector.total:,.0f}')
 
-    # todo
     # for each of the levels of segmentation, whats the total by segment
+    reindexed = dvector.data.reset_index()
+    for segmentation in dvector.segmentation.naming_order:
+        summary = pd.DataFrame(
+            data=reindexed.groupby(segmentation).sum().sum(axis=1),
+            columns=[segmentation]
+        )
+        # map numeric labels to actual helpful values
+        mapping = dvector.segmentation.seg_dict[segmentation].values
+        summary.index = summary.index.map(mapping)
+        summary[f'{segmentation}_proportion'] = summary[segmentation] / summary[segmentation].sum()
+        summary[segmentation] = summary[segmentation].map('{:,.0f}'.format)
+        summary[f'{segmentation}_proportion'] = (summary[f'{segmentation}_proportion'] * 100).map('{:.0f}%'.format)
+
+        if detailed_logs:
+            # loop through rows of the condensed dataframe
+            # note this is only as many iterations as there are segment definitions (e.g. gender has 2) so hopefully not too bad??
+            for index, row in summary.iterrows():
+                LOGGER.info(f'{index} total: {row[segmentation]}')
+            for index, row in summary.iterrows():
+                LOGGER.info(f'{index} proportion: {row[f"{segmentation}_proportion"]}')
