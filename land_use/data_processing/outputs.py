@@ -71,12 +71,14 @@ def summarise_dvector(
     dvector : DVector
         DVector to produce output summaries of
     output_directory : Path
-        Path to the main output directory. This will create a 'verifications' folder if it
-        does not already exist and write these outputs there.
+        Path to the main output directory. This will create a 'verifications'
+        folder if it does not already exist and write these outputs there.
     output_reference : str
-        reference name for the outputs so outputs dont get overwritten. Might be something like "output1" or something
-        equally useful.
-    value_name :
+        reference name for the outputs so outputs dont get overwritten. Might be
+        something like "output1" or something equally useful.
+    value_name : str
+        reference for the dimension of the output (e.g. population or households
+        or something similar)
 
     Returns
     -------
@@ -88,13 +90,27 @@ def summarise_dvector(
     write_folder.mkdir(exist_ok=True)
 
     # get summary distribution of segmentations across all zones
-    df = dvector_to_long(dvec=dvector, value_name=value_name)
     group_cols = [f'{col}_description' for col in dvector.segmentation.naming_order]
-    summary = df.groupby(group_cols).agg({value_name: ['sum', 'mean', 'max']})
-    summary.columns = summary.columns.droplevel(0)
+
+    # get dataframe
+    df = dvector.data.copy().reset_index()
+
+    # get zone cols
+    zone_cols = list(dvector.data.columns)
+
+    # calculate value column
+    df['total'] = df[zone_cols].sum(axis=1)
+    df['average'] = df[zone_cols].mean(axis=1)
+    df['max'] = df[zone_cols].max(axis=1)
+
+    # map the segmentation values to the actual descriptions for ease
+    for segment in dvector.segmentation.naming_order:
+        df[f'{segment}_description'] = df[segment].map(
+            dvector.segmentation.seg_dict.get(segment).values
+        )
 
     # write cross-tab distribution summary to verifications folder
-    summary.to_csv(
+    df.loc[:, group_cols + ['total', 'average', 'max']].to_csv(
         write_folder / f'{output_reference}_{dvector.zoning_system.name}_all.csv',
         float_format='%.5f'
     )
@@ -108,8 +124,14 @@ def summarise_dvector(
         )
 
         # Convert to long format
-        disaggregate_seg_long = dvector_to_long(disaggregate_total, value_name=value_name)
-        lad_seg_long = dvector_to_long(lad_total, value_name=value_name)
+        disaggregate_seg_long = dvector_to_long(
+            dvec=disaggregate_total,
+            value_name=value_name
+        )
+        lad_seg_long = dvector_to_long(
+            dvec=lad_total,
+            value_name=value_name
+        )
 
         # Write both out to a check folder
         disaggregate_seg_long.to_csv(
