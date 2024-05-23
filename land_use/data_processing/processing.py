@@ -104,42 +104,33 @@ def expand_segmentation(
     # get segmentation values from the segmentation_to_add
     val_dict = segmentation_to_add.values
 
-    # get current segmentation names of dvector
-    current_seg_names = dvector.segmentation.names
+    # get segmentation name from the segmentation_to_add
+    new_name = segmentation_to_add.name
 
-    # get current data of dvector
-    data = dvector.data.reset_index()
-
-    # add the segment definitions from the segmentation to add
-    dfs = []
-    for value in val_dict.keys():
-        df = data.copy()
-        df[segmentation_to_add.name] = value
-        dfs.append(df)
-
-    # create output data with the additional segmentation
-    output = pd.concat(dfs)
-
-    # convert to data ready for DVector
-    dvec = output.set_index(current_seg_names + [segmentation_to_add.name])
+    # copy and append the data with the expanded segmentation
+    expanded_segmentation = pd.concat([
+        dvector.data.copy().assign(**{new_name: value}).set_index([new_name], append=True)
+        for value in val_dict.keys()
+    ])
 
     # create DVector with the same segmentation, plus the segmentation_to_add
     # segmentation, in the same zone system
-    # TODO this wont work with default TfN super segments so needs rethinking, this is good enough for now?
-    names_list = current_seg_names + [segmentation_to_add.name]
-    segment_list = [segmentation_to_add] + [seg for seg in dvector.segmentation.segments]
+    segment_list = list(dvector.segmentation.segments) + [segmentation_to_add]
+
+    standard_segs = [s.name for s in segment_list if segments.is_standard_segment(s.name)]
+    custom_segs = [s for s in segment_list if not segments.is_standard_segment(s.name)]
 
     new_segmentation_input = SegmentationInput(
-        enum_segments=[],
-        naming_order=names_list,
-        custom_segments=segment_list
+        enum_segments=standard_segs,
+        naming_order=[s.name for s in segment_list],
+        custom_segments=custom_segs
     )
     new_segmentation = Segmentation(new_segmentation_input)
 
     return DVector(
         segmentation=new_segmentation,
         zoning_system=dvector.zoning_system,
-        import_data=dvec
+        import_data=expanded_segmentation
     )
 
 
