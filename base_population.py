@@ -54,6 +54,7 @@ ons_table_3_soc = data_processing.read_dvector_data(input_root_directory=config[
 
 # --- Step 1 --- #
 LOGGER.info('--- Step 1 ---')
+LOGGER.info(f'Calculating NS-SeC proportions by dwelling type')
 # calculate NS-SeC splits of households by
 # dwelling type by LSOA
 total_hh_by_hh = ons_table_4.aggregate(segs=['h'])
@@ -63,6 +64,7 @@ proportion_ns_sec = ons_table_4 / total_hh_by_hh
 # TODO is this what we want to do? This drops some dwellings from the addressbase wherever the census total is zero.
 proportion_ns_sec.data = proportion_ns_sec.data.fillna(0)
 
+LOGGER.info(f'Applying NS-SeC proportions to AddressBase dwellings')
 # apply proportional factors based on hh ns_sec to the addressbase dwellings
 hh_by_nssec = addressbase_dwellings * proportion_ns_sec
 
@@ -86,6 +88,7 @@ if generate_summary_outputs:
 
 # --- Step 2 --- #
 LOGGER.info('--- Step 2 ---')
+LOGGER.info(f'Calculating children, adults, and car availability proportions by dwelling type')
 # calculate splits of households with or without children and by car availability
 # and by number of adults by dwelling types by MSOA
 total_hh_by_hh = ons_table_2.aggregate(segs=['h'])
@@ -98,6 +101,7 @@ proportion_hhs_by_h_hc_ha_car.data = proportion_hhs_by_h_hc_ha_car.data.fillna(0
 # check proportions sum to one
 # tmp = proportion_hhs_by_h_hc_ha_car.aggregate(segs=['h'])
 
+LOGGER.info(f'Converting the proportions to LSOA level')
 # expand these factors to LSOA level
 proportion_hhs_by_h_hc_ha_car_lsoa = proportion_hhs_by_h_hc_ha_car.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
@@ -108,6 +112,7 @@ proportion_hhs_by_h_hc_ha_car_lsoa = proportion_hhs_by_h_hc_ha_car.translate_zon
 # check proportions sum to one
 # tmp = proportion_hhs_by_h_hc_ha_car_lsoa.aggregate(segs=['h'])
 
+LOGGER.info(f'Applying children, adult, and car availability proportions to households')
 # apply proportional factors based on hh by adults / children / car availability to the hh by nssec
 hh_by_nssec_hc_ha_car = hh_by_nssec * proportion_hhs_by_h_hc_ha_car_lsoa
 
@@ -132,6 +137,7 @@ if generate_summary_outputs:
 
 # --- Step 3 --- #
 LOGGER.info('--- Step 3 ---')
+LOGGER.info(f'Calculating average occupanct by dwelling type')
 # Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
 all_properties = unoccupied_households + occupied_households
 
@@ -168,6 +174,7 @@ if generate_summary_outputs:
 
 # --- Step 4 --- #
 LOGGER.info('--- Step 4 ---')
+LOGGER.info(f'Applying average occupancy to households')
 # Apply average occupancy by dwelling type to the households by NS-SeC,
 # car availability, number of adults and number of children
 # TODO Do we want to do this in a "smarter" way? The occupancy of 1 adult households (for example) should not be more than 1
@@ -192,11 +199,13 @@ if generate_summary_outputs:
 
 # --- Step 5 --- #
 LOGGER.info('--- Step 5 ---')
+LOGGER.info(f'Calculating age and gender proportions by dwelling type')
 # Calculate splits by dwelling type, age, and gender
 gender_age_splits = hh_age_gender_2021 / hh_age_gender_2021.aggregate(segs=['h'])
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
 gender_age_splits.data = gender_age_splits.data.fillna(0)
 
+LOGGER.info(f'Converting proportions to LSOA')
 # convert the factors back to LSOA
 gender_age_splits_lsoa = gender_age_splits.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
@@ -204,6 +213,7 @@ gender_age_splits_lsoa = gender_age_splits.translate_zoning(
     weighting=TranslationWeighting.NO_WEIGHT
 )
 
+LOGGER.info(f'Applying age and gender splits by dwelling type')
 # apply the splits at LSOA level to main population table
 pop_by_nssec_hc_ha_car_gender_age = pop_by_nssec_hc_ha_car * gender_age_splits_lsoa
 
@@ -225,24 +235,29 @@ if generate_summary_outputs:
 
 # --- Step 6 --- #
 LOGGER.info('--- Step 6 ---')
+LOGGER.info(f'Calculating economic status proportions')
 # Calculate splits by dwelling type, econ, and NS-SeC of HRP
 # TODO This is *officially* population over 16, somehow need to account for children
 econ_splits = ons_table_3_econ / ons_table_3_econ.aggregate(segs=['h', 'ns_sec'])
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
 econ_splits.data = econ_splits.data.fillna(0)
 
+LOGGER.info(f'Calculating employment status proportions')
 # Calculate splits by dwelling type, employment, and NS-SeC of HRP
 # TODO This is *officially* population over 16, somehow need to account for children
 emp_splits = ons_table_3_emp / ons_table_3_emp.aggregate(segs=['h', 'ns_sec'])
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
 emp_splits.data = emp_splits.data.fillna(0)
 
+LOGGER.info(f'Calculating SOC category proportions')
 # Calculate splits by dwelling type, soc, and NS-SeC of HRP
 # TODO This is *officially* population over 16, somehow need to account for children
 soc_splits = ons_table_3_soc / ons_table_3_soc.aggregate(segs=['h', 'ns_sec'])
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
 soc_splits.data = soc_splits.data.fillna(0)
 
+LOGGER.info(f'Converting economic status, employment status, and SOC category '
+            f'splits to LSOA level')
 # convert the factors back to LSOA
 econ_splits_lsoa = econ_splits.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
@@ -260,6 +275,7 @@ soc_splits_lsoa = soc_splits.translate_zoning(
     weighting=TranslationWeighting.NO_WEIGHT
 )
 
+LOGGER.info(f'Expanding segmentation to include age')
 # expand the segmentation to include age (assuming the same weights for all age categories)
 econ_splits_lsoa_age = data_processing.expand_segmentation(
     dvector=econ_splits_lsoa,
@@ -274,6 +290,7 @@ soc_splits_lsoa_age = data_processing.expand_segmentation(
     segmentation_to_add=constants.CUSTOM_SEGMENTS['age']
 )
 
+LOGGER.info(f'Setting child-specific employment / economic status / SOC values')
 # set children to have economic status proportions to 1 for students
 # only (stops under 16s being allocated working statuses)
 econ_splits_lsoa_age.data = data_processing.replace_segment_combination(
@@ -318,9 +335,12 @@ soc_splits_lsoa_age.data = data_processing.replace_segment_combination(
 # tmp = soc_splits_lsoa_age.aggregate(segs=['h', 'age', 'ns_sec'])
 
 # apply the splits at LSOA level to main population table
+LOGGER.info(f'Applying economic status splits to population')
 pop_by_nssec_hc_ha_car_gender_age_econ = econ_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age
 # TODO memory error here
+LOGGER.info(f'Applying employment status splits to population')
 pop_by_nssec_hc_ha_car_gender_age_econ_emp = emp_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age_econ
+LOGGER.info(f'Applying SOC category splits to population')
 pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc = soc_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age_econ_emp
 
 # save output to hdf and csvs for checking
