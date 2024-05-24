@@ -54,9 +54,9 @@ def read_rm002(
 
     # map the definitions used to define the segmentation, and drop na to remove any
     # missing values in the dataframe (e.g. 'Total' variable)
-    df['h'] = df['variable'].map(inv_seg)
-    df = df.dropna(subset='h')
-    df['h'] = df['h'].astype(int)
+    df['accom_h'] = df['variable'].map(inv_seg)
+    df = df.dropna(subset='accom_h')
+    df['accom_h'] = df['accom_h'].astype(int)
     df['households'] = df['value'].astype(int)
 
     # take first 'word' within the col_name as the zone
@@ -65,7 +65,7 @@ def read_rm002(
     df = pivot_to_dvector(
         data=df,
         zoning_column=zoning,
-        index_cols=['h'],
+        index_cols=['accom_h'],
         value_column='households'
     )
 
@@ -161,15 +161,15 @@ def convert_ons_table_1(
     inv_segmentation = {v: k for k, v in segmentation.items()}
     
     # create column of DVector segmentation
-    df['h'] = df['variable'].map(inv_segmentation)
-    df = df.dropna(subset='h')
+    df['accom_h'] = df['variable'].map(inv_segmentation)
+    df = df.dropna(subset='accom_h')
 
     # setting to int here will drop the redistribution of shared dwellings we've done above, maybe not necessary?
     df['population'] = df['value'].astype(int)
     df = pivot_to_dvector(
         data=df,
         zoning_column=zoning,
-        index_cols=['h'],
+        index_cols=['accom_h'],
         value_column='population'
     )
 
@@ -241,16 +241,16 @@ def read_abp(
         'RD08': 5,
         'RD10': 5
     }
-    df['h'] = df['variable'].map(mapping)
+    df['accom_h'] = df['variable'].map(mapping)
 
     # setting to int here will drop the redistribution of shared dwellings we've done above, maybe not necessary?
     df['dwellings'] = df['value'].astype(int)
     df[zoning] = df[zoning_col]
-    df = df.groupby([zoning, 'h']).agg({'dwellings': 'sum'}).reset_index()
+    df = df.groupby([zoning, 'accom_h']).agg({'dwellings': 'sum'}).reset_index()
     df = pivot_to_dvector(
         data=df,
         zoning_column=zoning,
-        index_cols=['h'],
+        index_cols=['accom_h'],
         value_column='dwellings'
     )
 
@@ -301,31 +301,30 @@ def convert_ons_table_2(
     df[zoning] = df[zoning].str.split(' ', expand=True)[0]
 
     # remap segmentation variables to be consistent with other mappings
-    df['h'] = df['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
-    df['ha'] = df['level_2'].map({v: k for k, v in adults_segmentation.items()})
-    df['hc'] = df['variable_0'].map({v: k for k, v in children_segmentation.items()})
-    df['car'] = df['variable_1'].map({v: k for k, v in car_segmentation.items()})
+    df['accom_h'] = df['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
+    df['adults'] = df['level_2'].map({v: k for k, v in adults_segmentation.items()})
+    df['children'] = df['variable_0'].map({v: k for k, v in children_segmentation.items()})
+    df['car_availability'] = df['variable_1'].map({v: k for k, v in car_segmentation.items()})
     df['households'] = df['value'].astype(int)
 
     # convert to required format for DVector
     # Altenative using pivot_wider
     # index_cols = ["h", "ha", "hc", "car"]
     # df = df.pivot(index=index_cols, columns=["zoning"], values="households")
-    # df = df.loc[:, [zoning, 'h', 'ha', 'hc', 'car', 'households']]
-    # df = df.set_index([zoning, 'h', 'ha', 'hc', 'car']).unstack(level=[zoning])
-    # df.columns = df.columns.get_level_values(zoning)
     df = pivot_to_dvector(
         data=df,
         zoning_column=zoning,
-        index_cols=['h', 'ha', 'hc', 'car'],
+        index_cols=['accom_h', 'adults', 'children', 'car_availability'],
         value_column='households'
     )
 
     # add in the missing segmentation category and fill with zeros
     # TODO this should be genericised, adding in a missing combination of indicies
-    missing = df[df.index.get_level_values('h') == 1].reset_index()
-    missing['h'] = 5
-    missing = missing.set_index(['h', 'ha', 'hc', 'car'])
+    missing = df[df.index.get_level_values('accom_h') == 1].reset_index()
+    missing['accom_h'] = 5
+    missing = missing.set_index(
+        ['accom_h', 'adults', 'children', 'car_availability']
+    )
     missing.loc[:] = np.nan
 
     # combine with df for all segments
@@ -402,14 +401,14 @@ def read_mype(
     melted.loc[melted['gender'] == 'M', 'gender_seg'] = 'male'
 
     # remap based on segmentations
-    melted['age'] = melted['age_band'].map({v: k for k, v in age_mapping.items()})
-    melted['gender'] = melted['gender_seg'].map({v: k for k, v in gender_mapping.items()})
+    melted['age_9'] = melted['age_band'].map({v: k for k, v in age_mapping.items()})
+    melted['g'] = melted['gender_seg'].map({v: k for k, v in gender_mapping.items()})
 
     # group by gender and age band and sum total population by LSOA
-    totalled = melted.groupby([zoning, 'age', 'gender'], as_index=False).agg({'population': 'sum'})
+    totalled = melted.groupby([zoning, 'age_9', 'g'], as_index=False).agg({'population': 'sum'})
 
     # set index column to gender/age
-    df = totalled.set_index([zoning, 'gender', 'age']).unstack(level=[zoning])
+    df = totalled.set_index([zoning, 'g', 'age_9']).unstack(level=[zoning])
     df.columns = df.columns.get_level_values(zoning)
 
     return df
@@ -455,7 +454,7 @@ def convert_ons_table_4(
         value_name='hh_ref_persons',
         var_name='ns_sec_category'
     )
-    melted['h'] = melted['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
+    melted['accom_h'] = melted['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
     melted['ns_sec'] = melted['ns_sec_category'].map({v: k for k, v in ns_sec_segmentation.items()})
     melted['hh_ref_persons'] = melted['hh_ref_persons'].astype(int)
 
@@ -463,15 +462,15 @@ def convert_ons_table_4(
     dvec = pivot_to_dvector(
         data=melted,
         zoning_column=zoning,
-        index_cols=['h', 'ns_sec'],
+        index_cols=['accom_h', 'ns_sec'],
         value_column='hh_ref_persons'
     )
 
     # add in the missing segmentation category and fill with zeros
     # TODO this should be genericised, adding in a missing combination of indicies
-    missing = dvec[dvec.index.get_level_values('h') == 1].reset_index()
-    missing['h'] = 5
-    missing = missing.set_index(['h', 'ns_sec'])
+    missing = dvec[dvec.index.get_level_values('accom_h') == 1].reset_index()
+    missing['accom_h'] = 5
+    missing = missing.set_index(['accom_h', 'ns_sec'])
     missing.loc[:] = np.nan
 
     # combine with df for all segments
@@ -511,7 +510,7 @@ def convert_ons_table_3(
     Returns
     -------
     dict
-        Dictionary of three dataframes with index of 'h', 'ns_sec', and 'pop_soc' or 'pop_emp' or 'pop_econ' and column headers of 'zoning' in the
+        Dictionary of three dataframes with index of 'accom_h', 'ns_sec', and 'soc' or 'pop_emp' or 'pop_econ' and column headers of 'zoning' in the
         correct format to convert to DVector
     """
 
@@ -519,7 +518,7 @@ def convert_ons_table_3(
     df[zoning] = df[zoning].str.split(' ', expand=True)[0]
 
     # remap dwelling and ns-sec segmentation variables to be consistent with other mappings
-    df['h'] = df['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
+    df['accom_h'] = df['level_1'].map({v: k for k, v in dwelling_segmentation.items()})
     df['ns_sec'] = df['variable_1'].map({v: k for k, v in ns_sec_segmentation.items()})
 
     # convert all segmentation to dataframe and merge with original data frame
@@ -531,21 +530,21 @@ def convert_ons_table_3(
 
     return_dict = {}
     for col in tmp.columns:
-        grouped = merged.groupby([zoning, 'h', 'ns_sec', col]).agg({'population': 'sum'}).reset_index()
+        grouped = merged.groupby([zoning, 'accom_h', 'ns_sec', col]).agg({'population': 'sum'}).reset_index()
 
         # convert to required format for DVector
         dvec = pivot_to_dvector(
             data=grouped,
             zoning_column=zoning,
-            index_cols=['h', 'ns_sec', col],
+            index_cols=['accom_h', 'ns_sec', col],
             value_column='population'
         )
 
         # add in the missing segmentation category and fill with zeros
         # TODO this should be genericised, adding in a missing combination of indicies
-        missing = dvec[dvec.index.get_level_values('h') == 1].reset_index()
-        missing['h'] = 5
-        missing = missing.set_index(['h', 'ns_sec', col])
+        missing = dvec[dvec.index.get_level_values('accom_h') == 1].reset_index()
+        missing['accom_h'] = 5
+        missing = missing.set_index(['accom_h', 'ns_sec', col])
         missing.loc[:] = np.nan
 
         # combine with df for all segments

@@ -1,3 +1,5 @@
+from caf.core.segments import SegmentsSuper
+
 from land_use.constants import segments
 
 # TODO: This is very similar to "h". Could we standardise?
@@ -26,34 +28,43 @@ ONS_NSSEC_ANNOYING = {
     5: "NS-SeC of HRP: L15: Full-time student"
 }
 
+# NOTE: the keys of the {'pop_econ': 1, 'pop_emp': 2, 'soc': 1} dictionaries need
+#  to be consistent with the names of the segmentations being used
 ONS_ECON_EMP_SOC_COMBO = {
     'Economically active (excluding full-time students): In employment: part-time: Occupation: 1. Managers, directors and senior officials; 2. Professional occupations; 3. Associate professional and technical occupations':
-        {'pop_econ': 1, 'pop_emp': 2, 'pop_soc': 1},
+        {'pop_econ': 1, 'pop_emp': 2, 'soc': 1},
     'Economically active (excluding full-time students): In employment: part-time: Occupation: 4. Administrative and secretarial occupations; 5. Skilled trades occupations; 6. Caring, leisure and other service occupations; 7. Sales and customer service occupations':
-        {'pop_econ': 1, 'pop_emp': 2, 'pop_soc': 2},
+        {'pop_econ': 1, 'pop_emp': 2, 'soc': 2},
     'Economically active (excluding full-time students): In employment: part-time: Occupation: 8. Process, plant and machine operatives; 9. Elementary occupations':
-        {'pop_econ': 1, 'pop_emp': 2, 'pop_soc': 3},
+        {'pop_econ': 1, 'pop_emp': 2, 'soc': 3},
     'Economically active (excluding full-time students): In employment: full-time: Occupation: 1. Managers, directors and senior officials; 2. Professional occupations; 3. Associate professional and technical occupations':
-        {'pop_econ': 1, 'pop_emp': 1, 'pop_soc': 1},
+        {'pop_econ': 1, 'pop_emp': 1, 'soc': 1},
     'Economically active (excluding full-time students): In employment: full-time: Occupation: 4. Administrative and secretarial occupations; 5. Skilled trades occupations; 6. Caring, leisure and other service occupations; 7. Sales and customer service occupations':
-        {'pop_econ': 1, 'pop_emp': 1, 'pop_soc': 2},
+        {'pop_econ': 1, 'pop_emp': 1, 'soc': 2},
     'Economically active (excluding full-time students): In employment: full-time: Occupation: 8. Process, plant and machine operatives; 9. Elementary occupations':
-        {'pop_econ': 1, 'pop_emp': 1, 'pop_soc': 3},
+        {'pop_econ': 1, 'pop_emp': 1, 'soc': 3},
     'Economically active (excluding full-time students): Unemployed':
-        {'pop_econ': 2, 'pop_emp': 3, 'pop_soc': 4},
+        {'pop_econ': 2, 'pop_emp': 3, 'soc': 4},
     'Economically inactive: Retired':
-        {'pop_econ': 3, 'pop_emp': 5, 'pop_soc': 4},
+        {'pop_econ': 3, 'pop_emp': 5, 'soc': 4},
     'Full-time students':
-        {'pop_econ': 4, 'pop_emp': 4, 'pop_soc': 4},
+        {'pop_econ': 4, 'pop_emp': 4, 'soc': 4},
     'Economically inactive: Other':
-        {'pop_econ': 3, 'pop_emp': 3, 'pop_soc': 4}
+        {'pop_econ': 3, 'pop_emp': 3, 'soc': 4}
 }
 
 ONS_DWELLING_AGE_SEX_MAPPINGS = {
-    'Age (11 categories)': ['age', segments._CUSTOM_SEGMENT_CATEGORIES['age']],
-    'Sex (2 categories)': ['gender', segments._CUSTOM_SEGMENT_CATEGORIES['gender']],
-    'Accommodation type (5 categories)': ['h', segments._CUSTOM_SEGMENT_CATEGORIES['h']]
-
+    'Age (11 categories)': [
+        'age_9',
+        SegmentsSuper.get_segment( SegmentsSuper.AGE).values
+    ],
+    'Sex (2 categories)': [
+        'g', SegmentsSuper.get_segment(SegmentsSuper.GENDER).values
+    ],
+    'Accommodation type (5 categories)': [
+        'accom_h',
+        SegmentsSuper.get_segment(SegmentsSuper.ACCOMODATION_TYPE_H).values
+    ]
 }
 
 AGE_11_TO_9_AGGREGATIONS = {

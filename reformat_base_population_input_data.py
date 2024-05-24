@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from caf.core.segmentation import SegmentsSuper
+
 import land_use.preprocessing as pp
 from land_use.constants import geographies, segments
 
@@ -16,7 +18,9 @@ for file_name in ('2072764328175065 zero.csv', '2672385425907310 all.csv'):
     df = pp.read_rm002(
         file_path=file_path, header_string=header_string, 
         zoning=geographies.LSOA_NAME, 
-        segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['h']
+        segmentation=SegmentsSuper.get_segment(
+            SegmentsSuper.ACCOMODATION_TYPE_H
+        ).values
     )
     pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
@@ -45,10 +49,18 @@ df = pp.read_ons_custom(
 
 df = pp.convert_ons_table_2(
     df=df, 
-    dwelling_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['h'],
-    adults_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['ha'],
-    children_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['hc'],
-    car_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['car'],
+    dwelling_segmentation=SegmentsSuper.get_segment(
+            SegmentsSuper.ACCOMODATION_TYPE_H
+        ).values,
+    adults_segmentation=SegmentsSuper.get_segment(
+            SegmentsSuper.ADULTS
+        ).values,
+    children_segmentation=SegmentsSuper.get_segment(
+            SegmentsSuper.CHILDREN
+        ).values,
+    car_segmentation=SegmentsSuper.get_segment(
+            SegmentsSuper.CAR_AVAILABILITY
+        ).values,
     zoning=geographies.MSOA_NAME
 )
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
@@ -64,7 +76,9 @@ df = pp.read_ons_custom(
 
 df = pp.convert_ons_table_4(
     df=df,
-    dwelling_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['h'],
+    dwelling_segmentation=SegmentsSuper.get_segment(
+            SegmentsSuper.ACCOMODATION_TYPE_H
+        ).values,
     ns_sec_segmentation=pp.ONS_NSSEC,
     zoning=geographies.LSOA_NAME
 )
@@ -82,7 +96,9 @@ df = pp.read_ons_custom(
 
 dfs = pp.convert_ons_table_3(
     df=df,
-    dwelling_segmentation=segments._CUSTOM_SEGMENT_CATEGORIES['h'],
+    dwelling_segmentation=SegmentsSuper.get_segment(
+            SegmentsSuper.ACCOMODATION_TYPE_H
+        ).values,
     ns_sec_segmentation=pp.ONS_NSSEC_ANNOYING,
     all_segmentation=pp.ONS_ECON_EMP_SOC_COMBO,
     zoning=geographies.MSOA_NAME
@@ -110,8 +126,12 @@ file_path = Path(
 df = pp.read_mype(
     file_path=file_path,
     zoning=geographies.LSOA_NAME,
-    age_mapping=segments._CUSTOM_SEGMENT_CATEGORIES['age'],
-    gender_mapping=segments._CUSTOM_SEGMENT_CATEGORIES['gender']
+    age_mapping=SegmentsSuper.get_segment(
+            SegmentsSuper.AGE
+        ).values,
+    gender_mapping=SegmentsSuper.get_segment(
+            SegmentsSuper.GENDER
+        ).values
 )
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 

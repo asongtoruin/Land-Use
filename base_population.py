@@ -3,6 +3,7 @@ import logging
 
 import yaml
 from caf.core.zoning import TranslationWeighting
+from caf.core.segmentation import SegmentsSuper
 
 from land_use import constants
 from land_use import data_processing
@@ -57,7 +58,7 @@ LOGGER.info('--- Step 1 ---')
 LOGGER.info(f'Calculating NS-SeC proportions by dwelling type')
 # calculate NS-SeC splits of households by
 # dwelling type by LSOA
-total_hh_by_hh = ons_table_4.aggregate(segs=['h'])
+total_hh_by_hh = ons_table_4.aggregate(segs=['accom_h'])
 proportion_ns_sec = ons_table_4 / total_hh_by_hh
 
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
@@ -69,7 +70,7 @@ LOGGER.info(f'Applying NS-SeC proportions to AddressBase dwellings')
 hh_by_nssec = addressbase_dwellings * proportion_ns_sec
 
 # check against original addressbase data
-# check = hh_by_nssec.aggregate(segs=['h'])
+# check = hh_by_nssec.aggregate(segs=['accom_h'])
 
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output A.hdf')
 data_processing.summary_reporting(
@@ -91,7 +92,7 @@ LOGGER.info('--- Step 2 ---')
 LOGGER.info(f'Calculating children, adults, and car availability proportions by dwelling type')
 # calculate splits of households with or without children and by car availability
 # and by number of adults by dwelling types by MSOA
-total_hh_by_hh = ons_table_2.aggregate(segs=['h'])
+total_hh_by_hh = ons_table_2.aggregate(segs=['accom_h'])
 proportion_hhs_by_h_hc_ha_car = ons_table_2 / total_hh_by_hh
 
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
@@ -99,7 +100,7 @@ proportion_hhs_by_h_hc_ha_car = ons_table_2 / total_hh_by_hh
 proportion_hhs_by_h_hc_ha_car.data = proportion_hhs_by_h_hc_ha_car.data.fillna(0)
 
 # check proportions sum to one
-# tmp = proportion_hhs_by_h_hc_ha_car.aggregate(segs=['h'])
+# tmp = proportion_hhs_by_h_hc_ha_car.aggregate(segs=['accom_h'])
 
 LOGGER.info(f'Converting the proportions to LSOA level')
 # expand these factors to LSOA level
@@ -110,14 +111,14 @@ proportion_hhs_by_h_hc_ha_car_lsoa = proportion_hhs_by_h_hc_ha_car.translate_zon
 )
 
 # check proportions sum to one
-# tmp = proportion_hhs_by_h_hc_ha_car_lsoa.aggregate(segs=['h'])
+# tmp = proportion_hhs_by_h_hc_ha_car_lsoa.aggregate(segs=['accom_h'])
 
 LOGGER.info(f'Applying children, adult, and car availability proportions to households')
 # apply proportional factors based on hh by adults / children / car availability to the hh by nssec
 hh_by_nssec_hc_ha_car = hh_by_nssec * proportion_hhs_by_h_hc_ha_car_lsoa
 
 # check against original addressbase data
-# check = hh_by_nssec_hc_ha_car.aggregate(segs=['h'])
+# check = hh_by_nssec_hc_ha_car.aggregate(segs=['accom_h'])
 
 # save output to hdf and csvs for checking
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output B.hdf')
@@ -137,7 +138,7 @@ if generate_summary_outputs:
 
 # --- Step 3 --- #
 LOGGER.info('--- Step 3 ---')
-LOGGER.info(f'Calculating average occupanct by dwelling type')
+LOGGER.info(f'Calculating average occupancy by dwelling type')
 # Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
 all_properties = unoccupied_households + occupied_households
 
@@ -201,7 +202,7 @@ if generate_summary_outputs:
 LOGGER.info('--- Step 5 ---')
 LOGGER.info(f'Calculating age and gender proportions by dwelling type')
 # Calculate splits by dwelling type, age, and gender
-gender_age_splits = hh_age_gender_2021 / hh_age_gender_2021.aggregate(segs=['h'])
+gender_age_splits = hh_age_gender_2021 / hh_age_gender_2021.aggregate(segs=['accom_h'])
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
 gender_age_splits.data = gender_age_splits.data.fillna(0)
 
@@ -238,21 +239,21 @@ LOGGER.info('--- Step 6 ---')
 LOGGER.info(f'Calculating economic status proportions')
 # Calculate splits by dwelling type, econ, and NS-SeC of HRP
 # TODO This is *officially* population over 16, somehow need to account for children
-econ_splits = ons_table_3_econ / ons_table_3_econ.aggregate(segs=['h', 'ns_sec'])
+econ_splits = ons_table_3_econ / ons_table_3_econ.aggregate(segs=['accom_h', 'ns_sec'])
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
 econ_splits.data = econ_splits.data.fillna(0)
 
 LOGGER.info(f'Calculating employment status proportions')
 # Calculate splits by dwelling type, employment, and NS-SeC of HRP
 # TODO This is *officially* population over 16, somehow need to account for children
-emp_splits = ons_table_3_emp / ons_table_3_emp.aggregate(segs=['h', 'ns_sec'])
+emp_splits = ons_table_3_emp / ons_table_3_emp.aggregate(segs=['accom_h', 'ns_sec'])
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
 emp_splits.data = emp_splits.data.fillna(0)
 
 LOGGER.info(f'Calculating SOC category proportions')
 # Calculate splits by dwelling type, soc, and NS-SeC of HRP
 # TODO This is *officially* population over 16, somehow need to account for children
-soc_splits = ons_table_3_soc / ons_table_3_soc.aggregate(segs=['h', 'ns_sec'])
+soc_splits = ons_table_3_soc / ons_table_3_soc.aggregate(segs=['accom_h', 'ns_sec'])
 # fill missing proportions with 0 as they are where the total hh is zero in the census data
 soc_splits.data = soc_splits.data.fillna(0)
 
@@ -279,15 +280,15 @@ LOGGER.info(f'Expanding segmentation to include age')
 # expand the segmentation to include age (assuming the same weights for all age categories)
 econ_splits_lsoa_age = data_processing.expand_segmentation(
     dvector=econ_splits_lsoa,
-    segmentation_to_add=constants.CUSTOM_SEGMENTS['age']
+    segmentation_to_add=SegmentsSuper.get_segment(SegmentsSuper.AGE)
 )
 emp_splits_lsoa_age = data_processing.expand_segmentation(
     dvector=emp_splits_lsoa,
-    segmentation_to_add=constants.CUSTOM_SEGMENTS['age']
+    segmentation_to_add=SegmentsSuper.get_segment(SegmentsSuper.AGE)
 )
 soc_splits_lsoa_age = data_processing.expand_segmentation(
     dvector=soc_splits_lsoa,
-    segmentation_to_add=constants.CUSTOM_SEGMENTS['age']
+    segmentation_to_add=SegmentsSuper.get_segment(SegmentsSuper.AGE)
 )
 
 LOGGER.info(f'Setting child-specific employment / economic status / SOC values')
@@ -295,12 +296,12 @@ LOGGER.info(f'Setting child-specific employment / economic status / SOC values')
 # only (stops under 16s being allocated working statuses)
 econ_splits_lsoa_age.data = data_processing.replace_segment_combination(
     data=econ_splits_lsoa_age.data,
-    segment_combination={'pop_econ': [1, 2, 3], 'age': [1]},
+    segment_combination={'pop_econ': [1, 2, 3], 'age_9': [1]},
     value=0
 )
 econ_splits_lsoa_age.data = data_processing.replace_segment_combination(
     data=econ_splits_lsoa_age.data,
-    segment_combination={'pop_econ': [4], 'age': [1]},
+    segment_combination={'pop_econ': [4], 'age_9': [1]},
     value=1
 )
 
@@ -308,12 +309,12 @@ econ_splits_lsoa_age.data = data_processing.replace_segment_combination(
 # only (stops under 16s being allocated employment statuses)
 emp_splits_lsoa_age.data = data_processing.replace_segment_combination(
     data=emp_splits_lsoa_age.data,
-    segment_combination={'pop_emp': [1, 2, 3, 4], 'age': [1]},
+    segment_combination={'pop_emp': [1, 2, 3, 4], 'age_9': [1]},
     value=0
 )
 emp_splits_lsoa_age.data = data_processing.replace_segment_combination(
     data=emp_splits_lsoa_age.data,
-    segment_combination={'pop_emp': [5], 'age': [1]},
+    segment_combination={'pop_emp': [5], 'age_9': [1]},
     value=1
 )
 
@@ -321,18 +322,18 @@ emp_splits_lsoa_age.data = data_processing.replace_segment_combination(
 # only (stops under 16s being allocated other SOC groupings)
 soc_splits_lsoa_age.data = data_processing.replace_segment_combination(
     data=soc_splits_lsoa_age.data,
-    segment_combination={'pop_soc': [1, 2, 3], 'age': [1]},
+    segment_combination={'soc': [1, 2, 3], 'age_9': [1]},
     value=0
 )
 soc_splits_lsoa_age.data = data_processing.replace_segment_combination(
     data=soc_splits_lsoa_age.data,
-    segment_combination={'pop_soc': [4], 'age': [1]},
+    segment_combination={'soc': [4], 'age_9': [1]},
     value=1
 )
 
 # check proportions sum to one
 # TODO some zeros in here that maybe shouldnt be? Need to check
-# tmp = soc_splits_lsoa_age.aggregate(segs=['h', 'age', 'ns_sec'])
+# tmp = soc_splits_lsoa_age.aggregate(segs=['accom_h', 'age_9', 'ns_sec'])
 
 # apply the splits at LSOA level to main population table
 LOGGER.info(f'Applying economic status splits to population')

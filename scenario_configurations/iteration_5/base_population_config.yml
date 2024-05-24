@@ -7,55 +7,55 @@ output_intermediate_outputs: False
 occupied_households:
     file_path: RM002 accom type by household size\preprocessing\2072764328175065 zero.hdf
     geographical_level: LSOA2021
-    input_segments: [h]
+    input_segments: [accom_h]
     # IDEALLY we might also have a "desired_segments" here, in case the input data is at an unrequired level of detail
 
 unoccupied_households:
     file_path: RM002 accom type by household size\preprocessing\2672385425907310 all.hdf
     geographical_level: LSOA2021
-    input_segments: [h]
+    input_segments: [accom_h]
 
 ons_table_1:
     file_path: ONS custom\preprocessing\ct210212census2021.hdf
     geographical_level: LSOA2021
-    input_segments: [h]
+    input_segments: [accom_h]
 
 addressbase_dwellings:
     file_path: ABP\ABP2021\preprocessing\output_results_all_2021(no red).hdf
     geographical_level: LSOA2021
-    input_segments: [h]
+    input_segments: [accom_h]
 
 ons_table_2:
     file_path: ONS custom\preprocessing\ct210213census2021.hdf
     geographical_level: MSOA2021
-    input_segments: [h, ha, hc, car]
+    input_segments: [accom_h, adults, children, car_availability]
 
 mype_2022:
     file_path: MYPE\preprocessing\sapelsoasyoatablefinal.hdf
     geographical_level: LSOA2021
-    input_segments: [gender, age]
+    input_segments: [g, age_9]
 
 ons_table_4:
     file_path: ONS custom\preprocessing\ct210215census2021.hdf
     geographical_level: LSOA2021
-    input_segments: [h, ns_sec]
+    input_segments: [accom_h, ns_sec]
 
 hh_age_gender_2021:
     file_path: ONS\preprocessing\population_hh_age11_gender_MSOA.hdf
     geographical_level: MSOA2021
-    input_segments: [h, age, gender]
+    input_segments: [accom_h, age_9, g]
 
 ons_table_3_econ:
     file_path: ONS custom\preprocessing\ct210214census2021_pop_econ.hdf
     geographical_level: MSOA2021
-    input_segments: [h, ns_sec, pop_econ]
+    input_segments: [accom_h, ns_sec, pop_econ]
 
 ons_table_3_emp:
     file_path: ONS custom\preprocessing\ct210214census2021_pop_emp.hdf
     geographical_level: MSOA2021
-    input_segments: [h, ns_sec, pop_emp]
+    input_segments: [accom_h, ns_sec, pop_emp]
 
 ons_table_3_soc:
-    file_path: ONS custom\preprocessing\ct210214census2021_pop_soc.hdf
+    file_path: ONS custom\preprocessing\ct210214census2021_soc.hdf
     geographical_level: MSOA2021
-    input_segments: [h, ns_sec, pop_soc]
+    input_segments: [accom_h, ns_sec, soc]
