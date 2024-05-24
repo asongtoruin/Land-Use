@@ -31,7 +31,7 @@ ons_segmentation = {
     5: "Unshared dwelling: A caravan or other mobile or temporary structure"
 }
 
-# define path to ONS table 1
+# *** define path to ONS table 1
 file_path = Path(r'I:\NorMITs Land Use\2023\import\ONS custom\ct210212census2021.xlsx')
 # read in excel format, preprocess, and reformat for DVector
 df = pp.read_ons_custom(
@@ -42,7 +42,7 @@ df = pp.convert_ons_table_1(
 )
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
-# define path to ONS table 2
+# *** define path to ONS table 2
 file_path = Path(r'I:\NorMITs Land Use\2023\import\ONS custom\ct210213census2021.xlsx')
 # read in excel format, preprocess, and reformat for DVector
 df = pp.read_ons_custom(
@@ -62,7 +62,7 @@ df = pp.convert_ons_table_2(
 )
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
-# define path to ONS table 4
+# *** define path to ONS table 4
 file_path = Path(r'I:\NorMITs Land Use\2023\import\ONS custom\ct210215census2021.xlsx')
 # read in excel format, preprocess, and reformat for DVector
 df = pp.read_ons_custom(
@@ -87,7 +87,7 @@ df = pp.convert_ons_table_4(
 )
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
-# define path to ONS table 3
+# *** define path to ONS table 3
 file_path = Path(r'I:\NorMITs Land Use\2023\import\ONS custom\ct210214census2021.xlsx')
 # read in excel format, preprocess, and reformat for DVector
 df = pp.read_ons_custom(
@@ -134,7 +134,7 @@ for ref, df in dfs.items():
     pp.save_preprocessed_hdf(source_file_path=file_path, df=df, multiple_output_ref=ref)
 
 # ****** AddressBase 
-# AddressBase database
+# *** AddressBase database
 file_path = Path(
     r'I:\NorMITs Land Use\2023\import\ABP\ABP2021'
     r'\output_results_all_2021(no red).xlsx'
@@ -144,7 +144,7 @@ df = pp.read_abp(file_path=file_path, zoning=geographies.LSOA_NAME)
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
 # ****** MYPE
-# MYPE database
+# *** MYPE database
 file_path = Path(
     r'I:\NorMITs Land Use\2023\import\MYPE'
     r'\sapelsoasyoatablefinal.xlsx'
@@ -159,7 +159,7 @@ df = pp.read_mype(
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
 # ****** ONS Data Downloads
-# ONS age and gender by dwelling type
+# *** ONS age and gender by dwelling type
 file_path = Path(
     r'I:\NorMITs Land Use\2023\import\ONS\population_hh_age5_gender_MSOA'
     r'\MSOA_age5_gender_hh_EnglandWales.csv'
@@ -181,7 +181,7 @@ df = pp.read_ons(
 )
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
-# ONS age and gender by dwelling type
+# *** ONS age and gender by dwelling type
 file_path = Path(
     r'I:\NorMITs Land Use\2023\import\ONS'
     r'\population_hh_age11_gender_MSOA.csv'
@@ -218,7 +218,7 @@ df = pp.read_ons(
 
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
-# ONS population in communal establishments
+# *** ONS population in communal establishments
 file_path = Path(
     r'I:\NorMITs Land Use\2023\import\TS048  CERs by type'
     r'\2741727163807526.csv'
@@ -229,13 +229,12 @@ df, zone_col = pp.read_headered_csv(
     file_path=file_path,
     header_string='middle'
 )
-df[geographies.MSOA_NAME] = df[zone_col].str.split(' ', expand=True)[0]
-df['ce'] = 1
-df = pp.pivot_to_dvector(
-    data=df,
-    zoning_column=geographies.MSOA_NAME,
-    index_cols=['ce'],
-    value_column='Total: All usual residents in communal establishments'
+
+df = pp.convert_ces_by_type(
+    df=df,
+    zoning=geographies.MSOA_NAME,
+    zoning_column=zone_col,
+    ce_type_map=pp.CE_POP_BY_TYPE
 )
 
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)

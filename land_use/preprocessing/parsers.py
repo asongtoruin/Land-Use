@@ -642,3 +642,69 @@ def read_ons(
     dvec.columns = dvec.columns.get_level_values(zoning)
 
     return dvec
+
+
+def convert_ces_by_type(
+        df: pd.DataFrame,
+        zoning: str,
+        zoning_column: str,
+        ce_type_map: dict
+    ) -> pd.DataFrame:
+    """Function to convert the census file of population by Communal Establishment
+    type to dvector format with the index as the CE types.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        dataframe output of read_headered_csv()
+        Expects a column of MSOA names (including the codes) and columns of each
+        CE type. Data is population.
+    zoning : str
+        standard zoning name from constants.geographies.py of the zone system
+        the data are in
+    zoning_column : str
+        str output of read_headered_csv()
+        column to rename to the standard zoning definition
+    ce_type_map : dict
+        dictionary of the relevant columns of data and the mappings to the numeric
+        values corresponding to the 'ce' segmentation defined in constants.segments.py
+
+    Returns
+    -------
+    pd.DataFrame
+        dataframe with index of 'ce' and columns of zoning, data is population.
+
+    """
+    # get MSOA code from the first column of the data
+    df[zoning] = df[zoning_column].str.split(' ', expand=True)[0]
+
+    # get relevant columns in the dataframe (there are lots of columns which sum
+    # up to the total "medical" column, for example, so just restricting to the
+    # columns we are actually interested in to avoid duplicates)
+    reduced = df.loc[:, [zoning] + list(ce_type_map.keys())]
+
+    # melt to get in long format
+    melted = reduced.melt(
+        id_vars=zoning,
+        value_vars=list(ce_type_map.keys()),
+        var_name='ce_type',
+        value_name='population'
+    )
+
+    # map the values in the input data to the groupings defined in the
+    # 'ce' mapping in segments.py
+    melted['ce'] = melted['ce_type'].map(ce_type_map)
+
+    # group by ce type and calcualte total population
+    # (the mappings applied are not one to one)
+    total = melted.groupby([zoning, 'ce']).agg({'population': 'sum'}).reset_index()
+
+    # convert to dvector format
+    return pivot_to_dvector(
+        data=total,
+        zoning_column=zoning,
+        index_cols=['ce'],
+        value_column='population'
+    )
+
+

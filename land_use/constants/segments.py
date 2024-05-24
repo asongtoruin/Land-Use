@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from caf.core.segments import SegmentsSuper, Segment
+from caf.core.segments import SegmentsSuper, Segment, Exclusion
 
 
 def is_standard_segment(identifier: str) -> bool:
@@ -106,7 +106,7 @@ _CUSTOM_SEGMENT_CATEGORIES = {
     },
     "ns_sec": {
         1: "HRP managerial / professional",
-        2: "HRP managerial / professional",
+        2: "HRP intermediate / technical",
         3: "HRP semi-routine / routine",
         4: "HRP never worked / long-term unemployed",
         5: "HRP full-time student"
@@ -149,13 +149,39 @@ _CUSTOM_SEGMENT_CATEGORIES = {
         2: 'Economically active unemployed',
         3: 'Economically inactive',
         4: 'Students'
+    },
+    'ce': {
+        1: 'Medical and care',
+        2: 'Defence',
+        3: 'Prison, approved premises, and detention',
+        4: 'Education',
+        5: 'Hotels, hostels, holiday accommodation, and travel',
+        6: 'Religion',
+        7: 'Staff'
     }
 }
 
-CUSTOM_SEGMENTS = {
-    key: Segment(name=key, values=values) for key, values in _CUSTOM_SEGMENT_CATEGORIES.items()
+_CUSTOM_EXCLUSIONS = {
+    'hc': {
+        'age': [{'own_val': 1, 'other_vals': {1, 2, 3}}],
+        'agg_age': [{'own_val': 1, 'other_vals': {1}}]
+    },
+    # TODO check if children are students or non-working age in pop_emp
+    'pop_emp': {
+        'age': [{'own_val': i, 'other_vals': {1, 2, 3}} for i in range(1, 4)]
+    }
 }
 
+CUSTOM_SEGMENTS = dict()
+for key, values in _CUSTOM_SEGMENT_CATEGORIES.items():
+    exclusions = []
+    # check for exclusions
+    if key in _CUSTOM_EXCLUSIONS.keys():
+        for other_category, exclusion_definitions in _CUSTOM_EXCLUSIONS[key].items():
+            for definition in exclusion_definitions:
+                exclusions.append(Exclusion(seg_name=other_category, **definition))
+
+    CUSTOM_SEGMENTS[key] = Segment(name=key, values=values, exclusions=exclusions)
 
 if __name__ == '__main__':
     example = ['p', 'tp', 'TfN', 'm', 'Land-Use', 'g']
