@@ -107,7 +107,8 @@ LOGGER.info(f'Converting the proportions to LSOA level')
 proportion_hhs_by_h_hc_ha_car_lsoa = proportion_hhs_by_h_hc_ha_car.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
-    weighting=TranslationWeighting.NO_WEIGHT
+    weighting=TranslationWeighting.NO_WEIGHT,
+    check_totals=False
 )
 
 # check proportions sum to one
@@ -211,7 +212,8 @@ LOGGER.info(f'Converting proportions to LSOA')
 gender_age_splits_lsoa = gender_age_splits.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
-    weighting=TranslationWeighting.NO_WEIGHT
+    weighting=TranslationWeighting.NO_WEIGHT,
+    check_totals=False
 )
 
 LOGGER.info(f'Applying age and gender splits by dwelling type')
@@ -263,17 +265,20 @@ LOGGER.info(f'Converting economic status, employment status, and SOC category '
 econ_splits_lsoa = econ_splits.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
-    weighting=TranslationWeighting.NO_WEIGHT
+    weighting=TranslationWeighting.NO_WEIGHT,
+    check_totals=False
 )
 emp_splits_lsoa = emp_splits.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
-    weighting=TranslationWeighting.NO_WEIGHT
+    weighting=TranslationWeighting.NO_WEIGHT,
+    check_totals=False
 )
 soc_splits_lsoa = soc_splits.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
-    weighting=TranslationWeighting.NO_WEIGHT
+    weighting=TranslationWeighting.NO_WEIGHT,
+    check_totals=False
 )
 
 LOGGER.info(f'Expanding segmentation to include age')
