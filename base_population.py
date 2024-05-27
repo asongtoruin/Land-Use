@@ -283,17 +283,14 @@ soc_splits_lsoa = soc_splits.translate_zoning(
 
 LOGGER.info(f'Expanding segmentation to include age')
 # expand the segmentation to include age (assuming the same weights for all age categories)
-econ_splits_lsoa_age = data_processing.expand_segmentation(
-    dvector=econ_splits_lsoa,
-    segmentation_to_add=SegmentsSuper.get_segment(SegmentsSuper.AGE)
+econ_splits_lsoa_age = econ_splits_lsoa.add_segment(
+    SegmentsSuper.get_segment(SegmentsSuper.AGE)
 )
-emp_splits_lsoa_age = data_processing.expand_segmentation(
-    dvector=emp_splits_lsoa,
-    segmentation_to_add=SegmentsSuper.get_segment(SegmentsSuper.AGE)
+emp_splits_lsoa_age = emp_splits_lsoa.add_segment(
+    SegmentsSuper.get_segment(SegmentsSuper.AGE)
 )
-soc_splits_lsoa_age = data_processing.expand_segmentation(
-    dvector=soc_splits_lsoa,
-    segmentation_to_add=SegmentsSuper.get_segment(SegmentsSuper.AGE)
+soc_splits_lsoa_age = soc_splits_lsoa.add_segment(
+    SegmentsSuper.get_segment(SegmentsSuper.AGE)
 )
 
 LOGGER.info(f'Setting child-specific employment / economic status / SOC values')
