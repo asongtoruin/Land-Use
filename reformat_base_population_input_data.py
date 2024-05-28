@@ -171,3 +171,43 @@ df = pp.convert_ces_by_type(
     ce_type_map=pp.CE_POP_BY_TYPE
 )
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# *** ONS gender, age, and economic status splits in communal establishments
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\ONS\ONS 2021 CERs'
+    r'\CERs_GOR_age11_gender_economicstatus.csv'
+)
+
+# read in ons data and reformat for DVector
+df = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.RGN_NAME,
+    zoning_column='Regions Code',
+    segment_mappings=pp.ONS_ECON_AGE_SEX_MAPPINGS,
+    segment_aggregations={
+        'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS,
+        'Economic activity status (7 categories)': pp.ECON_6_TO_4_AGGREGATIONS
+    }
+)
+
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# *** ONS gender, age, and occupation splits in communal establishments
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\ONS\ONS 2021 CERs'
+    r'\CERs_GOR_age11_gender_occupation.csv'
+)
+
+# read in ons data and reformat for DVector
+df = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.RGN_NAME,
+    zoning_column='Regions Code',
+    segment_mappings=pp.ONS_OCC_AGE_SEX_MAPPINGS,
+    segment_aggregations={
+        'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS,
+        'Occupation (current) (10 categories)': pp.SOC_10_TO_4_AGGREGATIONS
+    }
+)
+
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)

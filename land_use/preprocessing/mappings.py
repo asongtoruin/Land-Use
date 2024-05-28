@@ -95,3 +95,53 @@ CE_POP_BY_TYPE = {
     "Other establishment: Religious": 6,
     "Other establishment: Staff or worker accommodation or Other": 7
 }
+
+ONS_ECON_AGE_SEX_MAPPINGS = {
+    'Age (11 categories)': [
+        'age_9',
+        SegmentsSuper.get_segment(SegmentsSuper.AGE).values
+    ],
+    'Sex (2 categories)': [
+        'g', SegmentsSuper.get_segment(SegmentsSuper.GENDER).values
+    ],
+    'Economic activity status (7 categories)': [
+        'pop_econ',
+        SegmentsSuper.get_segment(SegmentsSuper.POP_ECON).values
+    ]
+}
+
+ECON_6_TO_4_AGGREGATIONS = {
+    'Economically active (excluding full-time students): In employment': 'Economically active employees',
+    'Economically active (excluding full-time students): Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks': 'Economically active unemployed',
+    'Economically active and a full-time student: In employment': 'Students',
+    'Economically active and a full-time student: Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks': 'Students',
+    'Economically inactive (excluding full-time students)': 'Economically inactive',
+    'Economically inactive and a full-time student': 'Students'
+}
+
+ONS_OCC_AGE_SEX_MAPPINGS = {
+    'Age (11 categories)': [
+        'age_9',
+        SegmentsSuper.get_segment(SegmentsSuper.AGE).values
+    ],
+    'Sex (2 categories)': [
+        'g', SegmentsSuper.get_segment(SegmentsSuper.GENDER).values
+    ],
+    'Occupation (current) (10 categories)': [
+        'pop_soc',
+        SegmentsSuper.get_segment(SegmentsSuper.SOC).values
+    ]
+}
+
+SOC_10_TO_4_AGGREGATIONS = {
+    '1. Managers, directors and senior officials': 'SOC1',
+    '2. Professional occupations': 'SOC1',
+    '3. Associate professional and technical occupations': 'SOC1',
+    '4. Administrative and secretarial occupations': 'SOC2',
+    '5. Skilled trades occupations': 'SOC2',
+    '6. Caring, leisure and other service occupations': 'SOC2',
+    '7. Sales and customer service occupations': 'SOC3',
+    '8. Process, plant and machine operatives': 'SOC3',
+    '9. Elementary occupations': 'SOC3',
+    'Does not apply': 'SOC4'
+}

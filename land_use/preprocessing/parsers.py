@@ -622,6 +622,13 @@ def read_ons(
     if segment_aggregations is not None:
         for col, mappings in segment_aggregations.items():
             df[col] = df[col].map(mappings)
+            # drop na based on mappings (all relevant values must be in the mappings)
+            missing = df.loc[df[col].isnull()]
+            if not missing.empty:
+                logging.warning(f'{len(missing)} missing values mapped using the {col} mapping. \n'
+                                f'Please check your mapping values and the input data to make sure '
+                                f'you are not losing data unexpectedly.')
+            df = df.dropna(subset=[col])
 
     # go through the dictionary and remap all the values based on the segmentation provided
     # columns are named based on the segment_ref provided
