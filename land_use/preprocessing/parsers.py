@@ -714,3 +714,59 @@ def convert_ces_by_type(
     )
 
 
+def convert_ces(
+        df: pd.DataFrame,
+        zoning: str,
+        zoning_column: str
+    ) -> pd.DataFrame:
+    """Convert the census file of population in Communal Establishments
+    to dvector format.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        dataframe output of read_headered_csv()
+        Expects a column of LSOA names (including the codes) and columns of 'all
+        residents' and 'all residents in communal establishments'. Data is population.
+    zoning : str
+        standard zoning name from constants.geographies.py of the zone system
+        the data are in
+    zoning_column : str
+        str output of read_headered_csv()
+        column to rename to the standard zoning definition
+    Returns
+    -------
+    pd.DataFrame
+        dataframe with index of 'total' and columns of zoning, data is uplift factor.
+
+    """
+    # get LSOA code from the first column of the data
+    df[zoning] = df[zoning_column].str.split(' ', expand=True)[0]
+
+    # calculate usual residents (total - CEs)
+    # we've double check this data set against ONS table 1
+    # ons_table_1['E01034628'].sum() = 1128
+    # in this table, E01034628: total = 3565, lives in CE = 2437
+    # so 3565 - 2437 = 1128, hence to calculate an uplift factor we need
+    # total / usual residents
+    df['usual_residents'] = df['Total: All usual residents'].astype(int) - df['Lives in a communal establishment'].astype(int)
+
+    # check for negatives
+    if (df['usual_residents'] < 0).sum() > 0:
+        raise RuntimeError('There are negatives in the communal establishment data'
+                           'when calculating usual residents. Please check your data.')
+
+    # calculate uplift factors
+    df['uplift'] = 1 + (df['Lives in a communal establishment'].astype(int) / df['usual_residents'].astype(int))
+
+    # set an index column named 'total', this uplift is not linked to any existing segmentation
+    # so here's we're using the 'total' cusotm segmentation defined in constants.segments.py
+    df['total'] = 1
+
+    # convert to dvector format
+    return pivot_to_dvector(
+        data=df,
+        zoning_column=zoning,
+        index_cols=['total'],
+        value_column='uplift'
+    )

@@ -35,6 +35,7 @@ df = pp.read_ons_custom(
 df = pp.convert_ons_table_1(
     df=df, segmentation=pp.ONS_DWELLINGS, zoning=geographies.LSOA_NAME
 )
+
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
 # *** define path to ONS table 2
@@ -63,6 +64,7 @@ df = pp.convert_ons_table_2(
         ).values,
     zoning=geographies.MSOA_NAME
 )
+
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
 # *** define path to ONS table 4
@@ -82,6 +84,7 @@ df = pp.convert_ons_table_4(
     ns_sec_segmentation=pp.ONS_NSSEC,
     zoning=geographies.LSOA_NAME
 )
+
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
 # *** define path to ONS table 3
@@ -133,6 +136,7 @@ df = pp.read_mype(
             SegmentsSuper.GENDER
         ).values
 )
+
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
 # ****** ONS Data Downloads
@@ -150,6 +154,7 @@ df = pp.read_ons(
     segment_mappings=pp.ONS_DWELLING_AGE_SEX_MAPPINGS,
     segment_aggregations={'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS}
 )
+
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
 # *** ONS population in communal establishments
@@ -170,6 +175,7 @@ df = pp.convert_ces_by_type(
     zoning_column=zone_col,
     ce_type_map=pp.CE_POP_BY_TYPE
 )
+
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
 # *** ONS gender, age, and economic status splits in communal establishments
@@ -208,6 +214,26 @@ df = pp.read_ons(
         'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS,
         'Occupation (current) (10 categories)': pp.SOC_10_TO_4_AGGREGATIONS
     }
+)
+
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# *** ONS population in communal establishments by LSOA
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\TS001 pop_hh_ce'
+    r'\1226171533660024.csv'
+)
+
+# read in ons data and reformat for DVector
+df, zone_col = pp.read_headered_csv(
+    file_path=file_path,
+    header_string='super'
+)
+
+df = pp.convert_ces(
+    df=df,
+    zoning=geographies.LSOA_NAME,
+    zoning_column=zone_col
 )
 
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
