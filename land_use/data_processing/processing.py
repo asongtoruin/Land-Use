@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from warnings import warn
 from typing import Any, Dict, List
@@ -11,6 +12,8 @@ import numpy as np
 from land_use.constants import segments
 from land_use.constants.geographies import KNOWN_GEOGRAPHIES
 
+
+LOGGER = logging.getLogger(__name__)
 
 def add_total_segmentation(dvector: DVector) -> DVector:
     """Function to add a 'total' segmentation to the DVector.
@@ -205,6 +208,8 @@ def replace_segment_combination(
         ]
     )
 
+    LOGGER.info(f'Replacing {flags.sum():,.0f} entries')
+
     # Divide by *inverted* flags (i.e. divide by 0) to get infinity, and replace
     # note: zeroes divided by false = nan not inf
     inverted = data.div(~flags, axis=0).replace(np.inf, value)
@@ -214,3 +219,44 @@ def replace_segment_combination(
         return inverted.fillna(value)
     else:
         return inverted.fillna(0)
+
+
+def rebalance_zone_totals(
+        input_dvector: DVector,
+        desired_totals: Union[DVector, pd.Series, float, int]
+    ) -> None:
+    """Rebalance zone totals to some other value or values.
+
+    Occasionally we may end up with a DVector that has lost some values e.g. due
+    to proportions being applied without pre-consideration of exclusions. This
+    allows for the zone totals to effectively be "reset", retaining the original
+    distribution.
+
+    Parameters
+    ----------
+    input_dvector : DVector
+        The source object requiring rebalanced totals. The _data attribute is
+        directly modified in-place
+    desired_totals : Union[DVector, pd.Series, float, int]
+        The zone totals to match. Can be one of several forms:
+        - Another DVector, in which case the zone totals are calculated
+        - A Series, with the required ZoneSystem zones as index
+        - A constant value (e.g. 1, if proportions need to be rebalanced)
+    """
+
+    if isinstance(desired_totals, DVector):
+        # Get the total per zone within the DVector
+        desired_totals = desired_totals.data.sum(axis=0)
+    elif isinstance(desired_totals, (int, float)):
+        desired_totals = pd.Series(
+            data=desired_totals, index=input_dvector.data.columns
+        )
+
+    LOGGER.info(
+        f'Adjusting totals from {input_dvector.total:,.0f} '
+        f'to {desired_totals.sum():,.0f}'
+    )
+
+    scaling_factors = input_dvector.data.sum(axis=0) / desired_totals
+
+    input_dvector._data = input_dvector._data.div(scaling_factors, axis=1)

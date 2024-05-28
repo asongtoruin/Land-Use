@@ -183,6 +183,13 @@ LOGGER.info(f'Applying average occupancy to households')
 # TODO and households with 2+ children should be more than 3 - is this a place for IPF?
 pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * occupancy
 
+# TODO: Review this. This step will correct the zone totals to match what's in our uplifted AddressBase. Is this going to give the correct number?
+# Rebalance the zone totals
+data_processing.processing.rebalance_zone_totals(
+    input_dvector=pop_by_nssec_hc_ha_car,
+    desired_totals=addressbase_population
+)
+
 # save output to hdf and csvs for checking
 LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output D.hdf')
 data_processing.summary_reporting(
