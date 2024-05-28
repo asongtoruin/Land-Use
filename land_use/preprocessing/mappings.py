@@ -56,7 +56,7 @@ ONS_ECON_EMP_SOC_COMBO = {
 ONS_DWELLING_AGE_SEX_MAPPINGS = {
     'Age (11 categories)': [
         'age_9',
-        SegmentsSuper.get_segment( SegmentsSuper.AGE).values
+        SegmentsSuper.get_segment(SegmentsSuper.AGE).values
     ],
     'Sex (2 categories)': [
         'g', SegmentsSuper.get_segment(SegmentsSuper.GENDER).values
