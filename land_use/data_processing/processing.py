@@ -219,3 +219,44 @@ def replace_segment_combination(
         return inverted.fillna(value)
     else:
         return inverted.fillna(0)
+
+
+def rebalance_zone_totals(
+        input_dvector: DVector,
+        desired_totals: Union[DVector, pd.Series, float, int]
+    ) -> None:
+    """Rebalance zone totals to some other value or values.
+
+    Occasionally we may end up with a DVector that has lost some values e.g. due
+    to proportions being applied without pre-consideration of exclusions. This
+    allows for the zone totals to effectively be "reset", retaining the original
+    distribution.
+
+    Parameters
+    ----------
+    input_dvector : DVector
+        The source object requiring rebalanced totals. The _data attribute is
+        directly modified in-place
+    desired_totals : Union[DVector, pd.Series, float, int]
+        The zone totals to match. Can be one of several forms:
+        - Another DVector, in which case the zone totals are calculated
+        - A Series, with the required ZoneSystem zones as index
+        - A constant value (e.g. 1, if proportions need to be rebalanced)
+    """
+
+    if isinstance(desired_totals, DVector):
+        # Get the total per zone within the DVector
+        desired_totals = desired_totals.data.sum(axis=0)
+    elif isinstance(desired_totals, (int, float)):
+        desired_totals = pd.Series(
+            data=desired_totals, index=input_dvector.data.columns
+        )
+
+    LOGGER.info(
+        f'Adjusting totals from {input_dvector.total:,.0f} '
+        f'to {desired_totals.sum():,.0f}'
+    )
+
+    scaling_factors = input_dvector.data.sum(axis=0) / desired_totals
+
+    input_dvector._data = input_dvector._data.div(scaling_factors, axis=1)
