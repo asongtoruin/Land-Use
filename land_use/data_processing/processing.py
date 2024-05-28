@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from warnings import warn
 from typing import Any, Dict, List
@@ -11,6 +12,8 @@ import numpy as np
 from land_use.constants import segments
 from land_use.constants.geographies import KNOWN_GEOGRAPHIES
 
+
+LOGGER = logging.getLogger(__name__)
 
 def add_total_segmentation(dvector: DVector) -> DVector:
     """Function to add a 'total' segmentation to the DVector.
@@ -204,6 +207,8 @@ def replace_segment_combination(
             for segmentation, segments in segment_combination.items()
         ]
     )
+
+    LOGGER.info(f'Replacing {flags.sum():,.0f} entries')
 
     # Divide by *inverted* flags (i.e. divide by 0) to get infinity, and replace
     # note: zeroes divided by false = nan not inf
