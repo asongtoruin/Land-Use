@@ -107,6 +107,12 @@ LAD_ZONING_SYSTEM = generate_zoning_system(
     shapefile_path=SHAPEFILE_DIRECTORY / 'LAD (2021)' / 'LAD_2021_EW_BFC.shp',
     id_col='LAD21CD', desc_col='LAD21NM'
 )
+RGN_NAME = 'RGN2021'
+RGN_ZONING_SYSTEM = generate_zoning_system(
+    name=RGN_NAME,
+    shapefile_path=SHAPEFILE_DIRECTORY / 'REGION (2021)' / 'RGN_2021_EW_BFC.shp',
+    id_col='RGN21CD', desc_col='RGN21NM'
+)
 
 # TODO: think about a different way to implement generate_zoning_system possibly on the fly as needed?
 try:
@@ -133,12 +139,22 @@ except NameError:
         LSOA_NAME: LSOA_ZONING_SYSTEM,
         MSOA_NAME: MSOA_ZONING_SYSTEM,
         LAD_NAME: LAD_ZONING_SYSTEM,
+        RGN_NAME: RGN_ZONING_SYSTEM
     }
 # TODO This generated zone translations on I drive no matter the cache_path specified. It works, just needs changing in caf.core.
 # if __name__ == '__main__':
+#     KNOWN_GEOGRAPHIES = {
+#             LSOA_NAME: LSOA_ZONING_SYSTEM,
+#             MSOA_NAME: MSOA_ZONING_SYSTEM,
+#             LAD_NAME: LAD_ZONING_SYSTEM,
+#             RGN_NAME: RGN_ZONING_SYSTEM
+#         }
 #     from itertools import combinations
 #
-#     for zone_system_1, zone_system_2 in combinations(KNOWN_GEOGRAPHIES.values(), 2):
+#     for zone_name_1, zone_name_2 in combinations(KNOWN_GEOGRAPHIES.keys(), 2):
+#         zone_system_1 = KNOWN_GEOGRAPHIES.get(zone_name_1)
+#         zone_system_2 = KNOWN_GEOGRAPHIES.get(zone_name_2)
+#         print(f'Generating zone translation for {zone_name_1} and {zone_name_2}')
 #         zone_system_1.translate(zone_system_2, cache_path=CACHE_FOLDER, weighting='spatial')
 
 
