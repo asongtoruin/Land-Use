@@ -1,7 +1,7 @@
 from pathlib import Path
 from warnings import warn
 import logging
-from typing import Union
+from typing import Optional, Union
 
 from caf.core.data_structures import DVector
 from caf.core.segmentation import Segmentation, SegmentationInput
@@ -14,21 +14,19 @@ LOGGER = logging.getLogger(__name__)
 
 
 def read_dvector_data(
-        gor: str,
         input_root_directory: Path,
         file_path: Path, 
         geographical_level: str, 
         input_segments: list, 
+        geography_subset: Optional[str] = None,
         **params
     ) -> DVector:
     """Read DVector data from an HDF file formatted for input (i.e. "wide").
+
     File the is read in is `input_root_directory / file_path`.
 
     Parameters
     ----------
-    gor: str
-        GOR name to subset the data to. Only zones (at `geographical_level`) within
-        this GOR definition will be included in the output data.
     input_root_directory : Path
         Main path directory where *all* inputs defined in the config will pivot from. This
         encourages the storage of data in one specific location to help with maintenance and
@@ -42,6 +40,11 @@ def read_dvector_data(
     input_segments : list
         codes corresponding to the various segments contained within the data, 
         in the order they are provided.
+    geography_subset: Optional[str], optional
+        Subset to filter `geographical_level` to, if desired. Suitable 
+        ZonzingSystem files must exist for this subset, and input data will 
+        automatically be filtered to only match zones within this subset. By
+        default None, in which case no filtering is applied
 
     Returns
     -------
@@ -62,18 +65,26 @@ def read_dvector_data(
             f'Unexpected parameters passed, please check - {params.keys()}.'
         )
 
-    zoning = f'{geographical_level}_{gor}'
+    if geography_subset:
+        zoning = f'{geographical_level}_{geography_subset}'
+    else:
+        zoning = geographical_level
 
     # Read in the file, with the correct geography and segments.
     LOGGER.info(f'Reading in {Path(input_root_directory) / Path(file_path)}')
     df = pd.read_hdf(Path(input_root_directory) / Path(file_path))
     df = pd.DataFrame(df)
 
-    # filter for data only in the zone GOR we're interested in
+    # filter columns if necessary
     zones = KNOWN_GEOGRAPHIES.get(zoning).zone_ids
-    filtered_data = df.loc[:, [col for col in zones]]
-    LOGGER.warning(f'The input data at {Path(input_root_directory) / Path(file_path)} started with {len(df.columns):,.0f} columns. '
-                   f'Filtering to {gor} results in {len(filtered_data.columns):,.0f} columns.')
+    filtered_data = df[zones]
+    if len(filtered_data.columns) != len(df.columns):
+        LOGGER.warning(
+            f'The input data at {Path(input_root_directory) / Path(file_path)} '
+            f'started with {len(df.columns):,.0f} columns. Filtering to '
+            f' {geography_subset} results in {len(filtered_data.columns):,.0f} '
+            'columns.'
+        )
 
     # get flags for segments that are or are not TfN standard super segments
     segment_flags = segments.split_input_segments(input_segments)

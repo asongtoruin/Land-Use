@@ -44,17 +44,17 @@ for GOR in constants.GORS:
 
     # read in the data from the config file
     LOGGER.info('Importing data from config file')
-    occupied_households = data_processing.read_dvector_data(gor=GOR, input_root_directory=config['input_root_directory'], **config['occupied_households'])
-    unoccupied_households = data_processing.read_dvector_data(gor=GOR, input_root_directory=config['input_root_directory'], **config['unoccupied_households'])
-    ons_table_1 = data_processing.read_dvector_data(gor=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_1'])
-    addressbase_dwellings = data_processing.read_dvector_data(gor=GOR, input_root_directory=config['input_root_directory'], **config['addressbase_dwellings'])
-    ons_table_2 = data_processing.read_dvector_data(gor=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_2'])
-    mype_2022 = data_processing.read_dvector_data(gor=GOR, input_root_directory=config['input_root_directory'], **config['mype_2022'])
-    ons_table_4 = data_processing.read_dvector_data(gor=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_4'])
-    hh_age_gender_2021 = data_processing.read_dvector_data(gor=GOR, input_root_directory=config['input_root_directory'], **config['hh_age_gender_2021'])
-    ons_table_3_econ = data_processing.read_dvector_data(gor=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_3_econ'])
-    ons_table_3_emp = data_processing.read_dvector_data(gor=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_3_emp'])
-    ons_table_3_soc = data_processing.read_dvector_data(gor=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_3_soc'])
+    occupied_households = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['occupied_households'])
+    unoccupied_households = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['unoccupied_households'])
+    ons_table_1 = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_1'])
+    addressbase_dwellings = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['addressbase_dwellings'])
+    ons_table_2 = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_2'])
+    mype_2022 = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['mype_2022'])
+    ons_table_4 = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_4'])
+    hh_age_gender_2021 = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['hh_age_gender_2021'])
+    ons_table_3_econ = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_3_econ'])
+    ons_table_3_emp = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_3_emp'])
+    ons_table_3_soc = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_3_soc'])
 
     # --- Step 1 --- #
     LOGGER.info('--- Step 1 ---')
