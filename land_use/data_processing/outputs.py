@@ -147,32 +147,32 @@ def summarise_dvector(
         )
 
     # store the disaggregate and LAD based dataframes to total across all zones
-    long_dfs = [disaggregate_seg_long, lad_seg_long]
-
-    # if the zone system of the DVector is not already MSOA, then generate the MSOA dataframe in the same format
-    # to export total summaries of
-    if not dvector.zoning_system.name == geographies.MSOA_NAME:
-        # Do the last one only for MSOA, so we have something to work with.
-        msoa_seg_long = dvector_to_long(
-            dvector.translate_zoning(
-                geographies.MSOA_ZONING_SYSTEM,
-                cache_path=geographies.CACHE_FOLDER
-            ), value_name=value_name
-        )
-        long_dfs.append(msoa_seg_long)
-
-    # create total summary outputs by zone
-    for long_frame in long_dfs:
-        # get the zone system name from the dataframe itself
-        zone_system = long_frame.columns[0]
-
-        # calculate and output total summary by zone
-        total = long_frame.groupby(zone_system).agg({value_name: 'sum'})
-        LOGGER.info(fr'Writing to {write_folder}\{output_reference}_{zone_system}.csv')
-        total.to_csv(
-            write_folder / f'{output_reference}_{zone_system}.csv',
-            float_format='%.5f'
-        )
+    # long_dfs = [disaggregate_seg_long, lad_seg_long]
+    #
+    # # if the zone system of the DVector is not already MSOA, then generate the MSOA dataframe in the same format
+    # # to export total summaries of
+    # if not dvector.zoning_system.name == geographies.MSOA_NAME:
+    #     # Do the last one only for MSOA, so we have something to work with.
+    #     msoa_seg_long = dvector_to_long(
+    #         dvector.translate_zoning(
+    #             geographies.MSOA_ZONING_SYSTEM,
+    #             cache_path=geographies.CACHE_FOLDER
+    #         ), value_name=value_name
+    #     )
+    #     long_dfs.append(msoa_seg_long)
+    #
+    # # create total summary outputs by zone
+    # for long_frame in long_dfs:
+    #     # get the zone system name from the dataframe itself
+    #     zone_system = long_frame.columns[0]
+    #
+    #     # calculate and output total summary by zone
+    #     total = long_frame.groupby(zone_system).agg({value_name: 'sum'})
+    #     LOGGER.info(fr'Writing to {write_folder}\{output_reference}_{zone_system}.csv')
+    #     total.to_csv(
+    #         write_folder / f'{output_reference}_{zone_system}.csv',
+    #         float_format='%.5f'
+    #     )
 
 
 def summary_reporting(

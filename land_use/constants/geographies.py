@@ -79,6 +79,7 @@ def generate_zoning_system(
 CACHE_FOLDER = Path(r'.\CACHE')
 CACHE_FOLDER.mkdir(exist_ok=True)
 SHAPEFILE_DIRECTORY = Path(r'.\TEMP_SHAPEFILES')
+GORS = ['EM', 'EOE', 'LON', 'NE', 'NW', 'SE', 'SW', 'WALES', 'WM', 'YH']
 
 # Define the name of the model zoning to be consistent with the cache file.
 # The model zoning is the zone system the outputs of the population / employment
@@ -114,6 +115,48 @@ RGN_ZONING_SYSTEM = generate_zoning_system(
     id_col='RGN21CD', desc_col='RGN21NM'
 )
 
+# Define zone systems by GOR to chunk the processing by GOR to save memory issues
+LSOAS_BY_GOR = dict()
+MSOAS_BY_GOR = dict()
+LADS_BY_GOR = dict()
+RGNS_BY_GOR = dict()
+for gor in GORS:
+    # LSOA CORRESPONDENCES
+    lsoa_zone_name = f'LSOA2021_{gor}'
+    lsoa_zone_system = generate_zoning_system(
+        name=lsoa_zone_name,
+        shapefile_path=SHAPEFILE_DIRECTORY / 'LSOA by GOR (2021)' / f'LSOA_2021_EW_BFC_V8_{gor}.shp',
+        id_col='LSOA21CD', desc_col='LSOA21NM'
+    )
+    LSOAS_BY_GOR[lsoa_zone_name] = lsoa_zone_system
+
+    # MSOA CORRESPONDENCES
+    msoa_zone_name = f'MSOA2021_{gor}'
+    msoa_zone_system = generate_zoning_system(
+        name=msoa_zone_name,
+        shapefile_path=SHAPEFILE_DIRECTORY / 'MSOA by GOR (2021)' / f'MSOA_2021_EW_BFC_V6_{gor}.shp',
+        id_col='MSOA21CD', desc_col='MSOA21NM'
+    )
+    MSOAS_BY_GOR[msoa_zone_name] = msoa_zone_system
+
+    # LAD CORRESPONDENCES
+    lad_zone_name = f'LAD2021_{gor}'
+    lad_zone_system = generate_zoning_system(
+        name=lad_zone_name,
+        shapefile_path=SHAPEFILE_DIRECTORY / 'LAD by GOR (2021)' / f'LAD_2021_EW_BFC_{gor}.shp',
+        id_col='LAD21CD', desc_col='LAD21NM'
+    )
+    LADS_BY_GOR[lad_zone_name] = lad_zone_system
+
+    # REGION CORRESPONDENCES
+    rgn_zone_name = f'RGN2021_{gor}'
+    rgn_zone_system = generate_zoning_system(
+        name=rgn_zone_name,
+        shapefile_path=SHAPEFILE_DIRECTORY / 'REGION by GOR (2021)' / f'RGN_2021_EW_BFC_{gor}.shp',
+        id_col='RGN21CD', desc_col='RGN21NM'
+    )
+    RGNS_BY_GOR[rgn_zone_name] = rgn_zone_system
+
 # TODO: think about a different way to implement generate_zoning_system possibly on the fly as needed?
 try:
     LSOA_2011_NAME = 'LSOA2011'
@@ -141,13 +184,20 @@ except NameError:
         LAD_NAME: LAD_ZONING_SYSTEM,
         RGN_NAME: RGN_ZONING_SYSTEM
     }
-# TODO This generated zone translations on I drive no matter the cache_path specified. It works, just needs changing in caf.core.
+    KNOWN_GEOGRAPHIES = {
+        **KNOWN_GEOGRAPHIES,
+        **LSOAS_BY_GOR,
+        **MSOAS_BY_GOR,
+        **LADS_BY_GOR,
+        **RGNS_BY_GOR
+    }
+
 # if __name__ == '__main__':
 #     KNOWN_GEOGRAPHIES = {
-#             LSOA_NAME: LSOA_ZONING_SYSTEM,
-#             MSOA_NAME: MSOA_ZONING_SYSTEM,
-#             LAD_NAME: LAD_ZONING_SYSTEM,
-#             RGN_NAME: RGN_ZONING_SYSTEM
+#         **LSOAS_BY_GOR,
+#         **MSOAS_BY_GOR,
+#         **LADS_BY_GOR,
+#         **RGNS_BY_GOR
 #         }
 #     from itertools import combinations
 #

@@ -14,6 +14,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def read_dvector_data(
+        gor: str,
         input_root_directory: Path,
         file_path: Path, 
         geographical_level: str, 
@@ -25,6 +26,9 @@ def read_dvector_data(
 
     Parameters
     ----------
+    gor: str
+        GOR name to subset the data to. Only zones (at `geographical_level`) within
+        this GOR definition will be included in the output data.
     input_root_directory : Path
         Main path directory where *all* inputs defined in the config will pivot from. This
         encourages the storage of data in one specific location to help with maintenance and
@@ -58,12 +62,18 @@ def read_dvector_data(
             f'Unexpected parameters passed, please check - {params.keys()}.'
         )
 
-    zoning = geographical_level
+    zoning = f'{geographical_level}_{gor}'
 
     # Read in the file, with the correct geography and segments.
     LOGGER.info(f'Reading in {Path(input_root_directory) / Path(file_path)}')
     df = pd.read_hdf(Path(input_root_directory) / Path(file_path))
     df = pd.DataFrame(df)
+
+    # filter for data only in the zone GOR we're interested in
+    zones = KNOWN_GEOGRAPHIES.get(zoning).zone_ids
+    filtered_data = df.loc[:, [col for col in zones]]
+    LOGGER.warning(f'The input data at {Path(input_root_directory) / Path(file_path)} started with {len(df.columns):,.0f} columns. '
+                   f'Filtering to {gor} results in {len(filtered_data.columns):,.0f} columns.')
 
     # get flags for segments that are or are not TfN standard super segments
     segment_flags = segments.split_input_segments(input_segments)
@@ -102,7 +112,7 @@ def read_dvector_data(
     return DVector(
         segmentation=resulting_segmentation, 
         zoning_system=KNOWN_GEOGRAPHIES.get(zoning),
-        import_data=df
+        import_data=filtered_data
     )
 
 
