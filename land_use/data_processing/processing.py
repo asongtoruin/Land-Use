@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 from warnings import warn
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 from functools import reduce
 
 from caf.core.data_structures import DVector
