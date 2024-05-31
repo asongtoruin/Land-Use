@@ -366,15 +366,11 @@ for GOR in constants.GORS:
             value_name='population'
         )
 
-    del econ_splits
-    del emp_splits
-    del soc_splits
-    del econ_splits_lsoa
-    del emp_splits_lsoa
-    del soc_splits_lsoa
-    del econ_splits_lsoa_age
-    del emp_splits_lsoa_age
-    del soc_splits_lsoa_age
-    del pop_by_nssec_hc_ha_car_gender_age_econ
-    del pop_by_nssec_hc_ha_car_gender_age_econ_emp
-    del pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc
+    data_processing.processing.clear_dvectors(
+        econ_splits, emp_splits, soc_splits,
+        econ_splits_lsoa, emp_splits_lsoa, soc_splits_lsoa,
+        econ_splits_lsoa_age, emp_splits_lsoa_age, soc_splits_lsoa_age,
+        pop_by_nssec_hc_ha_car_gender_age_econ,
+        pop_by_nssec_hc_ha_car_gender_age_econ_emp,
+        pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
+    )

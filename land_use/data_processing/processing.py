@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+import psutil
 from warnings import warn
 from typing import Any, Dict, List, Union
 from functools import reduce
@@ -260,3 +261,18 @@ def rebalance_zone_totals(
     scaling_factors = input_dvector.data.sum(axis=0) / desired_totals
 
     input_dvector._data = input_dvector._data.div(scaling_factors, axis=1)
+
+
+def _report_memory() -> str:
+    current_memuse = psutil.virtual_memory()
+    return (
+        f'{psutil._common.bytes2human(current_memuse.used)}'
+        f'/{psutil._common.bytes2human(current_memuse.total)}'
+    )
+
+
+def clear_dvectors(*dvectors: List[DVector]) -> None:
+    logging.info(f'About to clear dataframes, current usage: {_report_memory()}')
+    for dvec in dvectors:
+        dvec._data = None
+    logging.info(f'Finished clearing dataframes, current usage: {_report_memory()}')
