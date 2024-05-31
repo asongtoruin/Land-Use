@@ -78,8 +78,7 @@ for GOR in constants.GORS:
     LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output A.hdf')
     data_processing.summary_reporting(
         dvector=hh_by_nssec,
-        dimension='households',
-        detailed_logs=True
+        dimension='households'
     )
     hh_by_nssec.save(OUTPUT_DIR / f'Output A_{GOR}.hdf')
     if generate_summary_outputs:
@@ -128,8 +127,7 @@ for GOR in constants.GORS:
     LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output B.hdf')
     data_processing.summary_reporting(
         dvector=hh_by_nssec_hc_ha_car,
-        dimension='households',
-        detailed_logs=True
+        dimension='households'
     )
     hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / f'Output B_{GOR}.hdf')
     if generate_summary_outputs:
@@ -165,8 +163,7 @@ for GOR in constants.GORS:
     LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output C.hdf')
     data_processing.summary_reporting(
         dvector=addressbase_population,
-        dimension='population',
-        detailed_logs=True
+        dimension='population'
     )
     addressbase_population.save(OUTPUT_DIR / f'Output C_{GOR}.hdf')
     if generate_summary_outputs:
@@ -197,8 +194,7 @@ for GOR in constants.GORS:
     LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output D.hdf')
     data_processing.summary_reporting(
         dvector=pop_by_nssec_hc_ha_car,
-        dimension='population',
-        detailed_logs=True
+        dimension='population'
     )
     pop_by_nssec_hc_ha_car.save(OUTPUT_DIR / f'Output D_{GOR}.hdf')
     if generate_summary_outputs:
@@ -234,8 +230,7 @@ for GOR in constants.GORS:
     LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output E.hdf')
     data_processing.summary_reporting(
         dvector=pop_by_nssec_hc_ha_car_gender_age,
-        dimension='population',
-        detailed_logs=True
+        dimension='population'
     )
     pop_by_nssec_hc_ha_car_gender_age.save(OUTPUT_DIR / f'Output E_{GOR}.hdf')
     if generate_summary_outputs:
@@ -360,8 +355,7 @@ for GOR in constants.GORS:
     LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output F.hdf')
     data_processing.summary_reporting(
         dvector=pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
-        dimension='population',
-        detailed_logs=True
+        dimension='population'
     )
     pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc.save(OUTPUT_DIR / f'Output F_{GOR}.hdf')
     if generate_summary_outputs:
@@ -372,3 +366,15 @@ for GOR in constants.GORS:
             value_name='population'
         )
 
+    del econ_splits
+    del emp_splits
+    del soc_splits
+    del econ_splits_lsoa
+    del emp_splits_lsoa
+    del soc_splits_lsoa
+    del econ_splits_lsoa_age
+    del emp_splits_lsoa_age
+    del soc_splits_lsoa_age
+    del pop_by_nssec_hc_ha_car_gender_age_econ
+    del pop_by_nssec_hc_ha_car_gender_age_econ_emp
+    del pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc
