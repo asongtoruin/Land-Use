@@ -214,7 +214,6 @@ def summary_reporting(
             summary[segmentation] = summary[segmentation].map('{:,.0f}'.format)
             summary[f'{segmentation}_proportion'] = (summary[f'{segmentation}_proportion'] * 100).map('{:.0f}%'.format)
 
-
             # loop through rows of the condensed dataframe
             # note this is only as many iterations as there are segment definitions (e.g. gender has 2) so hopefully not too bad??
             for index, row in summary.iterrows():
