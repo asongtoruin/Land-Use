@@ -370,6 +370,15 @@ for GOR in constants.GORS:
             value_name='population'
         )
 
+    # clear data at the end of the loop
+    data_processing.processing.clear_dvectors(
+        econ_splits, emp_splits, soc_splits,
+        econ_splits_lsoa, emp_splits_lsoa, soc_splits_lsoa,
+        econ_splits_lsoa_age, emp_splits_lsoa_age, soc_splits_lsoa_age,
+        pop_by_nssec_hc_ha_car_gender_age_econ,
+        pop_by_nssec_hc_ha_car_gender_age_econ_emp
+    )
+
     # --- Step 7 --- #
     LOGGER.info('--- Step 7 ---')
     LOGGER.info(f'Calculating adjustments for communal establishment residents')
@@ -485,11 +494,6 @@ for GOR in constants.GORS:
 
     # clear data at the end of the loop
     data_processing.processing.clear_dvectors(
-        econ_splits, emp_splits, soc_splits,
-        econ_splits_lsoa, emp_splits_lsoa, soc_splits_lsoa,
-        econ_splits_lsoa_age, emp_splits_lsoa_age, soc_splits_lsoa_age,
-        pop_by_nssec_hc_ha_car_gender_age_econ,
-        pop_by_nssec_hc_ha_car_gender_age_econ_emp,
         pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
         ce_uplift_factor,
         ce_uplift, ce_pop_by_type_total, ce_type_splits,
