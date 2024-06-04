@@ -55,6 +55,10 @@ for GOR in constants.GORS:
     ons_table_3_econ = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_3_econ'])
     ons_table_3_emp = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_3_emp'])
     ons_table_3_soc = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_3_soc'])
+    ce_uplift_factor = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ce_uplift_factor'])
+    ce_pop_by_type = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ce_pop_by_type'])
+    ce_pop_by_age_gender_soc = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ce_pop_by_age_gender_soc'])
+    ce_pop_by_age_gender_econ = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ce_pop_by_age_gender_econ'])
 
     # --- Step 1 --- #
     LOGGER.info('--- Step 1 ---')
@@ -362,10 +366,124 @@ for GOR in constants.GORS:
         data_processing.summarise_dvector(
             dvector=pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
             output_directory=OUTPUT_DIR,
-            output_reference=f'OutputE_{GOR}',
+            output_reference=f'OutputF_{GOR}',
             value_name='population'
         )
 
+    # --- Step 7 --- #
+    LOGGER.info('--- Step 7 ---')
+    LOGGER.info(f'Calculating adjustments for communal establishment residents')
+
+    # calculate proportional increase by LSOA due to communal establishments
+    # define a matrix of 1s, ce_uplift_factor - 1 doesnt work
+    # TODO change dunder method to allow simple numeric operations?
+    ones = ce_uplift_factor.copy()
+    for col in ones.data.columns:
+        ones.data[col] = 1
+    ce_uplift = ce_uplift_factor - ones
+
+    LOGGER.info(f'Calculating splits of CE type by MSOA')
+    # calculate msoa-based splits of CE types
+    ce_pop_by_type_total = ce_pop_by_type.add_segment(
+        constants.CUSTOM_SEGMENTS.get('total')
+    )
+    ce_type_splits = ce_pop_by_type_total / ce_pop_by_type_total.aggregate(segs=['total'])
+    # fill in nan values with 0 (this is where there are no CEs in a given MSOA)
+    ce_type_splits.data = ce_type_splits.data.fillna(0)
+
+    # translate the MSOA based CE-type splits to LSOA
+    ce_type_splits_lsoa = ce_type_splits.translate_zoning(
+        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021_{GOR}'),
+        cache_path=constants.CACHE_FOLDER,
+        weighting=TranslationWeighting.NO_WEIGHT,
+        check_totals=False
+    )
+
+    LOGGER.info(f'Calculating splits of CE population by age, gender, and economic status')
+    # calculate GOR-based splits of person types
+    ce_pop_by_age_gender_econ_total = ce_pop_by_age_gender_econ.add_segment(
+        constants.CUSTOM_SEGMENTS.get('total')
+    )
+    ce_econ_splits = ce_pop_by_age_gender_econ_total / ce_pop_by_age_gender_econ_total.aggregate(segs=['total'])
+    # fill in nan values with 0 (this is where there are no CEs in a given REGION)
+    ce_econ_splits.data = ce_econ_splits.data.fillna(0)
+
+    # translate the GOR based splits to LSOA
+    ce_econ_splits_lsoa = ce_econ_splits.translate_zoning(
+        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021_{GOR}'),
+        cache_path=constants.CACHE_FOLDER,
+        weighting=TranslationWeighting.NO_WEIGHT,
+        check_totals=False
+    )
+
+    LOGGER.info(f'Calculating splits of CE population by age, gender, and SOC')
+    # calculate GOR-based splits of person types
+    ce_pop_by_age_gender_soc_total = ce_pop_by_age_gender_soc.add_segment(
+        constants.CUSTOM_SEGMENTS.get('total')
+    )
+    ce_soc_splits = ce_pop_by_age_gender_soc_total / ce_pop_by_age_gender_soc_total.aggregate(segs=['total'])
+    # fill in nan values with 0 (this is where there are no CEs in a given REGION)
+    ce_soc_splits.data = ce_soc_splits.data.fillna(0)
+
+    # translate the GOR based splits to LSOA
+    ce_soc_splits_lsoa = ce_soc_splits.translate_zoning(
+        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021_{GOR}'),
+        cache_path=constants.CACHE_FOLDER,
+        weighting=TranslationWeighting.NO_WEIGHT,
+        check_totals=False
+    )
+
+    LOGGER.info('Generating CE adjustment dataset at LSOA')
+    # split the uplift factor to be by age, gender, soc, econ, and ce type
+    LOGGER.info('Applying CE type splits to zonal uplift')
+    ce_uplift_by_ce = ce_uplift * ce_type_splits_lsoa
+    LOGGER.info('Applying CE type splits to zonal uplift')
+    ce_uplift_by_ce_age_gender_econ = ce_uplift_by_ce * ce_econ_splits_lsoa
+    LOGGER.info('Applying CE type splits to zonal uplift')
+    ce_uplift_by_ce_age_gender_econ_soc = ce_uplift_by_ce_age_gender_econ * ce_soc_splits_lsoa
+
+    # drop the 'total' segmentation
+    ce_uplift_by_ce_age_gender_econ_soc = ce_uplift_by_ce_age_gender_econ_soc.aggregate(
+        segs=['ce', 'age_9', 'g', 'pop_econ', 'pop_soc']
+    )
+
+    # define a matrix of 1s, ce_uplift_by_ce_age_gender_econ_soc + 1 doesnt work
+    # TODO change dunder method to allow simple numeric operations?
+    ones = ce_uplift_by_ce_age_gender_econ_soc.copy()
+    for col in ones.data.columns:
+        ones.data[col] = 1
+
+    LOGGER.info('Calculating zonal adjustment factors by CE type, age, gender, economic status, and SOC')
+    # calculate adjustment factors by ce type, age, gender, economic status, and SOC
+    ce_uplift_factor_by_ce_age_gender_econ_soc = ce_uplift_by_ce_age_gender_econ_soc + ones
+    # TODO some level of output is needed here? Confirm with Matteo
+
+    # drop communal establishment type to apply back to main population
+    ce_uplift_factor = ce_uplift_factor_by_ce_age_gender_econ_soc.aggregate(
+        segs=['age_9', 'g', 'pop_econ', 'pop_soc']
+    )
+
+    LOGGER.info('Uplifting population to account for CEs')
+    # calculate population in CEs by ce type, age, gender, econ status, and soc
+    adjusted_pop = ce_uplift_factor * pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc
+
+    # save output to hdf and csvs for checking
+    # TODO Output G hdf is big!
+    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output G.hdf')
+    data_processing.summary_reporting(
+        dvector=adjusted_pop,
+        dimension='population'
+    )
+    adjusted_pop.save(OUTPUT_DIR / f'Output G_{GOR}.hdf')
+    if generate_summary_outputs:
+        data_processing.summarise_dvector(
+            dvector=adjusted_pop,
+            output_directory=OUTPUT_DIR,
+            output_reference=f'OutputG_{GOR}',
+            value_name='population'
+        )
+
+    # clear data at the end of the loop
     data_processing.processing.clear_dvectors(
         econ_splits, emp_splits, soc_splits,
         econ_splits_lsoa, emp_splits_lsoa, soc_splits_lsoa,
@@ -373,4 +491,12 @@ for GOR in constants.GORS:
         pop_by_nssec_hc_ha_car_gender_age_econ,
         pop_by_nssec_hc_ha_car_gender_age_econ_emp,
         pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
+        ce_uplift_factor,
+        ce_uplift, ce_pop_by_type_total, ce_type_splits,
+        ce_type_splits_lsoa, ce_pop_by_age_gender_econ_total,
+        ce_econ_splits, ce_econ_splits_lsoa,
+        ce_pop_by_age_gender_soc_total, ce_soc_splits,
+        ce_soc_splits_lsoa, ce_uplift_by_ce, ce_uplift_by_ce_age_gender_econ,
+        ce_uplift_by_ce_age_gender_econ_soc, ones,
+        ce_uplift_factor_by_ce_age_gender_econ_soc, adjusted_pop
     )
