@@ -446,9 +446,9 @@ for GOR in constants.GORS:
     # split the uplift factor to be by age, gender, soc, econ, and ce type
     LOGGER.info('Applying CE type splits to zonal uplift')
     ce_uplift_by_ce = ce_uplift * ce_type_splits_lsoa
-    LOGGER.info('Applying CE type splits to zonal uplift')
+    LOGGER.info('Applying economic status splits to zonal uplift')
     ce_uplift_by_ce_age_gender_econ = ce_uplift_by_ce * ce_econ_splits_lsoa
-    LOGGER.info('Applying CE type splits to zonal uplift')
+    LOGGER.info('Applying SOC category splits to zonal uplift')
     ce_uplift_by_ce_age_gender_econ_soc = ce_uplift_by_ce_age_gender_econ * ce_soc_splits_lsoa
 
     # drop the 'total' segmentation
