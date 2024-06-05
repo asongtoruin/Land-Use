@@ -82,7 +82,7 @@ def read_dvector_data(
         LOGGER.warning(
             f'The input data at {Path(input_root_directory) / Path(file_path)} '
             f'started with {len(df.columns):,.0f} columns. Filtering to '
-            f' {geography_subset} results in {len(filtered_data.columns):,.0f} '
+            f'{geography_subset} results in {len(filtered_data.columns):,.0f} '
             'columns.'
         )
 
