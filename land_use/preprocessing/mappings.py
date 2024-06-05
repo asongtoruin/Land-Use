@@ -128,7 +128,7 @@ ONS_OCC_AGE_SEX_MAPPINGS = {
         'g', SegmentsSuper.get_segment(SegmentsSuper.GENDER).values
     ],
     'Occupation (current) (10 categories)': [
-        'pop_soc',
+        'soc',
         SegmentsSuper.get_segment(SegmentsSuper.SOC).values
     ]
 }
