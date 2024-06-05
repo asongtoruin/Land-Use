@@ -79,7 +79,7 @@ for GOR in constants.GORS:
     # check against original addressbase data
     # check = hh_by_nssec.aggregate(segs=['accom_h'])
 
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output A.hdf')
+    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output A_{GOR}.hdf')
     data_processing.summary_reporting(
         dvector=hh_by_nssec,
         dimension='households'
@@ -128,7 +128,7 @@ for GOR in constants.GORS:
     # check = hh_by_nssec_hc_ha_car.aggregate(segs=['accom_h'])
 
     # save output to hdf and csvs for checking
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output B.hdf')
+    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output B_{GOR}.hdf')
     data_processing.summary_reporting(
         dvector=hh_by_nssec_hc_ha_car,
         dimension='households'
@@ -164,7 +164,7 @@ for GOR in constants.GORS:
     addressbase_population = occupancy * addressbase_dwellings
 
     # save output to hdf and csvs for checking
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output C.hdf')
+    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output C_{GOR}.hdf')
     data_processing.summary_reporting(
         dvector=addressbase_population,
         dimension='population'
@@ -195,7 +195,7 @@ for GOR in constants.GORS:
     )
 
     # save output to hdf and csvs for checking
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output D.hdf')
+    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output D_{GOR}.hdf')
     data_processing.summary_reporting(
         dvector=pop_by_nssec_hc_ha_car,
         dimension='population'
@@ -231,7 +231,7 @@ for GOR in constants.GORS:
     pop_by_nssec_hc_ha_car_gender_age = pop_by_nssec_hc_ha_car * gender_age_splits_lsoa
 
     # save output to hdf and csvs for checking
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output E.hdf')
+    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output E_{GOR}.hdf')
     data_processing.summary_reporting(
         dvector=pop_by_nssec_hc_ha_car_gender_age,
         dimension='population'
@@ -356,7 +356,7 @@ for GOR in constants.GORS:
 
     # save output to hdf and csvs for checking
     # TODO Output F hdf is big!
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output F.hdf')
+    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output F_{GOR}.hdf')
     data_processing.summary_reporting(
         dvector=pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
         dimension='population'
@@ -501,7 +501,7 @@ for GOR in constants.GORS:
 
     # save output to hdf and csvs for checking
     # TODO Output G hdf is big!
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output G.hdf')
+    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output G_{GOR}.hdf')
     data_processing.summary_reporting(
         dvector=adjusted_pop,
         dimension='population'
