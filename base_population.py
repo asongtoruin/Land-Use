@@ -453,7 +453,7 @@ for GOR in constants.GORS:
 
     # drop the 'total' segmentation
     ce_uplift_by_ce_age_gender_econ_soc = ce_uplift_by_ce_age_gender_econ_soc.aggregate(
-        segs=['ce', 'age_9', 'g', 'pop_econ', 'pop_soc']
+        segs=['ce', 'age_9', 'g', 'pop_econ', 'soc']
     )
 
     # define a matrix of 1s, ce_uplift_by_ce_age_gender_econ_soc + 1 doesnt work
@@ -468,9 +468,32 @@ for GOR in constants.GORS:
     # TODO some level of output is needed here? Confirm with Matteo
 
     # drop communal establishment type to apply back to main population
-    ce_uplift_factor = ce_uplift_factor_by_ce_age_gender_econ_soc.aggregate(
-        segs=['age_9', 'g', 'pop_econ', 'pop_soc']
+    ce_uplift_factor = ce_uplift_by_ce_age_gender_econ_soc.aggregate(
+        segs=['age_9', 'g', 'pop_econ', 'soc']
     )
+    ones = ce_uplift_factor.copy()
+    for col in ones.data.columns:
+        ones.data[col] = 1
+    ce_uplift_factor = ce_uplift_factor + ones
+
+    LOGGER.info('Expanding CE segmentation to be the same as the population')
+    # expand the uplift factors to be the same segmentation as the population data
+    for seg in pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc.segmentation.names:
+        LOGGER.info(f'Adding {seg} segmentation')
+        if seg in ce_uplift_factor.segmentation.names:
+            LOGGER.info(f'Skipping {seg} - this is already in the CE segmentation')
+            continue
+        try:
+            ce_uplift_factor = ce_uplift_factor.add_segment(
+                SegmentsSuper(seg).get_segment()
+            )
+        except ValueError:
+            LOGGER.warning(f'{seg} is not defined in SegmentsSuper so the segment '
+                           f'is assumed to have come from the custom segments. '
+                           f'Please check this is what you expect.')
+            ce_uplift_factor = ce_uplift_factor.add_segment(
+                constants.CUSTOM_SEGMENTS.get(seg)
+            )
 
     LOGGER.info('Uplifting population to account for CEs')
     # calculate population in CEs by ce type, age, gender, econ status, and soc
