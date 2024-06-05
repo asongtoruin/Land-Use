@@ -476,25 +476,6 @@ for GOR in constants.GORS:
         ones.data[col] = 1
     ce_uplift_factor = ce_uplift_factor + ones
 
-    LOGGER.info('Expanding CE segmentation to be the same as the population')
-    # expand the uplift factors to be the same segmentation as the population data
-    for seg in pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc.segmentation.names:
-        LOGGER.info(f'Adding {seg} segmentation')
-        if seg in ce_uplift_factor.segmentation.names:
-            LOGGER.info(f'Skipping {seg} - this is already in the CE segmentation')
-            continue
-        try:
-            ce_uplift_factor = ce_uplift_factor.add_segment(
-                SegmentsSuper(seg).get_segment()
-            )
-        except ValueError:
-            LOGGER.warning(f'{seg} is not defined in SegmentsSuper so the segment '
-                           f'is assumed to have come from the custom segments. '
-                           f'Please check this is what you expect.')
-            ce_uplift_factor = ce_uplift_factor.add_segment(
-                constants.CUSTOM_SEGMENTS.get(seg)
-            )
-
     LOGGER.info('Uplifting population to account for CEs')
     # calculate population in CEs by ce type, age, gender, econ status, and soc
     adjusted_pop = ce_uplift_factor * pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc
