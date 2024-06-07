@@ -1,8 +1,12 @@
 Base Model Structure
-====================
+####################
+
+Introduction
+============
+This page can be used as a reference for the general flow of data within each of the base models.
 
 Population
-----------
+==========
 
 **Work in progress**
 
@@ -58,6 +62,6 @@ Population
 
 
 Employment
-----------
+==========
 
 *To be added*

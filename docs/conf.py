@@ -18,6 +18,8 @@
 # -- Project information -----------------------------------------------------
 import land_use
 
+project = "TfN Land-Use"
+
 # Napoleon settings
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
