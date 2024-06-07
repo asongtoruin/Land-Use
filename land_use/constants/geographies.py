@@ -159,10 +159,10 @@ for gor in GORS:
 
 # TODO: think about a different way to implement generate_zoning_system possibly on the fly as needed?
 try:
-    LSOA_2011_NAME = 'LSOA2011'
-    LSOA_2011_ZONING_SYSTEM = generate_zoning_system(
-        name=LSOA_2011_NAME, 
-        shapefile_path=SHAPEFILE_DIRECTORY / 'LSOA (2011)' / 'infuse_lsoa_lyr_2011.shp',
+    LSOA_EW_2011_NAME = 'LSOA2011'
+    LSOA_EW_2011_ZONING_SYSTEM = generate_zoning_system(
+        name=LSOA_EW_2011_NAME, 
+        shapefile_path=SHAPEFILE_DIRECTORY / 'LSOA (2011)' / 'infuse_lsoa_lyr_2011_ew.shp',
         id_col='geo_code', desc_col='name'
     )
 except FileNotFoundError:
@@ -175,7 +175,7 @@ try:
         LSOA_NAME: LSOA_ZONING_SYSTEM,
         MSOA_NAME: MSOA_ZONING_SYSTEM,
         LAD_NAME: LAD_ZONING_SYSTEM,
-        LSOA_2011_NAME: LSOA_2011_ZONING_SYSTEM,
+        LSOA_EW_2011_NAME: LSOA_EW_2011_ZONING_SYSTEM,
     }
 except NameError:
     KNOWN_GEOGRAPHIES = {

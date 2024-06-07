@@ -25,7 +25,7 @@ def main():
 def convert_bres_2022_lsoa_employment():
 
     file_path = INPUT_DIR / "BRES2022" / "264980261866694.csv"
-    zoning = geographies.LSOA_2011_NAME
+    zoning = geographies.LSOA_EW_2011_NAME
     segmentation = segments._CUSTOM_SEGMENT_CATEGORIES["big"]
 
     print(file_path)
