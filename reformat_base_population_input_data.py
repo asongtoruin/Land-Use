@@ -195,6 +195,8 @@ df = pp.read_ons(
         'Economic activity status (7 categories)': pp.ECON_6_TO_4_AGGREGATIONS
     }
 )
+# rename wales column for region level data
+df['WALES'] = df.pop('W92000004')
 
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
@@ -215,6 +217,8 @@ df = pp.read_ons(
         'Occupation (current) (10 categories)': pp.SOC_10_TO_4_AGGREGATIONS
     }
 )
+# rename wales column for region level data
+df['WALES'] = df.pop('W92000004')
 
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
