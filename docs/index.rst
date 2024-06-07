@@ -265,5 +265,7 @@ Contents
 .. toctree::
    :maxdepth: 2
    
+   quick_start
+   population
    reference
    base_model_structure
