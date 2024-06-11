@@ -1,7 +1,4 @@
-import logging
 from pathlib import Path
-
-import pandas as pd
 
 import land_use.preprocessing as pp
 from land_use.constants import geographies, segments
