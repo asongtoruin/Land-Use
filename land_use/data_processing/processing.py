@@ -361,7 +361,7 @@ def expand_segmentation_to_match(
     return working
 
 def collapse_segmentation_to_match(
-        dvector: DVector, match_to: DVector
+        dvector: DVector, match_to: DVector, strict: bool = False
     ) -> DVector:
     """Utility function for collapsing one DVector's segmentation to match another's.
 
@@ -373,6 +373,10 @@ def collapse_segmentation_to_match(
         the DVector to be collapsed
     match_to : DVector
         the DVector to take the desired segmentation from
+    strict : bool
+        if True, ensure match_to's segmentation is a strict subset of dvector's.
+        If False, use the intersection of the segmentation of the two DVectors.
+        By default, False.
 
     Returns
     -------
@@ -382,12 +386,22 @@ def collapse_segmentation_to_match(
     Raises
     ------
     ValueError
-        if match_to's segmentation is not a strict subset of dvector's 
-        segmentation
+        when strict is True - if match_to's segmentation is not a strict subset 
+        of dvector's segmentation.
+        When strict is False - if there is no overlap between the two 
+        segmentations
     """
     
     source_segmentation = set(dvector.segmentation.names)
-    desired_segmentation = set(match_to.segmentation.names)
+    # Set desired segmentation based on strict or not
+    if strict:
+        desired_segmentation = set(match_to.segmentation.names)
+    else:
+        desired_segmentation = source_segmentation.intersection(
+            set(match_to.segmentation.names)
+        )
+        if len(desired_segmentation) == 0:
+            raise ValueError('No common segmentation found')
 
     # Can't match if source is not fully contained within desired
     if not source_segmentation > desired_segmentation:
@@ -502,6 +516,7 @@ def find_largest_zoning_system(
 def aggregate_and_compare(
         first_dvector: DVector, 
         second_dvector: DVector, 
+        strict: bool = False,
         cache_path: Path = CACHE_FOLDER
     ) -> DVector:
     """Aggregates and compares two DVector files
@@ -518,6 +533,10 @@ def aggregate_and_compare(
         second DVector to aggregate
     cache_path : Path, optional
         path to the zoning translation cache, by default CACHE_FOLDER
+    strict : bool
+        if True, the segmentation of one DVector is entirely contained within 
+        the segmentation of the other. If False, use the intersection of the 
+        segmentation of the two DVectors. By default, False.
 
     Returns
     -------
@@ -531,6 +550,10 @@ def aggregate_and_compare(
         if the segmentations are not compatible
     """
 
+    incompatibility_message = (
+        'Provided with two DVectors with non-matching segmentation'
+    )
+    
     common_zs = find_largest_zoning_system(
         first_dvector.zoning_system, second_dvector.zoning_system,
         cache_path=cache_path
@@ -548,17 +571,27 @@ def aggregate_and_compare(
     # Step 3: aggregate segmentation
     try:
         working_first_dvector = collapse_segmentation_to_match(
-            dvector=working_first_dvector, match_to=working_second_dvector
+            dvector=working_first_dvector, match_to=working_second_dvector,
+            strict=strict
         )
-    except ValueError:
-        try:
+
+        if not strict:
             working_second_dvector = collapse_segmentation_to_match(
-                dvector=working_second_dvector, match_to=working_first_dvector
+                dvector=working_second_dvector, match_to=working_first_dvector,
+                strict=strict
             )
-        except ValueError:
-            raise ValueError(
-                'Provided with two DVectors with non-matching segmentation'
-            )
+        
+    except ValueError:
+        if strict:
+            try:
+                working_second_dvector = collapse_segmentation_to_match(
+                    dvector=working_second_dvector, match_to=working_first_dvector,
+                    strict=strict
+                )
+            except ValueError:
+                raise ValueError(incompatibility_message)
+        else:
+            raise ValueError(incompatibility_message)
     
     # Step 4: do the difference calc
     return working_first_dvector - working_second_dvector
