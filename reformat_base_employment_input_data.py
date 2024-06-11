@@ -1,11 +1,11 @@
 import logging
 from pathlib import Path
 
-
 import pandas as pd
 
 import land_use.preprocessing as pp
 from land_use.constants import geographies, segments
+
 
 # TODO consider sending this to a global config/settings file as shared with reformat population script
 INPUT_DIR = Path(r"I:\NorMITs Land Use\2023\import")
@@ -19,7 +19,105 @@ INPUT_DIR = Path(r"I:\NorMITs Land Use\2023\import")
 
 
 def main():
+    convert_bres_2021_employees_2_digit_sic()
+    convert_bres_2021_employment_2_digit_sic()
     convert_bres_2022_lsoa_employment()
+
+
+def convert_bres_2021_employees_2_digit_sic():
+    zoning = geographies.LSOA_EW_2011_NAME
+
+    file_path = (
+        INPUT_DIR / "BRES2021" / "Employees" / "bres_employees21_msoa11_2digit.csv"
+    )
+
+    df = pd.read_csv(file_path, skiprows=8)
+
+    df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
+    df = df.drop(columns=["2011 super output area - middle layer"])
+
+    df = df.rename(columns={"mnemonic": zoning})
+    df = df.dropna(subset=[zoning])
+
+    # keep only england and wales
+    df[zoning] = extract_geography_code_in_countries(df[zoning], scotland=False)
+    df = df.dropna(subset=[zoning])
+
+    df_wide = reformat_for_sic_2_digit_output(
+        df=df, id_vars=[zoning], var_name="sic_2_digit_description"
+    )
+
+    pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
+
+
+def convert_bres_2021_employment_2_digit_sic():
+    zoning = geographies.LSOA_EW_2011_NAME
+
+    file_path = (
+        INPUT_DIR
+        / "BRES2021"
+        / "Employment"
+        / "bres_employment21_lsoa11_2digit_sic.csv"
+    )
+
+    df = pd.read_csv(file_path, skiprows=8, low_memory=False)
+    df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
+
+    mixed_input_col = (
+        "01 : Crop and animal production, hunting and related service activities"
+    )
+    df[mixed_input_col] = pd.to_numeric(df[mixed_input_col], errors="coerce")
+    df = df.dropna(axis=0, subset=[mixed_input_col])
+
+    # filter rows to just lsoas in england and wales
+    df[zoning] = extract_geography_code_in_countries(df["Area"], scotland=False)
+    df = df.drop(columns=["Area"])
+    df = df.dropna(subset=[zoning])
+
+    df_wide = reformat_for_sic_2_digit_output(
+        df=df, id_vars=[zoning], var_name="sic_2_digit_description"
+    )
+
+    pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
+
+
+def reformat_for_sic_2_digit_output(
+    df: pd.DataFrame, id_vars: list[str], var_name: str
+) -> pd.DataFrame:
+    df_long = df.melt(
+        id_vars=id_vars, var_name="sic_2_digit_description", value_name="count"
+    )
+
+    segmentation = segments._CUSTOM_SEGMENT_CATEGORIES["sic_2_digit"]
+    # define dictionary of segmentation mapping
+    inv_seg = {v: k for k, v in segmentation.items()}
+
+    # map the definitions used to define the segmentation
+    df_long["sic_2_digit"] = df_long[var_name].map(inv_seg)
+    df_long["sic_2_digit"] = df_long["sic_2_digit"].astype(int)
+
+    df_wide = df_long.pivot(index="sic_2_digit", columns=id_vars, values="count")
+    df_wide = df_wide.astype("int")
+
+    return df_wide
+
+
+def extract_geography_code_in_countries(
+    col: pd.Series, england: bool = True, wales: bool = True, scotland: bool = True
+) -> pd.Series:
+    include = ""
+
+    if england:
+        include += "E"
+    if wales:
+        include += "W"
+    if scotland:
+        include += "S"
+
+    if include == "":
+        raise ValueError(f"No countries selected.")
+
+    return col.str.extract(rf"([{include}]\d{{8}})", expand=False)
 
 
 def convert_bres_2022_lsoa_employment():
