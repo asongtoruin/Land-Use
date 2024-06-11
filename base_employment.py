@@ -63,14 +63,14 @@ def process_bres_2021(config: dict):
     )
 
 
-def read_dvector(config: dict, key: str):
+def read_dvector(config: dict, key: str) -> data_processing.DVector:
     return data_processing.read_dvector_data(
         input_root_directory=config["input_root_directory"],
         **config[key],
     )
 
 
-def translate_to_lsoa_2021(dvec_in):
+def translate_to_lsoa_2021(dvec_in: data_processing.DVector) -> data_processing.DVector:
     return dvec_in.translate_zoning(
         new_zoning=constants.LSOA_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
