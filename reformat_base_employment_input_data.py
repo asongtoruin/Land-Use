@@ -25,7 +25,7 @@ def main():
 
 
 def convert_bres_2021_employees_2_digit_sic():
-    zoning = geographies.LSOA_EW_2011_NAME
+    zoning = geographies.MSOA_EW_2011_NAME
 
     file_path = (
         INPUT_DIR / "BRES2021" / "Employees" / "bres_employees21_msoa11_2digit.csv"

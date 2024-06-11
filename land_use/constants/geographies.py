@@ -200,6 +200,14 @@ try:
 except FileNotFoundError:
     pass
 
+MSOA_EW_2011_NAME = 'MSOA2011'
+MSOA_EW_2011_ZONING_SYSTEM = generate_zoning_system(
+    name=MSOA_EW_2011_NAME, 
+    shapefile_path=SHAPEFILE_DIRECTORY / 'MSOA (2011)' / 'infuse_msoa_lyr_2011_ew.shp',
+    id_col='geo_code', desc_col='name'
+)
+
+
 # Dictionary of references for the yaml file
 try:
     # TODO link with definitions above
@@ -208,6 +216,7 @@ try:
         MSOA_NAME: MSOA_ZONING_SYSTEM,
         LAD_NAME: LAD_ZONING_SYSTEM,
         LSOA_EW_2011_NAME: LSOA_EW_2011_ZONING_SYSTEM,
+        MSOA_EW_2011_NAME: MSOA_EW_2011_ZONING_SYSTEM,
     }
 except NameError:
     KNOWN_GEOGRAPHIES = {
