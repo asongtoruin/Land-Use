@@ -770,3 +770,66 @@ def convert_ces(
         index_cols=['total'],
         value_column='uplift'
     )
+
+
+def convert_scotland(
+        df: pd.DataFrame,
+        zoning: str,
+        zoning_column: str,
+        age_segmentation: dict,
+        gender_segmentation: dict
+    ) -> pd.DataFrame:
+    """Convert the census file of population in Scotland.
+
+    This dataset has sex, age, and residence type.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        dataframe output of read_headered_csv()
+        Expects a column of LSOA names (including the codes) and columns of 'all
+        residents' and 'all residents in communal establishments'. Data is population.
+    zoning : str
+        standard zoning name from constants.geographies.py of the zone system
+        the data are in
+    zoning_column : str
+        column to rename to the standard zoning definition
+    age_segmentation : dict
+        dictionary to map the values of the age column to a segmentation definition
+    gender_segmentation : dict
+        dictionary to map the values of the sex column to a segmentation definition
+    Returns
+    -------
+    pd.DataFrame
+        dataframe with index of 'total' and columns of zoning, data is uplift factor.
+
+    """
+    # get LSOA code from the first column of the data
+    df[zoning] = df[zoning_column]
+
+    # convert the count column to numeric
+    df['Count'] = pd.to_numeric(df['Count'], errors='coerce').fillna(0)
+
+    # map the correspondences
+    df['g'] = df['Sex'].str.lower().map(gender_segmentation)
+    df['scot_age'] = df['Age'].map(age_segmentation)
+
+    # drop anything that hasn't been mapped by the segmentations
+    # there are categories for "all people" in sex and "total" in age,
+    # so we want to avoid double counting this
+    df = df.dropna(subset=['g', 'scot_age'])
+    df['g'] = df['g'].astype(int)
+    df['scot_age'] = df['scot_age'].astype(int)
+
+    # get total population (includes both usual residents and communal establishments)
+    total_population = df.loc[df['Residence Type Indicator'] == 'All people']
+    total_population = total_population.groupby([zoning, 'g', 'scot_age'])[['Count']].sum().reset_index()
+    total_population['Count'] = total_population['Count'].astype(int)
+
+    # convert to dvector format
+    return pivot_to_dvector(
+        data=total_population,
+        zoning_column=zoning,
+        index_cols=['g', 'scot_age'],
+        value_column='Count'
+    )
