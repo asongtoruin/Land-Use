@@ -24,3 +24,13 @@ bres_2022_part_time_employees:
     file_path: BRES2022\preprocessing\264980261866694_part-time-employees.hdf
     geographical_level: LSOA2011
     input_segments: [big]
+
+bres_2021_employees_sic_2:
+    file_path: BRES2021\Employees\preprocessing\bres_employees21_msoa11_2digit.hdf
+    geographical_level: MSOA2011
+    input_segments: [sic_2_digit]
+
+bres_2021_employment_sic_2:
+    file_path: BRES2021\Employment\preprocessing\bres_employment21_lsoa11_2digit_sic.hdf
+    geographical_level: LSOA2011
+    input_segments: [sic_2_digit]
