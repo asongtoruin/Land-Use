@@ -126,8 +126,6 @@ def convert_bres_2022_lsoa_employment():
     zoning = geographies.LSOA_EW_2011_NAME
     segmentation = segments._CUSTOM_SEGMENT_CATEGORIES["big"]
 
-    print(file_path)
-
     # may be able to hard code this if we feel the csv won't change
     tables_and_line_starts = find_contained_tables_and_line_starts(file_path=file_path)
 
@@ -143,7 +141,6 @@ def convert_bres_2022_lsoa_employment():
         tables_names_to_wide_df[table_type] = wide_df
 
     for table_type, wide_df in tables_names_to_wide_df.items():
-        print(table_type)
         clean_table_type = table_type.replace(" ", "-")
         save_hdf_with_table_type(
             source_file_path=file_path, df=wide_df, data_type=clean_table_type
@@ -193,7 +190,7 @@ def find_contained_tables_and_line_starts(file_path: Path) -> dict[str, int]:
                 _, table_type = line.rstrip().split(",")
                 table_type = table_type.replace('"', "").lower()
                 skip_rows = idx + 3
-                print(f"{table_type} table starts on index {skip_rows}")
+                # print(f"{table_type} table starts on index {skip_rows}")
                 tables_and_line_starts[table_type] = skip_rows
     return tables_and_line_starts
 
@@ -223,18 +220,10 @@ def process_bres_table(
     # map the definitions used to define the segmentation,
     # drop na to remove any missing values in the dataframe
     df_long["big"] = df_long["big_full"].map(inv_seg)
-
-    # df_long["big"] = df_long["big_full"].str.split(" ", expand=True)[0]
-
-    # TODO: not sure this line is required if the dictionary is int already but included just in case
     df_long["big"] = df_long["big"].astype(int)
-
-    # TODO consider if big is the variable we want this stored in or if there is a more
 
     df_long[zoning] = df_long[zoning_col].str.split(" ", expand=True)[0]
     df_wide = df_long.pivot(index="big", columns=[zoning], values="people")
-
-    print(df_wide)
 
     return df_wide
 
