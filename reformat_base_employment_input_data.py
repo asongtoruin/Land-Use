@@ -142,43 +142,9 @@ def convert_bres_2022_lsoa_employment():
 
     for table_type, wide_df in tables_names_to_wide_df.items():
         clean_table_type = table_type.replace(" ", "-")
-        save_hdf_with_table_type(
-            source_file_path=file_path, df=wide_df, data_type=clean_table_type
+        pp.save_preprocessed_hdf(
+            source_file_path=file_path, df=wide_df, multiple_output_ref=clean_table_type
         )
-
-
-def save_hdf_with_table_type(source_file_path: Path, df: pd.DataFrame, data_type: str):
-    """Save a dataframe to HDF5 format, in a "preprocessing" subfolder.
-
-    The output file location will be a subfolder in the file_path location named 'preprocessing'
-    and the file name will have the same name as the file_path file.
-
-    This is done to help maintain the link between the original input file (e.g. csv or excel)
-    and the converted output file.
-
-    Parameters
-    ----------
-    source_file_path : Path
-        File path to the input file that has been read in and converted into the
-        DVector-readable format by one of the parsing functions.
-
-    df : pd.DataFrame
-        Data to be saved in HDF5 format with the same name as file_path.
-
-    data_type : str
-        Name to be appended to the output filename to allow multiple files to be saved to the same folder.
-    Returns
-    -------
-
-    """
-    output_folder = source_file_path.parent / "preprocessing"
-    output_folder.mkdir(exist_ok=True)
-
-    output_filename = f"{source_file_path.stem}_{data_type}.hdf"
-
-    logging.info(f"Writing to {output_folder / output_filename}")
-    # key kept as df to allow consistency with previous process
-    df.to_hdf(output_folder / output_filename, key="df")
 
 
 def find_contained_tables_and_line_starts(file_path: Path) -> dict[str, int]:
