@@ -1,16 +1,17 @@
 import logging
 from pathlib import Path
+import warnings
 import psutil
 from warnings import warn
 from typing import Any, Dict, List, Union
 from functools import reduce
 
 from caf.core.data_structures import DVector
-from caf.core.segmentation import Segmentation, SegmentationInput, Segment
+from caf.core.segmentation import Segmentation, SegmentationInput, Segment, SegmentsSuper
 import pandas as pd
 import numpy as np
 
-from land_use.constants import segments
+from land_use.constants import segments, split_input_segments, CUSTOM_SEGMENTS
 from land_use.constants.geographies import KNOWN_GEOGRAPHIES
 
 
@@ -276,3 +277,134 @@ def clear_dvectors(*dvectors: List[DVector]) -> None:
     for dvec in dvectors:
         dvec._data = None
     logging.info(f'Finished clearing dataframes, current usage: {_report_memory()}')
+
+
+def expand_segmentation_to_match(
+        dvector: DVector, match_to: DVector, split_method: str = 'duplicate'
+    ) -> DVector:
+    """Utility function for expanding one DVector to match another's.
+
+    Generally this should be used with proportions, and as a prep stage for 
+    combining two DVectors together. Care should be taken, and outputs should
+    be checked to ensure they contain the appropriate values.
+
+    Parameters
+    ----------
+    dvector : DVector
+        the DVector to be expanded
+    match_to : DVector
+        the DVector to match the segmentation to.
+    split_method : str, optional
+        how to "expand", by default 'duplicate'. The other option is "split",
+        i.e. equally split the input values across the additional segments.
+
+    Returns
+    -------
+    DVector
+        dvector expanded to match the segmentation of match_to
+
+    Raises
+    ------
+    ValueError
+        if dvector's segmentation is not a strict subset of match_to's 
+        segmentation
+    """
+
+    source_segmentation = set(dvector.segmentation.names)
+    desired_segmentation = set(match_to.segmentation.names)
+
+    # Can't match if source is not fully contained within desired
+    if not source_segmentation < desired_segmentation:
+
+        # If they're the same - nothing to do! Warn the user though, this might
+        # suggest something unexpected
+        if source_segmentation == desired_segmentation:
+            warnings.warn(
+                'No segments to add. This seems unexpected, but may be fine. '
+                'Returning a copy of the original.'
+            )
+            return dvector.copy()
+
+        missing_segments = source_segmentation - desired_segmentation
+        raise ValueError(
+            f'Cannot match segmentation when source segmentation is not fully '
+            f'contained in desired segmentation - desired segmentation does not '
+            f'feature {missing_segments}'
+        )
+    
+    # Figure out what segments we want to add, and split into standard vs custom
+    segment_dict = split_input_segments(
+        desired_segmentation - source_segmentation
+    )
+
+    if segment_dict[False]:
+        warnings.warn(
+            f'The following segments seem to be custom: {segment_dict[False]}. '
+            f'Ensure this is double-checked'
+        )
+
+    # Copy the object, then add in the standard and custom segments respectively
+    working = dvector.copy()
+    for standard_segment in segment_dict[True]:
+        working = working.add_segment(
+            SegmentsSuper(standard_segment).get_segment(),
+            split_method=split_method
+        )
+    
+    for custom_segment in segment_dict[False]:
+        working = working.add_segment(
+            CUSTOM_SEGMENTS.get(custom_segment),
+            split_method=split_method
+        )
+
+    return working
+
+def collapse_segmentation_to_match(
+        dvector: DVector, match_to: DVector
+    ) -> DVector:
+    """Utility function for collapsing one DVector's segmentation to match another's.
+
+    Values are summed when the collapsing is undertaken.
+
+    Parameters
+    ----------
+    dvector : DVector
+        the DVector to be collapsed
+    match_to : DVector
+        the DVector to take the desired segmentation from
+
+    Returns
+    -------
+    DVector
+        dvector aggregated to the segmentation of match_to
+
+    Raises
+    ------
+    ValueError
+        if match_to's segmentation is not a strict subset of dvector's 
+        segmentation
+    """
+    
+    source_segmentation = set(dvector.segmentation.names)
+    desired_segmentation = set(match_to.segmentation.names)
+
+    # Can't match if source is not fully contained within desired
+    if not source_segmentation > desired_segmentation:
+
+        # If they're the same - nothing to do! Warn the user though, this might
+        # suggest something unexpected
+        if source_segmentation == desired_segmentation:
+            warnings.warn(
+                'No segments to aggregate. This seems unexpected, but may be fine. '
+                'Returning a copy of the original.'
+            )
+            return dvector.copy()
+        
+        missing_segments = desired_segmentation - source_segmentation
+        raise ValueError(
+            f'Cannot aggregate segmentation when desired segmentation is not fully '
+            f'contained in source segmentation - source segmentation does not '
+            f'feature {missing_segments}'
+        )
+
+    return dvector.aggregate(desired_segmentation)
