@@ -407,4 +407,4 @@ def collapse_segmentation_to_match(
             f'feature {missing_segments}'
         )
 
-    return dvector.aggregate(desired_segmentation)
+    return dvector.aggregate(list(desired_segmentation))
