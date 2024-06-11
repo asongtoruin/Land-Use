@@ -100,6 +100,14 @@ _CUSTOM_SEGMENT_CATEGORIES = {
         4: "aged 35 to 49 years",
         5: "aged 50 years and over"
     },
+    "scot_age": {
+        1: "0 - 15",
+        2: "16 - 24",
+        3: "25 - 34",
+        4: "35 - 49",
+        5: "50 - 64",
+        6: "65 and over"
+    },
     "gender": {
         1: "male",
         2: "female"
