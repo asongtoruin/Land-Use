@@ -7,12 +7,13 @@ from typing import Any, Dict, List, Union
 from functools import reduce
 
 from caf.core.data_structures import DVector
+from caf.core.zoning import ZoningSystem, TranslationWeighting, TranslationWarning
 from caf.core.segmentation import Segmentation, SegmentationInput, Segment, SegmentsSuper
 import pandas as pd
 import numpy as np
 
 from land_use.constants import segments, split_input_segments, CUSTOM_SEGMENTS
-from land_use.constants.geographies import KNOWN_GEOGRAPHIES
+from land_use.constants.geographies import KNOWN_GEOGRAPHIES, CACHE_FOLDER
 
 
 LOGGER = logging.getLogger(__name__)
@@ -408,3 +409,157 @@ def collapse_segmentation_to_match(
         )
 
     return dvector.aggregate(list(desired_segmentation))
+
+
+def is_strict_zone_aggregation_of(
+        larger_zs: ZoningSystem, 
+        smaller_zs: ZoningSystem,
+        cache_path: Path = CACHE_FOLDER,
+    ) -> bool:
+    """Determine whether one ZoningSystem is a strict (i.e. one-to-many) aggregation of another
+
+    This is strictly one-way - you may have to undertake the comparison in both
+    directions to be certain if you have unknown ZoningSystems and just want
+    to know if one "fits" into the other
+
+    Parameters
+    ----------
+    larger_zs : ZoningSystem
+        the zoning system assumed to be "larger"
+    smaller_zs : ZoningSystem
+        the zoning system assumed to be "smaller"
+    cache_path : Path, optional
+        path to the zoning translation cache, by default CACHE_FOLDER
+
+    Returns
+    -------
+    bool
+        True if larger_zs is an aggregation of (or the same as) smaller_zs, else
+        False
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', TranslationWarning)
+        translation_frame = smaller_zs._get_translation_definition(
+            larger_zs, weighting=TranslationWeighting.SPATIAL,
+            trans_cache=cache_path
+        )
+    
+    comparison_col = translation_frame[
+        smaller_zs.translation_column_name(larger_zs)
+    ]
+    
+    return comparison_col.eq(1).all()
+
+
+def find_largest_zoning_system(
+        *zoning_systems: ZoningSystem,
+        cache_path: Path = CACHE_FOLDER
+    ) -> ZoningSystem:
+    """Find the "largest" zoning system that all of the others have a many-to-one translation into
+
+    Parameters
+    ----------
+    *zoning_systems : ZoningSystem
+        some number of ZoningSystem objects to be compared
+    cache_path : Path, optional
+        path to the zoning translation cache, by default CACHE_FOLDER
+
+    Returns
+    -------
+    ZoningSystem
+        the "largest" ZoningSystem, that all of the others can be many-to-one
+        translated into
+
+    Raises
+    ------
+    ValueError
+        if there is not a direct compatibility between two ZoningSystems, i.e.
+        overlapping boundaries
+    """
+    # Ideally we would do the following, but ZoningSystem is unhashable
+    # unique_zs = set(zoning_systems)
+    
+    # So grab a list!
+    zs_list = list(zoning_systems)
+
+    # Initialise with first ZS
+    current_largest_zs = zs_list.pop(0)
+
+    # Compare pairs at a time, retain largest ZS if we can (i.e. if a strict superset of the other)
+    for other_zs in zs_list:
+        if current_largest_zs == other_zs:
+            continue
+        elif is_strict_zone_aggregation_of(current_largest_zs, other_zs, cache_path=cache_path):
+            continue
+        elif is_strict_zone_aggregation_of(other_zs, current_largest_zs, cache_path=cache_path):
+            current_largest_zs = other_zs
+        else:
+            raise ValueError('Incompatible zoning systems')
+    
+    return current_largest_zs
+
+
+def aggregate_and_compare(
+        first_dvector: DVector, 
+        second_dvector: DVector, 
+        cache_path: Path = CACHE_FOLDER
+    ) -> DVector:
+    """Aggregates and compares two DVector files
+
+    The two must have compatible segmentation (i.e. one a complete subset of 
+    the other) and compatible zoning systems (i.e. one fitting "one to many" 
+    into the other)
+
+    Parameters
+    ----------
+    first_dvector : DVector
+        first DVector to aggregate
+    second_dvector : DVector
+        second DVector to aggregate
+    cache_path : Path, optional
+        path to the zoning translation cache, by default CACHE_FOLDER
+
+    Returns
+    -------
+    DVector
+        cell-level differences between the two DVectors (i.e. first_dvector 
+        minus second) at a common Segmentation and ZoningSystem level
+
+    Raises
+    ------
+    ValueError
+        if the segmentations are not compatible
+    """
+
+    common_zs = find_largest_zoning_system(
+        first_dvector.zoning_system, second_dvector.zoning_system,
+        cache_path=cache_path
+    )
+
+    # Step 2: aggregate whichever isn't ready into that zoning system
+    working_first_dvector = first_dvector.translate_zoning(
+        common_zs, cache_path=cache_path
+    )
+
+    working_second_dvector = second_dvector.translate_zoning(
+        common_zs, cache_path=cache_path
+    )
+
+    # Step 3: aggregate segmentation
+    try:
+        working_first_dvector = collapse_segmentation_to_match(
+            dvector=working_first_dvector, match_to=working_second_dvector
+        )
+    except ValueError:
+        try:
+            working_second_dvector = collapse_segmentation_to_match(
+                dvector=working_second_dvector, match_to=working_first_dvector
+            )
+        except ValueError:
+            raise ValueError(
+                'Provided with two DVectors with non-matching segmentation'
+            )
+    
+    # Step 4: do the difference calc
+    return working_first_dvector - working_second_dvector
+
