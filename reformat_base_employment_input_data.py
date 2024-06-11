@@ -206,78 +206,26 @@ def process_bres_table(
         nrows=number_of_lsoas,
     )
 
-    zoning_col = "2011 super output area - lower layer"
-
-    verify_lsoa_table(df=df, expected_first_col=zoning_col)
-
     df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
+
+    zoning_col = "2011 super output area - lower layer"
 
     df_long = df.melt(id_vars=[zoning_col], var_name="big_full", value_name="people")
 
     # define dictionary of segmentation mapping
     inv_seg = {v: k for k, v in segmentation.items()}
 
-    # map the definitions used to define the segmentation,
-    # drop na to remove any missing values in the dataframe
+    # map the definitions used to define the segmentation
     df_long["big"] = df_long["big_full"].map(inv_seg)
     df_long["big"] = df_long["big"].astype(int)
 
-    df_long[zoning] = df_long[zoning_col].str.split(" ", expand=True)[0]
+    df_long[zoning] = extract_geography_code_in_countries(
+        col=df_long[zoning_col], scotland=False
+    )
+
     df_wide = df_long.pivot(index="big", columns=[zoning], values="people")
 
     return df_wide
-
-
-def verify_lsoa_table(df: pd.DataFrame, expected_first_col: str) -> None:
-    """Verifying that table is of the right shape.
-    Maybe able to be removed from process if we deem DVector checks sufficient.
-
-    Args:
-        df (pd.DataFrame): Table to be checked.
-        expected_first_col (str): Check first column is expected (lsoa name)
-    """
-
-    act_first_col = df.columns[0]
-    verify_table_entries(
-        actual_entry=act_first_col,
-        expected_entry=expected_first_col,
-        entry_type="first column name",
-    )
-    expected_first_row = "E01000001 : City of London 001A"
-    act_first_row = df.iloc[0, 0]
-    verify_table_entries(
-        actual_entry=str(act_first_row),
-        expected_entry=expected_first_row,
-        entry_type="first row",
-    )
-
-    expected_last_row = "W01001958 : Swansea 025H"
-    act_last_row = df.iloc[-1, 0]
-    verify_table_entries(
-        actual_entry=str(act_last_row),
-        expected_entry=expected_last_row,
-        entry_type="last_row",
-    )
-
-
-def verify_table_entries(
-    actual_entry: str, expected_entry: str, entry_type: str
-) -> None:
-    """Confirm that a table column name or cell entry matches expectations.
-
-    Args:
-        actual_entry (str): The actual entry in the table
-        expected_entry (str): Entry that is expected
-        entry_type (str): What type of entry is compared, used in the error message if there is one.
-
-    Raises:
-        ValueError: If the actual entry does not match the expected entry
-    """
-    if actual_entry == expected_entry:
-        return
-    raise ValueError(
-        f"Given '{actual_entry}' as {entry_type} but expected '{expected_entry}.'"
-    )
 
 
 if __name__ == "__main__":
