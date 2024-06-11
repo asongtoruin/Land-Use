@@ -40,7 +40,7 @@ def convert_bres_2021_employees_2_digit_sic():
     df = df.dropna(subset=[zoning])
 
     # keep only england and wales
-    df[zoning] = extract_geo_code(df[zoning], scotland=False)
+    df[zoning] = pp.extract_geo_code(df[zoning], scotland=False)
     df = df.dropna(subset=[zoning])
 
     df_wide = reformat_for_sic_2_digit_output(
@@ -70,7 +70,7 @@ def convert_bres_2021_employment_2_digit_sic():
     df = df.dropna(axis=0, subset=[mixed_input_col])
 
     # filter rows to just lsoas in england and wales
-    df[zoning] = extract_geo_code(df["Area"], scotland=False)
+    df[zoning] = pp.extract_geo_code(df["Area"], scotland=False)
     df = df.drop(columns=["Area"])
     df = df.dropna(subset=[zoning])
 
@@ -100,24 +100,6 @@ def reformat_for_sic_2_digit_output(
     df_wide = df_wide.astype("int")
 
     return df_wide
-
-
-def extract_geo_code(
-    col: pd.Series, england: bool = True, wales: bool = True, scotland: bool = True
-) -> pd.Series:
-    include = ""
-
-    if england:
-        include += "E"
-    if wales:
-        include += "W"
-    if scotland:
-        include += "S"
-
-    if include == "":
-        raise ValueError(f"No countries selected.")
-
-    return col.str.extract(rf"([{include}]\d{{8}})", expand=False)
 
 
 def convert_bres_2022_lsoa_employment():
@@ -185,7 +167,7 @@ def process_bres_table(
     df_long["big"] = df_long["big_full"].map(inv_seg)
     df_long["big"] = df_long["big"].astype(int)
 
-    df_long[zoning] = extract_geo_code(col=df_long[zoning_col], scotland=False)
+    df_long[zoning] = pp.extract_geo_code(col=df_long[zoning_col], scotland=False)
 
     df_wide = df_long.pivot(index="big", columns=[zoning], values="people")
 
