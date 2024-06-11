@@ -231,3 +231,36 @@ def pivot_to_dvector(
     reindexed.columns = reindexed.columns.get_level_values(zoning_column)
 
     return reindexed
+
+def extract_geo_code(
+    col: pd.Series, england: bool = True, wales: bool = True, scotland: bool = True
+) -> pd.Series:
+    """Extract LSOA/DataZone/MSOA type from a pandas series. 
+    Done by assuming code begin with a country prefix followed by 8 digits.
+    Option within function to allow countries to be excluded from the match.
+
+    Args:
+        col (pd.Series): Column to match pattern against.
+        england (bool, optional): If to include code belonging to England (starting with an E). Defaults to True.
+        wales (bool, optional): If to include code belonging to Wales (starting with an W). Defaults to True.
+        scotland (bool, optional): If to include code belonging to Scotland (starting with an S). Defaults to True.
+
+    Raises:
+        ValueError: If no countries have been selected. Likely to be an error.
+
+    Returns:
+        pd.Series: Series showing the extracted code, or NaN if not found for that index. Will be the same length as the input col.
+    """
+    include = ""
+
+    if england:
+        include += "E"
+    if wales:
+        include += "W"
+    if scotland:
+        include += "S"
+
+    if include == "":
+        raise ValueError(f"No countries selected.")
+
+    return col.str.extract(rf"([{include}]\d{{8}})", expand=False)

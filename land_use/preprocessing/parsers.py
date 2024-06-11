@@ -8,7 +8,7 @@ import re
 import numpy as np
 import pandas as pd
 
-from .utilities import read_headered_csv, read_in_excel, pivot_to_dvector
+from .utilities import extract_geo_code, read_headered_csv, read_in_excel, pivot_to_dvector
 
 
 def read_rm002(
@@ -770,3 +770,181 @@ def convert_ces(
         index_cols=['total'],
         value_column='uplift'
     )
+
+
+def convert_scotland(
+        df: pd.DataFrame,
+        zoning: str,
+        zoning_column: str,
+        age_segmentation: dict,
+        gender_segmentation: dict
+    ) -> pd.DataFrame:
+    """Convert the census file of population in Scotland.
+
+    This dataset has sex, age, and residence type.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        dataframe output of read_headered_csv()
+        Expects a column of LSOA names (including the codes) and columns of 'all
+        residents' and 'all residents in communal establishments'. Data is population.
+    zoning : str
+        standard zoning name from constants.geographies.py of the zone system
+        the data are in
+    zoning_column : str
+        column to rename to the standard zoning definition
+    age_segmentation : dict
+        dictionary to map the values of the age column to a segmentation definition
+    gender_segmentation : dict
+        dictionary to map the values of the sex column to a segmentation definition
+    Returns
+    -------
+    pd.DataFrame
+        dataframe with index of 'total' and columns of zoning, data is uplift factor.
+
+    """
+    # get LSOA code from the first column of the data
+    df[zoning] = df[zoning_column]
+
+    # convert the count column to numeric
+    df['Count'] = pd.to_numeric(df['Count'], errors='coerce').fillna(0)
+
+    # map the correspondences
+    df['g'] = df['Sex'].str.lower().map(gender_segmentation)
+    df['scot_age'] = df['Age'].map(age_segmentation)
+
+    # drop anything that hasn't been mapped by the segmentations
+    # there are categories for "all people" in sex and "total" in age,
+    # so we want to avoid double counting this
+    df = df.dropna(subset=['g', 'scot_age'])
+    df['g'] = df['g'].astype(int)
+    df['scot_age'] = df['scot_age'].astype(int)
+
+    # get total population (includes both usual residents and communal establishments)
+    total_population = df.loc[df['Residence Type Indicator'] == 'All people']
+    total_population = total_population.groupby([zoning, 'g', 'scot_age'])[['Count']].sum().reset_index()
+    total_population['Count'] = total_population['Count'].astype(int)
+
+    # convert to dvector format
+    return pivot_to_dvector(
+        data=total_population,
+        zoning_column=zoning,
+        index_cols=['g', 'scot_age'],
+        value_column='Count'
+    )
+
+def read_bres_2021_employees_2_digit_sic(file_path: Path, zoning: str) -> pd.DataFrame:
+    df = pd.read_csv(file_path, skiprows=8)
+
+    df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
+    df = df.drop(columns=["2011 super output area - middle layer"])
+
+    df = df.rename(columns={"mnemonic": zoning})
+    df = df.dropna(subset=[zoning])
+    return df
+
+
+def convert_bres_2021_employees_2_digit_sic(
+    df: pd.DataFrame, zoning: str
+) -> pd.DataFrame:
+    df[zoning] = extract_geo_code(df[zoning], scotland=False)
+    df = df.dropna(subset=[zoning])
+
+    df_wide = reformat_for_sic_2_digit_output(
+        df=df, id_vars=[zoning], var_name="sic_2_digit_description"
+    )
+
+    return df_wide
+
+
+def convert_bres_2021_employment_2_digit_sic(
+    df: pd.DataFrame, zoning: str
+) -> pd.DataFrame:
+    df[zoning] = extract_geo_code(df["Area"], scotland=False)
+    df = df.drop(columns=["Area"])
+    df = df.dropna(subset=[zoning])
+
+    df_wide = reformat_for_sic_2_digit_output(
+        df=df, id_vars=[zoning], var_name="sic_2_digit_description"
+    )
+
+    return df_wide
+
+
+def read_bres_2021_employment_2_digit_sic(file_path: Path) -> pd.DataFrame:
+    df = pd.read_csv(file_path, skiprows=8, low_memory=False)
+    df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
+
+    mixed_input_col = (
+        "01 : Crop and animal production, hunting and related service activities"
+    )
+    df[mixed_input_col] = pd.to_numeric(df[mixed_input_col], errors="coerce")
+    df = df.dropna(axis=0, subset=[mixed_input_col])
+    return df
+
+
+def reformat_for_sic_2_digit_output(
+    df: pd.DataFrame, id_vars: list[str], var_name: str
+) -> pd.DataFrame:
+    df_long = df.melt(
+        id_vars=id_vars, var_name="sic_2_digit_description", value_name="count"
+    )
+
+    segmentation = segments._CUSTOM_SEGMENT_CATEGORIES["sic_2_digit"]
+    # define dictionary of segmentation mapping
+    inv_seg = {v: k for k, v in segmentation.items()}
+
+    # map the definitions used to define the segmentation
+    df_long["sic_2_digit"] = df_long[var_name].map(inv_seg)
+    df_long["sic_2_digit"] = df_long["sic_2_digit"].astype(int)
+
+    df_wide = df_long.pivot(index="sic_2_digit", columns=id_vars, values="count")
+    df_wide = df_wide.astype("int")
+
+    return df_wide
+
+
+def find_contained_tables_and_line_starts(file_path: Path) -> dict[str, int]:
+    tables_and_line_starts = {}
+
+    with open(file_path, "r") as f:
+        for idx, line in enumerate(f):
+            if line.lower().startswith('"employment status:"'):
+                _, table_type = line.rstrip().split(",")
+                table_type = table_type.replace('"', "").lower()
+                skip_rows = idx + 3
+                # print(f"{table_type} table starts on index {skip_rows}")
+                tables_and_line_starts[table_type] = skip_rows
+    return tables_and_line_starts
+
+
+def process_individual_bres_2022_table(
+    file_path: Path, skiprows: int, zoning: str, segmentation: dict[int, str]
+) -> pd.DataFrame:
+    # TODO feels like this could be a global parameter or derived from an lsoa list
+    number_of_lsoas = 34753
+    df = pd.read_csv(
+        filepath_or_buffer=file_path,
+        skiprows=skiprows,
+        nrows=number_of_lsoas,
+    )
+
+    df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
+
+    zoning_col = "2011 super output area - lower layer"
+
+    df_long = df.melt(id_vars=[zoning_col], var_name="big_full", value_name="people")
+
+    # define dictionary of segmentation mapping
+    inv_seg = {v: k for k, v in segmentation.items()}
+
+    # map the definitions used to define the segmentation
+    df_long["big"] = df_long["big_full"].map(inv_seg)
+    df_long["big"] = df_long["big"].astype(int)
+
+    df_long[zoning] = extract_geo_code(col=df_long[zoning_col], scotland=False)
+
+    df_wide = df_long.pivot(index="big", columns=[zoning], values="people")
+
+    return df_wide

@@ -14,11 +14,11 @@ LOGGER = logging.getLogger(__name__)
 
 
 def read_dvector_data(
-        input_root_directory: Path,
-        file_path: Path, 
+        file_path: Path,
         geographical_level: str, 
         input_segments: list, 
         geography_subset: Optional[str] = None,
+        input_root_directory: Path = None,
         **params
     ) -> DVector:
     """Read DVector data from an HDF file formatted for input (i.e. "wide").
@@ -27,10 +27,11 @@ def read_dvector_data(
 
     Parameters
     ----------
-    input_root_directory : Path
+    input_root_directory : Path, optional
         Main path directory where *all* inputs defined in the config will pivot from. This
         encourages the storage of data in one specific location to help with maintenance and
         traceability.
+        Default None - in this case the file_path param is assumed to be the full file path.
     file_path : Path
         Path to input file in to read in. This must be an HDF file, and should
         be in a suitable structure to be directly passed to `DVector`, i.e. 
@@ -71,8 +72,12 @@ def read_dvector_data(
         zoning = geographical_level
 
     # Read in the file, with the correct geography and segments.
-    LOGGER.info(f'Reading in {Path(input_root_directory) / Path(file_path)}')
-    df = pd.read_hdf(Path(input_root_directory) / Path(file_path))
+    if input_root_directory is None:
+        input_file = Path(file_path)
+    else:
+        input_file = Path(input_root_directory) / Path(file_path)
+    LOGGER.info(f'Reading in {input_file}')
+    df = pd.read_hdf(input_file)
     df = pd.DataFrame(df)
 
     # filter columns if necessary
@@ -80,7 +85,7 @@ def read_dvector_data(
     filtered_data = df[zones]
     if len(filtered_data.columns) != len(df.columns):
         LOGGER.warning(
-            f'The input data at {Path(input_root_directory) / Path(file_path)} '
+            f'The input data at {input_file} '
             f'started with {len(df.columns):,.0f} columns. Filtering to '
             f'{geography_subset} results in {len(filtered_data.columns):,.0f} '
             'columns.'

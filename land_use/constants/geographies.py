@@ -114,6 +114,38 @@ RGN_ZONING_SYSTEM = generate_zoning_system(
     shapefile_path=SHAPEFILE_DIRECTORY / 'REGION (2021)' / 'RGN_2021_EW_BFC.shp',
     id_col='RGN21CD', desc_col='RGN21NM'
 )
+SCOTLAND_NAME = 'DZ2011'
+SCOTLAND_ZONING_SYSTEM = generate_zoning_system(
+    name=SCOTLAND_NAME,
+    shapefile_path=SHAPEFILE_DIRECTORY / 'DATA ZONES (2011)' / 'Scottish Data Zones 2011.shp',
+    id_col='DZ2011CD', desc_col='tfn_at_nm'
+)
+NORTH_NAME = 'LSOA21_NORTH'
+NORTH_ZONING_SYSTEM = generate_zoning_system(
+    name=NORTH_NAME,
+    shapefile_path=SHAPEFILE_DIRECTORY / 'LSOA by GOR (2021)' / f'LSOA_2021_EW_BFC_V8_NORTH.shp',
+    id_col='LSOA21CD', desc_col='LSOA21NM'
+)
+TFN_AT_AGG_NAME = 'TFN_AT_AGG'
+TFN_AT_AGG_ZONING_SYSTEM = generate_zoning_system(
+    name=TFN_AT_AGG_NAME,
+    shapefile_path=SHAPEFILE_DIRECTORY / 'TFN AREA TYPES' / f'tfn_area_types_AGG.shp',
+    id_col='TFN_AT_AGG', desc_col='AT_AGG_NM'
+)
+
+# generate the zone systems required to translate the Scottish data
+# correspondence between TfN area types and the aggregated versions can be found in
+# "F:\Working\Land-Use\TEMP_SHAPEFILES\corrs\Scottish Data Zones 2011_TO_TFN_AREA_TYPES.csv"
+# "F:\Working\Land-Use\TEMP_SHAPEFILES\corrs\LSOA_2021_EW_BFC_V8_NORTH_TO_TFN_AREA_TYPES.csv"
+# this is basically to translate 'scottish urban' area type 20 to 'city / major' from the north
+# SCOTLAND_ZONING_SYSTEM.translate(
+#     TFN_AT_AGG_ZONING_SYSTEM,
+#     cache_path=CACHE_FOLDER
+# )
+# NORTH_ZONING_SYSTEM.translate(
+#     TFN_AT_AGG_ZONING_SYSTEM,
+#     cache_path=CACHE_FOLDER
+# )
 
 # Define zone systems by GOR to chunk the processing by GOR to save memory issues
 LSOAS_BY_GOR = dict()
@@ -168,6 +200,14 @@ try:
 except FileNotFoundError:
     pass
 
+MSOA_EW_2011_NAME = 'MSOA2011'
+MSOA_EW_2011_ZONING_SYSTEM = generate_zoning_system(
+    name=MSOA_EW_2011_NAME, 
+    shapefile_path=SHAPEFILE_DIRECTORY / 'MSOA (2011)' / 'infuse_msoa_lyr_2011_ew.shp',
+    id_col='geo_code', desc_col='name'
+)
+
+
 # Dictionary of references for the yaml file
 try:
     # TODO link with definitions above
@@ -176,13 +216,17 @@ try:
         MSOA_NAME: MSOA_ZONING_SYSTEM,
         LAD_NAME: LAD_ZONING_SYSTEM,
         LSOA_EW_2011_NAME: LSOA_EW_2011_ZONING_SYSTEM,
+        MSOA_EW_2011_NAME: MSOA_EW_2011_ZONING_SYSTEM,
     }
 except NameError:
     KNOWN_GEOGRAPHIES = {
         LSOA_NAME: LSOA_ZONING_SYSTEM,
         MSOA_NAME: MSOA_ZONING_SYSTEM,
         LAD_NAME: LAD_ZONING_SYSTEM,
-        RGN_NAME: RGN_ZONING_SYSTEM
+        RGN_NAME: RGN_ZONING_SYSTEM,
+        SCOTLAND_NAME: SCOTLAND_ZONING_SYSTEM,
+        NORTH_NAME: NORTH_ZONING_SYSTEM,
+        TFN_AT_AGG_NAME: TFN_AT_AGG_ZONING_SYSTEM
     }
     KNOWN_GEOGRAPHIES = {
         **KNOWN_GEOGRAPHIES,

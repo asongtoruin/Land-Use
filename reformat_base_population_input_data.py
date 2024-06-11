@@ -241,3 +241,30 @@ df = pp.convert_ces(
 )
 
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# *** scotland population data
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\Census Scotland'
+    r'\Population_age6_gender_DZ2011.csv'
+)
+
+df, _ = pp.read_headered_csv(
+    file_path=file_path,
+    header_string='Summation Options'
+)
+# TODO this data source has every column name written in a line before the data starts!
+# TODO currently finding a previous line and then shifting the data up one, but probably needs sorting
+# set column names to be first row
+df.columns = df.iloc[0]
+# drop first row (of old column names)
+df = df[1:]
+
+df = pp.convert_scotland(
+    df=df,
+    zoning=geographies.SCOTLAND_NAME,
+    zoning_column='Intermediate Zone - Data Zone 2011',
+    age_segmentation={i: j for j, i in segments._CUSTOM_SEGMENT_CATEGORIES['scot_age'].items()},
+    gender_segmentation={i: j for j, i in SegmentsSuper.GENDER.get_segment().values.items()}
+)
+
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
