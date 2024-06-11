@@ -497,7 +497,7 @@ for GOR in constants.GORS:
         )
 
     # clear data at the end of the loop
-    data_processing.processing.clear_dvectors(
+    data_processing.clear_dvectors(
         pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
         ce_uplift_factor,
         ce_uplift, ce_pop_by_type_total, ce_type_splits,
