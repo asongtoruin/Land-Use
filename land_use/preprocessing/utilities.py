@@ -359,7 +359,7 @@ def read_headered_and_tailed_csv(
 
     return df, col_name
 
-def reformat_lad_4digit(
+def reformat_2021_lad_4digit(
     df: pd.DataFrame,
     lad_lu: pd.DataFrame,
     segmentation: dict[int, str],
@@ -396,7 +396,7 @@ def reformat_lad_4digit(
     df[seg_name] = df[seg_name].astype(int)
     df = df.drop(columns=seg_col)
 
-    join_col = f"{zoning}_label"
+    join_col = "LAD21NM"
 
     df_long = df.melt(id_vars=[seg_name], var_name=join_col)
 
