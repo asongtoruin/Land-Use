@@ -25,7 +25,7 @@ def main():
 
 def lad_4_digit():
     filename = "bres_employment22_lad_4digit_sic.csv"
-    zoning = geographies.LAD_EW_2011_NAME
+    zoning = geographies.LAD_EW_2021_NAME
     seg_name = "sic_4_digit"
     header_string = "Industry"
 
@@ -38,11 +38,13 @@ def lad_4_digit():
     segmentation = segments._CUSTOM_SEGMENT_CATEGORIES[seg_name]
 
     lad_lu_file_path = (
-        INPUT_DIR / "ONS" / "Correspondence_lists" / "LAD2011_code_to_labels.csv"
+        INPUT_DIR / "ONS" / "Correspondence_lists" / "LAD_2021_EW_LADS_BFC.csv"
     )
-    lad_lu = pd.read_csv(lad_lu_file_path, usecols=["LAD2011", "LAD2011_label"])
+    lad_lu = pd.read_csv(lad_lu_file_path, usecols=["LAD21CD", "LAD21NM"])
 
-    df_wide = pp.reformat_lad_4digit(
+    lad_lu = lad_lu.rename(columns={'LAD21CD': zoning})
+
+    df_wide = pp.reformat_2021_lad_4digit(
         df=df,
         lad_lu=lad_lu,
         segmentation=segmentation,
