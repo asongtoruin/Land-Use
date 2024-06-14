@@ -1,8 +1,10 @@
+from os import PathLike
 from pathlib import Path
+from typing import Tuple
 
 import land_use.preprocessing as pp
 from land_use.constants import geographies, segments
-
+import pandas as pd
 
 # TODO consider sending this to a global config/settings file as shared with reformat population script
 INPUT_DIR = Path(r"I:\NorMITs Land Use\2023\import")
@@ -16,36 +18,91 @@ INPUT_DIR = Path(r"I:\NorMITs Land Use\2023\import")
 
 
 def main():
-    process_bres_2022_lsoa_employment()
+    lad_4_digit()
+    msoa_2_digit()
+    lsoa_1_digit()
 
 
-def process_bres_2022_lsoa_employment():
+def lad_4_digit():
+    filename = "bres_employment22_lad_4digit_sic.csv"
+    zoning = geographies.LAD_EW_2011_NAME
+    seg_name = "sic_4_digit"
+    header_string = "Industry"
 
-    file_path = INPUT_DIR / "BRES2022" / "264980261866694.csv"
-    zoning = geographies.LSOA_EW_2011_NAME
-    segmentation = segments._CUSTOM_SEGMENT_CATEGORIES["big"]
+    file_path = INPUT_DIR / "BRES2022" / "Employment" / filename
 
-    # may be able to hard code this if we feel the csv won't change
-    tables_and_line_starts = pp.find_contained_tables_and_line_starts(
-        file_path=file_path
+    df, seg_col = pp.read_headered_and_tailed_csv(
+        file_path=file_path, header_string=header_string, encoding="Latin-1"
     )
 
-    tables_names_to_wide_df = {}
+    segmentation = segments._CUSTOM_SEGMENT_CATEGORIES[seg_name]
 
-    for table_type, skiprows in tables_and_line_starts.items():
-        wide_df = pp.process_individual_bres_2022_table(
-            file_path=file_path,
-            skiprows=skiprows,
-            zoning=zoning,
-            segmentation=segmentation,
-        )
-        tables_names_to_wide_df[table_type] = wide_df
+    lad_lu_file_path = (
+        INPUT_DIR / "ONS" / "Correspondence_lists" / "LAD2011_code_to_labels.csv"
+    )
+    lad_lu = pd.read_csv(lad_lu_file_path, usecols=["LAD2011", "LAD2011_label"])
 
-    for table_type, wide_df in tables_names_to_wide_df.items():
-        clean_table_type = table_type.replace(" ", "-")
-        pp.save_preprocessed_hdf(
-            source_file_path=file_path, df=wide_df, multiple_output_ref=clean_table_type
-        )
+    df_wide = pp.reformat_lad_4digit(
+        df=df,
+        lad_lu=lad_lu,
+        segmentation=segmentation,
+        seg_col=seg_col,
+        seg_name=seg_name,
+        zoning=zoning,
+    )
+
+    pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
+
+
+def msoa_2_digit():
+    filename = "bres_employment22_msoa2011_2digit_sic.csv"
+    zoning = geographies.MSOA_EW_2011_NAME
+    seg_name = "sic_2_digit"
+    header_string = "Area"
+
+    file_path = INPUT_DIR / "BRES2022" / "Employment" / filename
+
+    df, heading_col = pp.read_headered_and_tailed_csv(
+        file_path=file_path, header_string=header_string, low_memory=False
+    )
+
+    segmentation = segments._CUSTOM_SEGMENT_CATEGORIES[seg_name]
+
+    df_wide = pp.reformat_xsoa_sic_digits_to_dvector(
+        df=df,
+        heading_col=heading_col,
+        segmentation=segmentation,
+        seg_name=seg_name,
+        zoning=zoning,
+    )
+
+    pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
+
+
+def lsoa_1_digit():
+
+    filename = "bres_employment22_lsoa2011_1digit_sic.csv"
+    zoning = geographies.LSOA_EW_2011_NAME
+    seg_name = "sic_1_digit"
+    header_string = "Area"
+
+    file_path = INPUT_DIR / "BRES2022" / "Employment" / filename
+
+    df, heading_col = pp.read_headered_and_tailed_csv(
+        file_path=file_path, header_string=header_string, low_memory=False
+    )
+
+    segmentation = segments._CUSTOM_SEGMENT_CATEGORIES[seg_name]
+
+    df_wide = pp.reformat_xsoa_sic_digits_to_dvector(
+        df=df,
+        heading_col=heading_col,
+        segmentation=segmentation,
+        seg_name=seg_name,
+        zoning=zoning,
+    )
+
+    pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
 
 
 if __name__ == "__main__":

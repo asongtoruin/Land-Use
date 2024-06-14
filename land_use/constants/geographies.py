@@ -200,6 +200,14 @@ try:
 except FileNotFoundError:
     pass
 
+LAD_EW_2011_NAME = 'LAD2011'
+LAD_EW_2011_ZONING_SYSTEM = generate_zoning_system(
+    name=LAD_EW_2011_NAME, 
+    shapefile_path=SHAPEFILE_DIRECTORY / 'LAD (2011)' / 'infuse_dist_lyr_2011_ew.shp',
+    id_col='geo_code', desc_col='name'
+)
+
+
 MSOA_EW_2011_NAME = 'MSOA2011'
 MSOA_EW_2011_ZONING_SYSTEM = generate_zoning_system(
     name=MSOA_EW_2011_NAME, 
@@ -217,6 +225,7 @@ try:
         LAD_NAME: LAD_ZONING_SYSTEM,
         LSOA_EW_2011_NAME: LSOA_EW_2011_ZONING_SYSTEM,
         MSOA_EW_2011_NAME: MSOA_EW_2011_ZONING_SYSTEM,
+        LAD_EW_2011_NAME: LAD_EW_2011_ZONING_SYSTEM,
     }
 except NameError:
     KNOWN_GEOGRAPHIES = {
