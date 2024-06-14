@@ -16,42 +16,7 @@ INPUT_DIR = Path(r"I:\NorMITs Land Use\2023\import")
 
 
 def main():
-    process_bres_2021_employees_2_digit_sic()
-    process_bres_2021_employment_2_digit_sic()
     process_bres_2022_lsoa_employment()
-
-
-def process_bres_2021_employees_2_digit_sic():
-    zoning = geographies.MSOA_EW_2011_NAME
-
-    file_path = (
-        INPUT_DIR / "BRES2021" / "Employees" / "bres_employees21_msoa11_2digit.csv"
-    )
-
-    df = pp.read_bres_2021_employees_2_digit_sic(file_path=file_path, zoning=zoning)
-
-    # keep only england and wales
-    df_wide = pp.convert_bres_2021_employees_2_digit_sic(df=df, zoning=zoning)
-
-    pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
-
-
-def process_bres_2021_employment_2_digit_sic():
-    zoning = geographies.LSOA_EW_2011_NAME
-
-    file_path = (
-        INPUT_DIR
-        / "BRES2021"
-        / "Employment"
-        / "bres_employment21_lsoa11_2digit_sic.csv"
-    )
-
-    df = pp.read_bres_2021_employment_2_digit_sic(file_path=file_path)
-
-    # filter rows to just lsoas in england and wales
-    df_wide = pp.convert_bres_2021_employment_2_digit_sic(df=df, zoning=zoning)
-
-    pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
 
 
 def process_bres_2022_lsoa_employment():
