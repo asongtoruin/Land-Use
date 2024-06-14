@@ -25,8 +25,9 @@ def find_header_line(
     file_path : PathLike
         File to search through
     header_string : str
-        Text witin the "column header" line. Note this will be converted
-          to lowercase by the function.
+        Text within the "column header" line. Note this will be converted
+          to lowercase within the function as the search is case-insensitive.
+          This does not impact the output as it is not returned. 
     max_lines : int, optional
         maximum number of line to check for the header text. Defaults to 100.
 
@@ -34,7 +35,8 @@ def find_header_line(
     -------
     Tuple[int, str]
         (0-indexed) number of the first line within the file that begins with
-        `header_start`, and the first column entry that contains header_string.
+        `header_start`, and the first column entry that contains header_string 
+        (with the case being unaltered).
     """
 
     if len(header_string) < 2:
