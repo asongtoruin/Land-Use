@@ -405,7 +405,7 @@ def reformat_2021_lad_4digit(
             f"{join_col} is not found in lookup columns, {lad_lu.columns}. Check inputs."
         )
 
-    df_with_codes = pd.merge(df_long, lad_lu, how="left")
+    df_with_codes = pd.merge(df_long, lad_lu, how="left", on=["LAD21NM"])
 
     df_with_codes[zoning] = extract_geo_code(
         df_with_codes[zoning], scotland=False, nireland=False

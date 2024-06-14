@@ -5,32 +5,19 @@ output_directory: OUTPUTS
 output_intermediate_outputs: False
 
 # Currently bres data only includes England and Wales
-bres_2022_employees:
-    file_path: BRES2022\preprocessing\264980261866694_employees.hdf
-    geographical_level: LSOA2011
-    input_segments: [big]
 
-bres_2022_employment:
-    file_path: BRES2022\preprocessing\264980261866694_employment.hdf
-    geographical_level: LSOA2011
-    input_segments: [big]
+bres_employment22_lad_4digit_sic:
+    file_path: BRES2022\Employment\preprocessing\bres_employment22_lad_4digit_sic.hdf
+    geographical_level: LAD2021
+    input_segments: [sic_4_digit]
 
-bres_2022_full_time_employees:
-    file_path: BRES2022\preprocessing\264980261866694_full-time-employees.hdf
-    geographical_level: LSOA2011
-    input_segments: [big]
-
-bres_2022_part_time_employees:
-    file_path: BRES2022\preprocessing\264980261866694_part-time-employees.hdf
-    geographical_level: LSOA2011
-    input_segments: [big]
-
-bres_2021_employees_sic_2:
-    file_path: BRES2021\Employees\preprocessing\bres_employees21_msoa11_2digit.hdf
+bres_2022_employment_msoa_2011_2_digit_sic:
+    file_path: BRES2022\Employment\preprocessing\bres_employment22_msoa2011_2digit_sic.hdf
     geographical_level: MSOA2011
     input_segments: [sic_2_digit]
 
-bres_2021_employment_sic_2:
-    file_path: BRES2021\Employment\preprocessing\bres_employment21_lsoa11_2digit_sic.hdf
+bres_2022_employment_lsoa_2011_1_digit_sic:
+    file_path: BRES2022\Employment\preprocessing\bres_employment22_lsoa2011_1digit_sic.hdf
     geographical_level: LSOA2011
-    input_segments: [sic_2_digit]
+    input_segments: [sic_1_digit]
+

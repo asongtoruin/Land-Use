@@ -37,12 +37,7 @@ def lad_4_digit():
 
     segmentation = segments._CUSTOM_SEGMENT_CATEGORIES[seg_name]
 
-    lad_lu_file_path = (
-        INPUT_DIR / "ONS" / "Correspondence_lists" / "LAD_2021_EW_LADS_BFC.csv"
-    )
-    lad_lu = pd.read_csv(lad_lu_file_path, usecols=["LAD21CD", "LAD21NM"])
-
-    lad_lu = lad_lu.rename(columns={'LAD21CD': zoning})
+    lad_lu = fetch_lad_lu(zoning=zoning)
 
     df_wide = pp.reformat_2021_lad_4digit(
         df=df,
@@ -54,6 +49,29 @@ def lad_4_digit():
     )
 
     pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
+
+
+def fetch_lad_lu(zoning:str) -> pd.DataFrame:
+    """Provide a correspondence between LAD 2021 code and name, for England and Wales.
+    Rhondda Cynon Taf is spelled with and without two fs at the end so duplicated here to avoid issues.
+
+    Args:
+        zoning (str): Column name to use for the geo code
+
+    Returns:
+        pd.DataFrame: Correspondence between the LAD names and geo codes
+    """
+    lad_lu_file_path = (
+        INPUT_DIR / "ONS" / "Correspondence_lists" / "LAD_2021_EW_LADS_BFC.csv"
+    )
+    lad_lu = pd.read_csv(lad_lu_file_path, usecols=["LAD21CD", "LAD21NM"])
+    lad_lu = lad_lu.rename(columns={"LAD21CD": zoning})
+
+    missing_lad = lad_lu[lad_lu["LAD21NM"] == "Rhondda Cynon Taf"].copy()
+
+    missing_lad["LAD21NM"] = "Rhondda Cynon Taff"
+
+    return pd.concat([lad_lu, missing_lad])
 
 
 def msoa_2_digit():
