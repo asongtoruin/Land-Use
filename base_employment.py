@@ -8,31 +8,6 @@ from land_use import constants
 from land_use import data_processing
 
 
-def read_dvector(config: dict, key: str) -> data_processing.DVector:
-    return data_processing.read_dvector_data(
-        input_root_directory=config["input_root_directory"],
-        **config[key],
-    )
-
-
-def translate_to_msoa_2021(dvec_in: data_processing.DVector) -> data_processing.DVector:
-    return dvec_in.translate_zoning(
-        new_zoning=constants.MSOA_ZONING_SYSTEM,
-        cache_path=constants.CACHE_FOLDER,
-        weighting=TranslationWeighting.SPATIAL,
-        check_totals=True,
-    )
-
-
-def translate_to_lsoa_2021(dvec_in: data_processing.DVector) -> data_processing.DVector:
-    return dvec_in.translate_zoning(
-        new_zoning=constants.LSOA_ZONING_SYSTEM,
-        cache_path=constants.CACHE_FOLDER,
-        weighting=TranslationWeighting.SPATIAL,
-        check_totals=True,
-    )
-
-
 # set up logging
 log_formatter = logging.Formatter(
     fmt="[%(asctime)-15s] %(levelname)s - [%(filename)s#%(lineno)d::%(funcName)s]: %(message)s",
@@ -72,25 +47,35 @@ generate_summary_outputs = bool(config["output_intermediate_outputs"])
 # read in the data from the config file
 LOGGER.info("Importing bres 2022 data from config file")
 # note this data is only for England and Wales
-bres_employment22_lad_4digit_sic = read_dvector(
+bres_employment22_lad_4digit_sic = data_processing.read_dvector_using_config(
     config=config, key="bres_employment22_lad_4digit_sic"
 )
-bres_2022_employment_msoa_2011_2_digit_sic = read_dvector(
+bres_2022_employment_msoa_2011_2_digit_sic = data_processing.read_dvector_using_config(
     config=config, key="bres_2022_employment_msoa_2011_2_digit_sic"
 )
-bres_2022_employment_lsoa_2011_1_digit_sic = read_dvector(
+bres_2022_employment_lsoa_2011_1_digit_sic = data_processing.read_dvector_using_config(
     config=config, key="bres_2022_employment_lsoa_2011_1_digit_sic"
 )
 
 LOGGER.info("Convert data held in LSOA 2011 and MSOA 2011 zoning to 2021")
 LOGGER.info("LAD is already at LAD 2021 zoning so doesn't need translating")
 
-bres_2022_employment_msoa_2021_2_digit_sic = translate_to_msoa_2021(
-    bres_2022_employment_msoa_2011_2_digit_sic
+bres_2022_employment_msoa_2021_2_digit_sic = (
+    bres_2022_employment_msoa_2011_2_digit_sic.translate_zoning(
+        new_zoning=constants.MSOA_ZONING_SYSTEM,
+        cache_path=constants.CACHE_FOLDER,
+        weighting=TranslationWeighting.SPATIAL,
+        check_totals=True,
+    )
 )
 
-bres_2022_employment_lsoa_2021_1_digit_sic = translate_to_lsoa_2021(
-    bres_2022_employment_lsoa_2011_1_digit_sic
+bres_2022_employment_lsoa_2021_1_digit_sic = (
+    bres_2022_employment_lsoa_2011_1_digit_sic.translate_zoning(
+        new_zoning=constants.LSOA_ZONING_SYSTEM,
+        cache_path=constants.CACHE_FOLDER,
+        weighting=TranslationWeighting.SPATIAL,
+        check_totals=True,
+    )
 )
 
 # TODO clarify what names we want to give the outputs for now given generic X* names

@@ -155,3 +155,6 @@ def try_loading_dvector(
     except FileNotFoundError:
         return None
 
+
+def read_dvector_using_config(config: dict, key: str) -> DVector:
+    return read_dvector_data(input_root_directory=config['input_root_directory'], **config[key])
