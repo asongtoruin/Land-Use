@@ -360,6 +360,7 @@ def expand_segmentation_to_match(
 
     return working
 
+
 def collapse_segmentation_to_match(
         dvector: DVector, match_to: DVector, strict: bool = False
     ) -> DVector:
