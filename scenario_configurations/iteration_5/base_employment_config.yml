@@ -21,3 +21,7 @@ bres_2022_employment_lsoa_2011_1_digit_sic:
     geographical_level: LSOA2011
     input_segments: [sic_1_digit]
 
+ons_sic_soc_lu:
+    file_path: ONS\industry_occupation\preprocessing\population_region_1sic_soc.hdf
+    geographical_level: RGN2021
+    input_segments: [sic_1_digit, soc_3]

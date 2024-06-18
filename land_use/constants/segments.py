@@ -899,8 +899,30 @@ _CUSTOM_SEGMENT_CATEGORIES = {
         614: "9810 : Undifferentiated goods-producing activities of private households for own use",
         615: "9820 : Undifferentiated service-producing activities of private households for own use",
         616: "9900 : Activities of extraterritorial organisations and bodies",
-
-    }
+    },
+    'soc_9':
+    {
+        # Standard Occupational Classfications (SOC 2020) only includes those working
+        1: "1. Managers, directors and senior officials",
+        2: "2. Professional occupations",
+        3: "3. Associate professional and technical occupations",
+        4: "4. Administrative and secretarial occupations",
+        5: "5. Skilled trades occupations",
+        6: "6. Caring, leisure and other service occupations",
+        7: "7. Sales and customer service occupations",
+        8: "8. Process, plant and machine operatives",
+        9: "9. Elementary occupations",
+    },
+    'soc_3':
+    {
+        # Standard Occupational Classfications (SOC 2020) in groups only includes those working (excludes SOC4)
+        # SOC group 1 consists of soc_9 1-3
+        # SOC group 2 consists of soc_9 4-7
+        # SOC group 3 consists of soc_9 8-9
+        1: "SOC group 1",
+        2: "SOC group 2",
+        3: "SOC group 3",
+    },
 }
 
 _CUSTOM_EXCLUSIONS = {

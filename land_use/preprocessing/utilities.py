@@ -431,44 +431,56 @@ def reformat_ons_sic_soc_correspondence(df: pd.DataFrame) -> pd.DataFrame:
         df (pd.DataFrame): Data in long format
 
     Returns:
-        pd.DataFrame: Data in wide format (with SIC_1 digit and SOC_9 as index and Regions as columns)
+        pd.DataFrame: Data in wide format (with SIC_1 digit and soc_9 as index and Regions as columns)
     """
     df = df.rename(
         columns={
-            "Regions Code": "RGN21CD",
-            "Occupation (current) (10 categories) Code": "SOC_9",
-            "Industry (current) (19 categories) Code": "Industry",
+            "Regions Code": "RGN2021",
+            "Occupation (current) (10 categories) Code": "soc_9",
+            "Industry (current) (19 categories) Code": "industry",
         }
     )
 
     # Set Wales code to match the shapefile
-    df.loc[df["RGN21CD"] == "W92000004", "RGN21CD"] = "WALES"
+    df.loc[df["RGN2021"] == "W92000004", "RGN2021"] = "WALES"
 
-    df = df.query("SOC_9 >0 and Industry > 0")
+    df = df.query("soc_9 >0 and industry > 0")
 
-    # having to map from industry to 1 digit sic. Note that 1digit sic is longer as more disagreegate with industry 18 being allocated to 18,19,20,21
+    # Have to map from industry to 1 digit sic. 
+    # Note that 1digit sic is longer as more disagreegate with industry 18 being allocated to 18,19,20,21
     # It is okay to duplicate these as we are only using splits.
     industry_to_sic_1_digit = pd.DataFrame(
         data={
-            "Industry": [x + 1 for x in range(21)],
-            "SIC_1_digit": [x + 1 for x in range(21)],
+            "industry": [x + 1 for x in range(21)],
+            "sic_1_digit": [x + 1 for x in range(21)],
         }
     )
 
     industry_to_sic_1_digit.loc[
-        industry_to_sic_1_digit["Industry"] > 18, "Industry"
+        industry_to_sic_1_digit["industry"] > 18, "industry"
     ] = 18
 
-    df_with_sic = pd.merge(df, industry_to_sic_1_digit, how="left", on="Industry").drop(
-        columns=["Industry"]
+    df_with_sic = pd.merge(df, industry_to_sic_1_digit, how="left", on="industry").drop(
+        columns=["industry"]
+    )
+
+    # TODO: consider if to move these to a correspondence file instead?
+    soc_9_to_soc_4 = {1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 2, 7: 2, 8: 3, 9: 3}
+
+    df_with_sic["soc_3"] = df_with_sic["soc_9"].map(soc_9_to_soc_4)
+
+    df_with_sic = df_with_sic.groupby(["RGN2021", "soc_3", "sic_1_digit"]).agg(
+        {"Observation": "sum"}
     )
 
     df_with_sic["sic_to_soc_split"] = df_with_sic["Observation"] / df_with_sic.groupby(
-        ["RGN21CD", "SIC_1_digit"]
+        ["RGN2021", "sic_1_digit"]
     )["Observation"].transform("sum")
 
+    df_with_sic = df_with_sic.reset_index()
+
     df_wide = df_with_sic.pivot(
-        index=["SIC_1_digit", "SOC_9"], columns="RGN21CD", values="sic_to_soc_split"
+        index=["sic_1_digit", "soc_3"], columns="RGN2021", values="sic_to_soc_split"
     )
 
     return df_wide

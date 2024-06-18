@@ -1,6 +1,8 @@
 from pathlib import Path
 import logging
 
+import numpy as np
+import pandas as pd
 import yaml
 from caf.core.zoning import TranslationWeighting
 
@@ -121,5 +123,67 @@ if generate_summary_outputs:
         dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
         output_directory=OUTPUT_DIR,
         output_reference=f"OutputX3",
+        value_name="jobs",
+    )
+
+ons_sic_soc_lu = data_processing.read_dvector_using_config(
+    config=config, key="ons_sic_soc_lu"
+)
+
+ons_sic_soc_lsoa = ons_sic_soc_lu.translate_zoning(
+    new_zoning=constants.LSOA_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.NO_WEIGHT,
+    check_totals=False,
+)
+
+LOGGER.info("Checking SIC-SOC splits by region have been allocated to LSOAs correctly")
+# take some representative lsoas to see if the values match
+data = [
+    ("E12000001", "E01008162"),
+    ("E12000002", "E01004766"),
+    ("E12000003", "E01007317"),
+    ("E12000004", "E01013453"),
+    ("E12000005", "E01008881"),
+    ("E12000006", "E01015589"),
+    ("E12000007", "E01000001"),
+    ("E12000008", "E01016016"),
+    ("E12000009", "E01014370"),
+    ("WALES", "W01000003"),
+]
+data_df = pd.DataFrame.from_records(data, columns=["gor", "example_lsoa"])
+rgn_list = list(data_df["gor"])
+example_lsoa_list = list(data_df["example_lsoa"])
+
+# convert to numpy arrays to avoid column mis-match issues
+ons_with_col_in_order = ons_sic_soc_lu.data[rgn_list].to_numpy()
+ons_sample_lsoa = ons_sic_soc_lsoa.data[example_lsoa_list].to_numpy()
+
+if np.all(ons_with_col_in_order == ons_sample_lsoa):
+    LOGGER.info("Split match as expected")
+else:
+    LOGGER.error(
+        "Splits do not match suggesting an issue with how the values have been allocated to regions."
+    )
+
+LOGGER.info("Applying sic-soc splits to sic jobs")
+employment_by_losa_soc_3 = bres_2022_employment_lsoa_2021_1_digit_sic * ons_sic_soc_lsoa
+
+LOGGER.info(f"Convert to MSOA as that is required for output")
+employment_by_mosa_soc_3 = employment_by_losa_soc_3.translate_zoning(
+    new_zoning=constants.MSOA_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.SPATIAL,
+    check_totals=True,
+)
+
+output_file_name = "Output E4.hdf"
+LOGGER.info(rf"Writing to {OUTPUT_DIR}\{output_file_name}")
+bres_2022_employment_lsoa_2021_1_digit_sic.save(OUTPUT_DIR / output_file_name)
+if generate_summary_outputs:
+    data_processing.summarise_dvector(
+        dvector=employment_by_mosa_soc_3,
+        output_directory=OUTPUT_DIR,
+        output_reference=f"OutputE4",
         value_name="jobs",
     )
