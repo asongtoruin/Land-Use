@@ -423,3 +423,52 @@ def reformat_2021_lad_4digit(
     df_wide = df_wide.astype(float)
 
     return df_wide
+
+def reformat_ons_sic_soc_correspondence(df: pd.DataFrame) -> pd.DataFrame:
+    """Change the ONS sic-soc correspondence to be in DVector format
+
+    Args:
+        df (pd.DataFrame): Data in long format
+
+    Returns:
+        pd.DataFrame: Data in wide format (with SIC_1 digit and SOC_9 as index and Regions as columns)
+    """
+    df = df.rename(
+        columns={
+            "Regions Code": "RGN21CD",
+            "Occupation (current) (10 categories) Code": "SOC_9",
+            "Industry (current) (19 categories) Code": "Industry",
+        }
+    )
+
+    # Set Wales code to match the shapefile
+    df.loc[df["RGN21CD"] == "W92000004", "RGN21CD"] = "WALES"
+
+    df = df.query("SOC_9 >0 and Industry > 0")
+
+    # having to map from industry to 1 digit sic. Note that 1digit sic is longer as more disagreegate with industry 18 being allocated to 18,19,20,21
+    # It is okay to duplicate these as we are only using splits.
+    industry_to_sic_1_digit = pd.DataFrame(
+        data={
+            "Industry": [x + 1 for x in range(21)],
+            "SIC_1_digit": [x + 1 for x in range(21)],
+        }
+    )
+
+    industry_to_sic_1_digit.loc[
+        industry_to_sic_1_digit["Industry"] > 18, "Industry"
+    ] = 18
+
+    df_with_sic = pd.merge(df, industry_to_sic_1_digit, how="left", on="Industry").drop(
+        columns=["Industry"]
+    )
+
+    df_with_sic["sic_to_soc_split"] = df_with_sic["Observation"] / df_with_sic.groupby(
+        ["RGN21CD", "SIC_1_digit"]
+    )["Observation"].transform("sum")
+
+    df_wide = df_with_sic.pivot(
+        index=["SIC_1_digit", "SOC_9"], columns="RGN21CD", values="sic_to_soc_split"
+    )
+
+    return df_wide

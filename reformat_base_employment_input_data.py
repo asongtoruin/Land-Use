@@ -21,6 +21,7 @@ def main():
     lad_4_digit()
     msoa_2_digit()
     lsoa_1_digit()
+    find_sic_soc_splits_by_region()
 
 
 def lad_4_digit():
@@ -51,7 +52,7 @@ def lad_4_digit():
     pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
 
 
-def fetch_lad_lu(zoning:str) -> pd.DataFrame:
+def fetch_lad_lu(zoning: str) -> pd.DataFrame:
     """Provide a correspondence between LAD 2021 code and name, for England and Wales.
     Rhondda Cynon Taf is spelled with and without two fs at the end so duplicated here to avoid issues.
 
@@ -121,6 +122,27 @@ def lsoa_1_digit():
         seg_name=seg_name,
         zoning=zoning,
     )
+
+    pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
+
+
+def find_sic_soc_splits_by_region():
+
+    filename = "population_region_1sic_soc.csv"
+
+    file_path = INPUT_DIR / "ONS" / "industry_occupation" / filename
+
+    df = pd.read_csv(
+        file_path,
+        usecols=[
+            "Regions Code",
+            "Occupation (current) (10 categories) Code",
+            "Industry (current) (19 categories) Code",
+            "Observation",
+        ],
+    )
+
+    df_wide = pp.reformat_ons_sic_soc_correspondence(df=df)
 
     pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
 
