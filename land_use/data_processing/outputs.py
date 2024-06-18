@@ -220,3 +220,61 @@ def summary_reporting(
                 LOGGER.info(f'{index} total: {row[segmentation]}')
             for index, row in summary.iterrows():
                 LOGGER.info(f'{index} proportion: {row[f"{segmentation}_proportion"]}')
+
+
+def save_output(
+        output_folder: Path,
+        output_reference: str,
+        dvector: DVector,
+        dvector_dimension: str,
+        generate_summary_outputs: bool = False,
+        detailed_logs: bool = False
+
+):
+    """Output data and report logs of high level totals.
+    Also contains the option to provide detailed logging and detailed summary
+    outputs, which are not output by default.
+
+    Parameters
+    ----------
+    output_folder : Path
+        Output location to store outputs passed from the config.
+        Directory should already exist before use in this function (the set up
+        of the logging guarantees this).
+    output_reference : str
+        Helpful string reference for the user to report which outputs are being
+        produced.
+    dvector : DVector
+        DVector of data that should be summarised / saved.
+    dvector_dimension : str
+        Helpful string reference for the user to report the units of the data
+        stored in DVector. May be 'population', or 'households', or something
+        similar.
+    generate_summary_outputs : bool, default False
+        Produces csv summary outputs grouped by geography and segment by calling
+        the summarise_dvector() function.
+    detailed_logs : bool, default False
+        Provides detailed logging for all segments in dvector by setting
+        detailed_logs=True in the summary_reporting() function.
+
+    """
+
+    # logging information
+    summary_reporting(
+        dvector=dvector,
+        dimension=dvector_dimension,
+        detailed_logs=detailed_logs
+    )
+
+    # save to HDF
+    LOGGER.info(fr'Writing to {output_folder}\{output_reference}.hdf')
+    dvector.save(output_folder / f'{output_reference}.hdf')
+
+    # produce output summaries in csv format if required
+    if generate_summary_outputs:
+        summarise_dvector(
+            dvector=dvector,
+            output_directory=output_folder,
+            output_reference=output_reference,
+            value_name=dvector_dimension
+        )
