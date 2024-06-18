@@ -23,7 +23,7 @@ with open(r'scenario_configurations\iteration_5\base_population_config.yml', 'r'
 
 # Get output directory for intermediate outputs from config file
 OUTPUT_DIR = Path(config['output_directory'])
-OUTPUT_DIR.mkdir(exist_ok=True)
+OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 
 # Define whether to output intermediate outputs, recommended to not output loads if debugging
 generate_summary_outputs = bool(config['output_intermediate_outputs'])
@@ -79,19 +79,13 @@ for GOR in constants.GORS:
     # check against original addressbase data
     # check = hh_by_nssec.aggregate(segs=['accom_h'])
 
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output A_{GOR}.hdf')
-    data_processing.summary_reporting(
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output A_{GOR}',
         dvector=hh_by_nssec,
-        dimension='households'
+        dvector_dimension='households'
     )
-    hh_by_nssec.save(OUTPUT_DIR / f'Output A_{GOR}.hdf')
-    if generate_summary_outputs:
-        data_processing.summarise_dvector(
-            dvector=hh_by_nssec,
-            output_directory=OUTPUT_DIR,
-            output_reference=F'OutputA_{GOR}',
-            value_name='households'
-        )
 
     # --- Step 2 --- #
     LOGGER.info('--- Step 2 ---')
@@ -128,19 +122,12 @@ for GOR in constants.GORS:
     # check = hh_by_nssec_hc_ha_car.aggregate(segs=['accom_h'])
 
     # save output to hdf and csvs for checking
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output B_{GOR}.hdf')
-    data_processing.summary_reporting(
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output B_{GOR}',
         dvector=hh_by_nssec_hc_ha_car,
-        dimension='households'
+        dvector_dimension='households'
     )
-    hh_by_nssec_hc_ha_car.save(OUTPUT_DIR / f'Output B_{GOR}.hdf')
-    if generate_summary_outputs:
-        data_processing.summarise_dvector(
-            dvector=hh_by_nssec_hc_ha_car,
-            output_directory=OUTPUT_DIR,
-            output_reference=f'OutputB_{GOR}',
-            value_name='households'
-        )
 
     # --- Step 3 --- #
     LOGGER.info('--- Step 3 ---')
@@ -164,19 +151,12 @@ for GOR in constants.GORS:
     addressbase_population = occupancy * addressbase_dwellings
 
     # save output to hdf and csvs for checking
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output C_{GOR}.hdf')
-    data_processing.summary_reporting(
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output C_{GOR}',
         dvector=addressbase_population,
-        dimension='population'
+        dvector_dimension='population'
     )
-    addressbase_population.save(OUTPUT_DIR / f'Output C_{GOR}.hdf')
-    if generate_summary_outputs:
-        data_processing.summarise_dvector(
-            dvector=addressbase_population,
-            output_directory=OUTPUT_DIR,
-            output_reference=f'OutputC_{GOR}',
-            value_name='population'
-        )
 
     # --- Step 4 --- #
     LOGGER.info('--- Step 4 ---')
@@ -195,19 +175,12 @@ for GOR in constants.GORS:
     )
 
     # save output to hdf and csvs for checking
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output D_{GOR}.hdf')
-    data_processing.summary_reporting(
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output D_{GOR}',
         dvector=pop_by_nssec_hc_ha_car,
-        dimension='population'
+        dvector_dimension='population'
     )
-    pop_by_nssec_hc_ha_car.save(OUTPUT_DIR / f'Output D_{GOR}.hdf')
-    if generate_summary_outputs:
-        data_processing.summarise_dvector(
-            dvector=pop_by_nssec_hc_ha_car,
-            output_directory=OUTPUT_DIR,
-            output_reference=f'OutputD_{GOR}',
-            value_name='population'
-        )
 
     # --- Step 5 --- #
     LOGGER.info('--- Step 5 ---')
@@ -231,19 +204,12 @@ for GOR in constants.GORS:
     pop_by_nssec_hc_ha_car_gender_age = pop_by_nssec_hc_ha_car * gender_age_splits_lsoa
 
     # save output to hdf and csvs for checking
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output E_{GOR}.hdf')
-    data_processing.summary_reporting(
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output E_{GOR}',
         dvector=pop_by_nssec_hc_ha_car_gender_age,
-        dimension='population'
+        dvector_dimension='population'
     )
-    pop_by_nssec_hc_ha_car_gender_age.save(OUTPUT_DIR / f'Output E_{GOR}.hdf')
-    if generate_summary_outputs:
-        data_processing.summarise_dvector(
-            dvector=pop_by_nssec_hc_ha_car_gender_age,
-            output_directory=OUTPUT_DIR,
-            output_reference=f'OutputE_{GOR}',
-            value_name='population'
-        )
 
     # --- Step 6 --- #
     LOGGER.info('--- Step 6 ---')
@@ -355,20 +321,12 @@ for GOR in constants.GORS:
     pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc = soc_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age_econ_emp
 
     # save output to hdf and csvs for checking
-    # TODO Output F hdf is big!
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output F_{GOR}.hdf')
-    data_processing.summary_reporting(
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output F_{GOR}',
         dvector=pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
-        dimension='population'
+        dvector_dimension='population'
     )
-    pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc.save(OUTPUT_DIR / f'Output F_{GOR}.hdf')
-    if generate_summary_outputs:
-        data_processing.summarise_dvector(
-            dvector=pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
-            output_directory=OUTPUT_DIR,
-            output_reference=f'OutputF_{GOR}',
-            value_name='population'
-        )
 
     # clear data at the end of the loop
     data_processing.processing.clear_dvectors(
@@ -481,20 +439,12 @@ for GOR in constants.GORS:
     adjusted_pop = ce_uplift_factor * pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc
 
     # save output to hdf and csvs for checking
-    # TODO Output G hdf is big!
-    LOGGER.info(fr'Writing to {OUTPUT_DIR}\Output G_{GOR}.hdf')
-    data_processing.summary_reporting(
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output G_{GOR}',
         dvector=adjusted_pop,
-        dimension='population'
+        dvector_dimension='population'
     )
-    adjusted_pop.save(OUTPUT_DIR / f'Output G_{GOR}.hdf')
-    if generate_summary_outputs:
-        data_processing.summarise_dvector(
-            dvector=adjusted_pop,
-            output_directory=OUTPUT_DIR,
-            output_reference=f'OutputG_{GOR}',
-            value_name='population'
-        )
 
     # clear data at the end of the loop
     data_processing.clear_dvectors(
