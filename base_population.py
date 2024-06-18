@@ -23,7 +23,7 @@ with open(r'scenario_configurations\iteration_5\base_population_config.yml', 'r'
 
 # Get output directory for intermediate outputs from config file
 OUTPUT_DIR = Path(config['output_directory'])
-OUTPUT_DIR.mkdir(exist_ok=True)
+OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 
 # Define whether to output intermediate outputs, recommended to not output loads if debugging
 generate_summary_outputs = bool(config['output_intermediate_outputs'])
