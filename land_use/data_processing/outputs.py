@@ -120,7 +120,7 @@ def summarise_dvector(
     for segment in dvector.segmentation.seg_dict.keys():
         disaggregate_total = dvector.aggregate([segment])
         lad_total = disaggregate_total.translate_zoning(
-            geographies.LAD_ZONING_SYSTEM,
+            geographies.ENG_LAD_PLUS_WALES_ZONING_SYSTEM,
             cache_path=geographies.CACHE_FOLDER
         )
 

@@ -25,8 +25,9 @@ def find_header_line(
     file_path : PathLike
         File to search through
     header_string : str
-        Text witin the "column header" line. Note this will be converted
-          to lowercase by the function.
+        Text within the "column header" line. Note this will be converted
+          to lowercase within the function as the search is case-insensitive.
+          This does not impact the output as it is not returned. 
     max_lines : int, optional
         maximum number of line to check for the header text. Defaults to 100.
 
@@ -34,7 +35,8 @@ def find_header_line(
     -------
     Tuple[int, str]
         (0-indexed) number of the first line within the file that begins with
-        `header_start`, and the first column entry that contains header_string.
+        `header_start`, and the first column entry that contains header_string 
+        (with the case being unaltered).
     """
 
     if len(header_string) < 2:
@@ -230,10 +232,13 @@ def pivot_to_dvector(
     # set column names to be the zoning column values
     reindexed.columns = reindexed.columns.get_level_values(zoning_column)
 
+    # TODO: consider if to enforce a type change of making all cells floats.
+    # As this helps with HDF writing/compressing.
+
     return reindexed
 
 def extract_geo_code(
-    col: pd.Series, england: bool = True, wales: bool = True, scotland: bool = True
+    col: pd.Series, england: bool = True, wales: bool = True, scotland: bool = True, nireland: bool = True
 ) -> pd.Series:
     """Extract LSOA/DataZone/MSOA type from a pandas series. 
     Done by assuming code begin with a country prefix followed by 8 digits.
@@ -244,6 +249,7 @@ def extract_geo_code(
         england (bool, optional): If to include code belonging to England (starting with an E). Defaults to True.
         wales (bool, optional): If to include code belonging to Wales (starting with an W). Defaults to True.
         scotland (bool, optional): If to include code belonging to Scotland (starting with an S). Defaults to True.
+        nireland (bool, optional): If to include code belonging to Northern Ireland (starting with an 9). Defaults to True.
 
     Raises:
         ValueError: If no countries have been selected. Likely to be an error.
@@ -259,8 +265,210 @@ def extract_geo_code(
         include += "W"
     if scotland:
         include += "S"
+    if nireland:
+        include += "9"
 
     if include == "":
         raise ValueError(f"No countries selected.")
 
     return col.str.extract(rf"([{include}]\d{{8}})", expand=False)
+
+def reformat_xsoa_sic_digits_to_dvector(
+    df: pd.DataFrame,
+    heading_col: str,
+    segmentation: dict[int, str],
+    seg_name: str,
+    zoning: str,
+) -> pd.DataFrame:
+    """Convert an input dataframe with required segmentation and zoning into DVector format.
+
+    Parameters
+    ----------
+        df : pd.DataFrame
+            Data as read in from file
+        heading_col : str
+            Column name that includes the geography code with extra information
+        segmentation : dict[int, str]
+            Used for mapping the segmentation labels to index numbers (starting at 1)
+        seg_name : str
+            Name for the segmentation
+        zoning : str
+            The name of the column that is the geography code (and NOTHING else)
+
+    Returns
+    -------
+    pd.DataFrame:
+        Data in DVector format (sic segmentation as index and geographical areas as columns).
+    """
+
+    # Extract geocodes and filter to England+Wales
+    df[zoning] = extract_geo_code(df[heading_col], scotland=False, nireland=False)
+    df = df.dropna(subset=[zoning])
+    df = df.drop(columns=[heading_col])
+
+    # Turn into long format to allow segmentation index to be allocated
+    df = df.melt(id_vars=[zoning])
+
+    # define dictionary of segmentation mapping
+    inv_seg = {v: k for k, v in segmentation.items()}
+
+    # map the definitions used to define the segmentation
+    df[seg_name] = df["variable"].map(inv_seg)
+    df[seg_name] = df[seg_name].astype(int)
+    df = df.drop(columns=["variable"])
+
+    # convert to dvector format
+    df_wide = pivot_to_dvector(
+        data=df,
+        zoning_column=zoning,
+        index_cols=[seg_name],
+        value_column="value",
+    )
+
+    df_wide = df_wide.astype(float)
+
+    return df_wide
+
+def read_headered_and_tailed_csv(
+    file_path: PathLike, header_string: str, **kwargs
+) -> Tuple[pd.DataFrame, str]:
+    """Reads a CSV (or similarly-delimited file), skipping metadata stored before and after actual data.
+    Works by elimiating rows where the header string column is NA.
+
+    Parameters
+    ----------
+    file_path : PathLike
+        path to the file to read
+    header_string : str
+        text within the "column header" line. Note this will be converted
+        to lowercase by the function.
+    kwargs :
+        any other options to pass to `pd.read_csv`
+
+    Returns
+    -------
+    Tuple[pd.DataFrame, str]:
+        tuple of the dataframe of the data found after the header row and before the ending data, with the
+        index of the header row and the first column entry that contains header_string.
+    """
+    skip_rows, col_name = find_header_line(file_path, header_string=header_string)
+
+    df = pd.read_csv(file_path, skiprows=skip_rows, **kwargs)
+    df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
+    df = df.dropna(subset=[col_name])
+
+    return df, col_name
+
+def reformat_2021_lad_4digit(
+    df: pd.DataFrame,
+    lad_lu: pd.DataFrame,
+    segmentation: dict[int, str],
+    seg_col: str,
+    seg_name: str,
+    zoning: str,
+) -> pd.DataFrame:
+    """Convert an input dataframe with required segmentation and LAD zoning into DVector format.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data as read in from file
+    lad_lu : pd.DataFrame
+        Correspondence between LAD geo code and name
+    segmentation : dict[int, str]
+        Used for mapping the segmentation labels to index numbers (starting at 1)
+    seg_name : str
+        Name for the segmentation
+    zoning : str
+        The name of the column that is the geography code (and NOTHING else)
+
+    Returns
+    -------
+    pd.DataFrame:
+        Data in DVector format (sic segmentation as index and geographical LAD areas as columns).
+    """
+
+    # define dictionary of segmentation mapping
+    inv_seg = {v: k for k, v in segmentation.items()}
+
+    # map the definitions used to define the segmentation
+    df[seg_name] = df[seg_col].map(inv_seg)
+    df[seg_name] = df[seg_name].astype(int)
+    df = df.drop(columns=seg_col)
+
+    join_col = "LAD21NM"
+
+    df_long = df.melt(id_vars=[seg_name], var_name=join_col)
+
+    if not join_col in lad_lu.columns:
+        raise ValueError(
+            f"{join_col} is not found in lookup columns, {lad_lu.columns}. Check inputs."
+        )
+
+    df_with_codes = pd.merge(df_long, lad_lu, how="left", on=["LAD21NM"])
+
+    df_with_codes[zoning] = extract_geo_code(
+        df_with_codes[zoning], scotland=False, nireland=False
+    )
+    df_with_codes = df_with_codes.dropna(subset=[zoning])
+
+    df_wide = pivot_to_dvector(
+        data=df_with_codes,
+        zoning_column=zoning,
+        index_cols=[seg_name],
+        value_column="value",
+    )
+
+    # set to float to help hdf process
+    df_wide = df_wide.astype(float)
+
+    return df_wide
+
+def reformat_ons_sic_soc_correspondence(df: pd.DataFrame) -> pd.DataFrame:
+    """Change the ONS sic-soc correspondence to be in DVector format
+
+    Args:
+        df (pd.DataFrame): Data in long format
+
+    Returns:
+        pd.DataFrame: Data in wide format (with SIC_1 digit and SOC_9 as index and Regions as columns)
+    """
+    df = df.rename(
+        columns={
+            "Regions Code": "RGN21CD",
+            "Occupation (current) (10 categories) Code": "SOC_9",
+            "Industry (current) (19 categories) Code": "Industry",
+        }
+    )
+
+    # Set Wales code to match the shapefile
+    df.loc[df["RGN21CD"] == "W92000004", "RGN21CD"] = "WALES"
+
+    df = df.query("SOC_9 >0 and Industry > 0")
+
+    # having to map from industry to 1 digit sic. Note that 1digit sic is longer as more disagreegate with industry 18 being allocated to 18,19,20,21
+    # It is okay to duplicate these as we are only using splits.
+    industry_to_sic_1_digit = pd.DataFrame(
+        data={
+            "Industry": [x + 1 for x in range(21)],
+            "SIC_1_digit": [x + 1 for x in range(21)],
+        }
+    )
+
+    industry_to_sic_1_digit.loc[
+        industry_to_sic_1_digit["Industry"] > 18, "Industry"
+    ] = 18
+
+    df_with_sic = pd.merge(df, industry_to_sic_1_digit, how="left", on="Industry").drop(
+        columns=["Industry"]
+    )
+
+    df_with_sic["sic_to_soc_split"] = df_with_sic["Observation"] / df_with_sic.groupby(
+        ["RGN21CD", "SIC_1_digit"]
+    )["Observation"].transform("sum")
+
+    df_wide = df_with_sic.pivot(
+        index=["SIC_1_digit", "SOC_9"], columns="RGN21CD", values="sic_to_soc_split"
+    )
+
+    return df_wide

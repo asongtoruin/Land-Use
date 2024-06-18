@@ -102,12 +102,22 @@ MSOA_ZONING_SYSTEM = generate_zoning_system(
 
 # Define other zone systems which are defined in the cache which may be used
 # as part of the modelling.
-LAD_NAME = 'LAD2021'
-LAD_ZONING_SYSTEM = generate_zoning_system(
-    name=LAD_NAME,
+# This LAD2021 is used for reporting and has Wales as a single feature but England is broken into LAD
+ENG_LAD_PLUS_WALES_NAME = 'LAD2021_Wales_as_one'
+ENG_LAD_PLUS_WALES_ZONING_SYSTEM = generate_zoning_system(
+    name=ENG_LAD_PLUS_WALES_NAME,
     shapefile_path=SHAPEFILE_DIRECTORY / 'LAD (2021)' / 'LAD_2021_EW_BFC.shp',
     id_col='LAD21CD', desc_col='LAD21NM'
 )
+
+# This shapefile has each LAD in England and Wales as a separate feature
+LAD_EW_2021_NAME = 'LAD2021'
+LAD_EW_2021_ZONING_SYSTEM = generate_zoning_system(
+    name=LAD_EW_2021_NAME, 
+    shapefile_path=SHAPEFILE_DIRECTORY / 'LAD (2021)' / 'LAD_2021_EW_LADS_BFC.shp',
+    id_col='LAD21CD', desc_col='LAD21NM'
+)
+
 RGN_NAME = 'RGN2021'
 RGN_ZONING_SYSTEM = generate_zoning_system(
     name=RGN_NAME,
@@ -200,6 +210,13 @@ try:
 except FileNotFoundError:
     pass
 
+LAD_EW_2011_NAME = 'LAD2011'
+LAD_EW_2011_ZONING_SYSTEM = generate_zoning_system(
+    name=LAD_EW_2011_NAME, 
+    shapefile_path=SHAPEFILE_DIRECTORY / 'LAD (2011)' / 'infuse_dist_lyr_2011_ew.shp',
+    id_col='geo_code', desc_col='name'
+)
+
 MSOA_EW_2011_NAME = 'MSOA2011'
 MSOA_EW_2011_ZONING_SYSTEM = generate_zoning_system(
     name=MSOA_EW_2011_NAME, 
@@ -207,22 +224,23 @@ MSOA_EW_2011_ZONING_SYSTEM = generate_zoning_system(
     id_col='geo_code', desc_col='name'
 )
 
-
 # Dictionary of references for the yaml file
 try:
     # TODO link with definitions above
     KNOWN_GEOGRAPHIES = {
         LSOA_NAME: LSOA_ZONING_SYSTEM,
         MSOA_NAME: MSOA_ZONING_SYSTEM,
-        LAD_NAME: LAD_ZONING_SYSTEM,
+        ENG_LAD_PLUS_WALES_NAME: ENG_LAD_PLUS_WALES_ZONING_SYSTEM,
         LSOA_EW_2011_NAME: LSOA_EW_2011_ZONING_SYSTEM,
         MSOA_EW_2011_NAME: MSOA_EW_2011_ZONING_SYSTEM,
+        LAD_EW_2011_NAME: LAD_EW_2011_ZONING_SYSTEM,
+        LAD_EW_2021_NAME: LAD_EW_2021_ZONING_SYSTEM,
     }
 except NameError:
     KNOWN_GEOGRAPHIES = {
         LSOA_NAME: LSOA_ZONING_SYSTEM,
         MSOA_NAME: MSOA_ZONING_SYSTEM,
-        LAD_NAME: LAD_ZONING_SYSTEM,
+        ENG_LAD_PLUS_WALES_NAME: ENG_LAD_PLUS_WALES_ZONING_SYSTEM,
         RGN_NAME: RGN_ZONING_SYSTEM,
         SCOTLAND_NAME: SCOTLAND_ZONING_SYSTEM,
         NORTH_NAME: NORTH_ZONING_SYSTEM,
