@@ -78,13 +78,13 @@ bres_2022_employment_lsoa_2021_1_digit_sic = (
     )
 )
 
-# TODO clarify what names we want to give the outputs for now given generic X* names
-LOGGER.info(rf"Writing to {OUTPUT_DIR}\Output X1.hdf")
+output_file_name = "Output E1.hdf"
+LOGGER.info(rf"Writing to {OUTPUT_DIR}\{output_file_name}")
 
 data_processing.summary_reporting(
     dvector=bres_employment22_lad_4digit_sic, dimension="jobs"
 )
-bres_employment22_lad_4digit_sic.save(OUTPUT_DIR / "Output X1.hdf")
+bres_employment22_lad_4digit_sic.save(OUTPUT_DIR / output_file_name)
 if generate_summary_outputs:
     data_processing.summarise_dvector(
         dvector=bres_employment22_lad_4digit_sic,
@@ -93,12 +93,14 @@ if generate_summary_outputs:
         value_name="jobs",
     )
 
-LOGGER.info(rf"Writing to {OUTPUT_DIR}\Output X2.hdf")
+
+output_file_name = "Output E2.hdf"
+LOGGER.info(rf"Writing to {OUTPUT_DIR}\{output_file_name}")
 
 data_processing.summary_reporting(
     dvector=bres_2022_employment_msoa_2021_2_digit_sic, dimension="jobs"
 )
-bres_2022_employment_msoa_2021_2_digit_sic.save(OUTPUT_DIR / "Output X2.hdf")
+bres_2022_employment_msoa_2021_2_digit_sic.save(OUTPUT_DIR / output_file_name)
 if generate_summary_outputs:
     data_processing.summarise_dvector(
         dvector=bres_2022_employment_msoa_2021_2_digit_sic,
@@ -107,12 +109,13 @@ if generate_summary_outputs:
         value_name="jobs",
     )
 
-LOGGER.info(rf"Writing to {OUTPUT_DIR}\Output X3.hdf")
+output_file_name = "Output E3.hdf"
+LOGGER.info(rf"Writing to {OUTPUT_DIR}\{output_file_name}")
 
 data_processing.summary_reporting(
     dvector=bres_2022_employment_lsoa_2021_1_digit_sic, dimension="jobs"
 )
-bres_2022_employment_lsoa_2021_1_digit_sic.save(OUTPUT_DIR / "Output X3.hdf")
+bres_2022_employment_lsoa_2021_1_digit_sic.save(OUTPUT_DIR / output_file_name)
 if generate_summary_outputs:
     data_processing.summarise_dvector(
         dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
