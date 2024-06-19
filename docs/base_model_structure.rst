@@ -124,7 +124,7 @@ Where the year for geographical area is not stated then it is 2021.
         table_3 -> output_e3;
         table_4 -> table_6;
         table_5 -> table_6;
-        table_3 -> output_e4;
+        output_e3 -> output_e4;
         table_6 -> output_e4;
 
     }
