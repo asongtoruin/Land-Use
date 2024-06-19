@@ -33,7 +33,7 @@ generate_summary_outputs = bool(config["output_intermediate_outputs"])
 
 # define logging path based on config file
 logging.basicConfig(
-    format=log_formatter._fmt,
+    format=log_formatter._fmt, # type: ignore # error in imported library which?
     datefmt=log_formatter.datefmt,
     level=logging.INFO,
     handlers=[
@@ -49,8 +49,8 @@ generate_summary_outputs = bool(config["output_intermediate_outputs"])
 # read in the data from the config file
 LOGGER.info("Importing bres 2022 data from config file")
 # note this data is only for England and Wales
-bres_employment22_lad_4digit_sic = data_processing.read_dvector_using_config(
-    config=config, key="bres_employment22_lad_4digit_sic"
+bres_2022_employment_lad_4_digit_sic = data_processing.read_dvector_using_config(
+    config=config, key="bres_2022_employment_lad_4_digit_sic"
 )
 bres_2022_employment_msoa_2011_2_digit_sic = data_processing.read_dvector_using_config(
     config=config, key="bres_2022_employment_msoa_2011_2_digit_sic"
@@ -84,16 +84,23 @@ output_file_name = "Output E1.hdf"
 LOGGER.info(rf"Writing to {OUTPUT_DIR}\{output_file_name}")
 
 data_processing.summary_reporting(
-    dvector=bres_employment22_lad_4digit_sic, dimension="jobs"
+    dvector=bres_2022_employment_lad_4_digit_sic, dimension="jobs"
 )
-bres_employment22_lad_4digit_sic.save(OUTPUT_DIR / output_file_name)
+bres_2022_employment_lad_4_digit_sic.save(OUTPUT_DIR / output_file_name)
 if generate_summary_outputs:
     data_processing.summarise_dvector(
-        dvector=bres_employment22_lad_4digit_sic,
+        dvector=bres_2022_employment_lad_4_digit_sic,
         output_directory=OUTPUT_DIR,
         output_reference=f"OutputX1",
         value_name="jobs",
     )
+
+data_processing.save_output(
+    output_folder=OUTPUT_DIR,
+    output_reference=output_file_name,
+    dvector=bres_2022_employment_lad_4_digit_sic,
+    dvector_dimension="job",
+)
 
 
 output_file_name = "Output E2.hdf"
@@ -111,6 +118,13 @@ if generate_summary_outputs:
         value_name="jobs",
     )
 
+data_processing.save_output(
+    output_folder=OUTPUT_DIR,
+    output_reference=output_file_name,
+    dvector=bres_2022_employment_msoa_2021_2_digit_sic,
+    dvector_dimension="job",
+)
+
 output_file_name = "Output E3.hdf"
 LOGGER.info(rf"Writing to {OUTPUT_DIR}\{output_file_name}")
 
@@ -125,6 +139,13 @@ if generate_summary_outputs:
         output_reference=f"OutputX3",
         value_name="jobs",
     )
+
+data_processing.save_output(
+    output_folder=OUTPUT_DIR,
+    output_reference=output_file_name,
+    dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
+    dvector_dimension="job",
+)
 
 ons_sic_soc_lu = data_processing.read_dvector_using_config(
     config=config, key="ons_sic_soc_lu"
@@ -187,3 +208,10 @@ if generate_summary_outputs:
         output_reference=f"OutputE4",
         value_name="jobs",
     )
+
+data_processing.save_output(
+    output_folder=OUTPUT_DIR,
+    output_reference=output_file_name,
+    dvector=employment_by_mosa_soc_3,
+    dvector_dimension="job",
+)
