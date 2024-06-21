@@ -11,17 +11,22 @@ bres_2022_employment_lad_4_digit_sic:
     geographical_level: LAD2021
     input_segments: [sic_4_digit]
 
-bres_2022_employment_msoa_2011_2_digit_sic:
-    file_path: BRES2022\Employment\preprocessing\bres_employment22_msoa2011_2digit_sic.hdf
+bres_2022_employment_msoa_2011_2_digit_sic_jobs:
+    file_path: BRES2022\Employment\preprocessing\bres_employment22_msoa2011_2digit_sic_jobs.hdf
     geographical_level: MSOA2011
     input_segments: [sic_2_digit]
+
+bres_2022_employment_msoa_2011_2_digit_sic_1_splits:
+    file_path: BRES2022\Employment\preprocessing\bres_employment22_msoa2011_2digit_sic_sic_1_splits.hdf
+    geographical_level: MSOA2011
+    input_segments: [sic_1_digit, sic_2_digit]
 
 bres_2022_employment_lsoa_2011_1_digit_sic:
     file_path: BRES2022\Employment\preprocessing\bres_employment22_lsoa2011_1digit_sic.hdf
     geographical_level: LSOA2011
     input_segments: [sic_1_digit]
 
-ons_sic_soc_lu:
+ons_sic_soc_splits_lu:
     file_path: ONS\industry_occupation\preprocessing\population_region_1sic_soc.hdf
     geographical_level: RGN2021
     input_segments: [sic_1_digit, soc_3]

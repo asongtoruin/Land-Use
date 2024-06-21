@@ -933,6 +933,32 @@ _CUSTOM_EXCLUSIONS = {
     # TODO check if children are students or non-working age in pop_emp
     'pop_emp': {
         'age': [{'own_val': i, 'other_vals': {1, 2, 3}} for i in range(1, 4)]
+    },
+    # TODO consider reworking this as it is not easy to check / maintain
+    'sic_1_digit': {
+        'sic_2_digit': [
+            {'own_val': 1, 'other_vals': set(i for i in range(1,100) if i not in range(1,5))},
+            {'own_val': 2, 'other_vals': set(i for i in range(1,100) if i not in range(5,10))},
+            {'own_val': 3, 'other_vals': set(i for i in range(1,100) if i not in range(10,35))},
+            {'own_val': 4, 'other_vals': set(i for i in range(1,100) if i not in range(35,36))},
+            {'own_val': 5, 'other_vals': set(i for i in range(1,100) if i not in range(36,41))},
+            {'own_val': 6, 'other_vals': set(i for i in range(1,100) if i not in range(41,45))},
+            {'own_val': 7, 'other_vals': set(i for i in range(1,100) if i not in range(45,49))},
+            {'own_val': 8, 'other_vals': set(i for i in range(1,100) if i not in range(49,55))},
+            {'own_val': 9, 'other_vals': set(i for i in range(1,100) if i not in range(55,58))},
+            {'own_val': 10, 'other_vals': set(i for i in range(1,100) if i not in range(58,64))},
+            {'own_val': 11, 'other_vals': set(i for i in range(1,100) if i not in range(64,68))},
+            {'own_val': 12, 'other_vals': set(i for i in range(1,100) if i not in range(68,69))},
+            {'own_val': 13, 'other_vals': set(i for i in range(1,100) if i not in range(69,77))},
+            {'own_val': 14, 'other_vals': set(i for i in range(1,100) if i not in range(77,84))},
+            {'own_val': 15, 'other_vals': set(i for i in range(1,100) if i not in range(84,85))},
+            {'own_val': 16, 'other_vals': set(i for i in range(1,100) if i not in range(85,86))},
+            {'own_val': 17, 'other_vals': set(i for i in range(1,100) if i not in range(86,90))},
+            {'own_val': 18, 'other_vals': set(i for i in range(1,100) if i not in range(90,94))},
+            {'own_val': 19, 'other_vals': set(i for i in range(1,100) if i not in range(94,97))},
+            {'own_val': 20, 'other_vals': set(i for i in range(1,100) if i not in range(97,99))},
+            {'own_val': 21, 'other_vals': set(i for i in range(1,100) if i not in range(99,100))}
+        ]
     }
 }
 

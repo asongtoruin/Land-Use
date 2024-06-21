@@ -96,8 +96,39 @@ def msoa_2_digit():
         seg_name=seg_name,
         zoning=zoning,
     )
+    pp.save_preprocessed_hdf(
+        source_file_path=file_path, df=df_wide, multiple_output_ref="jobs"
+    )
 
-    pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
+    # now move onto working out proportions for sic_1_digit, sic_2_digit by msoa
+    df_sic_1_sic_2 = df_wide.copy().reset_index()
+
+    df_sic_1_sic_2["sic_1_digit"] = df_sic_1_sic_2["sic_2_digit"].map(
+        pp.SIC_2_DIGIT_TO_SIC_1_DIGIT_AGGREGATIONS
+    )
+
+    df_long = df_sic_1_sic_2.melt(id_vars=["sic_1_digit", "sic_2_digit"])
+
+    df_long["sic_1_to_sic_2_split"] = df_long["value"] / df_long.groupby(
+        ["MSOA2011", "sic_1_digit"]
+    )["value"].transform("sum")
+
+    # infill nas with 0's note this might be risky
+    # if a certain sic_1_digit MSOA category does not have any jobs in this dataset
+    # so the splits are all 0% for that combination.
+    # But it is then applied to a dataset where there are jobs at the sic_1_digit level
+    # Needs to be checked for when applying the split, as it may need more careful infilling possible from LAD (or even GOR) or neighbouring MSOAs
+    df_long = df_long.fillna(0)
+
+    df_wide = df_long.pivot(
+        index=["sic_1_digit", "sic_2_digit"],
+        columns=["MSOA2011"],
+        values="sic_1_to_sic_2_split",
+    )
+
+    pp.save_preprocessed_hdf(
+        source_file_path=file_path, df=df_wide, multiple_output_ref="sic_1_splits"
+    )
 
 
 def lsoa_1_digit():
