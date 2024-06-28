@@ -195,8 +195,6 @@ df = pp.read_ons(
         'Economic activity status (7 categories)': pp.ECON_6_TO_4_AGGREGATIONS
     }
 )
-# rename wales column for region level data
-df['WALES'] = df.pop('W92000004')
 
 # drop exlusions
 # TODO Is there a way to do this better / using the SegmentSuper exclusion definitions?
@@ -223,8 +221,6 @@ df = pp.read_ons(
         'Occupation (current) (10 categories)': pp.SOC_10_TO_4_AGGREGATIONS
     }
 )
-# rename wales column for region level data
-df['WALES'] = df.pop('W92000004')
 
 # drop exlusions
 # TODO Is there a way to do this better / using the SegmentSuper exclusion definitions?

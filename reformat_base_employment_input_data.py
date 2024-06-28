@@ -26,7 +26,7 @@ def main():
 
 def lad_4_digit():
     filename = "bres_employment22_lad_4digit_sic.csv"
-    zoning = geographies.LAD_EW_2021_NAME
+    zoning = geographies.LAD_NAME
     seg_name = "sic_4_digit"
     header_string = "Industry"
 
@@ -77,7 +77,7 @@ def fetch_lad_lu(zoning: str) -> pd.DataFrame:
 
 def msoa_2_digit():
     filename = "bres_employment22_msoa2011_2digit_sic.csv"
-    zoning = geographies.MSOA_EW_2011_NAME
+    zoning = geographies.MSOA_2011_NAME
     seg_name = "sic_2_digit"
     header_string = "Area"
 
@@ -134,7 +134,7 @@ def msoa_2_digit():
 def lsoa_1_digit():
 
     filename = "bres_employment22_lsoa2011_1digit_sic.csv"
-    zoning = geographies.LSOA_EW_2011_NAME
+    zoning = geographies.LSOA_2011_NAME
     seg_name = "sic_1_digit"
     header_string = "Area"
 

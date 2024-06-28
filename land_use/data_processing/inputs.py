@@ -67,7 +67,7 @@ def read_dvector_data(
         )
 
     if geography_subset:
-        zoning = f'{geographical_level}_{geography_subset}'
+        zoning = f'{geographical_level}-{geography_subset}'
     else:
         zoning = geographical_level
 

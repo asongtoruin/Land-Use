@@ -1,7 +1,7 @@
 # Configuration file specifying the segmentation and geographical level of the input data.
 # All files here are assumed to be in a format ready for DVectors.
 input_root_directory: I:\NorMITs Land Use\2023\import
-output_directory: OUTPUTS
+output_directory: F:\Working\Land-Use\OUTPUTS\POPULATION
 output_intermediate_outputs: False
 
 occupied_households:

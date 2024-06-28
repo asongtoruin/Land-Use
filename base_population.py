@@ -105,7 +105,7 @@ for GOR in constants.GORS:
     LOGGER.info(f'Converting the proportions to LSOA level')
     # expand these factors to LSOA level
     proportion_hhs_by_h_hc_ha_car_lsoa = proportion_hhs_by_h_hc_ha_car.translate_zoning(
-        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021_{GOR}'),
+        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False
@@ -193,7 +193,7 @@ for GOR in constants.GORS:
     LOGGER.info(f'Converting proportions to LSOA')
     # convert the factors back to LSOA
     gender_age_splits_lsoa = gender_age_splits.translate_zoning(
-        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021_{GOR}'),
+        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False
@@ -238,19 +238,19 @@ for GOR in constants.GORS:
                 f'splits to LSOA level')
     # convert the factors back to LSOA
     econ_splits_lsoa = econ_splits.translate_zoning(
-        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021_{GOR}'),
+        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False
     )
     emp_splits_lsoa = emp_splits.translate_zoning(
-        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021_{GOR}'),
+        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False
     )
     soc_splits_lsoa = soc_splits.translate_zoning(
-        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021_{GOR}'),
+        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False
@@ -360,7 +360,7 @@ for GOR in constants.GORS:
 
     # translate the MSOA based CE-type splits to LSOA
     ce_type_splits_lsoa = ce_type_splits.translate_zoning(
-        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021_{GOR}'),
+        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False
@@ -377,7 +377,7 @@ for GOR in constants.GORS:
 
     # translate the GOR based splits to LSOA
     ce_econ_splits_lsoa = ce_econ_splits.translate_zoning(
-        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021_{GOR}'),
+        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False
@@ -394,7 +394,7 @@ for GOR in constants.GORS:
 
     # translate the GOR based splits to LSOA
     ce_soc_splits_lsoa = ce_soc_splits.translate_zoning(
-        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021_{GOR}'),
+        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False

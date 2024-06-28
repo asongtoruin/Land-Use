@@ -442,7 +442,7 @@ def reformat_ons_sic_soc_correspondence(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # Set Wales code to match the shapefile
-    df.loc[df["RGN2021"] == "W92000004", "RGN2021"] = "WALES"
+    # df.loc[df["RGN2021"] == "W92000004", "RGN2021"] = "WALES"
 
     df = df.query("soc_9 >0 and industry > 0")
 
