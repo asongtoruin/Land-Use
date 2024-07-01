@@ -188,15 +188,6 @@ for gor in GORS:
     RGNS_BY_GOR[rgn_zone_name] = rgn_zone_system
 
 # TODO: think about a different way to implement generate_zoning_system possibly on the fly as needed?
-# try:
-#     LSOA_EW_2011_NAME = 'LSOA2011'
-#     LSOA_EW_2011_ZONING_SYSTEM = generate_zoning_system(
-#         name=LSOA_EW_2011_NAME,
-#         shapefile_path=SHAPEFILE_DIRECTORY / 'LSOA (2011)' / 'infuse_lsoa_lyr_2011_ew.shp',
-#         id_col='geo_code', desc_col='name'
-#     )
-# except FileNotFoundError:
-#     pass
 
 # --- GENERATE KNOWN_GEOGRAPHIES TO IMPORT INTO LAND USE PROCESSING --- #
 # Dictionary of references for the yaml file
@@ -304,19 +295,3 @@ KNOWN_GEOGRAPHIES = {
 #             gor,
 #             cache_path=CACHE_FOLDER
 #         )
-
-    # TRANSLATING_GEOGRAPHIES = {
-    #     **LSOAS_BY_GOR,
-    #     **MSOAS_BY_GOR,
-    #     **LADS_BY_GOR,
-    #     **RGNS_BY_GOR
-    #     }
-    # from itertools import combinations
-    #
-    # for zone_name_1, zone_name_2 in combinations(TRANSLATING_GEOGRAPHIES.keys(), 2):
-    #     zone_system_1 = TRANSLATING_GEOGRAPHIES.get(zone_name_1)
-    #     zone_system_2 = TRANSLATING_GEOGRAPHIES.get(zone_name_2)
-    #     print(f'Generating zone translation for {zone_name_1} and {zone_name_2}')
-    #     zone_system_1.translate(zone_system_2, cache_path=CACHE_FOLDER, weighting='spatial')
-
-
