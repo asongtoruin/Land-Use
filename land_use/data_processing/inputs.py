@@ -156,5 +156,25 @@ def try_loading_dvector(
         return None
 
 
-def read_dvector_using_config(config: dict, key: str) -> DVector:
-    return read_dvector_data(input_root_directory=config['input_root_directory'], **config[key])
+def read_dvector_from_config(config: dict, key: str, **kwargs) -> DVector:
+    """Read DVector format input data (assumed to be HDF format) using
+    information directly from the config file.
+
+    Parameters
+    ----------
+    config: dict
+        Config dictionary loaded directly from reading the yml file.
+    key: str
+        Name of the table in the config file.
+
+    Returns
+    -------
+    DVector
+        Calls read_dvector_data() and returns DVector.
+
+    """
+    return read_dvector_data(
+        input_root_directory=config['input_root_directory'],
+        **config[key],
+        **kwargs
+    )

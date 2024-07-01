@@ -42,23 +42,84 @@ logging.basicConfig(
 # loop through GORs to save memory issues further down the line
 for GOR in constants.GORS:
 
+    # --- Step 0 --- #
     # read in the data from the config file
     LOGGER.info('Importing data from config file')
-    occupied_households = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['occupied_households'])
-    unoccupied_households = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['unoccupied_households'])
-    ons_table_1 = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_1'])
-    addressbase_dwellings = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['addressbase_dwellings'])
-    ons_table_2 = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_2'])
-    mype_2022 = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['mype_2022'])
-    ons_table_4 = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_4'])
-    hh_age_gender_2021 = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['hh_age_gender_2021'])
-    ons_table_3_econ = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_3_econ'])
-    ons_table_3_emp = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_3_emp'])
-    ons_table_3_soc = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ons_table_3_soc'])
-    ce_uplift_factor = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ce_uplift_factor'])
-    ce_pop_by_type = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ce_pop_by_type'])
-    ce_pop_by_age_gender_soc = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ce_pop_by_age_gender_soc'])
-    ce_pop_by_age_gender_econ = data_processing.read_dvector_data(geography_subset=GOR, input_root_directory=config['input_root_directory'], **config['ce_pop_by_age_gender_econ'])
+    occupied_households = data_processing.read_dvector_from_config(
+        config=config,
+        key='occupied_households',
+        geography_subset=GOR
+    )
+    unoccupied_households = data_processing.read_dvector_from_config(
+        config=config,
+        key='unoccupied_households',
+        geography_subset=GOR
+    )
+    ons_table_1 = data_processing.read_dvector_from_config(
+        config=config,
+        key='ons_table_1',
+        geography_subset=GOR
+    )
+    addressbase_dwellings = data_processing.read_dvector_from_config(
+        config=config,
+        key='addressbase_dwellings',
+        geography_subset=GOR
+    )
+    ons_table_2 = data_processing.read_dvector_from_config(
+        config=config,
+        key='ons_table_2',
+        geography_subset=GOR
+    )
+    mype_2022 = data_processing.read_dvector_from_config(
+        config=config,
+        key='mype_2022',
+        geography_subset=GOR
+    )
+    ons_table_4 = data_processing.read_dvector_from_config(
+        config=config,
+        key='ons_table_4',
+        geography_subset=GOR
+    )
+    hh_age_gender_2021 = data_processing.read_dvector_from_config(
+        config=config,
+        key='hh_age_gender_2021',
+        geography_subset=GOR
+    )
+    ons_table_3_econ = data_processing.read_dvector_from_config(
+        config=config,
+        key='ons_table_3_econ',
+        geography_subset=GOR
+    )
+    ons_table_3_emp = data_processing.read_dvector_from_config(
+        config=config,
+        key='ons_table_3_emp',
+        geography_subset=GOR
+    )
+    ons_table_3_soc = data_processing.read_dvector_from_config(
+        config=config,
+        key='ons_table_3_soc',
+        geography_subset=GOR
+    )
+    ce_uplift_factor = data_processing.read_dvector_from_config(
+        config=config,
+        key='ce_uplift_factor',
+        geography_subset=GOR
+    )
+    ce_pop_by_type = data_processing.read_dvector_from_config(
+        config=config,
+        key='ce_pop_by_type',
+        geography_subset=GOR
+    )
+    ce_pop_by_age_gender_soc = data_processing.read_dvector_from_config(
+        config=config,
+        key='ce_pop_by_age_gender_soc',
+        geography_subset=GOR
+    )
+    ce_pop_by_age_gender_econ = data_processing.read_dvector_from_config(
+        config=config,
+        key='ce_pop_by_age_gender_econ',
+        geography_subset=GOR
+    )
 
     # --- Step 1 --- #
     LOGGER.info('--- Step 1 ---')

@@ -45,22 +45,22 @@ LOGGER.info("Processing BRES 2022")
 # read in the data from the config file
 LOGGER.info("Importing bres 2022 data from config file")
 # note this data is only for England and Wales
-bres_2022_employment_lad_4_digit_sic = data_processing.read_dvector_using_config(
+bres_2022_employment_lad_4_digit_sic = data_processing.read_dvector_from_config(
     config=config,
     key="bres_2022_employment_lad_4_digit_sic"
 )
 
-bres_2022_employment_msoa_2011_2_digit_sic_jobs = data_processing.read_dvector_using_config(
+bres_2022_employment_msoa_2011_2_digit_sic_jobs = data_processing.read_dvector_from_config(
         config=config,
         key="bres_2022_employment_msoa_2011_2_digit_sic_jobs"
 )
 
-bres_2022_employment_lsoa_2011_1_digit_sic = data_processing.read_dvector_using_config(
+bres_2022_employment_lsoa_2011_1_digit_sic = data_processing.read_dvector_from_config(
     config=config,
     key="bres_2022_employment_lsoa_2011_1_digit_sic"
 )
 
-bres_2022_employment_msoa_2011_2_digit_sic_1_splits = data_processing.read_dvector_using_config(
+bres_2022_employment_msoa_2011_2_digit_sic_1_splits = data_processing.read_dvector_from_config(
     config=config,
     key="bres_2022_employment_msoa_2011_2_digit_sic_1_splits"
 )
@@ -154,7 +154,7 @@ data_processing.save_output(
 LOGGER.info("Moving onto the steps required to create Output E4")
 
 LOGGER.info("Calculate splits by industry and allocate to LSOA level")
-ons_sic_soc_splits_lu = data_processing.read_dvector_using_config(
+ons_sic_soc_splits_lu = data_processing.read_dvector_from_config(
     config=config,
     key="ons_sic_soc_splits_lu"
 )
