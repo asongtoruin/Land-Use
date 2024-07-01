@@ -40,10 +40,9 @@ logging.basicConfig(
     ]
 )
 
-LOGGER.info("Processing BRES 2022")
-
+# --- Step 0 --- #
 # read in the data from the config file
-LOGGER.info("Importing bres 2022 data from config file")
+LOGGER.info("Importing BRES 2022 data from config file")
 # note this data is only for England and Wales
 bres_2022_employment_lad_4_digit_sic = data_processing.read_dvector_from_config(
     config=config,
@@ -65,9 +64,10 @@ bres_2022_employment_msoa_2011_2_digit_sic_1_splits = data_processing.read_dvect
     key="bres_2022_employment_msoa_2011_2_digit_sic_1_splits"
 )
 
-LOGGER.info("Convert data held in LSOA 2011 and MSOA 2011 zoning to 2021")
-LOGGER.info("LAD is already at LAD 2021 zoning so doesn't need translating")
-
+# --- Step 1 --- #
+LOGGER.info('--- Step 1 ---')
+LOGGER.info('Convert BRES data held in LSOA 2011 and MSOA 2011 zoning to 2021')
+# LAD is already at LAD 2021 zoning so doesn't need translating
 bres_2022_employment_msoa_2021_2_digit_sic_jobs = bres_2022_employment_msoa_2011_2_digit_sic_jobs.translate_zoning(
         new_zoning=constants.MSOA_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
@@ -82,83 +82,37 @@ bres_2022_employment_lsoa_2021_1_digit_sic = bres_2022_employment_lsoa_2011_1_di
         check_totals=True
 )
 
-output_file_name = "Output E1.hdf"
-LOGGER.info(rf"Writing to {OUTPUT_DIR}\{output_file_name}")
-
-data_processing.summary_reporting(
-    dvector=bres_2022_employment_lad_4_digit_sic,
-    dimension="jobs"
-)
-bres_2022_employment_lad_4_digit_sic.save(OUTPUT_DIR / output_file_name)
-if generate_summary_outputs:
-    data_processing.summarise_dvector(
+# save output to hdf and csvs for checking
+data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference='Output E1',
         dvector=bres_2022_employment_lad_4_digit_sic,
-        output_directory=OUTPUT_DIR,
-        output_reference=f"OutputE1",
-        value_name="jobs"
-    )
+        dvector_dimension='jobs'
+)
 
 data_processing.save_output(
-    output_folder=OUTPUT_DIR,
-    output_reference=output_file_name,
-    dvector=bres_2022_employment_lad_4_digit_sic,
-    dvector_dimension="job"
-)
-
-
-output_file_name = "Output E2.hdf"
-LOGGER.info(rf"Writing to {OUTPUT_DIR}\{output_file_name}")
-
-data_processing.summary_reporting(
-    dvector=bres_2022_employment_msoa_2021_2_digit_sic_jobs,
-    dimension="jobs"
-)
-bres_2022_employment_msoa_2021_2_digit_sic_jobs.save(OUTPUT_DIR / output_file_name)
-if generate_summary_outputs:
-    data_processing.summarise_dvector(
+        output_folder=OUTPUT_DIR,
+        output_reference='Output E2',
         dvector=bres_2022_employment_msoa_2021_2_digit_sic_jobs,
-        output_directory=OUTPUT_DIR,
-        output_reference=f"OutputE2",
-        value_name="jobs"
-    )
+        dvector_dimension='jobs'
+)
+
 data_processing.save_output(
-    output_folder=OUTPUT_DIR,
-    output_reference=output_file_name,
-    dvector=bres_2022_employment_msoa_2021_2_digit_sic_jobs,
-    dvector_dimension="job"
-)
-
-output_file_name = "Output E3.hdf"
-LOGGER.info(rf"Writing to {OUTPUT_DIR}\{output_file_name}")
-
-data_processing.summary_reporting(
-    dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
-    dimension="jobs"
-)
-
-bres_2022_employment_lsoa_2021_1_digit_sic.save(OUTPUT_DIR / output_file_name)
-if generate_summary_outputs:
-    data_processing.summarise_dvector(
+        output_folder=OUTPUT_DIR,
+        output_reference='Output E3',
         dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
-        output_directory=OUTPUT_DIR,
-        output_reference=f"OutputE3",
-        value_name="jobs"
-    )
-data_processing.save_output(
-    output_folder=OUTPUT_DIR,
-    output_reference=output_file_name,
-    dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
-    dvector_dimension="job"
+        dvector_dimension='jobs'
 )
 
-LOGGER.info("Moving onto the steps required to create Output E4")
-
-LOGGER.info("Calculate splits by industry and allocate to LSOA level")
+# --- Step 2 --- #
+LOGGER.info('--- Step 2 ---')
+LOGGER.info('Calculate splits by industry and allocate to LSOA level')
 ons_sic_soc_splits_lu = data_processing.read_dvector_from_config(
     config=config,
     key="ons_sic_soc_splits_lu"
 )
 
+LOGGER.info(f'Converting the proportions to LSOA level')
 ons_sic_soc_splits_lsoa = ons_sic_soc_splits_lu.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
@@ -166,8 +120,7 @@ ons_sic_soc_splits_lsoa = ons_sic_soc_splits_lu.translate_zoning(
     check_totals=False
 )
 
-LOGGER.info("calcualate jobs by lsoa with soc group")
-
+LOGGER.info(f'Applying SOC group proportions to BRES 1-digit SIC jobs')
 jobs_by_lsoa_with_soc_group = (
     bres_2022_employment_lsoa_2021_1_digit_sic * ons_sic_soc_splits_lsoa
 )
@@ -180,27 +133,36 @@ bres_2022_employment_lsoa_2021_2_digit_sic_1_splits = bres_2022_employment_msoa_
         check_totals=False
 )
 
-LOGGER.info("create output E4")
+LOGGER.info(f'Applying SOC group proportions to BRES 2-digit SIC jobs')
 output_e4 = bres_2022_employment_lsoa_2021_2_digit_sic_1_splits * jobs_by_lsoa_with_soc_group
 
-output_file_name = "Output E4.hdf"
-LOGGER.info(rf"Writing to {OUTPUT_DIR}\{output_file_name}")
-
-data_processing.summary_reporting(
-    dvector=bres_2022_employment_lsoa_2021_1_digit_sic, dimension="jobs"
-)
-bres_2022_employment_lsoa_2021_1_digit_sic.save(OUTPUT_DIR / output_file_name)
-if generate_summary_outputs:
-    data_processing.summarise_dvector(
-        dvector=output_e4,
-        output_directory=OUTPUT_DIR,
-        output_reference=f"OutputE4",
-        value_name="jobs",
-    )
-
+# save output to hdf and csvs for checking
 data_processing.save_output(
-    output_folder=OUTPUT_DIR,
-    output_reference=output_file_name,
-    dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
-    dvector_dimension="job",
+        output_folder=OUTPUT_DIR,
+        output_reference='Output E4',
+        dvector=output_e4,
+        dvector_dimension='jobs'
 )
+
+# TODO Simon this chunk of code below was outputting but not outputting Output 4?? Was this intentional?
+# output_file_name = "Output E4.hdf"
+# LOGGER.info(rf"Writing to {OUTPUT_DIR}\{output_file_name}")
+#
+# data_processing.summary_reporting(
+#     dvector=bres_2022_employment_lsoa_2021_1_digit_sic, dimension="jobs"
+# )
+# bres_2022_employment_lsoa_2021_1_digit_sic.save(OUTPUT_DIR / output_file_name)
+# if generate_summary_outputs:
+#     data_processing.summarise_dvector(
+#         dvector=output_e4,
+#         output_directory=OUTPUT_DIR,
+#         output_reference=f"OutputE4",
+#         value_name="jobs",
+#     )
+#
+# data_processing.save_output(
+#     output_folder=OUTPUT_DIR,
+#     output_reference=output_file_name,
+#     dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
+#     dvector_dimension="job",
+# )
