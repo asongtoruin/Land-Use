@@ -46,27 +46,31 @@ LOGGER.info("Importing BRES 2022 data from config file")
 # note this data is only for England and Wales
 bres_2022_employment_lad_4_digit_sic = data_processing.read_dvector_from_config(
     config=config,
-    key="bres_2022_employment_lad_4_digit_sic"
+    key='bres_2022_employment_lad_4_digit_sic'
 )
 
 bres_2022_employment_msoa_2011_2_digit_sic_jobs = data_processing.read_dvector_from_config(
         config=config,
-        key="bres_2022_employment_msoa_2011_2_digit_sic_jobs"
+        key='bres_2022_employment_msoa_2011_2_digit_sic_jobs'
 )
 
 bres_2022_employment_lsoa_2011_1_digit_sic = data_processing.read_dvector_from_config(
     config=config,
-    key="bres_2022_employment_lsoa_2011_1_digit_sic"
+    key='bres_2022_employment_lsoa_2011_1_digit_sic'
 )
 
 bres_2022_employment_msoa_2011_2_digit_sic_1_splits = data_processing.read_dvector_from_config(
     config=config,
-    key="bres_2022_employment_msoa_2011_2_digit_sic_1_splits"
+    key='bres_2022_employment_msoa_2011_2_digit_sic_1_splits'
+)
+ons_sic_soc_splits_lu = data_processing.read_dvector_from_config(
+    config=config,
+    key='ons_sic_soc_splits_lu'
 )
 
 # --- Step 1 --- #
 LOGGER.info('--- Step 1 ---')
-LOGGER.info('Convert BRES data held in LSOA 2011 and MSOA 2011 zoning to 2021')
+LOGGER.info('Convert 2 Digit SIC 2022 BRES data held in MSOA 2011 zoning to 2021 MSOA')
 # LAD is already at LAD 2021 zoning so doesn't need translating
 bres_2022_employment_msoa_2021_2_digit_sic_jobs = bres_2022_employment_msoa_2011_2_digit_sic_jobs.translate_zoning(
         new_zoning=constants.MSOA_ZONING_SYSTEM,
@@ -75,6 +79,17 @@ bres_2022_employment_msoa_2021_2_digit_sic_jobs = bres_2022_employment_msoa_2011
         check_totals=True
 )
 
+# save output to hdf and csvs for checking
+data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference='Output A',
+        dvector=bres_2022_employment_msoa_2021_2_digit_sic_jobs,
+        dvector_dimension='jobs'
+)
+
+# --- Step 2 --- #
+LOGGER.info('--- Step 2 ---')
+LOGGER.info('Convert 1 Digit SIC 2022 BRES data held in LSOA 2011 zoning to 2021 LSOA')
 bres_2022_employment_lsoa_2021_1_digit_sic = bres_2022_employment_lsoa_2011_1_digit_sic.translate_zoning(
         new_zoning=constants.LSOA_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
@@ -85,34 +100,25 @@ bres_2022_employment_lsoa_2021_1_digit_sic = bres_2022_employment_lsoa_2011_1_di
 # save output to hdf and csvs for checking
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference='Output E1',
-        dvector=bres_2022_employment_lad_4_digit_sic,
-        dvector_dimension='jobs'
-)
-
-data_processing.save_output(
-        output_folder=OUTPUT_DIR,
-        output_reference='Output E2',
-        dvector=bres_2022_employment_msoa_2021_2_digit_sic_jobs,
-        dvector_dimension='jobs'
-)
-
-data_processing.save_output(
-        output_folder=OUTPUT_DIR,
-        output_reference='Output E3',
+        output_reference='Output B',
         dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
         dvector_dimension='jobs'
 )
 
-# --- Step 2 --- #
-LOGGER.info('--- Step 2 ---')
-LOGGER.info('Calculate splits by industry and allocate to LSOA level')
-ons_sic_soc_splits_lu = data_processing.read_dvector_from_config(
-    config=config,
-    key="ons_sic_soc_splits_lu"
+# --- Step 3 --- #
+LOGGER.info('--- Step 3 ---')
+LOGGER.info('Exporting district-based 4 Digit SIC 2022 BRES data')
+# save output to hdf and csvs for checking
+data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference='Output C',
+        dvector=bres_2022_employment_lad_4_digit_sic,
+        dvector_dimension='jobs'
 )
 
-LOGGER.info(f'Converting the proportions to LSOA level')
+# --- Step 4 --- #
+LOGGER.info('--- Step 4 ---')
+LOGGER.info(f'Converting SIC SOC proportions from Region to LSOA 2021 level')
 ons_sic_soc_splits_lsoa = ons_sic_soc_splits_lu.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
@@ -125,7 +131,7 @@ jobs_by_lsoa_with_soc_group = (
     bres_2022_employment_lsoa_2021_1_digit_sic * ons_sic_soc_splits_lsoa
 )
 
-LOGGER.info("Convert proportion of sic 2 digit by sic 1 digit to apply to soc groups jobs by lsoa")
+LOGGER.info('Converting proportions of SIC 2 digit by SIC 1 digit by SOC groups jobs to LSOA 2021')
 bres_2022_employment_lsoa_2021_2_digit_sic_1_splits = bres_2022_employment_msoa_2011_2_digit_sic_1_splits.translate_zoning(
         new_zoning=constants.LSOA_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
@@ -134,35 +140,12 @@ bres_2022_employment_lsoa_2021_2_digit_sic_1_splits = bres_2022_employment_msoa_
 )
 
 LOGGER.info(f'Applying SOC group proportions to BRES 2-digit SIC jobs')
-output_e4 = bres_2022_employment_lsoa_2021_2_digit_sic_1_splits * jobs_by_lsoa_with_soc_group
+jobs_by_sic_soc_lsoa = bres_2022_employment_lsoa_2021_2_digit_sic_1_splits * jobs_by_lsoa_with_soc_group
 
 # save output to hdf and csvs for checking
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference='Output E4',
-        dvector=output_e4,
+        output_reference='Output D',
+        dvector=jobs_by_sic_soc_lsoa,
         dvector_dimension='jobs'
 )
-
-# TODO Simon this chunk of code below was outputting but not outputting Output 4?? Was this intentional?
-# output_file_name = "Output E4.hdf"
-# LOGGER.info(rf"Writing to {OUTPUT_DIR}\{output_file_name}")
-#
-# data_processing.summary_reporting(
-#     dvector=bres_2022_employment_lsoa_2021_1_digit_sic, dimension="jobs"
-# )
-# bres_2022_employment_lsoa_2021_1_digit_sic.save(OUTPUT_DIR / output_file_name)
-# if generate_summary_outputs:
-#     data_processing.summarise_dvector(
-#         dvector=output_e4,
-#         output_directory=OUTPUT_DIR,
-#         output_reference=f"OutputE4",
-#         value_name="jobs",
-#     )
-#
-# data_processing.save_output(
-#     output_folder=OUTPUT_DIR,
-#     output_reference=output_file_name,
-#     dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
-#     dvector_dimension="job",
-# )
