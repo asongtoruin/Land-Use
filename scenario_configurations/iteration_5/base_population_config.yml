@@ -1,16 +1,16 @@
 # Configuration file specifying the segmentation and geographical level of the input data.
 # All files here are assumed to be in a format ready for DVectors.
 input_root_directory: I:\NorMITs Land Use\2023\import
-output_directory: F:\Working\Land-Use\OUTPUTS\POPULATION
+output_directory: F:\Working\Land-Use\OUTPUTS\TMP
 output_intermediate_outputs: False
 
-occupied_households:
+unoccupied_households:
     file_path: RM002 accom type by household size\preprocessing\2072764328175065 zero.hdf
     geographical_level: LSOA2021
     input_segments: [accom_h]
     # IDEALLY we might also have a "desired_segments" here, in case the input data is at an unrequired level of detail
 
-unoccupied_households:
+occupied_households:
     file_path: RM002 accom type by household size\preprocessing\2672385425907310 all.hdf
     geographical_level: LSOA2021
     input_segments: [accom_h]

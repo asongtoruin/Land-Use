@@ -123,7 +123,69 @@ for GOR in constants.GORS:
 
     # --- Step 1 --- #
     LOGGER.info('--- Step 1 ---')
-    LOGGER.info(f'Calculating NS-SeC proportions by dwelling type')
+    LOGGER.info(f'Calculating average occupancy by dwelling type')
+    # Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
+    all_properties = unoccupied_households + occupied_households
+
+    # Calculate adjustment factors by zone to get proportion of households occupied by dwelling type by zone
+    non_empty_proportion = occupied_households / all_properties
+
+    # infill missing adjustment factors with average value of other properties
+    # in the LSOA. Note this is where the total households in and LSOA of a given
+    # type is 0
+    # TODO do we want to do anything about 1/0 proportions??
+    non_empty_proportion.data = non_empty_proportion.data.fillna(
+        non_empty_proportion.data.mean(axis=0), axis=0
+    )
+
+    # average occupancy for occupied dwellings
+    # TODO this average occupancy is now based on census households, not addressbase, is this what we want? Or do we want to use the adjusted addressbase?
+    average_occupancy = (ons_table_1 / occupied_households)
+
+    # infill missing occupancies with average value of other properties in the LSOA
+    # i.e. based on column
+    average_occupancy.data = average_occupancy.data.fillna(
+        average_occupancy.data.mean(axis=0), axis=0
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Step1_Occupied Households_{GOR}',
+        dvector=occupied_households,
+        dvector_dimension='households'
+    )
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Step1_Unoccupied Households_{GOR}',
+        dvector=unoccupied_households,
+        dvector_dimension='households'
+    )
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Step1_Average Occupancy_{GOR}',
+        dvector=average_occupancy,
+        dvector_dimension='occupancy'
+    )
+
+    # --- Step 2 --- #
+    LOGGER.info('--- Step 2 ---')
+    LOGGER.info(f'Adjusting addressbase buildings to reflect unoccupied dwellings')
+
+    # apply factors of proportion of total households that are occupied by LSOA
+    adjusted_addressbase_dwellings = addressbase_dwellings * non_empty_proportion
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Step2_Adjusted Addressbase Dwellings_{GOR}',
+        dvector=adjusted_addressbase_dwellings,
+        dvector_dimension='households'
+    )
+
+    # --- Step 3 --- #
+    LOGGER.info('--- Step 3 ---')
+    LOGGER.info(f'Calculating NS-SeC household proportions by dwelling type')
     # calculate NS-SeC splits of households by
     # dwelling type by LSOA
     total_hh_by_hh = ons_table_4.aggregate(segs=['accom_h'])
@@ -133,9 +195,9 @@ for GOR in constants.GORS:
     # TODO is this what we want to do? This drops some dwellings from the addressbase wherever the census total is zero.
     proportion_ns_sec.data = proportion_ns_sec.data.fillna(0)
 
-    LOGGER.info(f'Applying NS-SeC proportions to AddressBase dwellings')
+    LOGGER.info(f'Applying NS-SeC proportions to Adjusted AddressBase dwellings')
     # apply proportional factors based on hh ns_sec to the addressbase dwellings
-    hh_by_nssec = addressbase_dwellings * proportion_ns_sec
+    hh_by_nssec = adjusted_addressbase_dwellings * proportion_ns_sec
 
     # check against original addressbase data
     # check = hh_by_nssec.aggregate(segs=['accom_h'])
@@ -143,13 +205,13 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Output A_{GOR}',
+        output_reference=f'Step3_Households_{GOR}',
         dvector=hh_by_nssec,
         dvector_dimension='households'
     )
 
-    # --- Step 2 --- #
-    LOGGER.info('--- Step 2 ---')
+    # --- Step 4 --- #
+    LOGGER.info('--- Step 4 ---')
     LOGGER.info(f'Calculating children, adults, and car availability proportions by dwelling type')
     # calculate splits of households with or without children and by car availability
     # and by number of adults by dwelling types by MSOA
@@ -185,60 +247,22 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Output B_{GOR}',
+        output_reference=f'Step4_Households_{GOR}',
         dvector=hh_by_nssec_hc_ha_car,
         dvector_dimension='households'
     )
 
-    # --- Step 3 --- #
-    LOGGER.info('--- Step 3 ---')
-    LOGGER.info(f'Calculating average occupancy by dwelling type')
-    # Create a total dvec of total number of households based on occupied_properties + unoccupied_properties
-    all_properties = unoccupied_households + occupied_households
-
-    # Calculate adjustment factors by zone to get proportion of households occupied by dwelling type by zone
-    non_empty_proportion = occupied_households / all_properties
-    non_empty_proportion.data = non_empty_proportion.data.fillna(0)
-
-    # average occupancy for all dwellings
-    occupancy = (ons_table_1 / occupied_households) * non_empty_proportion
-    # occ_2 = population / all_properties
-
-    # infill missing occupancies with average value of other properties in the LSOA
-    # i.e. based on column
-    occupancy.data = occupancy.data.fillna(occupancy.data.mean(axis=0), axis=0)
-
-    # multiply occupancy by the addressbase dwellings to get total population by zone
-    addressbase_population = occupancy * addressbase_dwellings
-
-    # save output to hdf and csvs for checking
-    data_processing.save_output(
-        output_folder=OUTPUT_DIR,
-        output_reference=f'Occupied Households_{GOR}',
-        dvector=occupied_households,
-        dvector_dimension='households'
-    )
-    data_processing.save_output(
-        output_folder=OUTPUT_DIR,
-        output_reference=f'Unoccupied Households_{GOR}',
-        dvector=unoccupied_households,
-        dvector_dimension='households'
-    )
-    data_processing.save_output(
-        output_folder=OUTPUT_DIR,
-        output_reference=f'Output C_{GOR}',
-        dvector=addressbase_population,
-        dvector_dimension='population'
-    )
-
-    # --- Step 4 --- #
-    LOGGER.info('--- Step 4 ---')
+    # --- Step 5 --- #
+    LOGGER.info('--- Step 5 ---')
     LOGGER.info(f'Applying average occupancy to households')
     # Apply average occupancy by dwelling type to the households by NS-SeC,
     # car availability, number of adults and number of children
     # TODO Do we want to do this in a "smarter" way? The occupancy of 1 adult households (for example) should not be more than 1
     # TODO and households with 2+ children should be more than 3 - is this a place for IPF?
-    pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * occupancy
+    pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * average_occupancy
+
+    # calculate expected population based in the addressbase "occupied" dwellings
+    addressbase_population = adjusted_addressbase_dwellings * average_occupancy
 
     # TODO: Review this. This step will correct the zone totals to match what's in our uplifted AddressBase. Is this going to give the correct number?
     # Rebalance the zone totals
@@ -250,13 +274,13 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Output D_{GOR}',
+        output_reference=f'Step5_Population_{GOR}',
         dvector=pop_by_nssec_hc_ha_car,
         dvector_dimension='population'
     )
 
-    # --- Step 5 --- #
-    LOGGER.info('--- Step 5 ---')
+    # --- Step 6 --- #
+    LOGGER.info('--- Step 6 ---')
     LOGGER.info(f'Calculating age and gender proportions by dwelling type')
     # Calculate splits by dwelling type, age, and gender
     gender_age_splits = hh_age_gender_2021 / hh_age_gender_2021.aggregate(segs=['accom_h'])
@@ -279,13 +303,13 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Output E_{GOR}',
+        output_reference=f'Step6_Population_{GOR}',
         dvector=pop_by_nssec_hc_ha_car_gender_age,
         dvector_dimension='population'
     )
 
-    # --- Step 6 --- #
-    LOGGER.info('--- Step 6 ---')
+    # --- Step 7 --- #
+    LOGGER.info('--- Step 7 ---')
     LOGGER.info(f'Calculating economic status proportions')
     # Calculate splits by dwelling type, econ, and NS-SeC of HRP
     # TODO This is *officially* population over 16, somehow need to account for children
@@ -396,7 +420,7 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Output F_{GOR}',
+        output_reference=f'Step7_Population_{GOR}',
         dvector=pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
         dvector_dimension='population'
     )
@@ -410,8 +434,8 @@ for GOR in constants.GORS:
         pop_by_nssec_hc_ha_car_gender_age_econ_emp
     )
 
-    # --- Step 7 --- #
-    LOGGER.info('--- Step 7 ---')
+    # --- Step 8 --- #
+    LOGGER.info('--- Step 8 ---')
     LOGGER.info(f'Calculating adjustments for communal establishment residents')
 
     # calculate proportional increase by LSOA due to communal establishments
@@ -514,7 +538,7 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Output G_{GOR}',
+        output_reference=f'Step8_Population_{GOR}',
         dvector=adjusted_pop,
         dvector_dimension='population'
     )
