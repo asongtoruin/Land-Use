@@ -214,6 +214,18 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
+        output_reference=f'Occupied Households_{GOR}',
+        dvector=occupied_households,
+        dvector_dimension='households'
+    )
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Unoccupied Households_{GOR}',
+        dvector=unoccupied_households,
+        dvector_dimension='households'
+    )
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
         output_reference=f'Output C_{GOR}',
         dvector=addressbase_population,
         dvector_dimension='population'
