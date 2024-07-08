@@ -511,8 +511,8 @@ def convert_ons_table_3(
     Returns
     -------
     dict
-        Dictionary of three dataframes with index of 'accom_h', 'ns_sec', and 'soc' or 'pop_emp' or 'pop_econ' and column headers of 'zoning' in the
-        correct format to convert to DVector
+        Dictionary of three dataframes with index of 'accom_h', 'ns_sec', and 'soc' or 'pop_emp' or 'pop_econ'
+        and column headers of 'zoning' in the correct format to convert to DVector
     """
 
     # convert to required format for DVec
