@@ -70,7 +70,18 @@ ons_sic_soc_splits_lu = data_processing.read_dvector_from_config(
 
 # --- Step 1 --- #
 LOGGER.info('--- Step 1 ---')
-LOGGER.info('Convert 2 Digit SIC 2022 BRES data held in MSOA 2011 zoning to 2021 MSOA')
+LOGGER.info('Exporting district-based 4 Digit SIC 2022 BRES data (Output E1)')
+# save output to hdf and csvs for checking
+data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference='Output E1',
+        dvector=bres_2022_employment_lad_4_digit_sic,
+        dvector_dimension='jobs'
+)
+
+# --- Step 2 --- #
+LOGGER.info('--- Step 2 ---')
+LOGGER.info('Convert 2 Digit SIC 2022 BRES data held in MSOA 2011 zoning to 2021 MSOA (Output E2)')
 # LAD is already at LAD 2021 zoning so doesn't need translating
 bres_2022_employment_msoa_2021_2_digit_sic_jobs = bres_2022_employment_msoa_2011_2_digit_sic_jobs.translate_zoning(
         new_zoning=constants.MSOA_ZONING_SYSTEM,
@@ -82,14 +93,14 @@ bres_2022_employment_msoa_2021_2_digit_sic_jobs = bres_2022_employment_msoa_2011
 # save output to hdf and csvs for checking
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference='Output A',
+        output_reference='Output E2',
         dvector=bres_2022_employment_msoa_2021_2_digit_sic_jobs,
         dvector_dimension='jobs'
 )
 
-# --- Step 2 --- #
-LOGGER.info('--- Step 2 ---')
-LOGGER.info('Convert 1 Digit SIC 2022 BRES data held in LSOA 2011 zoning to 2021 LSOA')
+# --- Step 3 --- #
+LOGGER.info('--- Step 3 ---')
+LOGGER.info('Convert 1 Digit SIC 2022 BRES data held in LSOA 2011 zoning to 2021 LSOA (Output E3)')
 bres_2022_employment_lsoa_2021_1_digit_sic = bres_2022_employment_lsoa_2011_1_digit_sic.translate_zoning(
         new_zoning=constants.LSOA_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
@@ -100,25 +111,14 @@ bres_2022_employment_lsoa_2021_1_digit_sic = bres_2022_employment_lsoa_2011_1_di
 # save output to hdf and csvs for checking
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference='Output B',
+        output_reference='Output E3',
         dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
-        dvector_dimension='jobs'
-)
-
-# --- Step 3 --- #
-LOGGER.info('--- Step 3 ---')
-LOGGER.info('Exporting district-based 4 Digit SIC 2022 BRES data')
-# save output to hdf and csvs for checking
-data_processing.save_output(
-        output_folder=OUTPUT_DIR,
-        output_reference='Output C',
-        dvector=bres_2022_employment_lad_4_digit_sic,
         dvector_dimension='jobs'
 )
 
 # --- Step 4 --- #
 LOGGER.info('--- Step 4 ---')
-LOGGER.info(f'Converting SIC SOC proportions from Region to LSOA 2021 level')
+LOGGER.info(f'Converting SIC SOC proportions from Region to LSOA 2021 level (Output E4)')
 ons_sic_soc_splits_lsoa = ons_sic_soc_splits_lu.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
@@ -145,7 +145,7 @@ jobs_by_sic_soc_lsoa = bres_2022_employment_lsoa_2021_2_digit_sic_1_splits * job
 # save output to hdf and csvs for checking
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference='Output D',
+        output_reference='Output E4',
         dvector=jobs_by_sic_soc_lsoa,
         dvector_dimension='jobs'
 )
