@@ -196,6 +196,12 @@ df = pp.read_ons(
     }
 )
 
+# drop exlusions
+# TODO Is there a way to do this better / using the SegmentSuper exclusion definitions?
+df = df.loc[
+    ~((df.index.isin([1, 2, 3, 9], level='age_9')) & (df.index.isin([1, 2, 4], level='pop_econ')))
+]
+
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
 # *** ONS gender, age, and occupation splits in communal establishments
