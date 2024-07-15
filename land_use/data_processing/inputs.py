@@ -77,8 +77,8 @@ def read_dvector_data(
     else:
         input_file = Path(input_root_directory) / Path(file_path)
     LOGGER.info(f'Reading in {input_file}')
-    df = pd.read_hdf(input_file)
-    df = pd.DataFrame(df)
+    # note this key is required in the save_processed_hdf()
+    df = pd.read_hdf(input_file, key='df')
 
     # filter columns if necessary
     zones = KNOWN_GEOGRAPHIES.get(zoning).zone_ids
