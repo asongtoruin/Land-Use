@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from caf.core.segmentation import SegmentsSuper
+import pandas as pd
 
 import land_use.preprocessing as pp
 from land_use.constants import geographies, segments
@@ -87,7 +88,72 @@ df = pp.convert_ons_table_4(
 
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
-# *** define path to ONS table 3
+# *** ONS table 3
+# ONS age by MSOA
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\ONS'
+    r'\population_age11_MSOA.csv'
+)
+
+# read in ons data and reformat for DVector
+ages = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.MSOA_NAME,
+    zoning_column='Middle layer Super Output Areas Code',
+    segment_mappings=pp.ONS_AGE_11_MAPPING,
+    segment_aggregations={'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS}
+)
+
+# calculate adjustment factors by MSOA to deflate the economically inactive
+# population to ignore 75+ (these will get added in later)
+# TODO tidy this up
+ages.loc['factor'] = ages.loc[9] / (ages.loc[4] + ages.loc[5] +
+                                    ages.loc[6] + ages.loc[7] +
+                                    ages.loc[8])
+ages = pd.melt(
+    ages.loc[['factor']],
+    var_name=geographies.MSOA_NAME,
+    value_name='factor'
+)
+
+# ONS economic status by MSOA
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\ONS'
+    r'\population_economicstatus_MSOA.csv'
+)
+
+# read in ons data and reformat for DVector
+economic_status = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.MSOA_NAME,
+    zoning_column='Middle layer Super Output Areas Code',
+    segment_mappings=pp.ONS_ECON_MAPPING
+)
+
+# calculate adjustment factors by MSOA to split students into
+# economically active student in employment, economically active
+# student not in employment, and economically inactive students
+# TODO tidy this up
+economic_status.loc['student_total'] = (
+        economic_status.loc[3] + economic_status.loc[4] + economic_status.loc[6]
+)
+economic_status.loc['students_employed'] = (
+        economic_status.loc[3] / economic_status.loc['student_total']
+)
+economic_status.loc['students_unemployed'] = (
+        economic_status.loc[4] / economic_status.loc['student_total']
+)
+economic_status.loc['students_inactive'] = (
+        economic_status.loc[6] / economic_status.loc['student_total']
+)
+economic_status = pd.melt(
+    economic_status.loc[['students_employed', 'students_unemployed', 'students_inactive']].reset_index(),
+    id_vars=['econ'],
+    var_name=geographies.MSOA_NAME,
+    value_name='factor'
+)
+
+# define path to ONS table 3
 file_path = Path(r'I:\NorMITs Land Use\2023\import\ONS custom\ct210214census2021.xlsx')
 # read in excel format, preprocess, and reformat for DVector
 df = pp.read_ons_custom(
@@ -97,17 +163,19 @@ df = pp.read_ons_custom(
     header=[0, 1]
 )
 
-dfs = pp.convert_ons_table_3(
+df = pp.convert_ons_table_3(
     df=df,
     dwelling_segmentation=SegmentsSuper.get_segment(
             SegmentsSuper.ACCOMODATION_TYPE_H
         ).values,
     ns_sec_segmentation=pp.ONS_NSSEC_ANNOYING,
     all_segmentation=pp.ONS_ECON_EMP_SOC_COMBO,
-    zoning=geographies.MSOA_NAME
+    zoning=geographies.MSOA_NAME,
+    ages=ages,
+    economic_status=economic_status
 )
-for ref, df in dfs.items():
-    pp.save_preprocessed_hdf(source_file_path=file_path, df=df, multiple_output_ref=ref)
+
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
 # ****** AddressBase 
 # *** AddressBase database
