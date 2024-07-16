@@ -100,8 +100,16 @@ Where the year for geographical area is not stated then it is 2021.
                 table_1 [label="BRES 2022 Employment LAD|Jobs by LAD, SIC Class (4 digit)|LAD"];
                 table_2 [label="BRES 2022 Employment MSOA|Jobs by MSOA, SIC Division (2 digit)|MSOA 2011"];
                 table_3 [label="BRES 2022 Employment LSOA|Jobs by LSOA, SIC Section (1 digit)|LSOA 2011"];
-                table_4 [label="ONS Industry to Occupation|Number of jobs by\nIndustry (A-U), SOC group (1-3)|GOR"];
                 table_5 [label="ONS Industry to SIC Section|Correspondece between\nIndustry and SIC Section"];
+                table_4 [label="ONS Industry to Occupation|Number of jobs by\nIndustry (A-U), SOC group (1-3)|GOR"];
+            }
+            
+        node [shape=record, color=blue width=3.4]
+            subgraph cluster_inputs{
+                peripheries=0
+                rank="same"
+                table_2a [label="Balanced BRES 2022 Employment MSOA|Jobs by MSOA, SIC Division (2 digit)|MSOA 2011"];
+                table_3a [label="Balanced BRES 2022 Employment LSOA|Jobs by LSOA, SIC Section (1 digit)|LSOA 2011"];
             }
             
         node [shape=record, color=blue width=3.4]
@@ -115,10 +123,14 @@ Where the year for geographical area is not stated then it is 2021.
             }
         
         node [style=rounded, color=black]
-            output_e1 [label="Output E1|Jobs by LAD, SIC Class (4 digit)|LAD"];
-            output_e2 [label="Output E2|Jobs by MSOA, SIC Division (2 digit)|MSOA"];
-            output_e3 [label="Output E3|Jobs by LSOA, SIC Section (1 digit)|LSOA"];
-        
+                subgraph cluster_inputs{
+                peripheries=0
+                rank="same"
+                output_e1 [label="Output E1|Jobs by LAD, SIC Class (4 digit)|LAD"];
+                output_e2 [label="Output E2|Jobs by MSOA, SIC Division (2 digit)|MSOA"];
+                output_e3 [label="Output E3|Jobs by LSOA, SIC Section (1 digit)|LSOA"];
+            }
+                
         node [shape=record, color=blue width=3.4]
             table_7 [label="Jobs by LSOA with SOC group|Jobs by LSOA, SOC group (1-3)|LSOA"];
             
@@ -128,8 +140,12 @@ Where the year for geographical area is not stated then it is 2021.
         {rank="same" output_e3 table_6 table_8}    
 
         table_1 -> output_e1;
-        table_2 -> output_e2;
-        table_3 -> output_e3;
+        table_1 -> table_2a;
+        table_1 -> table_3a;
+        table_2 -> table_2a;
+        table_2a -> output_e2;
+        table_3 -> table_3a;
+        table_3a -> output_e3;
         table_4 -> table_6;
         table_5 -> table_6;
         output_e3 -> table_7;
@@ -139,4 +155,5 @@ Where the year for geographical area is not stated then it is 2021.
         table_2 -> table_8
 
     }
+
 
