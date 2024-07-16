@@ -567,17 +567,21 @@ def convert_ons_table_3(
     list_of_student_types = [non_students]
     for student, mat in economic_status.groupby('econ'):
         if student == 'students_employed':
-            val = 3
+            economic_status_val = 3
+            pop_emp_val = 1
         elif student == 'students_unemployed':
-            val = 4
+            economic_status_val = 4
+            pop_emp_val = 3
         elif student == 'students_inactive':
-            val = 5
+            economic_status_val = 5
+            pop_emp_val = 4
         else:
             raise RuntimeError(f'Your student type is {student} which'
                                f'has no corresponding economic_status value.')
         foo = pd.merge(students, mat, on=zoning, how='left')
         foo['population'] = foo['population'] * foo['factor']
-        foo['economic_status'] = val
+        foo['economic_status'] = economic_status_val
+        foo['pop_emp'] = pop_emp_val
         foo = foo[list(merged.columns)]
         list_of_student_types.append(foo)
 
@@ -586,9 +590,50 @@ def convert_ons_table_3(
         [zoning, 'accom_h', 'ns_sec', 'economic_status', 'pop_emp', 'soc']
     ).agg({'population': 'sum'}).reset_index()
 
+    # split economically active students in to full time and part time
+    # based on the splits of full time and part time economically active people
+    workers = grouped.loc[
+        grouped['economic_status'] == 1
+    ]
+    workers['ft_pt_splits'] = workers['population'] / workers.groupby(
+        [zoning, 'accom_h', 'ns_sec', 'soc']
+    )['population'].transform('sum')
+    workers['ft_pt_splits'] = workers['ft_pt_splits'].fillna(0)
+
+    # set these to be employed students now
+    workers['economic_status'] = 3
+
+    # drop the population column from the employed data
+    workers = workers.drop(columns=['population'])
+
+    # get the employed students from the main dataset
+    employed = grouped.loc[grouped['economic_status'] == 3]
+    non_employed = grouped.loc[~(grouped['economic_status'] == 3)]
+
+    # get rid of soc categorisation from the employed students
+    employed = employed.groupby(
+        [zoning, 'accom_h', 'ns_sec', 'economic_status']
+    )['population'].sum().reset_index()
+
+    # merge the employed totals on the workers which are
+    # segmented by pop_emp and soc
+    employed = pd.merge(
+        workers,
+        employed,
+        on=[zoning, 'accom_h', 'ns_sec', 'economic_status'],
+        how='left'
+    )
+
+    # calculate new population over the full time and part time splits
+    employed['population'] = employed['population'] * employed['ft_pt_splits']
+    employed = employed.drop(columns=['ft_pt_splits'])
+
+    # combine the non-employed students dataset with the newly expanded employed students
+    combined = pd.concat([non_employed, employed])
+
     # convert to required format for DVector
     dvec = pivot_to_dvector(
-        data=grouped,
+        data=combined,
         zoning_column=zoning,
         index_cols=['accom_h', 'ns_sec', 'economic_status', 'pop_emp', 'soc'],
         value_column='population'
