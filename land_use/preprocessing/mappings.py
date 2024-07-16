@@ -116,7 +116,8 @@ ECON_6_TO_4_AGGREGATIONS = {
     'Economically active and a full-time student: In employment': 'Students',
     'Economically active and a full-time student: Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks': 'Students',
     'Economically inactive (excluding full-time students)': 'Economically inactive',
-    'Economically inactive and a full-time student': 'Students'
+    'Economically inactive and a full-time student': 'Students',
+    'Does not apply': 'Economically inactive'
 }
 
 ONS_OCC_AGE_SEX_MAPPINGS = {

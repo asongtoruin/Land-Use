@@ -128,7 +128,8 @@ def read_dvector_data(
     return DVector(
         segmentation=resulting_segmentation, 
         zoning_system=KNOWN_GEOGRAPHIES.get(zoning),
-        import_data=filtered_data
+        import_data=filtered_data,
+        cut_read=True
     )
 
 

@@ -70,9 +70,96 @@ ons_sic_soc_splits_lu = data_processing.read_dvector_from_config(
 
 # --- Step 1 --- #
 LOGGER.info('--- Step 1 ---')
-LOGGER.info('Convert 2 Digit SIC 2022 BRES data held in MSOA 2011 zoning to 2021 MSOA')
+LOGGER.info(
+    'Balance the input datasets to each have the same totals at LAD level as the 4 Digit SIC 2022 BRES data'
+)
+
+bres_2022_employment_lad_2011_2_digit_sic_jobs = (
+    bres_2022_employment_msoa_2011_2_digit_sic_jobs.translate_zoning(
+        new_zoning=constants.LAD_ZONING_SYSTEM,
+        cache_path=constants.CACHE_FOLDER,
+        weighting=TranslationWeighting.SPATIAL,
+        check_totals=False,
+    )
+)
+
+bres_2022_employment_lad_2011_1_digit_sic_jobs = (
+    bres_2022_employment_lsoa_2011_1_digit_sic.translate_zoning(
+        new_zoning=constants.LAD_ZONING_SYSTEM,
+        cache_path=constants.CACHE_FOLDER,
+        weighting=TranslationWeighting.SPATIAL,
+        check_totals=False,
+    )
+)
+
+lad_total_jobs = bres_2022_employment_lad_4_digit_sic.add_segment(
+    constants.CUSTOM_SEGMENTS['total'], split_method='split'
+).aggregate(['total'])
+
+msoa_total_jobs_at_lad = bres_2022_employment_lad_2011_2_digit_sic_jobs.add_segment(
+    constants.CUSTOM_SEGMENTS['total'], split_method='split'
+).aggregate(['total'])
+
+lsoa_total_jobs_at_lad = bres_2022_employment_lad_2011_1_digit_sic_jobs.add_segment(
+    constants.CUSTOM_SEGMENTS['total'], split_method='split'
+).aggregate(['total'])
+
+msoa_adj_factors = lad_total_jobs / msoa_total_jobs_at_lad
+
+lsoa_adj_factors = lad_total_jobs / lsoa_total_jobs_at_lad
+
+
+# TODO: consider having a output/log of where the increases are outside expectations. Along the lines of
+# sig_increases = adjustment_factors.data[adjustment_factors.data.ge(1.1)]
+# sig_decreases = adjustment_factors.data[adjustment_factors.data.le(0.9)]
+
+rehydrated_adj_factors_for_msoa = (
+    msoa_adj_factors.add_segment(constants.CUSTOM_SEGMENTS['sic_2_digit'])
+    .aggregate([constants.CUSTOM_SEGMENTS['sic_2_digit'].name])
+    .translate_zoning(
+        new_zoning=constants.MSOA_2011_ZONING_SYSTEM,
+        cache_path=constants.CACHE_FOLDER,
+        weighting=TranslationWeighting.NO_WEIGHT,
+        check_totals=False,
+    )
+)
+
+rehydrated_adj_factors_for_lsoa = (
+    lsoa_adj_factors.add_segment(constants.CUSTOM_SEGMENTS['sic_1_digit'])
+    .aggregate([constants.CUSTOM_SEGMENTS['sic_1_digit'].name])
+    .translate_zoning(
+        new_zoning=constants.LSOA_2011_ZONING_SYSTEM,
+        cache_path=constants.CACHE_FOLDER,
+        weighting=TranslationWeighting.NO_WEIGHT,
+        check_totals=False,
+    )
+)
+
+adj_bres_2022_employment_msoa_2011_2_digit_sic_jobs = (
+    bres_2022_employment_msoa_2011_2_digit_sic_jobs * rehydrated_adj_factors_for_msoa
+)
+
+adj_bres_2022_employment_lsoa_2011_1_digit_sic = (
+    bres_2022_employment_lsoa_2011_1_digit_sic * rehydrated_adj_factors_for_lsoa
+)
+
+
+# --- Step 2 --- #
+LOGGER.info('--- Step 2 ---')
+LOGGER.info('Exporting district-based 4 Digit SIC 2022 BRES data (Output E1)')
+# save output to hdf and csvs for checking
+data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference='Output E1',
+        dvector=bres_2022_employment_lad_4_digit_sic,
+        dvector_dimension='jobs'
+)
+
+# --- Step 3 --- #
+LOGGER.info('--- Step 3 ---')
+LOGGER.info('Convert 2 Digit SIC 2022 BRES data held in MSOA 2011 zoning to 2021 MSOA (Output E2)')
 # LAD is already at LAD 2021 zoning so doesn't need translating
-bres_2022_employment_msoa_2021_2_digit_sic_jobs = bres_2022_employment_msoa_2011_2_digit_sic_jobs.translate_zoning(
+bres_2022_employment_msoa_2021_2_digit_sic_jobs = adj_bres_2022_employment_msoa_2011_2_digit_sic_jobs.translate_zoning(
         new_zoning=constants.MSOA_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.SPATIAL,
@@ -82,15 +169,15 @@ bres_2022_employment_msoa_2021_2_digit_sic_jobs = bres_2022_employment_msoa_2011
 # save output to hdf and csvs for checking
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference='Output A',
+        output_reference='Output E2',
         dvector=bres_2022_employment_msoa_2021_2_digit_sic_jobs,
         dvector_dimension='jobs'
 )
 
-# --- Step 2 --- #
-LOGGER.info('--- Step 2 ---')
-LOGGER.info('Convert 1 Digit SIC 2022 BRES data held in LSOA 2011 zoning to 2021 LSOA')
-bres_2022_employment_lsoa_2021_1_digit_sic = bres_2022_employment_lsoa_2011_1_digit_sic.translate_zoning(
+# --- Step 4 --- #
+LOGGER.info('--- Step 4 ---')
+LOGGER.info('Convert 1 Digit SIC 2022 BRES data held in LSOA 2011 zoning to 2021 LSOA (Output E3)')
+bres_2022_employment_lsoa_2021_1_digit_sic = adj_bres_2022_employment_lsoa_2011_1_digit_sic.translate_zoning(
         new_zoning=constants.LSOA_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.SPATIAL,
@@ -100,25 +187,14 @@ bres_2022_employment_lsoa_2021_1_digit_sic = bres_2022_employment_lsoa_2011_1_di
 # save output to hdf and csvs for checking
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference='Output B',
+        output_reference='Output E3',
         dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
         dvector_dimension='jobs'
 )
 
-# --- Step 3 --- #
-LOGGER.info('--- Step 3 ---')
-LOGGER.info('Exporting district-based 4 Digit SIC 2022 BRES data')
-# save output to hdf and csvs for checking
-data_processing.save_output(
-        output_folder=OUTPUT_DIR,
-        output_reference='Output C',
-        dvector=bres_2022_employment_lad_4_digit_sic,
-        dvector_dimension='jobs'
-)
-
-# --- Step 4 --- #
-LOGGER.info('--- Step 4 ---')
-LOGGER.info(f'Converting SIC SOC proportions from Region to LSOA 2021 level')
+# --- Step 5 --- #
+LOGGER.info('--- Step 5 ---')
+LOGGER.info(f'Converting SIC SOC proportions from Region to LSOA 2021 level (Output E4)')
 ons_sic_soc_splits_lsoa = ons_sic_soc_splits_lu.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
@@ -145,7 +221,7 @@ jobs_by_sic_soc_lsoa = bres_2022_employment_lsoa_2021_2_digit_sic_1_splits * job
 # save output to hdf and csvs for checking
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference='Output D',
+        output_reference='Output E4',
         dvector=jobs_by_sic_soc_lsoa,
         dvector_dimension='jobs'
 )
