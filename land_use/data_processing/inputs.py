@@ -117,18 +117,25 @@ def read_dvector_data(
         for seg in segment_flags[False]
     ]
 
+    # Ensure we have consistently sorted segments
+    sorted_segments = sorted(input_segments)
+    if len(sorted_segments) > 1:
+        sorted_data = filtered_data.reorder_levels(order=sorted(input_segments))
+    else:
+        sorted_data = filtered_data
+
     # Configure the segmentation
     segmentation_input = SegmentationInput(
         enum_segments=segment_flags[True], 
         custom_segments=custom_segments,
-        naming_order=input_segments
+        naming_order=sorted_segments
     )
     resulting_segmentation = Segmentation(segmentation_input)
 
     return DVector(
         segmentation=resulting_segmentation, 
         zoning_system=KNOWN_GEOGRAPHIES.get(zoning),
-        import_data=filtered_data,
+        import_data=sorted_data,
         cut_read=True
     )
 
