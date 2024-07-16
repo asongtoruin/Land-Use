@@ -2,7 +2,7 @@
 # All files here are assumed to be in a format ready for DVectors.
 input_root_directory: I:\NorMITs Land Use\2023\import
 # output_directory: F:\Working\Land-Use\OUTPUTS\TMP
-output_directory: C:\Users\Firefly\Desktop\code\TEMP_LU OUTPUTS
+output_directory: C:\Users\Firefly\Desktop\code\TEMP_ONS TABLE 3 TESTING
 output_intermediate_outputs: False
 
 unoccupied_households:
@@ -45,6 +45,11 @@ hh_age_gender_2021:
     file_path: ONS\preprocessing\population_hh_age11_gender_MSOA.hdf
     geographical_level: MSOA2021
     input_segments: [accom_h, age_9, g]
+
+ons_table_3:
+    file_path: ONS custom\preprocessing\ct210214census2021.hdf
+    geographical_level: MSOA2021
+    input_segments: [accom_h, ns_sec, economic_status, pop_emp, soc]
 
 ons_table_3_econ:
     file_path: ONS custom\preprocessing\ct210214census2021_pop_econ.hdf
