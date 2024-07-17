@@ -121,6 +121,7 @@ Where the year for geographical area is not stated then it is 2021.
                 table_3 [label="BRES 2022 Employment LSOA|Jobs by LSOA, SIC Section (1 digit)|LSOA 2011"];
                 table_5 [label="ONS Industry to SIC Section|Correspondece between\nIndustry and SIC Section"];
                 table_4 [label="ONS Industry to Occupation|Number of jobs by\nIndustry (A-U), SOC group (1-3)|GOR"];
+                wfj_2023 [label="WFJ 2023|Total workforce jobs by region|GOR"];
             }
             
         node [shape=record, color=blue width=3.4]
@@ -155,6 +156,7 @@ Where the year for geographical area is not stated then it is 2021.
             
         node [style=rounded, color=black]
             output_e4 [label="Output E4|Jobs by LSOA, SIC Division (2 digit),\nSOC group (1-3)|LSOA"];
+            output_e4_2 [label="Output E4_2|Jobs by LSOA, SIC Division (2 digit),\nSOC group (1-3)\nweighted to WFJ|LSOA"];
         
         {rank="same" output_e3 table_6 table_8}    
 
@@ -172,6 +174,8 @@ Where the year for geographical area is not stated then it is 2021.
         table_8 -> output_e4
         table_7 -> output_e4
         table_2 -> table_8
+        wfj_2023 -> output_e4_2
+        output_e4 -> output_e4_2
 
     }
 
