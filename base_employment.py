@@ -68,6 +68,11 @@ ons_sic_soc_splits_lu = data_processing.read_dvector_from_config(
     key='ons_sic_soc_splits_lu'
 )
 
+wfj = data_processing.read_dvector_from_config(
+    config=config,
+    key='wfj'
+)
+
 # --- Step 1 --- #
 LOGGER.info('--- Step 1 ---')
 LOGGER.info(
@@ -223,5 +228,48 @@ data_processing.save_output(
         output_folder=OUTPUT_DIR,
         output_reference='Output E4',
         dvector=jobs_by_sic_soc_lsoa,
+        dvector_dimension='jobs'
+)
+
+# --- Step 6 --- #
+LOGGER.info('--- Step 6 ---')
+LOGGER.info(f'Uplifting Output E4 to Workforce jobs (WFJ) levels by region (Output E4_2)')
+
+output_e4_by_rgn = jobs_by_sic_soc_lsoa.translate_zoning(
+    new_zoning=constants.RGN_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.SPATIAL,
+    check_totals=False
+)
+
+e4_total_jobs_by_rgn = output_e4_by_rgn.add_segment(
+    constants.CUSTOM_SEGMENTS['total'], split_method='split'
+).aggregate(['total'])
+
+factors = wfj / e4_total_jobs_by_rgn
+
+rehydrated_adj_factors_for_e4_2 = (
+    factors.add_segment(constants.CUSTOM_SEGMENTS['sic_1_digit'])
+    .add_segment(constants.CUSTOM_SEGMENTS['sic_2_digit'])
+    .add_segment(constants.CUSTOM_SEGMENTS['soc_3'])
+    .aggregate([
+        constants.CUSTOM_SEGMENTS['sic_1_digit'].name,
+        constants.CUSTOM_SEGMENTS['sic_2_digit'].name,
+        constants.CUSTOM_SEGMENTS['soc_3'].name
+        ])
+    .translate_zoning(
+        new_zoning=constants.LSOA_ZONING_SYSTEM,
+        cache_path=constants.CACHE_FOLDER,
+        weighting=TranslationWeighting.NO_WEIGHT,
+        check_totals=False
+    )
+)
+
+output_e4_2 = jobs_by_sic_soc_lsoa * rehydrated_adj_factors_for_e4_2
+
+data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference='Output E4_2',
+        dvector=output_e4_2,
         dvector_dimension='jobs'
 )

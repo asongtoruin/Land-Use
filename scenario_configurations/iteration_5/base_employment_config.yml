@@ -30,3 +30,8 @@ ons_sic_soc_splits_lu:
     file_path: ONS\industry_occupation\preprocessing\population_region_1sic_soc.hdf
     geographical_level: RGN2021
     input_segments: [sic_1_digit, soc_3]
+
+wfj:
+    file_path: BRES2022\Employment\Employment Investigation\preprocessing\WFJ.hdf
+    geographical_level: RGN2021
+    input_segments: [total]

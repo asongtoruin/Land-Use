@@ -20,6 +20,7 @@ def main():
     msoa_2_digit()
     lsoa_1_digit()
     find_sic_soc_splits_by_region()
+    wfj_2023()
 
 
 def lad_4_digit():
@@ -175,6 +176,36 @@ def find_sic_soc_splits_by_region():
 
     pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
 
+
+def wfj_2023():
+    file_path = INPUT_DIR / "BRES2022" / "Employment" / "Employment investigation" / "WFJ.xlsx"
+    # can't use pp.read_headered_and_tailed_csv as we want the second table in the sheet (Sept 2023) which is same column headings as the first (Sept 2022)
+    df = pd.read_excel(file_path, skiprows=31, usecols=["region", "total workforce jobs"])
+
+    # Rename East to East of England to make it clearer and match lookup
+    df.loc[df["region"] == "East", "region"] = "East of England"
+
+    # attach codes for the regions
+    gor_lu_file_path = INPUT_DIR / "ONS" / "Correspondence_lists" / "gor_ew_code_to_labels.csv"
+    gor_lu = pd.read_csv(gor_lu_file_path, usecols=["RGN21CD", "RGN21NM"])
+    gor_lu = gor_lu.rename(columns={"RGN21NM": "region"})
+
+    df_with_codes = pd.merge(df, gor_lu, how="left", on=["region"])
+    df_with_codes = df_with_codes.dropna(subset=["RGN21CD"])
+
+    # add in a total segementation
+    df_with_codes["total"] = "all"
+
+    # Copy from utlities, will don from there when fixed the import issue
+    # pp.reformat_2021_lad_4digit
+    df_wide = pp.pivot_to_dvector(
+        data=df_with_codes,
+        zoning_column="RGN21CD",
+        index_cols=["total"],
+        value_column="total workforce jobs",
+    )
+
+    pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
 
 if __name__ == "__main__":
     main()
