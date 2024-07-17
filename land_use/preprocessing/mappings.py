@@ -147,6 +147,28 @@ SOC_10_TO_4_AGGREGATIONS = {
     'Does not apply': 'SOC4'
 }
 
+ONS_AGE_11_MAPPING = {
+    'Age (11 categories)': [
+        'age_9',
+        SegmentsSuper.get_segment(SegmentsSuper.AGE).values
+    ]
+}
+
+ONS_ECON_MAPPING = {
+    'Economic activity status (7 categories)': [
+        'econ',
+        {
+            1: 'Economically active (excluding full-time students): In employment',
+            2: 'Economically active (excluding full-time students): Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks',
+            3: 'Economically active and a full-time student: In employment',
+            4: 'Economically active and a full-time student: Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks',
+            5: 'Economically inactive (excluding full-time students)',
+            6: 'Economically inactive and a full-time student',
+            -8: 'Does not apply',
+         }
+    ]
+}
+
 # Based on https://onsdigital.github.io/dp-classification-tools/standard-industrial-classification/ONS_SIC_hierarchy_view.html
 # Note for most BIG groups the section (A,B,...U) is enough except for G which is split into 3 BIG groups (5,6, and 7)
 # based on the type of trade.

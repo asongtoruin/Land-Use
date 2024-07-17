@@ -485,8 +485,10 @@ def convert_ons_table_3(
         dwelling_segmentation: dict,
         ns_sec_segmentation: dict,
         all_segmentation: dict,
-        zoning: str
-    ) -> dict:
+        zoning: str,
+        ages: pd.DataFrame,
+        economic_status: pd.DataFrame
+    ) -> pd.DataFrame:
     """
 
     Parameters
@@ -507,12 +509,19 @@ def convert_ons_table_3(
     zoning : str
         the zoning level of the input data (e.g. 'lsoa2021') which should match
         the relevant zoning in the ZONING_CACHE
+    ages : pd.DataFrame
+        DataFrame of [zoning, 'factor'] based on how to deflate the economically
+         inactive economic status to exclude 75+s
+    economic_status : pd.DataFrame
+        DataFrame of [zoning, 'econ', 'factor'] based on how students are split between
+        students_unemployed, students_employed, students_inactive (all of these values are
+        in the 'econ' column).
 
     Returns
     -------
-    dict
-        Dictionary of three dataframes with index of 'accom_h', 'ns_sec', and 'soc' or 'pop_emp' or 'pop_econ' and column headers of 'zoning' in the
-        correct format to convert to DVector
+    pd.DataFrame
+        Dataframes with index of 'accom_h', 'ns_sec', 'soc', 'pop_emp', and 'pop_econ'
+        and column headers of 'zoning' in the correct format to convert to DVector
     """
 
     # convert to required format for DVec
@@ -529,32 +538,118 @@ def convert_ons_table_3(
     # set observation column to numeric
     merged['population'] = merged['value'].astype(int)
 
-    return_dict = {}
-    for col in tmp.columns:
-        grouped = merged.groupby([zoning, 'accom_h', 'ns_sec', col]).agg({'population': 'sum'}).reset_index()
+    # adjust population to exclude 75+ from the calculation of proportions for
+    # economically inactive
+    merged = pd.merge(merged, ages, on=zoning, how='left')
+    merged['factor'] = 1 - merged['factor']
+    merged.loc[
+        (merged['pop_econ'] == 3) &
+        (merged['pop_emp'] == 5) &
+        (merged['soc'] == 4), 'population'
+    ] = merged['population'] * merged['factor']
+    merged = merged.drop(columns=['factor'])
 
-        # convert to required format for DVector
-        dvec = pivot_to_dvector(
-            data=grouped,
-            zoning_column=zoning,
-            index_cols=['accom_h', 'ns_sec', col],
-            value_column='population'
-        )
+    # map the aggregated pop_econ values to economic_status
+    mapping = {
+        1: 1,
+        2: 2,
+        3: 6,
+        4: 3
+    }
+    merged['economic_status'] = merged['pop_econ'].map(mapping)
 
-        # add in the missing segmentation category and fill with zeros
-        # TODO this should be genericised, adding in a missing combination of indicies
-        missing = dvec[dvec.index.get_level_values('accom_h') == 1].reset_index()
-        missing['accom_h'] = 5
-        missing = missing.set_index(['accom_h', 'ns_sec', col])
-        missing.loc[:] = np.nan
+    # split students into economically active in emp, economically active
+    # not in emp, and economically inactive
+    students = merged.loc[merged['pop_econ'] == 4]
+    non_students = merged.loc[~(merged['pop_econ'] == 4)]
 
-        # combine with df for all segments
-        grouped = pd.concat([dvec, missing])
+    # TODO THIS SHOULD BE IMPROVED ITS VERY MANUAL ATM AND I DONT LIKE IT
+    list_of_student_types = [non_students]
+    for student, mat in economic_status.groupby('econ'):
+        if student == 'students_employed':
+            economic_status_val = 3
+            pop_emp_val = 1
+        elif student == 'students_unemployed':
+            economic_status_val = 4
+            pop_emp_val = 3
+        elif student == 'students_inactive':
+            economic_status_val = 5
+            pop_emp_val = 4
+        else:
+            raise RuntimeError(f'Your student type is {student} which'
+                               f'has no corresponding economic_status value.')
+        foo = pd.merge(students, mat, on=zoning, how='left')
+        foo['population'] = foo['population'] * foo['factor']
+        foo['economic_status'] = economic_status_val
+        foo['pop_emp'] = pop_emp_val
+        foo = foo[list(merged.columns)]
+        list_of_student_types.append(foo)
 
-        # add to output
-        return_dict[col] = grouped.fillna(0)
+    output = pd.concat(list_of_student_types)
+    grouped = output.groupby(
+        [zoning, 'accom_h', 'ns_sec', 'economic_status', 'pop_emp', 'soc']
+    ).agg({'population': 'sum'}).reset_index()
 
-    return return_dict
+    # split economically active students in to full time and part time
+    # based on the splits of full time and part time economically active people
+    workers = grouped.loc[
+        grouped['economic_status'] == 1
+    ]
+    workers['ft_pt_splits'] = workers['population'] / workers.groupby(
+        [zoning, 'accom_h', 'ns_sec', 'soc']
+    )['population'].transform('sum')
+    workers['ft_pt_splits'] = workers['ft_pt_splits'].fillna(0)
+
+    # set these to be employed students now
+    workers['economic_status'] = 3
+
+    # drop the population column from the employed data
+    workers = workers.drop(columns=['population'])
+
+    # get the employed students from the main dataset
+    employed = grouped.loc[grouped['economic_status'] == 3]
+    non_employed = grouped.loc[~(grouped['economic_status'] == 3)]
+
+    # get rid of soc categorisation from the employed students
+    employed = employed.groupby(
+        [zoning, 'accom_h', 'ns_sec', 'economic_status']
+    )['population'].sum().reset_index()
+
+    # merge the employed totals on the workers which are
+    # segmented by pop_emp and soc
+    employed = pd.merge(
+        workers,
+        employed,
+        on=[zoning, 'accom_h', 'ns_sec', 'economic_status'],
+        how='left'
+    )
+
+    # calculate new population over the full time and part time splits
+    employed['population'] = employed['population'] * employed['ft_pt_splits']
+    employed = employed.drop(columns=['ft_pt_splits'])
+
+    # combine the non-employed students dataset with the newly expanded employed students
+    combined = pd.concat([non_employed, employed])
+
+    # convert to required format for DVector
+    dvec = pivot_to_dvector(
+        data=combined,
+        zoning_column=zoning,
+        index_cols=['accom_h', 'ns_sec', 'economic_status', 'pop_emp', 'soc'],
+        value_column='population'
+    )
+
+    # add in the missing segmentation category and fill with zeros
+    # TODO this should be genericised, adding in a missing combination of indicies
+    missing = dvec[dvec.index.get_level_values('accom_h') == 1].reset_index()
+    missing['accom_h'] = 5
+    missing = missing.set_index(['accom_h', 'ns_sec', 'economic_status', 'pop_emp', 'soc'])
+    missing.loc[:] = np.nan
+
+    # combine with df for all segments
+    grouped = pd.concat([dvec, missing])
+
+    return grouped.fillna(0)
 
 
 def read_ons(

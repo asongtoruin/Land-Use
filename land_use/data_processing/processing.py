@@ -597,3 +597,36 @@ def aggregate_and_compare(
     # Step 4: do the difference calc
     return working_first_dvector - working_second_dvector
 
+
+def apply_proportions(source_dvector: DVector, apply_to: DVector) -> DVector:
+    """Applies proportions calculated from one DVector to another
+
+    It's assumed that whatever intersection of segments between the two DVectors
+    should be the level at which proportions are calculated.
+
+    Args:
+        source_dvector (DVector): data to use to determine proportions (only!)
+        apply_to (DVector): data to use to determine values
+
+    Returns:
+        DVector: combination of the two objects
+    """
+
+    # Expand the segmentation to match the desired - this will apply any exclusions
+    expanded_source = source_dvector.expand_to_other(apply_to)
+
+    # Calculate totals - by *only* using the "desired" segmentation, we include all overlaps
+    totals = expanded_source.aggregate(apply_to.segmentation)
+
+    # Divide directly - the two will have the same set of exclusions applied - and fill NAs with 0
+    # TODO: Check filling NA with 0 is sensible!
+    proportions_to_apply = expanded_source / totals
+    proportions_to_apply.data.fillna(0, inplace=True)
+
+    # We'll get an error for the segmentation changing - we're happy with that though! So filter it away
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', message='.*changed the segmentation.*')
+        result = apply_to * proportions_to_apply
+
+    return result
+

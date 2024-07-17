@@ -85,6 +85,11 @@ for GOR in constants.GORS:
         key='hh_age_gender_2021',
         geography_subset=GOR
     )
+    ons_table_3 = data_processing.read_dvector_from_config(
+        config=config,
+        key='ons_table_3',
+        geography_subset=GOR
+    )
     ons_table_3_econ = data_processing.read_dvector_from_config(
         config=config,
         key='ons_table_3_econ',
