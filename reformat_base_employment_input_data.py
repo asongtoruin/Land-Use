@@ -1,6 +1,4 @@
-from os import PathLike
 from pathlib import Path
-from typing import Tuple
 
 import land_use.preprocessing as pp
 from land_use.constants import geographies, segments
