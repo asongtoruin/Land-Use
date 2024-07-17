@@ -51,21 +51,6 @@ ons_table_3:
     geographical_level: MSOA2021
     input_segments: [accom_h, ns_sec, economic_status, pop_emp, soc]
 
-ons_table_3_econ:
-    file_path: ONS custom\preprocessing\ct210214census2021_pop_econ.hdf
-    geographical_level: MSOA2021
-    input_segments: [accom_h, ns_sec, pop_econ]
-
-ons_table_3_emp:
-    file_path: ONS custom\preprocessing\ct210214census2021_pop_emp.hdf
-    geographical_level: MSOA2021
-    input_segments: [accom_h, ns_sec, pop_emp]
-
-ons_table_3_soc:
-    file_path: ONS custom\preprocessing\ct210214census2021_soc.hdf
-    geographical_level: MSOA2021
-    input_segments: [accom_h, ns_sec, soc]
-
 ce_uplift_factor:
     file_path: TS001 pop_hh_ce\preprocessing\1226171533660024.hdf
     geographical_level: LSOA2021

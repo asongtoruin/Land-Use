@@ -90,21 +90,6 @@ for GOR in constants.GORS:
         key='ons_table_3',
         geography_subset=GOR
     )
-    ons_table_3_econ = data_processing.read_dvector_from_config(
-        config=config,
-        key='ons_table_3_econ',
-        geography_subset=GOR
-    )
-    ons_table_3_emp = data_processing.read_dvector_from_config(
-        config=config,
-        key='ons_table_3_emp',
-        geography_subset=GOR
-    )
-    ons_table_3_soc = data_processing.read_dvector_from_config(
-        config=config,
-        key='ons_table_3_soc',
-        geography_subset=GOR
-    )
     ce_uplift_factor = data_processing.read_dvector_from_config(
         config=config,
         key='ce_uplift_factor',
@@ -315,99 +300,21 @@ for GOR in constants.GORS:
 
     # --- Step 7 --- #
     LOGGER.info('--- Step 7 ---')
-    LOGGER.info(f'Calculating economic status proportions')
+    LOGGER.info(f'Calculating economic status, employment status, and soc category proportions')
     # Calculate splits by dwelling type, econ, and NS-SeC of HRP
     # TODO This is *officially* population over 16, somehow need to account for children
-    econ_splits = ons_table_3_econ / ons_table_3_econ.aggregate(segs=['accom_h', 'ns_sec'])
+    econ_emp_soc_splits = ons_table_3 / ons_table_3.aggregate(segs=['accom_h', 'ns_sec'])
     # fill missing proportions with 0 as they are where the total hh is zero in the census data
-    econ_splits.data = econ_splits.data.fillna(0)
-
-    LOGGER.info(f'Calculating employment status proportions')
-    # Calculate splits by dwelling type, employment, and NS-SeC of HRP
-    # TODO This is *officially* population over 16, somehow need to account for children
-    emp_splits = ons_table_3_emp / ons_table_3_emp.aggregate(segs=['accom_h', 'ns_sec'])
-    # fill missing proportions with 0 as they are where the total hh is zero in the census data
-    emp_splits.data = emp_splits.data.fillna(0)
-
-    LOGGER.info(f'Calculating SOC category proportions')
-    # Calculate splits by dwelling type, soc, and NS-SeC of HRP
-    # TODO This is *officially* population over 16, somehow need to account for children
-    soc_splits = ons_table_3_soc / ons_table_3_soc.aggregate(segs=['accom_h', 'ns_sec'])
-    # fill missing proportions with 0 as they are where the total hh is zero in the census data
-    soc_splits.data = soc_splits.data.fillna(0)
+    econ_emp_soc_splits.data = econ_emp_soc_splits.data.fillna(0)
 
     LOGGER.info(f'Converting economic status, employment status, and SOC category '
                 f'splits to LSOA level')
     # convert the factors back to LSOA
-    econ_splits_lsoa = econ_splits.translate_zoning(
+    econ_emp_soc_splits_lsoa = econ_emp_soc_splits.translate_zoning(
         new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False
-    )
-    emp_splits_lsoa = emp_splits.translate_zoning(
-        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
-        cache_path=constants.CACHE_FOLDER,
-        weighting=TranslationWeighting.NO_WEIGHT,
-        check_totals=False
-    )
-    soc_splits_lsoa = soc_splits.translate_zoning(
-        new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
-        cache_path=constants.CACHE_FOLDER,
-        weighting=TranslationWeighting.NO_WEIGHT,
-        check_totals=False
-    )
-
-    LOGGER.info(f'Expanding segmentation to include age')
-    # expand the segmentation to include age (assuming the same weights for all age categories)
-    econ_splits_lsoa_age = econ_splits_lsoa.add_segment(
-        SegmentsSuper.get_segment(SegmentsSuper.AGE)
-    )
-    emp_splits_lsoa_age = emp_splits_lsoa.add_segment(
-        SegmentsSuper.get_segment(SegmentsSuper.AGE)
-    )
-    soc_splits_lsoa_age = soc_splits_lsoa.add_segment(
-        SegmentsSuper.get_segment(SegmentsSuper.AGE)
-    )
-
-    LOGGER.info(f'Setting child-specific employment / economic status / SOC values')
-    # set children to have economic status proportions to 1 for students
-    # only (stops under 16s being allocated working statuses)
-    econ_splits_lsoa_age.data = data_processing.replace_segment_combination(
-        data=econ_splits_lsoa_age.data,
-        segment_combination={'pop_econ': [1, 2, 3], 'age_9': [1]},
-        value=0
-    )
-    econ_splits_lsoa_age.data = data_processing.replace_segment_combination(
-        data=econ_splits_lsoa_age.data,
-        segment_combination={'pop_econ': [4], 'age_9': [1]},
-        value=1
-    )
-
-    # set children to have employment status proportions to 1 for non-working age
-    # only (stops under 16s being allocated employment statuses)
-    emp_splits_lsoa_age.data = data_processing.replace_segment_combination(
-        data=emp_splits_lsoa_age.data,
-        segment_combination={'pop_emp': [1, 2, 3, 4], 'age_9': [1]},
-        value=0
-    )
-    emp_splits_lsoa_age.data = data_processing.replace_segment_combination(
-        data=emp_splits_lsoa_age.data,
-        segment_combination={'pop_emp': [5], 'age_9': [1]},
-        value=1
-    )
-
-    # set children to have SOC grouping proportions to 1 for SOC4
-    # only (stops under 16s being allocated other SOC groupings)
-    soc_splits_lsoa_age.data = data_processing.replace_segment_combination(
-        data=soc_splits_lsoa_age.data,
-        segment_combination={'soc': [1, 2, 3], 'age_9': [1]},
-        value=0
-    )
-    soc_splits_lsoa_age.data = data_processing.replace_segment_combination(
-        data=soc_splits_lsoa_age.data,
-        segment_combination={'soc': [4], 'age_9': [1]},
-        value=1
     )
 
     # check proportions sum to one
@@ -415,12 +322,9 @@ for GOR in constants.GORS:
     # tmp = soc_splits_lsoa_age.aggregate(segs=['accom_h', 'age_9', 'ns_sec'])
 
     # apply the splits at LSOA level to main population table
-    LOGGER.info(f'Applying economic status splits to population')
-    pop_by_nssec_hc_ha_car_gender_age_econ = econ_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age
-    LOGGER.info(f'Applying employment status splits to population')
-    pop_by_nssec_hc_ha_car_gender_age_econ_emp = emp_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age_econ
-    LOGGER.info(f'Applying SOC category splits to population')
-    pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc = soc_splits_lsoa_age * pop_by_nssec_hc_ha_car_gender_age_econ_emp
+    LOGGER.info(f'Applying economic status, employment status, and SOC category '
+                f'splits to population')
+    pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc = econ_emp_soc_splits_lsoa * pop_by_nssec_hc_ha_car_gender_age
 
     # save output to hdf and csvs for checking
     data_processing.save_output(
@@ -428,15 +332,6 @@ for GOR in constants.GORS:
         output_reference=f'Step7_Population_{GOR}',
         dvector=pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
         dvector_dimension='population'
-    )
-
-    # clear data at the end of the loop
-    data_processing.processing.clear_dvectors(
-        econ_splits, emp_splits, soc_splits,
-        econ_splits_lsoa, emp_splits_lsoa, soc_splits_lsoa,
-        econ_splits_lsoa_age, emp_splits_lsoa_age, soc_splits_lsoa_age,
-        pop_by_nssec_hc_ha_car_gender_age_econ,
-        pop_by_nssec_hc_ha_car_gender_age_econ_emp
     )
 
     # --- Step 8 --- #
