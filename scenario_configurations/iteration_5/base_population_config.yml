@@ -1,8 +1,7 @@
 # Configuration file specifying the segmentation and geographical level of the input data.
 # All files here are assumed to be in a format ready for DVectors.
 input_root_directory: I:\NorMITs Land Use\2023\import
-# output_directory: F:\Working\Land-Use\OUTPUTS\TMP
-output_directory: C:\Users\Firefly\Desktop\code\TEMP_ONS TABLE 3 TESTING
+output_directory: F:\Working\Land-Use\OUTPUTS
 output_intermediate_outputs: False
 
 unoccupied_households:
@@ -69,4 +68,4 @@ ce_pop_by_age_gender_soc:
 ce_pop_by_age_gender_econ:
     file_path: ONS\ONS 2021 CERs\preprocessing\CERs_GOR_age11_gender_economicstatus.hdf
     geographical_level: RGN2021
-    input_segments: [age_9, g, pop_econ]
+    input_segments: [age_9, g, economic_status]
