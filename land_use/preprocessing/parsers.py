@@ -330,7 +330,7 @@ def convert_ons_table_2(
         ['accom_h', 'adults', 'children', 'car_availability']
     )
 
-    return pd.concat([dvec, missing])
+    return pd.concat([dvec, missing]).fillna(0)
 
 
 def read_mype(
@@ -477,7 +477,7 @@ def convert_ons_table_4(
         ['accom_h', 'ns_sec']
     )
 
-    return pd.concat([dvec, missing])
+    return pd.concat([dvec, missing]).fillna(0)
 
 
 def convert_ons_table_3(

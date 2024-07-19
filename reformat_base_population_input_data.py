@@ -264,13 +264,24 @@ df = pp.read_ons(
     }
 )
 
-# drop exlusions
-# TODO Is there a way to do this better / using the SegmentSuper exclusion definitions?
-df = df.loc[
-    ~((df.index.isin([1, 2, 3, 9], level='age_9')) & (df.index.isin([1, 2, 4], level='pop_econ')))
-]
+# duplicate the pop_econ values to be consistent with the economic_status segmentation
+df = df.reset_index()
+mapping = {
+    1: 1,
+    2: 2,
+    3: 6,
+    4: 3
+}
+df['economic_status'] = df['pop_econ'].map(mapping)
+category_4 = df.loc[df['economic_status'] == 3]
+category_5 = df.loc[df['economic_status'] == 3]
+category_4['economic_status'] = 4
+category_5['economic_status'] = 5
+output = pd.concat([df, category_4, category_5])
 
-pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+# set the index and save
+dvec = output.set_index(['age_9', 'g', 'economic_status']).drop(columns=['pop_econ'])
+pp.save_preprocessed_hdf(source_file_path=file_path, df=dvec)
 
 # *** ONS gender, age, and occupation splits in communal establishments
 file_path = Path(
