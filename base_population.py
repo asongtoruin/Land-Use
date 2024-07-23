@@ -149,19 +149,19 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Step1_Occupied Households_{GOR}',
+        output_reference=f'Output P1.1_{GOR}',
         dvector=occupied_households,
         dvector_dimension='households'
     )
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Step1_Unoccupied Households_{GOR}',
+        output_reference=f'Output P1.2_{GOR}',
         dvector=unoccupied_households,
         dvector_dimension='households'
     )
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Step1_Average Occupancy_{GOR}',
+        output_reference=f'Output P1.3_{GOR}',
         dvector=average_occupancy,
         dvector_dimension='occupancy'
     )
@@ -176,7 +176,7 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Step2_Adjusted Addressbase Dwellings_{GOR}',
+        output_reference=f'Output P2_{GOR}',
         dvector=adjusted_addressbase_dwellings,
         dvector_dimension='households'
     )
@@ -193,7 +193,7 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Step3_Households_{GOR}',
+        output_reference=f'Output P3_{GOR}',
         dvector=hh_by_nssec,
         dvector_dimension='households'
     )
@@ -223,7 +223,7 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Step4_Households_{GOR}',
+        output_reference=f'Output P4_{GOR}',
         dvector=hh_by_nssec_hc_ha_car,
         dvector_dimension='households'
     )
@@ -250,7 +250,7 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Step5_Population_{GOR}',
+        output_reference=f'Output P5_{GOR}',
         dvector=pop_by_nssec_hc_ha_car,
         dvector_dimension='population'
     )
@@ -275,7 +275,7 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Step6_Population_{GOR}',
+        output_reference=f'Output P6_{GOR}',
         dvector=pop_by_nssec_hc_ha_car_gender_age,
         dvector_dimension='population'
     )
@@ -304,7 +304,7 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Step7_Population_{GOR}',
+        output_reference=f'Output P7_{GOR}',
         dvector=pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
         dvector_dimension='population'
     )
@@ -414,7 +414,7 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Step8_Population_{GOR}',
+        output_reference=f'Output P8_{GOR}',
         dvector=adjusted_pop,
         dvector_dimension='population',
         detailed_logs=True
