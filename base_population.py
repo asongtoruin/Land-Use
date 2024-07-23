@@ -4,6 +4,7 @@ import logging
 import yaml
 from caf.core.zoning import TranslationWeighting
 from caf.core.segmentation import SegmentsSuper
+import numpy as np
 
 from land_use import constants
 from land_use import data_processing
@@ -38,6 +39,7 @@ logging.basicConfig(
         logging.FileHandler(OUTPUT_DIR / 'population.log', mode='w')
     ],
 )
+logging.captureWarnings(True)
 
 # loop through GORs to save memory issues further down the line
 for GOR in constants.GORS:
@@ -132,10 +134,16 @@ for GOR in constants.GORS:
     # TODO this average occupancy is now based on census households, not addressbase, is this what we want? Or do we want to use the adjusted addressbase?
     average_occupancy = (ons_table_1 / occupied_households)
 
+    # replace infinities with nans for infilling
+    # this is where the occupied_households value is zero for a dwelling type and LSOA,
+    # but the ons_table_1 has non-zero population. E.g. LSOA E01007423 in GOR = 'YH'
+    # caravans and mobile homes, the occupied households = 0 but ons_table_1 population = 4
+    average_occupancy._data = average_occupancy._data.replace(np.inf, np.nan)
+
     # infill missing occupancies with average value of other properties in the LSOA
     # i.e. based on column
-    average_occupancy.data = average_occupancy.data.fillna(
-        average_occupancy.data.mean(axis=0), axis=0
+    average_occupancy._data = average_occupancy._data.fillna(
+        average_occupancy._data.mean(axis=0), axis=0
     )
 
     # save output to hdf and csvs for checking
@@ -375,7 +383,7 @@ for GOR in constants.GORS:
 
     # drop the 'total' segmentation
     ce_uplift_by_ce_age_gender_econ_soc = ce_uplift_by_ce_age_gender_econ_soc.aggregate(
-        segs=['ce', 'age_9', 'g', 'pop_econ', 'soc']
+        segs=['ce', 'age_9', 'g', 'economic_status', 'soc']
     )
 
     # define a matrix of 1s, ce_uplift_by_ce_age_gender_econ_soc + 1 doesnt work
@@ -391,7 +399,7 @@ for GOR in constants.GORS:
 
     # drop communal establishment type to apply back to main population
     ce_uplift_factor = ce_uplift_by_ce_age_gender_econ_soc.aggregate(
-        segs=['age_9', 'g', 'pop_econ', 'soc']
+        segs=['age_9', 'g', 'economic_status', 'soc']
     )
     ones = ce_uplift_factor.copy()
     for col in ones.data.columns:
@@ -400,15 +408,19 @@ for GOR in constants.GORS:
 
     LOGGER.info('Uplifting population to account for CEs')
     # calculate population in CEs by ce type, age, gender, econ status, and soc
-    adjusted_pop = ce_uplift_factor * pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc
+    # TODO: This only works *this* way round. Why?
+    adjusted_pop = pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc * ce_uplift_factor
 
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
         output_reference=f'Step8_Population_{GOR}',
         dvector=adjusted_pop,
-        dvector_dimension='population'
+        dvector_dimension='population',
+        detailed_logs=True
     )
+
+    LOGGER.info(f'*****COMPLETED PROCESSING FOR {GOR}*****')
 
     # clear data at the end of the loop
     data_processing.clear_dvectors(
