@@ -3,7 +3,6 @@ import logging
 
 import yaml
 from caf.core.zoning import TranslationWeighting
-from caf.core.segmentation import SegmentsSuper
 import numpy as np
 
 from land_use import constants
@@ -317,8 +316,7 @@ for GOR in constants.GORS:
     # define a matrix of 1s, ce_uplift_factor - 1 doesnt work
     # TODO change dunder method to allow simple numeric operations?
     ones = ce_uplift_factor.copy()
-    for col in ones.data.columns:
-        ones.data[col] = 1
+    ones.data.loc[:] = 1
     ce_uplift = ce_uplift_factor - ones
 
     LOGGER.info(f'Calculating splits of CE type by MSOA')
@@ -389,8 +387,7 @@ for GOR in constants.GORS:
     # define a matrix of 1s, ce_uplift_by_ce_age_gender_econ_soc + 1 doesnt work
     # TODO change dunder method to allow simple numeric operations?
     ones = ce_uplift_by_ce_age_gender_econ_soc.copy()
-    for col in ones.data.columns:
-        ones.data[col] = 1
+    ones.data.loc[:] = 1
 
     LOGGER.info('Calculating zonal adjustment factors by CE type, age, gender, economic status, and SOC')
     # calculate adjustment factors by ce type, age, gender, economic status, and SOC
@@ -402,8 +399,7 @@ for GOR in constants.GORS:
         segs=['age_9', 'g', 'economic_status', 'soc']
     )
     ones = ce_uplift_factor.copy()
-    for col in ones.data.columns:
-        ones.data[col] = 1
+    ones.data.loc[:] = 1
     ce_uplift_factor = ce_uplift_factor + ones
 
     LOGGER.info('Uplifting population to account for CEs')
