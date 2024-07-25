@@ -44,34 +44,28 @@ logging.basicConfig(
 # read in the data from the config file
 LOGGER.info("Importing BRES 2022 data from config file")
 # note this data is only for England and Wales
-bres_2022_employment_lad_4_digit_sic = data_processing.read_dvector_from_config(
-    config=config,
-    key='bres_2022_employment_lad_4_digit_sic'
-)
+lad_4_digit_sic = data_processing.read_dvector_from_config(config=config, key='lad_4_digit_sic')
 
-bres_2022_employment_msoa_2011_2_digit_sic_jobs = data_processing.read_dvector_from_config(
+msoa_2011_2_digit_sic = data_processing.read_dvector_from_config(
         config=config,
-        key='bres_2022_employment_msoa_2011_2_digit_sic_jobs'
+        key='msoa_2011_2_digit_sic'
 )
 
-bres_2022_employment_lsoa_2011_1_digit_sic = data_processing.read_dvector_from_config(
+lsoa_2011_1_digit_sic = data_processing.read_dvector_from_config(
     config=config,
-    key='bres_2022_employment_lsoa_2011_1_digit_sic'
+    key='lsoa_2011_1_digit_sic'
 )
 
-bres_2022_employment_msoa_2011_2_digit_sic_1_digit_sic_splits = data_processing.read_dvector_from_config(
+msoa_2011_2_digit_sic_1_digit_sic_splits = data_processing.read_dvector_from_config(
     config=config,
-    key='bres_2022_employment_msoa_2011_2_digit_sic_1_digit_sic_splits'
+    key='msoa_2011_2_digit_sic_1_digit_sic_splits'
 )
 ons_sic_soc_splits_lu = data_processing.read_dvector_from_config(
     config=config,
     key='ons_sic_soc_splits_lu'
 )
 
-wfj = data_processing.read_dvector_from_config(
-    config=config,
-    key='wfj'
-)
+wfj = data_processing.read_dvector_from_config(config=config, key='wfj')
 
 # --- Step 1 --- #
 LOGGER.info('--- Step 1 ---')
@@ -79,8 +73,8 @@ LOGGER.info(
     'Balance the input datasets to each have the same totals at LAD level as the 4 Digit SIC 2022 BRES data'
 )
 
-bres_2022_employment_lad_2011_2_digit_sic_jobs = (
-    bres_2022_employment_msoa_2011_2_digit_sic_jobs.translate_zoning(
+lad_2011_2_digit_sic = (
+    msoa_2011_2_digit_sic.translate_zoning(
         new_zoning=constants.LAD_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.SPATIAL,
@@ -88,8 +82,8 @@ bres_2022_employment_lad_2011_2_digit_sic_jobs = (
     )
 )
 
-bres_2022_employment_lad_2011_1_digit_sic_jobs = (
-    bres_2022_employment_lsoa_2011_1_digit_sic.translate_zoning(
+lad_2011_1_digit_sic = (
+    lsoa_2011_1_digit_sic.translate_zoning(
         new_zoning=constants.LAD_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.SPATIAL,
@@ -97,21 +91,21 @@ bres_2022_employment_lad_2011_1_digit_sic_jobs = (
     )
 )
 
-lad_total_jobs = bres_2022_employment_lad_4_digit_sic.add_segment(
+lad_total = lad_4_digit_sic.add_segment(
     constants.CUSTOM_SEGMENTS['total'], split_method='split'
 ).aggregate(['total'])
 
-msoa_total_jobs_at_lad = bres_2022_employment_lad_2011_2_digit_sic_jobs.add_segment(
+msoa_total_at_lad = lad_2011_2_digit_sic.add_segment(
     constants.CUSTOM_SEGMENTS['total'], split_method='split'
 ).aggregate(['total'])
 
-lsoa_total_jobs_at_lad = bres_2022_employment_lad_2011_1_digit_sic_jobs.add_segment(
+lsoa_total_at_lad = lad_2011_1_digit_sic.add_segment(
     constants.CUSTOM_SEGMENTS['total'], split_method='split'
 ).aggregate(['total'])
 
-msoa_adj_factors = lad_total_jobs / msoa_total_jobs_at_lad
+msoa_adj_factors = lad_total / msoa_total_at_lad
 
-lsoa_adj_factors = lad_total_jobs / lsoa_total_jobs_at_lad
+lsoa_adj_factors = lad_total / lsoa_total_at_lad
 
 
 # TODO: consider having a output/log of where the increases are outside expectations. Along the lines of
@@ -140,13 +134,9 @@ rehydrated_adj_factors_for_lsoa = (
     )
 )
 
-adj_bres_2022_employment_msoa_2011_2_digit_sic_jobs = (
-    bres_2022_employment_msoa_2011_2_digit_sic_jobs * rehydrated_adj_factors_for_msoa
-)
+adj_msoa_2011_2_digit_sic = msoa_2011_2_digit_sic * rehydrated_adj_factors_for_msoa
 
-adj_bres_2022_employment_lsoa_2011_1_digit_sic = (
-    bres_2022_employment_lsoa_2011_1_digit_sic * rehydrated_adj_factors_for_lsoa
-)
+adj_lsoa_2011_1_digit_sic = lsoa_2011_1_digit_sic * rehydrated_adj_factors_for_lsoa
 
 
 # --- Step 2 --- #
@@ -156,7 +146,7 @@ LOGGER.info('Exporting district-based 4 Digit SIC 2022 BRES data (Output E1)')
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
         output_reference='Output E1',
-        dvector=bres_2022_employment_lad_4_digit_sic,
+        dvector=lad_4_digit_sic,
         dvector_dimension='jobs'
 )
 
@@ -164,7 +154,7 @@ data_processing.save_output(
 LOGGER.info('--- Step 3 ---')
 LOGGER.info('Convert 2 Digit SIC 2022 BRES data held in MSOA 2011 zoning to 2021 MSOA (Output E2)')
 # LAD is already at LAD 2021 zoning so doesn't need translating
-bres_2022_employment_msoa_2021_2_digit_sic_jobs = adj_bres_2022_employment_msoa_2011_2_digit_sic_jobs.translate_zoning(
+msoa_2021_2_digit_sic = adj_msoa_2011_2_digit_sic.translate_zoning(
         new_zoning=constants.MSOA_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.SPATIAL,
@@ -175,14 +165,14 @@ bres_2022_employment_msoa_2021_2_digit_sic_jobs = adj_bres_2022_employment_msoa_
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
         output_reference='Output E2',
-        dvector=bres_2022_employment_msoa_2021_2_digit_sic_jobs,
+        dvector=msoa_2021_2_digit_sic,
         dvector_dimension='jobs'
 )
 
 # --- Step 4 --- #
 LOGGER.info('--- Step 4 ---')
 LOGGER.info('Convert 1 Digit SIC 2022 BRES data held in LSOA 2011 zoning to 2021 LSOA (Output E3)')
-bres_2022_employment_lsoa_2021_1_digit_sic = adj_bres_2022_employment_lsoa_2011_1_digit_sic.translate_zoning(
+lsoa_2021_1_digit_sic = adj_lsoa_2011_1_digit_sic.translate_zoning(
         new_zoning=constants.LSOA_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.SPATIAL,
@@ -193,7 +183,7 @@ bres_2022_employment_lsoa_2021_1_digit_sic = adj_bres_2022_employment_lsoa_2011_
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
         output_reference='Output E3',
-        dvector=bres_2022_employment_lsoa_2021_1_digit_sic,
+        dvector=lsoa_2021_1_digit_sic,
         dvector_dimension='jobs'
 )
 
@@ -209,11 +199,11 @@ ons_sic_soc_splits_lsoa = ons_sic_soc_splits_lu.translate_zoning(
 
 LOGGER.info(f'Applying SOC group proportions to BRES 1-digit SIC jobs')
 jobs_by_lsoa_with_soc_group = (
-    bres_2022_employment_lsoa_2021_1_digit_sic * ons_sic_soc_splits_lsoa
+    lsoa_2021_1_digit_sic * ons_sic_soc_splits_lsoa
 )
 
 LOGGER.info('Converting proportions of SIC 2 digit by SIC 1 digit by SOC groups jobs to LSOA 2021')
-bres_2022_employment_lsoa_2021_2_digit_sic_1_splits = bres_2022_employment_msoa_2011_2_digit_sic_1_digit_sic_splits.translate_zoning(
+lsoa_2021_2_digit_sic_1_splits = msoa_2011_2_digit_sic_1_digit_sic_splits.translate_zoning(
         new_zoning=constants.LSOA_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
@@ -221,7 +211,7 @@ bres_2022_employment_lsoa_2021_2_digit_sic_1_splits = bres_2022_employment_msoa_
 )
 
 LOGGER.info(f'Applying SOC group proportions to BRES 2-digit SIC jobs')
-jobs_by_sic_soc_lsoa = bres_2022_employment_lsoa_2021_2_digit_sic_1_splits * jobs_by_lsoa_with_soc_group
+jobs_by_sic_soc_lsoa = lsoa_2021_2_digit_sic_1_splits * jobs_by_lsoa_with_soc_group
 
 # save output to hdf and csvs for checking
 data_processing.save_output(
@@ -242,11 +232,11 @@ output_e4_by_rgn = jobs_by_sic_soc_lsoa.translate_zoning(
     check_totals=False
 )
 
-e4_total_jobs_by_rgn = output_e4_by_rgn.add_segment(
+e4_total_by_rgn = output_e4_by_rgn.add_segment(
     constants.CUSTOM_SEGMENTS['total'], split_method='split'
 ).aggregate(['total'])
 
-factors = wfj / e4_total_jobs_by_rgn
+factors = wfj / e4_total_by_rgn
 
 rehydrated_adj_factors_for_e4_2 = (
     factors.add_segment(constants.CUSTOM_SEGMENTS['sic_1_digit'])
