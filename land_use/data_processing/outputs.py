@@ -202,19 +202,22 @@ def summary_reporting(
     LOGGER.info(f'Total {dimension} in data: {dvector.total:,.0f}')
 
     if detailed_logs:
-        # Remove the zoning
-        non_spatial = dvector.remove_zoning()
-        total = non_spatial.total
-        for segmentation in dvector.segmentation.naming_order:
-            summary = non_spatial.aggregate([segmentation])
+        log_level = LOGGER.info
+    else:
+        log_level = LOGGER.debug
+    # Remove the zoning
+    non_spatial = dvector.remove_zoning()
+    total = non_spatial.total
+    for segmentation in dvector.segmentation.naming_order:
+        summary = non_spatial.aggregate([segmentation])
 
-            # Get lookup from numeric labels to descriptions
-            mapping = dvector.segmentation.seg_dict[segmentation].values
-            values = {desc: f"{summary.data.get(key, 0):,.0f}" for key, desc in mapping.items()}
-            proportions = {desc: f"{summary.data.get(key, 0)/total:.0%}" for key, desc in mapping.items()}
+        # Get lookup from numeric labels to descriptions
+        mapping = dvector.segmentation.seg_dict[segmentation].values
+        values = {desc: f"{summary.data.get(key, 0):,.0f}" for key, desc in mapping.items()}
+        proportions = {desc: f"{summary.data.get(key, 0)/total:.0%}" for key, desc in mapping.items()}
 
-            LOGGER.info(f'{segmentation} values: {values}')
-            LOGGER.info(f'{segmentation} proportions: {proportions}')
+        log_level(f'{segmentation} values: {values}')
+        log_level(f'{segmentation} proportions: {proportions}')
 
 
 def save_output(
@@ -254,16 +257,17 @@ def save_output(
 
     """
 
+    # save to HDF
+    LOGGER.info(fr'Writing to {output_folder}\{output_reference}.hdf')
+    dvector.save(output_folder / f'{output_reference}.hdf')
+
+    LOGGER.info('Output summary:')
     # logging information
     summary_reporting(
         dvector=dvector,
         dimension=dvector_dimension,
         detailed_logs=detailed_logs
     )
-
-    # save to HDF
-    LOGGER.info(fr'Writing to {output_folder}\{output_reference}.hdf')
-    dvector.save(output_folder / f'{output_reference}.hdf')
 
     # produce output summaries in csv format if required
     if generate_summary_outputs:
