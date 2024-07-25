@@ -59,9 +59,9 @@ bres_2022_employment_lsoa_2011_1_digit_sic = data_processing.read_dvector_from_c
     key='bres_2022_employment_lsoa_2011_1_digit_sic'
 )
 
-bres_2022_employment_msoa_2011_2_digit_sic_1_splits = data_processing.read_dvector_from_config(
+bres_2022_employment_msoa_2011_2_digit_sic_1_digit_sic_splits = data_processing.read_dvector_from_config(
     config=config,
-    key='bres_2022_employment_msoa_2011_2_digit_sic_1_splits'
+    key='bres_2022_employment_msoa_2011_2_digit_sic_1_digit_sic_splits'
 )
 ons_sic_soc_splits_lu = data_processing.read_dvector_from_config(
     config=config,
@@ -213,7 +213,7 @@ jobs_by_lsoa_with_soc_group = (
 )
 
 LOGGER.info('Converting proportions of SIC 2 digit by SIC 1 digit by SOC groups jobs to LSOA 2021')
-bres_2022_employment_lsoa_2021_2_digit_sic_1_splits = bres_2022_employment_msoa_2011_2_digit_sic_1_splits.translate_zoning(
+bres_2022_employment_lsoa_2021_2_digit_sic_1_splits = bres_2022_employment_msoa_2011_2_digit_sic_1_digit_sic_splits.translate_zoning(
         new_zoning=constants.LSOA_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,

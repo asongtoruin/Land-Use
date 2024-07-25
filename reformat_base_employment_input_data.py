@@ -126,7 +126,7 @@ def msoa_2_digit():
     )
 
     pp.save_preprocessed_hdf(
-        source_file_path=file_path, df=df_wide, multiple_output_ref="sic_1_splits"
+        source_file_path=file_path, df=df_wide, multiple_output_ref="1digit_sic_splits"
     )
 
 

@@ -16,8 +16,8 @@ bres_2022_employment_msoa_2011_2_digit_sic_jobs:
     geographical_level: MSOA2011
     input_segments: [sic_2_digit]
 
-bres_2022_employment_msoa_2011_2_digit_sic_1_splits:
-    file_path: BRES2022\Employment\preprocessing\bres_employment22_msoa2011_2digit_sic_sic_1_splits.hdf
+bres_2022_employment_msoa_2011_2_digit_sic_1_digit_sic_splits:
+    file_path: BRES2022\Employment\preprocessing\bres_employment22_msoa2011_2digit_sic_1digit_sic_splits.hdf
     geographical_level: MSOA2011
     input_segments: [sic_1_digit, sic_2_digit]
 
