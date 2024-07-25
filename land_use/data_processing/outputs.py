@@ -1,5 +1,7 @@
+from collections.abc import Iterator
 from pathlib import Path
 import logging
+from typing import Dict
 
 import pandas as pd
 from caf.core.data_structures import DVector
@@ -200,26 +202,19 @@ def summary_reporting(
     LOGGER.info(f'Total {dimension} in data: {dvector.total:,.0f}')
 
     if detailed_logs:
-        # for each of the levels of segmentation, whats the total by segment
-        reindexed = dvector.data.reset_index()
+        # Remove the zoning
+        non_spatial = dvector.remove_zoning()
+        total = non_spatial.total
         for segmentation in dvector.segmentation.naming_order:
-            summary = pd.DataFrame(
-                data=reindexed.groupby(segmentation).sum().sum(axis=1),
-                columns=[segmentation]
-            )
-            # map numeric labels to actual helpful values
-            mapping = dvector.segmentation.seg_dict[segmentation].values
-            summary.index = summary.index.map(mapping)
-            summary[f'{segmentation}_proportion'] = summary[segmentation] / summary[segmentation].sum()
-            summary[segmentation] = summary[segmentation].map('{:,.0f}'.format)
-            summary[f'{segmentation}_proportion'] = (summary[f'{segmentation}_proportion'] * 100).map('{:.0f}%'.format)
+            summary = non_spatial.aggregate([segmentation])
 
-            # loop through rows of the condensed dataframe
-            # note this is only as many iterations as there are segment definitions (e.g. gender has 2) so hopefully not too bad??
-            for index, row in summary.iterrows():
-                LOGGER.info(f'{index} total: {row[segmentation]}')
-            for index, row in summary.iterrows():
-                LOGGER.info(f'{index} proportion: {row[f"{segmentation}_proportion"]}')
+            # Get lookup from numeric labels to descriptions
+            mapping = dvector.segmentation.seg_dict[segmentation].values
+            values = {desc: f"{summary.data.get(key, 0):,.0f}" for key, desc in mapping.items()}
+            proportions = {desc: f"{summary.data.get(key, 0)/total:.0%}" for key, desc in mapping.items()}
+
+            LOGGER.info(f'{segmentation} values: {values}')
+            LOGGER.info(f'{segmentation} proportions: {proportions}')
 
 
 def save_output(

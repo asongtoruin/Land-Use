@@ -312,26 +312,25 @@ def convert_ons_table_2(
     # Altenative using pivot_wider
     # index_cols = ["h", "ha", "hc", "car"]
     # df = df.pivot(index=index_cols, columns=["zoning"], values="households")
-    df = pivot_to_dvector(
+    dvec = pivot_to_dvector(
         data=df,
         zoning_column=zoning,
         index_cols=['accom_h', 'adults', 'children', 'car_availability'],
         value_column='households'
     )
 
-    # add in the missing segmentation category and fill with zeros
+    # caravan data is missing from data source
+    # assume caravan data is the same as flat data (used for proportions mainly so
+    # so shouldn't be too much of a problem??
     # TODO this should be genericised, adding in a missing combination of indicies
-    missing = df[df.index.get_level_values('accom_h') == 1].reset_index()
+    # TODO REVIEW THIS ASSUMPTION, IS THIS OKAY?
+    missing = dvec[dvec.index.get_level_values('accom_h') == 4].reset_index()
     missing['accom_h'] = 5
     missing = missing.set_index(
         ['accom_h', 'adults', 'children', 'car_availability']
     )
-    missing.loc[:] = np.nan
 
-    # combine with df for all segments
-    df = pd.concat([df, missing])
-
-    return df.fillna(0)
+    return pd.concat([dvec, missing]).fillna(0)
 
 
 def read_mype(
@@ -467,17 +466,18 @@ def convert_ons_table_4(
         value_column='hh_ref_persons'
     )
 
-    # add in the missing segmentation category and fill with zeros
+    # caravan data is missing from data source
+    # assume caravan data is the same as flat data (used for proportions mainly so
+    # so shouldn't be too much of a problem??
     # TODO this should be genericised, adding in a missing combination of indicies
-    missing = dvec[dvec.index.get_level_values('accom_h') == 1].reset_index()
+    # TODO REVIEW THIS ASSUMPTION, IS THIS OKAY?
+    missing = dvec[dvec.index.get_level_values('accom_h') == 4].reset_index()
     missing['accom_h'] = 5
-    missing = missing.set_index(['accom_h', 'ns_sec'])
-    missing.loc[:] = np.nan
+    missing = missing.set_index(
+        ['accom_h', 'ns_sec']
+    )
 
-    # combine with df for all segments
-    df = pd.concat([dvec, missing])
-
-    return df.fillna(0)
+    return pd.concat([dvec, missing]).fillna(0)
 
 
 def convert_ons_table_3(
@@ -639,17 +639,18 @@ def convert_ons_table_3(
         value_column='population'
     )
 
-    # add in the missing segmentation category and fill with zeros
+    # caravan data is missing from data source
+    # assume caravan data is the same as flat data (used for proportions mainly so
+    # so shouldn't be too much of a problem??
     # TODO this should be genericised, adding in a missing combination of indicies
-    missing = dvec[dvec.index.get_level_values('accom_h') == 1].reset_index()
+    # TODO REVIEW THIS ASSUMPTION, IS THIS OKAY?
+    missing = dvec[dvec.index.get_level_values('accom_h') == 4].reset_index()
     missing['accom_h'] = 5
-    missing = missing.set_index(['accom_h', 'ns_sec', 'economic_status', 'pop_emp', 'soc'])
-    missing.loc[:] = np.nan
+    missing = missing.set_index(
+        ['accom_h', 'ns_sec', 'economic_status', 'pop_emp', 'soc']
+    )
 
-    # combine with df for all segments
-    grouped = pd.concat([dvec, missing])
-
-    return grouped.fillna(0)
+    return pd.concat([dvec, missing])
 
 
 def read_ons(

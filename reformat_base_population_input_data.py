@@ -175,7 +175,26 @@ df = pp.convert_ons_table_3(
     economic_status=economic_status
 )
 
-pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+# get dataframe of non-working data
+missing = df.copy().reset_index()
+missing['soc'] = 4
+missing['pop_emp'] = 5
+missing['economic_status'] = -8
+missing = missing.drop_duplicates(
+    subset=['accom_h', 'ns_sec', 'economic_status', 'pop_emp', 'soc']
+).set_index(
+    ['accom_h', 'ns_sec', 'economic_status', 'pop_emp', 'soc']
+)
+missing.iloc[:] = 1
+
+# combine into a single output
+combo = pd.concat([df, missing])
+
+pp.save_preprocessed_hdf(
+    source_file_path=file_path,
+    df=combo,
+    multiple_output_ref='-8_modified'
+)
 
 # ****** AddressBase 
 # *** AddressBase database
@@ -264,13 +283,42 @@ df = pp.read_ons(
     }
 )
 
-# drop exlusions
-# TODO Is there a way to do this better / using the SegmentSuper exclusion definitions?
-df = df.loc[
-    ~((df.index.isin([1, 2, 3, 9], level='age_9')) & (df.index.isin([1, 2, 4], level='pop_econ')))
-]
+# duplicate the pop_econ values to be consistent with the economic_status segmentation
+df = df.reset_index()
+mapping = {
+    1: 1,
+    2: 2,
+    3: 6,
+    4: 3
+}
+df['economic_status'] = df['pop_econ'].map(mapping)
+category_4 = df.loc[df['economic_status'] == 3]
+category_5 = df.loc[df['economic_status'] == 3]
+category_4['economic_status'] = 4
+category_5['economic_status'] = 5
+output = pd.concat([df, category_4, category_5])
 
-pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+# add in the -8 economic status category
+children_age9 = [1, 2, 3]
+children = output.loc[
+    (output['pop_econ'] == 3) &
+    (output['age_9'].isin(children_age9))
+]
+children['economic_status'] = -8
+non_children = output.loc[
+    ~(output['age_9'].isin(children_age9))
+]
+combo = pd.concat([children, non_children])
+
+# set the index and save
+dvec = combo.set_index(
+    ['age_9', 'g', 'economic_status']
+).drop(columns=['pop_econ'])
+pp.save_preprocessed_hdf(
+    source_file_path=file_path,
+    df=dvec,
+    multiple_output_ref='-8_modified'
+)
 
 # *** ONS gender, age, and occupation splits in communal establishments
 file_path = Path(
