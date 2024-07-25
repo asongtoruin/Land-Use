@@ -193,8 +193,8 @@ def wfj_2023():
     df_with_codes = pd.merge(df, gor_lu, how="left", on=["region"])
     df_with_codes = df_with_codes.dropna(subset=["RGN21CD"])
 
-    # add in a total segementation
-    df_with_codes["total"] = "all"
+    # Add in a total segementation. Note that this needs to be a number i.e. 1 here.
+    df_with_codes["total"] = 1
 
     # Copy from utlities, will don from there when fixed the import issue
     # pp.reformat_2021_lad_4digit
