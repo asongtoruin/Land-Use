@@ -199,6 +199,7 @@ ons_sic_soc_splits_lsoa = ons_sic_soc_splits_lu.translate_zoning(
     check_totals=False
 )
 
+# Note a warning is generated here about combinations with SOC as 4. We can ignore it.
 LOGGER.info(f'Applying SOC group proportions to BRES 1-digit SIC jobs')
 jobs_by_lsoa_with_soc_group = (
     lsoa_2021_1_digit_sic * ons_sic_soc_splits_lsoa
@@ -212,6 +213,7 @@ lsoa_2021_2_digit_sic_1_splits = msoa_2011_2_digit_sic_1_digit_sic_splits.transl
         check_totals=False
 )
 
+# Note a warning is generated here about combinations with SOC as 4. We can ignore it.
 LOGGER.info(f'Applying SOC group proportions to BRES 2-digit SIC jobs')
 jobs_by_sic_soc_lsoa = lsoa_2021_2_digit_sic_1_splits * jobs_by_lsoa_with_soc_group
 
@@ -265,3 +267,23 @@ data_processing.save_output(
         dvector=output_e4_2,
         dvector_dimension='jobs'
 )
+
+LOGGER.info('--- Step 7 ---')
+LOGGER.info(f'Combining Output E1 and E4 to give Jobs by LSOA SIC 4 digit and SOC group (1-3) (Output E5)')
+# Output E5
+e1_with_sic_2_lad = lad_4_digit_sic.translate_segment(
+    from_seg=SegmentsSuper('sic_4_digit').get_segment(),
+    to_seg=SegmentsSuper('sic_2_digit').get_segment(),
+    drop_from=False
+)
+
+e1_with_sic_2_lsoa = e1_with_sic_2_lad.translate_zoning(
+    new_zoning=constants.LSOA_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.SPATIAL,
+    check_totals=False
+)
+
+e5 = data_processing.apply_proportions(e1_with_sic_2_lsoa, jobs_by_sic_soc_lsoa)
+
+print(e5.data)
