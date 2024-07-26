@@ -11,7 +11,7 @@ from land_use import data_processing
 
 # set up logging
 log_formatter = logging.Formatter(
-    fmt='[%(asctime)-15s] %(levelname)s - [%(filename)s#%(lineno)d::%(funcName)s]: %(message)s',
+    fmt='[%(asctime)-15s] %(levelname)-7s - [%(filename)s#%(lineno)d::%(funcName)s]: %(message)s',
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
@@ -28,16 +28,22 @@ OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 # Define whether to output intermediate outputs, recommended to not output loads if debugging
 generate_summary_outputs = bool(config['output_intermediate_outputs'])
 
-# define logging path based on config file
-logging.basicConfig(
-    format=log_formatter._fmt,
-    datefmt=log_formatter.datefmt,
-    level=logging.INFO,
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(OUTPUT_DIR / 'population.log', mode='w')
-    ],
-)
+# Set up logging
+LOGGER.setLevel(logging.DEBUG)
+
+sh = logging.StreamHandler()
+fh = logging.FileHandler(OUTPUT_DIR / 'population.log', mode='w')
+
+for handler in (sh, fh):
+    handler.setFormatter(log_formatter)
+    handler.setLevel(logging.INFO)
+    LOGGER.addHandler(handler)
+
+detailed_logs = logging.FileHandler(OUTPUT_DIR / 'population_detailed.log', mode='w')
+detailed_logs.setLevel(logging.DEBUG)
+detailed_logs.setFormatter(log_formatter)
+LOGGER.addHandler(detailed_logs)
+
 logging.captureWarnings(True)
 
 # loop through GORs to save memory issues further down the line
@@ -406,6 +412,13 @@ for GOR in constants.GORS:
     # calculate population in CEs by ce type, age, gender, econ status, and soc
     # TODO: This only works *this* way round. Why?
     adjusted_pop = pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc * ce_uplift_factor
+
+    LOGGER.debug('Checks on impact of Communal Establishments uplift')
+    ce_change = adjusted_pop - pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc
+    data_processing.summary_reporting(
+        ce_change,
+        dimension='Change derived from Communal Establishments',
+    )
 
     # save output to hdf and csvs for checking
     data_processing.save_output(
