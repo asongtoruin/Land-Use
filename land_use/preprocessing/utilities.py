@@ -465,11 +465,11 @@ def reformat_ons_sic_soc_correspondence(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # TODO: consider if to move these to a correspondence file instead?
-    soc_9_to_soc_4 = {1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 2, 7: 2, 8: 3, 9: 3}
+    soc_9_to_soc_3 = {1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 2, 7: 2, 8: 3, 9: 3}
 
-    df_with_sic["soc_3"] = df_with_sic["soc_9"].map(soc_9_to_soc_4)
+    df_with_sic["soc"] = df_with_sic["soc_9"].map(soc_9_to_soc_3)
 
-    df_with_sic = df_with_sic.groupby(["RGN2021", "soc_3", "sic_1_digit"]).agg(
+    df_with_sic = df_with_sic.groupby(["RGN2021", "soc", "sic_1_digit"]).agg(
         {"Observation": "sum"}
     )
 
@@ -479,8 +479,19 @@ def reformat_ons_sic_soc_correspondence(df: pd.DataFrame) -> pd.DataFrame:
 
     df_with_sic = df_with_sic.reset_index()
 
+    # infill soc 4 as it isn't currently included
+    soc_4_df = df_with_sic[["RGN2021", "sic_1_digit"]].drop_duplicates(
+    subset=["RGN2021", "sic_1_digit"]
+)
+
+    soc_4_df["soc"] = 4
+    soc_4_df["Observation"] = 0
+    soc_4_df["sic_to_soc_split"] = 0
+
+    df_with_sic = pd.concat([df_with_sic, soc_4_df])
+
     df_wide = df_with_sic.pivot(
-        index=["sic_1_digit", "soc_3"], columns="RGN2021", values="sic_to_soc_split"
+        index=["sic_1_digit", "soc"], columns="RGN2021", values="sic_to_soc_split"
     )
 
     return df_wide
