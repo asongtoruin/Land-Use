@@ -2,10 +2,12 @@ from pathlib import Path
 import logging
 
 import yaml
+from caf.core.segments import SegmentsSuper
 from caf.core.zoning import TranslationWeighting
 
 from land_use import constants
 from land_use import data_processing
+
 
 
 # set up logging
@@ -113,8 +115,8 @@ lsoa_adj_factors = lad_total / lsoa_total_at_lad
 # sig_decreases = adjustment_factors.data[adjustment_factors.data.le(0.9)]
 
 rehydrated_adj_factors_for_msoa = (
-    msoa_adj_factors.add_segment(constants.CUSTOM_SEGMENTS['sic_2_digit'])
-    .aggregate([constants.CUSTOM_SEGMENTS['sic_2_digit'].name])
+    msoa_adj_factors.add_segment(SegmentsSuper('sic_2_digit').get_segment())
+    .aggregate([SegmentsSuper('sic_2_digit').get_segment().name])
     .translate_zoning(
         new_zoning=constants.MSOA_2011_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
@@ -124,8 +126,8 @@ rehydrated_adj_factors_for_msoa = (
 )
 
 rehydrated_adj_factors_for_lsoa = (
-    lsoa_adj_factors.add_segment(constants.CUSTOM_SEGMENTS['sic_1_digit'])
-    .aggregate([constants.CUSTOM_SEGMENTS['sic_1_digit'].name])
+    lsoa_adj_factors.add_segment(SegmentsSuper('sic_1_digit').get_segment())
+    .aggregate([SegmentsSuper('sic_1_digit').get_segment().name])
     .translate_zoning(
         new_zoning=constants.LSOA_2011_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
@@ -239,12 +241,12 @@ e4_total_by_rgn = output_e4_by_rgn.add_segment(
 factors = wfj / e4_total_by_rgn
 
 rehydrated_adj_factors_for_e4_2 = (
-    factors.add_segment(constants.CUSTOM_SEGMENTS['sic_1_digit'])
-    .add_segment(constants.CUSTOM_SEGMENTS['sic_2_digit'])
+    factors.add_segment(SegmentsSuper('sic_1_digit').get_segment())
+    .add_segment(SegmentsSuper('sic_2_digit').get_segment())
     .add_segment(constants.CUSTOM_SEGMENTS['soc_3'])
     .aggregate([
-        constants.CUSTOM_SEGMENTS['sic_1_digit'].name,
-        constants.CUSTOM_SEGMENTS['sic_2_digit'].name,
+        SegmentsSuper('sic_1_digit').get_segment().name,
+        SegmentsSuper('sic_2_digit').get_segment().name,
         constants.CUSTOM_SEGMENTS['soc_3'].name
         ])
     .translate_zoning(
@@ -263,3 +265,36 @@ data_processing.save_output(
         dvector=output_e4_2,
         dvector_dimension='jobs'
 )
+
+# ### TEMP have it here, needs moving to end.
+# LOGGER.info('--- Step 7 ---')
+# LOGGER.info(f'Combining Output E1 and E4 to give Jobs by LSOA SIC 4 digit and SOC group (1-3) (Output E5)')
+# # Output E5
+# e1_with_sic_2_lad = lad_4_digit_sic.translate_segment(
+#     from_seg=SegmentsSuper('sic_4_digit').get_segment(),
+#     to_seg=SegmentsSuper('sic_2_digit').get_segment(),
+#     drop_from=False
+# )
+
+# lad_4_digit_sic.data.to_csv("temp_lad_4_digit_sic.csv")
+
+# print(e1_with_sic_2_lad.data)
+# e1_with_sic_2_lad.data.to_csv("temp_e1_with_sic_2_lad.csv")
+
+# e1_with_sic_2_lsoa = e1_with_sic_2_lad.translate_zoning(
+#     new_zoning=constants.LSOA_ZONING_SYSTEM,
+#     cache_path=constants.CACHE_FOLDER,
+#     weighting=TranslationWeighting.SPATIAL,
+#     check_totals=False
+# )
+
+# print(e1_with_sic_2_lsoa.data)
+
+# e1_with_sic_2_lsoa.data.to_csv("temp_e1_with_sic_2_lsoa.csv")
+
+# e5 = data_processing.apply_proportions(e1_with_sic_2_lsoa, jobs_by_sic_soc_lsoa)
+
+# print(e5.data)
+
+# jobs_by_sic_soc_lsoa.data.to_csv("temp_jobs_by_sic_soc_lsoa.csv")
+# e5.data.to_csv("temp_e5.csv")
