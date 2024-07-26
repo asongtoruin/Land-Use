@@ -479,17 +479,6 @@ def reformat_ons_sic_soc_correspondence(df: pd.DataFrame) -> pd.DataFrame:
 
     df_with_sic = df_with_sic.reset_index()
 
-    # infill soc 4 as it isn't currently included
-    soc_4_df = df_with_sic[["RGN2021", "sic_1_digit"]].drop_duplicates(
-    subset=["RGN2021", "sic_1_digit"]
-)
-
-    soc_4_df["soc"] = 4
-    soc_4_df["Observation"] = 0
-    soc_4_df["sic_to_soc_split"] = 0
-
-    df_with_sic = pd.concat([df_with_sic, soc_4_df])
-
     df_wide = df_with_sic.pivot(
         index=["sic_1_digit", "soc"], columns="RGN2021", values="sic_to_soc_split"
     )
