@@ -425,7 +425,7 @@ def reformat_2021_lad_4digit(
     return df_wide
 
 def reformat_ons_sic_soc_correspondence(df: pd.DataFrame) -> pd.DataFrame:
-    """Change the ONS sic-soc correspondence to be in DVector format
+    """Change the ONS sic-soc correspondence to be in DVector format. Values are in exact numbers not splits.
 
     Args:
         df (pd.DataFrame): Data in long format
@@ -440,9 +440,6 @@ def reformat_ons_sic_soc_correspondence(df: pd.DataFrame) -> pd.DataFrame:
             "Industry (current) (19 categories) Code": "industry",
         }
     )
-
-    # Set Wales code to match the shapefile
-    # df.loc[df["RGN2021"] == "W92000004", "RGN2021"] = "WALES"
 
     df = df.query("soc_9 >0 and industry > 0")
 
@@ -473,14 +470,10 @@ def reformat_ons_sic_soc_correspondence(df: pd.DataFrame) -> pd.DataFrame:
         {"Observation": "sum"}
     )
 
-    df_with_sic["sic_to_soc_split"] = df_with_sic["Observation"] / df_with_sic.groupby(
-        ["RGN2021", "sic_1_digit"]
-    )["Observation"].transform("sum")
-
     df_with_sic = df_with_sic.reset_index()
 
     df_wide = df_with_sic.pivot(
-        index=["sic_1_digit", "soc"], columns="RGN2021", values="sic_to_soc_split"
+        index=["sic_1_digit", "soc"], columns="RGN2021", values="Observation"
     )
 
     return df_wide

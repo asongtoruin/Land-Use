@@ -62,9 +62,9 @@ msoa_2011_2_digit_sic_1_digit_sic_splits = data_processing.read_dvector_from_con
     config=config,
     key='msoa_2011_2_digit_sic_1_digit_sic_splits'
 )
-ons_sic_soc_splits_lu = data_processing.read_dvector_from_config(
+ons_sic_soc_jobs_lu = data_processing.read_dvector_from_config(
     config=config,
-    key='ons_sic_soc_splits_lu'
+    key='ons_sic_soc_jobs_lu'
 )
 
 wfj = data_processing.read_dvector_from_config(config=config, key='wfj')
@@ -191,8 +191,8 @@ data_processing.save_output(
 
 # --- Step 5 --- #
 LOGGER.info('--- Step 5 ---')
-LOGGER.info(f'Converting SIC SOC proportions from Region to LSOA 2021 level (Output E4)')
-ons_sic_soc_splits_lsoa = ons_sic_soc_splits_lu.translate_zoning(
+LOGGER.info(f'Converting SIC SOC jobs from Region to LSOA 2021 level (Output E4)')
+ons_sic_soc_jobs_lsoa = ons_sic_soc_jobs_lu.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
     weighting=TranslationWeighting.NO_WEIGHT,
@@ -201,8 +201,9 @@ ons_sic_soc_splits_lsoa = ons_sic_soc_splits_lu.translate_zoning(
 
 # Note a warning is generated here about combinations with SOC as 4. We can ignore it.
 LOGGER.info(f'Applying SOC group proportions to BRES 1-digit SIC jobs')
-jobs_by_lsoa_with_soc_group = (
-    lsoa_2021_1_digit_sic * ons_sic_soc_splits_lsoa
+jobs_by_lsoa_with_soc_group = data_processing.apply_proportions(
+    ons_sic_soc_jobs_lsoa,
+    lsoa_2021_1_digit_sic
 )
 
 LOGGER.info('Converting proportions of SIC 2 digit by SIC 1 digit by SOC groups jobs to LSOA 2021')
@@ -215,7 +216,10 @@ lsoa_2021_2_digit_sic_1_splits = msoa_2011_2_digit_sic_1_digit_sic_splits.transl
 
 # Note a warning is generated here about combinations with SOC as 4. We can ignore it.
 LOGGER.info(f'Applying SOC group proportions to BRES 2-digit SIC jobs')
-jobs_by_sic_soc_lsoa = lsoa_2021_2_digit_sic_1_splits * jobs_by_lsoa_with_soc_group
+jobs_by_sic_soc_lsoa = data_processing.apply_proportions(
+    source_dvector=lsoa_2021_2_digit_sic_1_splits,
+    apply_to=jobs_by_lsoa_with_soc_group
+)
 
 # save output to hdf and csvs for checking
 data_processing.save_output(
@@ -284,7 +288,10 @@ e1_with_sic_2_lsoa = e1_with_sic_2_lad.translate_zoning(
     check_totals=False
 )
 
-jobs_by_sic_2_4_soc_lsoa = data_processing.apply_proportions(e1_with_sic_2_lsoa, jobs_by_sic_soc_lsoa)
+jobs_by_sic_2_4_soc_lsoa = data_processing.apply_proportions(
+    source_dvector=e1_with_sic_2_lsoa, 
+    apply_to=jobs_by_sic_soc_lsoa
+)
 
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
