@@ -284,6 +284,11 @@ e1_with_sic_2_lsoa = e1_with_sic_2_lad.translate_zoning(
     check_totals=False
 )
 
-e5 = data_processing.apply_proportions(e1_with_sic_2_lsoa, jobs_by_sic_soc_lsoa)
+jobs_by_sic_2_4_soc_lsoa = data_processing.apply_proportions(e1_with_sic_2_lsoa, jobs_by_sic_soc_lsoa)
 
-print(e5.data)
+data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference='Output E5',
+        dvector=jobs_by_sic_2_4_soc_lsoa,
+        dvector_dimension='jobs'
+)
