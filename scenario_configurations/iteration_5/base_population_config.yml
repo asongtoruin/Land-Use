@@ -3,6 +3,7 @@
 input_root_directory: I:\NorMITs Land Use\2023\import
 output_directory: F:\Working\Land-Use\OUTPUTS
 output_intermediate_outputs: False
+scotland_donor_regions: [NE, NW, YH]
 
 unoccupied_households:
     file_path: RM002 accom type by household size\preprocessing\2072764328175065 zero.hdf
@@ -69,3 +70,8 @@ ce_pop_by_age_gender_econ:
     file_path: ONS\ONS 2021 CERs\preprocessing\CERs_GOR_age11_gender_economicstatus_-8_modified.hdf
     geographical_level: RGN2021
     input_segments: [age_9, g, economic_status]
+
+scotland_population:
+    file_path: Census Scotland\preprocessing\Population_age6_gender_DZ2011.hdf
+    geographical_level: DZ2011
+    input_segments: [g, scot_age]

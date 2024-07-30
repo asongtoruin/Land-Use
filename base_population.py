@@ -1,7 +1,9 @@
+from functools import reduce
 from pathlib import Path
 import logging
 
 import yaml
+from caf.core import DVector
 from caf.core.zoning import TranslationWeighting
 import numpy as np
 
@@ -443,3 +445,48 @@ for GOR in constants.GORS:
         ce_uplift_by_ce_age_gender_econ_soc, ones,
         ce_uplift_factor_by_ce_age_gender_econ_soc, adjusted_pop
     )
+
+
+# SCOTLAND-SPECIFIC PROCESSING
+LOGGER.info('Applying regional profiles to Scotland population data')
+area_type_agg = []
+for gor in config['scotland_donor_regions']:
+    LOGGER.debug(f'Re-reading P8 for {gor}')
+    final_pop = DVector.load(OUTPUT_DIR / f'Output P8_{gor}.hdf')
+    area_type_agg.append(
+        final_pop.translate_zoning(constants.TFN_AT_AGG_ZONING_SYSTEM, cache_path=constants.CACHE_FOLDER)
+    )
+
+LOGGER.debug('Disaggregating area types to Scotland')
+# Accumulate England totals at area type, then disaggregate to Scotland zoning
+england_totals = reduce(lambda x, y: x+y, area_type_agg)
+
+# Clear out the individual DVectors for England (in case of memory issues)
+data_processing.clear_dvectors(*area_type_agg)
+
+england_totals_scotland_zoning = england_totals.translate_zoning(
+    constants.SCOTLAND_ZONING_SYSTEM, cache_path=constants.CACHE_FOLDER
+)
+
+# Read in the Scotland data, and then apply proportions
+scotland_population = data_processing.read_dvector_from_config(
+    config=config,
+    key='scotland_population'
+)
+
+scotland_hydrated = data_processing.apply_proportions(
+    source_dvector=england_totals_scotland_zoning, apply_to=scotland_population
+)
+
+LOGGER.debug('Removing any superfluous segments from Scotland data')
+scotland_hydrated = scotland_hydrated.aggregate(
+    england_totals.segmentation
+)
+
+data_processing.save_output(
+    output_folder=OUTPUT_DIR,
+    output_reference=f'Output P8_Scotland',
+    dvector=scotland_hydrated,
+    dvector_dimension='population',
+    detailed_logs=True
+)
