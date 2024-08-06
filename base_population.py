@@ -265,7 +265,7 @@ for GOR in constants.GORS:
     # --- Step 6 --- #
     LOGGER.info('--- Step 6 ---')
     LOGGER.info(f'Converting household age and gender figures to LSOA level (only to be used in proportions, totals will be wrong)')
-    # convert the to LSOA
+    # convert to LSOA
     hh_age_gender_2021_lsoa = hh_age_gender_2021.translate_zoning(
         new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
         cache_path=constants.CACHE_FOLDER,
@@ -277,6 +277,12 @@ for GOR in constants.GORS:
     # apply the splits at LSOA level to main population table
     pop_by_nssec_hc_ha_car_gender_age = data_processing.apply_proportions(
         hh_age_gender_2021_lsoa, pop_by_nssec_hc_ha_car
+    )
+
+    # compare each step
+    data_processing.compare_dvectors(
+        dvec1=pop_by_nssec_hc_ha_car,
+        dvec2=pop_by_nssec_hc_ha_car_gender_age
     )
 
     # save output to hdf and csvs for checking
@@ -306,6 +312,12 @@ for GOR in constants.GORS:
     LOGGER.info('Applying economic status, employment status, and SOC category splits to population')
     pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc = data_processing.apply_proportions(
         ons_table_3_lsoa, pop_by_nssec_hc_ha_car_gender_age
+    )
+
+    # compare each step
+    data_processing.compare_dvectors(
+        dvec1=pop_by_nssec_hc_ha_car_gender_age,
+        dvec2=pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc
     )
 
     # save output to hdf and csvs for checking
