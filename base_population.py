@@ -434,6 +434,11 @@ for GOR in constants.GORS:
         dimension='Change derived from Communal Establishments',
     )
 
+    data_processing.compare_dvectors(
+        dvec1=pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
+        dvec2=adjusted_pop
+    )
+
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,

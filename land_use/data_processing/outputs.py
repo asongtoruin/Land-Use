@@ -275,8 +275,8 @@ def save_output(
     plot_folder = output_folder / 'plots'
     plot_folder.mkdir(exist_ok=True, parents=True)
     segmentation_combination = 1
-    for fig, ax in generate_segment_heatmaps(dvec=dvector):
-        fig.savefig(plot_folder / f'{output_reference}_{segmentation_combination}.png')
+    for fig, ax, row_seg, col_seg in generate_segment_heatmaps(dvec=dvector):
+        fig.savefig(plot_folder / f'{output_reference}-{row_seg}_by_{col_seg}.png')
         segmentation_combination += 1
 
     # produce output summaries in csv format if required

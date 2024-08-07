@@ -1,5 +1,6 @@
 import logging
 from itertools import combinations
+from typing import Generator, Union
 
 import pandas as pd
 from caf.core.data_structures import DVector
@@ -14,7 +15,7 @@ plt.style.use(r'https://raw.githubusercontent.com/Transport-for-the-North/caf.vi
 def compare_dvectors(
         dvec1: DVector,
         dvec2: DVector
-):
+) -> Union[None, pd.DataFrame]:
     """Compare the total values of two DVectors based on the overlapping
     segmentations. If there are no overlapping segmentations then only totals
     are reported, otherwise the differences are reported at a level of the
@@ -57,8 +58,9 @@ def compare_dvectors(
         )
 
         # report totals
-        total1 = dvec1.data.sum().sum()
-        total2 = dvec2.data.sum().sum()
+        # dvector.total
+        total1 = dvec1.total
+        total2 = dvec2.total
         LOGGER.info(f'DVector 1 total: {total1:,.0f}')
         LOGGER.info(f'DVector 2 total: {total2:,.0f}')
 
@@ -68,14 +70,15 @@ def compare_dvectors(
         df2 = dvec2.data.sum(axis=1).rename('total2').reset_index()
 
         # groupby the common segments
-        df1 = df1.groupby(list(common_segs)).agg({'total1': 'sum'}).reset_index()
-        df2 = df2.groupby(list(common_segs)).agg({'total2': 'sum'}).reset_index()
+        df1 = df1.groupby(list(common_segs)).agg({'total1': 'sum'})
+        df2 = df2.groupby(list(common_segs)).agg({'total2': 'sum'})
 
-        # combine to single dataframe and sum totals
-        output = pd.concat([df1, df2]).fillna(0).groupby(list(common_segs)).sum()
+        # combine to single dataframe
+        output = df1.join(df2)
         output['change'] = output['total2'] - output['total1']
 
         # report changes
+        # todo where are these min maxs
         max_change = output['change'].max()
         min_change = output['change'].min()
         average_change = output['change'].mean()
@@ -83,8 +86,12 @@ def compare_dvectors(
         LOGGER.info(f'Minimum change: {min_change:,.0f}')
         LOGGER.info(f'Average change: {average_change:,.0f}')
 
+        return output
 
-def generate_segment_heatmaps(dvec: DVector):
+
+def generate_segment_heatmaps(
+        dvec: DVector
+) -> Generator[tuple[plt.Figure, plt.Axes, str, str], None, None]:
     """Produce plots of heatmaps between different combinations of segmentations
     in a given DVector.
 
@@ -122,6 +129,27 @@ def generate_segment_heatmaps(dvec: DVector):
         fig, ax = plt.subplots()
         ax.grid(False)
 
-        sns.heatmap(grouped_totals, ax=ax, square=True)
+        # plot heatmap
+        sns.heatmap(grouped_totals, ax=ax, square=True, annot=True, fmt=',.0f')
 
-        yield fig, ax
+        # set axis labels to the wordy values to help readability
+        ax.set_yticks(
+            list(grouped_totals.reset_index()[row_seg] - 0.5),
+            labels=[
+                f'{x}: {y}' for (x, y) in
+                dvec.segmentation.seg_dict.get(row_seg).values.items()
+            ]
+        )
+        ax.set_xticks(
+            [(col - 0.5) for col in grouped_totals.columns],
+            labels=[
+                f'{x}: {y}' for (x, y) in
+                dvec.segmentation.seg_dict.get(col_seg).values.items()
+            ]
+        )
+        ax.tick_params(axis='x', labelrotation=45)
+        ax.tick_params(axis='y', labelrotation=0)
+
+        fig.set_size_inches(15, 15)
+
+        yield fig, ax, row_seg, col_seg
