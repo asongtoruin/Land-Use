@@ -10,17 +10,21 @@ def compare_dvectors(
         dvec1: DVector,
         dvec2: DVector
 ):
-    """
+    """Compare the total values of two DVectors based on the overlapping
+    segmentations. If there are no overlapping segmentations then only totals
+    are reported, otherwise the differences are reported at a level of the
+    overlapping segmentations.
 
     Parameters
     ----------
     dvec1: DVector
-
+        DVector from the previous stage of processing (i.e. a change has been
+        made to dvec1 to reach dvec2 and therefore dvec1 is the baseline for
+        comparison)
     dvec2: DVector
-
-
-    Returns
-    -------
+        DVector from a subsequent processing step from dvec1 with which to
+        compare against dvec1. Should have some overlapping segmentations with
+        dvec1, otherwise only totals will be reported.
 
     """
     # check if DVectors are in the same zone system
