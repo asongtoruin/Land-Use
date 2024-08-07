@@ -3,6 +3,7 @@ from pathlib import Path
 
 import yaml
 from caf.core import DVector
+from caf.core.segments import SegmentsSuper
 from caf.core.zoning import TranslationWeighting
 import numpy as np
 
@@ -317,8 +318,8 @@ for GOR in constants.GORS:
 
     LOGGER.info(f'Calculating splits of CE type by MSOA')
     # calculate msoa-based splits of CE types
-    ce_pop_by_type_total = ce_pop_by_type.add_segment(
-        constants.CUSTOM_SEGMENTS.get('total')
+    ce_pop_by_type_total = ce_pop_by_type.add_segments(
+        [constants.CUSTOM_SEGMENTS.get('total')]
     )
     ce_type_splits = ce_pop_by_type_total / ce_pop_by_type_total.aggregate(segs=['total'])
     # fill in nan values with 0 (this is where there are no CEs in a given MSOA)
@@ -334,8 +335,8 @@ for GOR in constants.GORS:
 
     LOGGER.info(f'Calculating splits of CE population by age, gender, and economic status')
     # calculate GOR-based splits of person types
-    ce_pop_by_age_gender_econ_total = ce_pop_by_age_gender_econ.add_segment(
-        constants.CUSTOM_SEGMENTS.get('total')
+    ce_pop_by_age_gender_econ_total = ce_pop_by_age_gender_econ.add_segments(
+        [constants.CUSTOM_SEGMENTS.get('total')]
     )
     ce_econ_splits = ce_pop_by_age_gender_econ_total / ce_pop_by_age_gender_econ_total.aggregate(segs=['total'])
     # fill in nan values with 0 (this is where there are no CEs in a given REGION)
@@ -351,8 +352,8 @@ for GOR in constants.GORS:
 
     LOGGER.info(f'Calculating splits of CE population by age, gender, and SOC')
     # calculate GOR-based splits of person types
-    ce_pop_by_age_gender_soc_total = ce_pop_by_age_gender_soc.add_segment(
-        constants.CUSTOM_SEGMENTS.get('total')
+    ce_pop_by_age_gender_soc_total = ce_pop_by_age_gender_soc.add_segments(
+        [constants.CUSTOM_SEGMENTS.get('total')]
     )
     ce_soc_splits = ce_pop_by_age_gender_soc_total / ce_pop_by_age_gender_soc_total.aggregate(segs=['total'])
     # fill in nan values with 0 (this is where there are no CEs in a given REGION)
