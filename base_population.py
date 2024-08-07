@@ -201,6 +201,8 @@ for GOR in constants.GORS:
     # apply proportional factors based on hh by adults / children / car availability to the hh by nssec
     hh_by_nssec_hc_ha_car = data_processing.apply_proportions(ons_table_2_lsoa, hh_by_nssec)
 
+    hh_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car.add_segments([SegmentsSuper.get_segment(SegmentsSuper.ADULT_NSSEC)])
+
     # check against original addressbase data
     # check = hh_by_nssec_hc_ha_car.aggregate(segs=['accom_h'])
 
