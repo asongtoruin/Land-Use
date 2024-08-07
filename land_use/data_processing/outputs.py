@@ -7,6 +7,7 @@ import pandas as pd
 from caf.core.data_structures import DVector
 
 from land_use.constants import geographies
+from .verifications import generate_segment_heatmaps
 
 LOGGER = logging.getLogger(__name__)
 
@@ -268,6 +269,15 @@ def save_output(
         dimension=dvector_dimension,
         detailed_logs=detailed_logs
     )
+
+    LOGGER.info(fr'Generating heatmaps to {output_folder}\plots')
+    # generate heat map plots
+    plot_folder = output_folder / 'plots'
+    plot_folder.mkdir(exist_ok=True, parents=True)
+    segmentation_combination = 1
+    for fig, ax in generate_segment_heatmaps(dvec=dvector):
+        fig.savefig(plot_folder / f'{output_reference}_{segmentation_combination}.png')
+        segmentation_combination += 1
 
     # produce output summaries in csv format if required
     if generate_summary_outputs:

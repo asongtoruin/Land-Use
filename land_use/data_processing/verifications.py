@@ -1,9 +1,14 @@
 import logging
+from itertools import combinations
 
 import pandas as pd
 from caf.core.data_structures import DVector
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 LOGGER = logging.getLogger(__name__)
+
+plt.style.use(r'https://raw.githubusercontent.com/Transport-for-the-North/caf.viz/main/src/caf/viz/tfn.mplstyle')
 
 
 def compare_dvectors(
@@ -77,3 +82,46 @@ def compare_dvectors(
         LOGGER.info(f'Maximum change: {max_change:,.0f}')
         LOGGER.info(f'Minimum change: {min_change:,.0f}')
         LOGGER.info(f'Average change: {average_change:,.0f}')
+
+
+def generate_segment_heatmaps(dvec: DVector):
+    """Produce plots of heatmaps between different combinations of segmentations
+    in a given DVector.
+
+    Parameters
+    ----------
+    dvec: DVector
+        DVector with at least two levels of segmentation. If the DVector has 1
+        segmentation level (e.g. only dwelling type) then no plots will be
+        produced (as there are no combinations).
+
+    Returns
+    -------
+    Generator
+        Generator of figures based on all combinations of segmentations in
+        dvector.
+
+    """
+    data = dvec.data
+
+    segment_names = sorted(data.index.names)
+
+    if len(segment_names) == 1:
+        LOGGER.warning(f'DVector only has one level of segmentation so no '
+                       f'heatmaps will be produced.')
+        return
+
+    total_values = data.sum(axis=1).to_frame(name='Total').reset_index()
+
+    for row_seg, col_seg in combinations(segment_names, 2):
+        # Get the "matrix" of values
+        grouped_totals = total_values.pivot_table(
+            index=row_seg, columns=col_seg, values='Total', aggfunc='sum'
+        )
+
+        fig, ax = plt.subplots()
+        ax.grid(False)
+
+        sns.heatmap(grouped_totals, ax=ax, square=True)
+
+        yield fig, ax
