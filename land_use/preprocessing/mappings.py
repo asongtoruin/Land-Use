@@ -134,6 +134,13 @@ ONS_OCC_AGE_SEX_MAPPINGS = {
     ]
 }
 
+ONS_OCC_MAPPINGS = {
+    'Occupation (current) (10 categories)': [
+        'soc',
+        SegmentsSuper.get_segment(SegmentsSuper.SOC).values
+    ]
+}
+
 SOC_10_TO_4_AGGREGATIONS = {
     '1. Managers, directors and senior officials': 'SOC1',
     '2. Professional occupations': 'SOC1',
@@ -166,6 +173,114 @@ ONS_ECON_MAPPING = {
             6: 'Economically inactive and a full-time student',
             -8: 'Does not apply',
          }
+    ]
+}
+
+# TODO should the above mapping be 6, 5 instead of 5, 6? caf.core economic_status mapping is the same as 6, 5
+ONS_ECONOMIC_STATUS_MAPPING = {
+    'Economic activity status (7 categories)': [
+        'economic_status',
+        {
+            1: 'Economically active (excluding full-time students): In employment',
+            2: 'Economically active (excluding full-time students): Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks',
+            3: 'Economically active and a full-time student: In employment',
+            4: 'Economically active and a full-time student: Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks',
+            6: 'Economically inactive (excluding full-time students)',
+            5: 'Economically inactive and a full-time student',
+            -8: 'Does not apply',
+         }
+    ]
+}
+
+ONS_CAR_MAPPING = {
+    'Car or van availability (3 categories)': [
+        'hh_car',
+        {
+            1: 'No cars or vans in household',
+            2: '1 or more cars or vans in household',
+         }
+    ]
+}
+
+ONS_CAR_NSSEC_MAPPINGS = {
+    'Car or van availability (4 categories)': [
+        'car_availability',
+        SegmentsSuper.get_segment(SegmentsSuper.CAR_AVAILABILITY).values
+    ],
+    'National Statistics Socio-economic Classification (NS-SeC) (10 categories)': [
+        'ns_sec', SegmentsSuper.get_segment(SegmentsSuper.NS_SEC).values
+    ]
+}
+
+ONS_NSSEC_10_TO_5_AGGREGATIONS = {
+    'L1, L2 and L3: Higher managerial, administrative and professional occupations': 'HRP managerial / professional',
+    'L4, L5 and L6: Lower managerial, administrative and professional occupations': 'HRP managerial / professional',
+    'L7: Intermediate occupations': 'HRP intermediate / technical',
+    'L8 and L9: Small employers and own account workers': 'HRP intermediate / technical',
+    'L10 and L11: Lower supervisory and technical occupations': 'HRP intermediate / technical',
+    'L12: Semi-routine occupations': 'HRP semi-routine / routine',
+    'L13: Routine occupations': 'HRP semi-routine / routine',
+    'L14.1 and L14.2: Never worked and long-term unemployed': 'HRP never worked / long-term unemployed',
+    'L15: Full-time students': 'HRP no category, inc. full-time student',
+    'Does not apply': 'HRP no category, inc. full-time student'
+}
+
+ONS_ADULT_CHILDREN_MAPPINGS = {
+    'Adults and children in household (11 categories)': [
+        'children',
+        SegmentsSuper.get_segment(SegmentsSuper.CHILDREN).values
+    ],
+    'Adults and children in household (11 categories) Code': [
+        'adults', SegmentsSuper.get_segment(SegmentsSuper.ADULTS).values
+    ]
+}
+
+ONS_ADULT_AGGREGATIONS = {
+    1: 'No adults or 1 adult in household',
+    2: 'No adults or 1 adult in household',
+    3: 'No adults or 1 adult in household',
+    4: '2 adults in household',
+    5: '2 adults in household',
+    6: '2 adults in household',
+    7: '2 adults in household',
+    8: '2 adults in household',
+    9: '3 or more adults in household',
+    10: '3 or more adults in household'
+}
+
+ONS_CHILDREN_AGGREGATIONS = {
+    'One-person household: One adult aged 66 years or over': 'Household with no children or all children non-dependent',
+    'One-person household: One person aged 65 years or under': 'Household with no children or all children non-dependent',
+    'No adults, or one adult and one or more children': 'Household with one or more dependent children',
+    'Two adults: One adult aged 65 years or under and one adult aged 66 years or over: No children': 'Household with no children or all children non-dependent',
+    'Two adults: Both adults aged 66 years or over: No children': 'Household with no children or all children non-dependent',
+    'Two adults: Both adults aged 65 years or under: No children': 'Household with no children or all children non-dependent',
+    'Two adults: One or two children': 'Household with one or more dependent children',
+    'Two adults: Three or more children': 'Household with one or more dependent children',
+    'Three or more adults: One or more children': 'Household with one or more dependent children',
+    'Three or more adults: No children': 'Household with no children or all children non-dependent'
+}
+
+ONS_ADULT_CHILDREN_NSSEC_MAPPINGS = {
+    'Adults and children in household (11 categories)': [
+        'children',
+        SegmentsSuper.get_segment(SegmentsSuper.CHILDREN).values
+    ],
+    'Adults and children in household (11 categories) Code': [
+        'adults', SegmentsSuper.get_segment(SegmentsSuper.ADULTS).values
+    ],
+    'National Statistics Socio-economic Classification (NS-SeC) (10 categories)': [
+        'ns_sec', SegmentsSuper.get_segment(SegmentsSuper.NS_SEC).values
+    ]
+}
+
+ONS_AGE_SEX_MAPPINGS = {
+    'Age (11 categories)': [
+        'age_9',
+        SegmentsSuper.get_segment(SegmentsSuper.AGE).values
+    ],
+    'Sex (2 categories)': [
+        'g', SegmentsSuper.get_segment(SegmentsSuper.GENDER).values
     ]
 }
 
