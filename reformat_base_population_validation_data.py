@@ -157,3 +157,21 @@ pp.save_preprocessed_hdf(
     df=df,
     multiple_output_ref='age-econ-aggregated'
 )
+
+# *** population by age, gender, and LSOA
+file_path = data_path / 'population_age11_gender_LSOA.csv'
+# read in data and reformat for DVector
+df = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.LSOA_NAME,
+    zoning_column='Lower layer Super Output Areas Code',
+    segment_mappings=pp.ONS_AGE_SEX_MAPPINGS,
+    segment_aggregations={
+        'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS
+    }
+)
+pp.save_preprocessed_hdf(
+    source_file_path=file_path,
+    df=df,
+    multiple_output_ref='age-aggregated'
+)

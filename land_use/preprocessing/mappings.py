@@ -274,6 +274,16 @@ ONS_ADULT_CHILDREN_NSSEC_MAPPINGS = {
     ]
 }
 
+ONS_AGE_SEX_MAPPINGS = {
+    'Age (11 categories)': [
+        'age_9',
+        SegmentsSuper.get_segment(SegmentsSuper.AGE).values
+    ],
+    'Sex (2 categories)': [
+        'g', SegmentsSuper.get_segment(SegmentsSuper.GENDER).values
+    ]
+}
+
 # Based on https://onsdigital.github.io/dp-classification-tools/standard-industrial-classification/ONS_SIC_hierarchy_view.html
 # Note for most BIG groups the section (A,B,...U) is enough except for G which is split into 3 BIG groups (5,6, and 7)
 # based on the type of trade.
