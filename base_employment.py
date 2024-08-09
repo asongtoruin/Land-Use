@@ -69,8 +69,8 @@ ons_sic_soc_jobs_lu = data_processing.read_dvector_from_config(
 
 wfj = data_processing.read_dvector_from_config(config=config, key='wfj')
 
-# --- Step 1 --- #
-LOGGER.info('--- Step 1 ---')
+# --- Step 0 --- #
+LOGGER.info('--- Step 0 ---')
 LOGGER.info(
     'Balance the input datasets to each have the same totals at LAD level as the 4 Digit SIC 2022 BRES data'
 )
@@ -93,16 +93,16 @@ lad_2011_1_digit_sic = (
     )
 )
 
-lad_total = lad_4_digit_sic.add_segment(
-    constants.CUSTOM_SEGMENTS['total'], split_method='split'
+lad_total = lad_4_digit_sic.add_segments(
+    [constants.CUSTOM_SEGMENTS['total']], split_method='split'
 ).aggregate(['total'])
 
-msoa_total_at_lad = lad_2011_2_digit_sic.add_segment(
-    constants.CUSTOM_SEGMENTS['total'], split_method='split'
+msoa_total_at_lad = lad_2011_2_digit_sic.add_segments(
+    [constants.CUSTOM_SEGMENTS['total']], split_method='split'
 ).aggregate(['total'])
 
-lsoa_total_at_lad = lad_2011_1_digit_sic.add_segment(
-    constants.CUSTOM_SEGMENTS['total'], split_method='split'
+lsoa_total_at_lad = lad_2011_1_digit_sic.add_segments(
+    [constants.CUSTOM_SEGMENTS['total']], split_method='split'
 ).aggregate(['total'])
 
 msoa_adj_factors = lad_total / msoa_total_at_lad
@@ -115,7 +115,7 @@ lsoa_adj_factors = lad_total / lsoa_total_at_lad
 # sig_decreases = adjustment_factors.data[adjustment_factors.data.le(0.9)]
 
 rehydrated_adj_factors_for_msoa = (
-    msoa_adj_factors.add_segment(SegmentsSuper('sic_2_digit').get_segment())
+    msoa_adj_factors.add_segments([SegmentsSuper('sic_2_digit').get_segment()])
     .aggregate([SegmentsSuper('sic_2_digit').get_segment().name])
     .translate_zoning(
         new_zoning=constants.MSOA_2011_ZONING_SYSTEM,
@@ -126,7 +126,7 @@ rehydrated_adj_factors_for_msoa = (
 )
 
 rehydrated_adj_factors_for_lsoa = (
-    lsoa_adj_factors.add_segment(SegmentsSuper('sic_1_digit').get_segment())
+    lsoa_adj_factors.add_segments([SegmentsSuper('sic_1_digit').get_segment()])
     .aggregate([SegmentsSuper('sic_1_digit').get_segment().name])
     .translate_zoning(
         new_zoning=constants.LSOA_2011_ZONING_SYSTEM,
@@ -141,8 +141,8 @@ adj_msoa_2011_2_digit_sic = msoa_2011_2_digit_sic * rehydrated_adj_factors_for_m
 adj_lsoa_2011_1_digit_sic = lsoa_2011_1_digit_sic * rehydrated_adj_factors_for_lsoa
 
 
-# --- Step 2 --- #
-LOGGER.info('--- Step 2 ---')
+# --- Step 1 --- #
+LOGGER.info('--- Step 1 ---')
 LOGGER.info('Exporting district-based 4 Digit SIC 2022 BRES data (Output E1)')
 # save output to hdf and csvs for checking
 data_processing.save_output(
@@ -152,8 +152,8 @@ data_processing.save_output(
         dvector_dimension='jobs'
 )
 
-# --- Step 3 --- #
-LOGGER.info('--- Step 3 ---')
+# --- Step 2 --- #
+LOGGER.info('--- Step 2 ---')
 LOGGER.info('Convert 2 Digit SIC 2022 BRES data held in MSOA 2011 zoning to 2021 MSOA (Output E2)')
 # LAD is already at LAD 2021 zoning so doesn't need translating
 msoa_2021_2_digit_sic = adj_msoa_2011_2_digit_sic.translate_zoning(
@@ -171,8 +171,8 @@ data_processing.save_output(
         dvector_dimension='jobs'
 )
 
-# --- Step 4 --- #
-LOGGER.info('--- Step 4 ---')
+# --- Step 3 --- #
+LOGGER.info('--- Step 3 ---')
 LOGGER.info('Convert 1 Digit SIC 2022 BRES data held in LSOA 2011 zoning to 2021 LSOA (Output E3)')
 lsoa_2021_1_digit_sic = adj_lsoa_2011_1_digit_sic.translate_zoning(
         new_zoning=constants.LSOA_ZONING_SYSTEM,
@@ -189,8 +189,8 @@ data_processing.save_output(
         dvector_dimension='jobs'
 )
 
-# --- Step 5 --- #
-LOGGER.info('--- Step 5 ---')
+# --- Step 4 --- #
+LOGGER.info('--- Step 4 ---')
 LOGGER.info(f'Converting SIC SOC jobs from Region to LSOA 2021 level (Output E4)')
 ons_sic_soc_jobs_lsoa = ons_sic_soc_jobs_lu.translate_zoning(
     new_zoning=constants.LSOA_ZONING_SYSTEM,
@@ -229,8 +229,6 @@ data_processing.save_output(
         dvector_dimension='jobs'
 )
 
-# --- Step 6 --- #
-LOGGER.info('--- Step 6 ---')
 LOGGER.info(f'Uplifting Output E4 to Workforce jobs (WFJ) levels by region (Output E4_2)')
 
 output_e4_by_rgn = jobs_by_sic_soc_lsoa.translate_zoning(
@@ -247,9 +245,11 @@ e4_total_by_rgn = output_e4_by_rgn.add_segment(
 factors = wfj / e4_total_by_rgn
 
 rehydrated_adj_factors_for_e4_2 = (
-    factors.add_segment(SegmentsSuper('sic_1_digit').get_segment())
-    .add_segment(SegmentsSuper('sic_2_digit').get_segment())
-    .add_segment(SegmentsSuper('soc').get_segment())
+    factors.add_segments([
+        SegmentsSuper('sic_1_digit').get_segment(),
+        SegmentsSuper('sic_2_digit').get_segment(),
+        SegmentsSuper('soc').get_segment()
+    ])
     .aggregate([
         SegmentsSuper('sic_1_digit').get_segment().name,
         SegmentsSuper('sic_2_digit').get_segment().name,
@@ -272,7 +272,7 @@ data_processing.save_output(
         dvector_dimension='jobs'
 )
 
-LOGGER.info('--- Step 7 ---')
+LOGGER.info('--- Step 5 ---')
 LOGGER.info(f'Combining Output E1 and E4 to give Jobs by LSOA SIC 4 digit and SOC group (1-3) (Output E5)')
 # Output E5
 e1_with_sic_2_lad = lad_4_digit_sic.translate_segment(
