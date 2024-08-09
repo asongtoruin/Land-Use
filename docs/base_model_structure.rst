@@ -108,7 +108,7 @@ Where the year for geographical area is not stated then it is 2021.
 
 .. graphviz::
 
-digraph G {
+    digraph G {
         rankdir="LR"
         nodesep=0.5
         node [shape=record, color=blue width=3.4]
