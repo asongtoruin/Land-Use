@@ -16,32 +16,23 @@ Population
         rankdir="LR"
         nodesep=0.5
         node [shape=record, color=blue width=3.4]
-            subgraph ce_inputs {
-                peripheries=0
-                rank="same"
-                communal_establishments [label="Census|Total population in \nCommunal Establishments|LSOA"]
-                ce_type [label="Census|Total population in Communal \nEstablishments by CE type|MSOA"]
-                ce_pop_soc [label="Census|Total population in Communal \nEstablishments by age, gender, SOC|GOR"]
-                ce_pop_econ [label="Census|Total population in Communal \nEstablishments by age, gender, \neconomic status|GOR"]
+            communal_establishments [label="Census|Total population in \nCommunal Establishments|LSOA"]
+            ce_type [label="Census|Total population in Communal \nEstablishments by CE type|MSOA"]
+            ce_pop_soc [label="Census|Total population in Communal \nEstablishments by age, gender, SOC|GOR"]
+            ce_pop_econ [label="Census|Total population in Communal \nEstablishments by age, gender, \neconomic status|GOR"]
+            
+            addressbase [label="AddressBase|Number of dwellings|LSOA"];
+            age_gender [label="Census|Proportion of population by\ndwelling type, age, gender|MSOA"]
 
-            }
-            subgraph cluster_inputs{
-                peripheries=0
-                rank="same"
+            occupied [label="Census|Number of occupied households|LSOA"]
+            unoccupied [label="Census|Number of unoccupied households|LSOA"]
 
-                addressbase [label="AddressBase|Number of dwellings|LSOA"];
-                age_gender [label="Census|Proportion of population by\ndwelling type, age, gender|MSOA"]
+            table_1 [label="ONS Table 1|Population by dwelling type|LSOA"];
+            table_2 [label="ONS Table 2|Proportion of households by\ndwelling type, #adults, #children, #cars|MSOA"];
+            table_3 [label="ONS Table 3|Proportion of population by\neconomic status/employment status/SOC,\ndwelling type, NS-SeC|MSOA"];
+            table_4 [label="ONS Table 4|Proportion of households by\ndwelling type, NS-SeC|LSOA"];
 
-                occupied [label="Census|Number of occupied households|LSOA"]
-                unoccupied [label="Census|Number of unoccupied households|LSOA"]
-
-                table_1 [label="ONS Table 1|Population by dwelling type|LSOA"];
-                table_2 [label="ONS Table 2|Proportion of households by\ndwelling type, #adults, #children, #cars|MSOA"];
-                table_3 [label="ONS Table 3|Proportion of population by\neconomic status/employment status/SOC,\ndwelling type, NS-SeC|MSOA"];
-                table_4 [label="ONS Table 4|Proportion of households by\ndwelling type, NS-SeC|LSOA"];
-
-                ce_output [label="Communal Establishments|Population by CE type, age, gender, \neconomic status, SOC|LSOA"];
-            }
+            ce_output [label="Communal Establishments|Population by CE type, age, gender, \neconomic status, SOC|LSOA"];
 
         node [style=rounded, color=black]
 
@@ -55,15 +46,8 @@ Population
             output_p6 [label="Output P6|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars,\nage, gender|LSOA"];
             output_p7 [label="Output P7|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars,\nage, gender, economic status,\nemployment status, SOC|LSOA"];
             output_p8 [label="Output P8|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars,\nage, gender, economic status,\nemployment status, SOC|LSOA"];
-
-            {rank="same" output_p11 output_p12 output_p13}
-            {rank="same" output_p2}
-            {rank="same" output_p3}
-            {rank="same" output_p4}
-            {rank="same" output_p5}
-            {rank="same" output_p6}
-            {rank="same" output_p7}
-            {rank="same" output_p8}
+            output_p9 [label="Output P9|Population rebalanced with IPF|LSOA"];
+        
 
         occupied -> output_p11;
         unoccupied -> output_p12;
@@ -96,6 +80,10 @@ Population
         ce_pop_econ -> ce_output
         ce_output -> output_p8;
         output_p7 -> output_p8
+        
+        output_p8 -> output_p9
+        age_gender -> output_p9
+        table_3 -> output_p9
     }
 
 
