@@ -219,8 +219,8 @@ output_e4_by_rgn = jobs_by_sic_soc_lsoa.translate_zoning(
     check_totals=False
 )
 
-e4_total_by_rgn = output_e4_by_rgn.add_segment(
-    constants.CUSTOM_SEGMENTS['total'], split_method='split'
+e4_total_by_rgn = output_e4_by_rgn.add_segments(
+    [constants.CUSTOM_SEGMENTS['total']], split_method='split'
 ).aggregate(['total'])
 
 factors = wfj / e4_total_by_rgn
