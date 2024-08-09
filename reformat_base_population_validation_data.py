@@ -57,7 +57,7 @@ pp.save_preprocessed_hdf(
 )
 
 # ****** Multi-variate datasets
-# *** households by nssec and number of cars and LSOA
+# *** households by number of adults and number of children and LSOA
 file_path = data_path / 'households_adults_children_lsoa.csv'
 # read in data and reformat for DVector
 df = pp.read_ons(
