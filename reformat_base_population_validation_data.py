@@ -1,10 +1,7 @@
 from pathlib import Path
 
-from caf.core.segmentation import SegmentsSuper
-import pandas as pd
-
 import land_use.preprocessing as pp
-from land_use.constants import geographies, segments
+from land_use.constants import geographies
 
 # Main input path for verification datasets
 data_path = Path(r'I:\NorMITs Land Use\2023\import\ONS-validation')
