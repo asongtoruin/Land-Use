@@ -78,6 +78,29 @@ pp.save_preprocessed_hdf(
     multiple_output_ref='adults-children-aggregated'
 )
 
+# *** households by nssec and number of adults and number of children and LAD
+file_path = data_path / 'households_nssec_adults_children_lad.csv'
+# read in data and reformat for DVector
+df = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.LAD_NAME,
+    zoning_column='Lower tier local authorities Code',
+    segment_mappings=pp.ONS_ADULT_CHILDREN_NSSEC_MAPPINGS,
+    segment_aggregations={
+        'Adults and children in household (11 categories)':
+            pp.ONS_CHILDREN_AGGREGATIONS,
+        'Adults and children in household (11 categories) Code':
+            pp.ONS_ADULT_AGGREGATIONS,
+        'National Statistics Socio-economic Classification (NS-SeC) (10 categories)':
+            pp.ONS_NSSEC_10_TO_5_AGGREGATIONS
+    }
+)
+pp.save_preprocessed_hdf(
+    source_file_path=file_path,
+    df=df,
+    multiple_output_ref='adults-children-nssec-aggregated'
+)
+
 # *** households by nssec and number of cars and LSOA
 file_path = data_path / 'households_nssec_car_lad.csv'
 # read in data and reformat for DVector

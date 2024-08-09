@@ -261,6 +261,19 @@ ONS_CHILDREN_AGGREGATIONS = {
     'Three or more adults: No children': 'Household with no children or all children non-dependent'
 }
 
+ONS_ADULT_CHILDREN_NSSEC_MAPPINGS = {
+    'Adults and children in household (11 categories)': [
+        'children',
+        SegmentsSuper.get_segment(SegmentsSuper.CHILDREN).values
+    ],
+    'Adults and children in household (11 categories) Code': [
+        'adults', SegmentsSuper.get_segment(SegmentsSuper.ADULTS).values
+    ],
+    'National Statistics Socio-economic Classification (NS-SeC) (10 categories)': [
+        'ns_sec', SegmentsSuper.get_segment(SegmentsSuper.NS_SEC).values
+    ]
+}
+
 # Based on https://onsdigital.github.io/dp-classification-tools/standard-industrial-classification/ONS_SIC_hierarchy_view.html
 # Note for most BIG groups the section (A,B,...U) is enough except for G which is split into 3 BIG groups (5,6, and 7)
 # based on the type of trade.
