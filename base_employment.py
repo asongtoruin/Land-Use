@@ -1,22 +1,12 @@
 from pathlib import Path
-import logging
 
 import yaml
 from caf.core.segments import SegmentsSuper
 from caf.core.zoning import TranslationWeighting
 
-from land_use import constants
-from land_use import data_processing
+from land_use import constants, data_processing
+from land_use import logging as lu_logging
 
-
-
-# set up logging
-log_formatter = logging.Formatter(
-    fmt="[%(asctime)-15s] %(levelname)s - [%(filename)s#%(lineno)d::%(funcName)s]: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
-LOGGER = logging.getLogger("land_use")
 
 # load configuration file
 with open(
@@ -31,16 +21,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 # Define whether to output intermediate outputs, recommended to not output loads if debugging
 generate_summary_outputs = bool(config["output_intermediate_outputs"])
 
-# define logging path based on config file
-logging.basicConfig(
-    format=log_formatter._fmt,  # type: ignore # error in imported library which?
-    datefmt=log_formatter.datefmt,
-    level=logging.INFO,
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(OUTPUT_DIR / "employment.log", mode="w"),
-    ]
-)
+LOGGER = lu_logging.configure_logger(OUTPUT_DIR, log_name='employment')
 
 # --- Step 0 --- #
 # read in the data from the config file

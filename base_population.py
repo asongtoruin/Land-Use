@@ -1,23 +1,14 @@
 from functools import reduce
 from pathlib import Path
-import logging
 
 import yaml
 from caf.core import DVector
 from caf.core.zoning import TranslationWeighting
 import numpy as np
 
-from land_use import constants
-from land_use import data_processing
+from land_use import constants, data_processing
+from land_use import logging as lu_logging
 
-
-# set up logging
-log_formatter = logging.Formatter(
-    fmt='[%(asctime)-15s] %(levelname)-7s - [%(filename)s#%(lineno)d::%(funcName)s]: %(message)s',
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-
-LOGGER = logging.getLogger('land_use')
 
 # load configuration file
 with open(r'scenario_configurations\iteration_5\base_population_config.yml', 'r') as text_file:
@@ -30,23 +21,8 @@ OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 # Define whether to output intermediate outputs, recommended to not output loads if debugging
 generate_summary_outputs = bool(config['output_intermediate_outputs'])
 
-# Set up logging
-LOGGER.setLevel(logging.DEBUG)
-
-sh = logging.StreamHandler()
-fh = logging.FileHandler(OUTPUT_DIR / 'population.log', mode='w')
-
-for handler in (sh, fh):
-    handler.setFormatter(log_formatter)
-    handler.setLevel(logging.INFO)
-    LOGGER.addHandler(handler)
-
-detailed_logs = logging.FileHandler(OUTPUT_DIR / 'population_detailed.log', mode='w')
-detailed_logs.setLevel(logging.DEBUG)
-detailed_logs.setFormatter(log_formatter)
-LOGGER.addHandler(detailed_logs)
-
-logging.captureWarnings(True)
+# Set up logger
+LOGGER = lu_logging.configure_logger(output_dir=OUTPUT_DIR, log_name='population')
 
 # loop through GORs to save memory issues further down the line
 for GOR in constants.GORS:
