@@ -120,6 +120,25 @@ pp.save_preprocessed_hdf(
     multiple_output_ref='nssec-aggregated'
 )
 
+# *** population by age, gender, and occupation and MSOA
+file_path = data_path / 'population_age11_gender_occupation_msoa_4missing.csv'
+# read in data and reformat for DVector
+df = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.MSOA_NAME,
+    zoning_column='Middle layer Super Output Areas Code',
+    segment_mappings=pp.ONS_OCC_AGE_SEX_MAPPINGS,
+    segment_aggregations={
+        'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS,
+        'Occupation (current) (10 categories)': pp.SOC_10_TO_4_AGGREGATIONS
+    }
+)
+pp.save_preprocessed_hdf(
+    source_file_path=file_path,
+    df=df,
+    multiple_output_ref='age-occ-aggregated'
+)
+
 # *** population by age, gender, and economic status and MSOA
 file_path = data_path / 'population_age11_gender_economicstatus_msoa_1missing.csv'
 # read in data and reformat for DVector
