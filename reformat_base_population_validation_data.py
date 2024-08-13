@@ -32,7 +32,10 @@ df = pp.read_ons(
     file_path=file_path,
     zoning=geographies.LSOA_NAME,
     zoning_column='Lower layer Super Output Areas Code',
-    segment_mappings=pp.ONS_ECONOMIC_STATUS_MAPPING
+    segment_mappings=pp.ONS_POP_ECON_MAPPING,
+    segment_aggregations={
+        'Economic activity status (7 categories)': pp.ECON_6_TO_4_AGGREGATIONS
+    }
 )
 pp.save_preprocessed_hdf(
     source_file_path=file_path,
@@ -201,7 +204,7 @@ df = pp.read_ons(
     segment_mappings={
         **pp.ONS_AGE_11_MAPPING,
         **pp.ONS_SEX_MAPPING,
-        **pp.ONS_ECON_MAPPING
+        **pp.ONS_POP_ECON_MAPPING
     },
     segment_aggregations={
         'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS,
@@ -224,7 +227,7 @@ df = pp.read_ons(
     segment_mappings={
         **pp.ONS_AGE_11_MAPPING,
         **pp.ONS_SEX_MAPPING,
-        **pp.ONS_ECON_MAPPING
+        **pp.ONS_POP_ECON_MAPPING
     },
     segment_aggregations={
         'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS,

@@ -122,22 +122,6 @@ ONS_ECON_MAPPING = {
     ]
 }
 
-# TODO should the above mapping be 6, 5 instead of 5, 6? caf.core economic_status mapping is the same as 6, 5
-ONS_ECONOMIC_STATUS_MAPPING = {
-    'Economic activity status (7 categories)': [
-        'economic_status',
-        {
-            1: 'Economically active (excluding full-time students): In employment',
-            2: 'Economically active (excluding full-time students): Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks',
-            3: 'Economically active and a full-time student: In employment',
-            4: 'Economically active and a full-time student: Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks',
-            6: 'Economically inactive (excluding full-time students)',
-            5: 'Economically inactive and a full-time student',
-            -8: 'Does not apply',
-         }
-    ]
-}
-
 ONS_POP_ECON_MAPPING = {
     'Economic activity status (7 categories)': [
         'pop_econ',
