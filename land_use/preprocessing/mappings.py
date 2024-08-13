@@ -94,6 +94,13 @@ ONS_OCC_MAPPING = {
     ]
 }
 
+ONS_POP_ECON_MAPPING = {
+    'Economic activity status (7 categories)': [
+        'pop_econ',
+        SegmentsSuper.get_segment(SegmentsSuper.POP_ECON).values
+    ]
+}
+
 ONS_AGE_11_MAPPING = {
     'Age (11 categories)': [
         'age_9',
@@ -119,13 +126,6 @@ ONS_ECON_MAPPING = {
             6: 'Economically inactive and a full-time student',
             -8: 'Does not apply',
          }
-    ]
-}
-
-ONS_POP_ECON_MAPPING = {
-    'Economic activity status (7 categories)': [
-        'pop_econ',
-        SegmentsSuper.get_segment(SegmentsSuper.POP_ECON).values
     ]
 }
 
