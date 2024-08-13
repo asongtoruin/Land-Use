@@ -219,7 +219,11 @@ df = pp.read_ons(
     file_path=file_path,
     zoning=geographies.MSOA_NAME,
     zoning_column='Middle layer Super Output Areas Code',
-    segment_mappings=pp.ONS_DWELLING_AGE_SEX_MAPPINGS,
+    segment_mappings={
+        **pp.ONS_DWELLING_MAPPING,
+        **pp.ONS_SEX_MAPPING,
+        **pp.ONS_AGE_11_MAPPING
+    },
     segment_aggregations={'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS}
 )
 
@@ -257,7 +261,11 @@ df = pp.read_ons(
     file_path=file_path,
     zoning=geographies.RGN_NAME,
     zoning_column='Regions Code',
-    segment_mappings=pp.ONS_ECON_AGE_SEX_MAPPINGS,
+    segment_mappings={
+        **pp.ONS_AGE_11_MAPPING,
+        **pp.ONS_SEX_MAPPING,
+        **pp.ONS_POP_ECON_MAPPING
+    },
     segment_aggregations={
         'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS,
         'Economic activity status (7 categories)': pp.ECON_6_TO_4_AGGREGATIONS
@@ -312,7 +320,11 @@ df = pp.read_ons(
     file_path=file_path,
     zoning=geographies.RGN_NAME,
     zoning_column='Regions Code',
-    segment_mappings=pp.ONS_OCC_AGE_SEX_MAPPINGS,
+    segment_mappings={
+        **pp.ONS_AGE_11_MAPPING,
+        **pp.ONS_SEX_MAPPING,
+        **pp.ONS_OCC_MAPPING
+    },
     segment_aggregations={
         'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS,
         'Occupation (current) (10 categories)': pp.SOC_10_TO_4_AGGREGATIONS

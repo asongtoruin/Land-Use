@@ -53,34 +53,6 @@ ONS_ECON_EMP_SOC_COMBO = {
         {'pop_econ': 3, 'pop_emp': 3, 'soc': 4}
 }
 
-ONS_DWELLING_AGE_SEX_MAPPINGS = {
-    'Age (11 categories)': [
-        'age_9',
-        SegmentsSuper.get_segment(SegmentsSuper.AGE).values
-    ],
-    'Sex (2 categories)': [
-        'g', SegmentsSuper.get_segment(SegmentsSuper.GENDER).values
-    ],
-    'Accommodation type (5 categories)': [
-        'accom_h',
-        SegmentsSuper.get_segment(SegmentsSuper.ACCOMODATION_TYPE_H).values
-    ]
-}
-
-AGE_11_TO_9_AGGREGATIONS = {
-    'Aged 4 years and under': '0 to 4 years',
-    'Aged 5 to 9 years': '5 to 9 years',
-    'Aged 10 to 15 years': '10 to 15 years',
-    'Aged 16 to 19 years': '16 to 19 years',
-    'Aged 20 to 24 years': '20 to 34 years',
-    'Aged 25 to 34 years': '20 to 34 years',
-    'Aged 35 to 49 years': '35 to 49 years',
-    'Aged 50 to 64 years': '50 to 64 years',
-    'Aged 65 to 74 years': '65 to 74 years',
-    'Aged 75 to 84 years': '75+ years',
-    'Aged 85 years and over': '75+ years'
-}
-
 CE_POP_BY_TYPE = {
     "Medical and care establishment": 1,
     "Other establishment: Defence": 2,
@@ -96,68 +68,57 @@ CE_POP_BY_TYPE = {
     "Other establishment: Staff or worker accommodation or Other": 7
 }
 
-ONS_ECON_AGE_SEX_MAPPINGS = {
-    'Age (11 categories)': [
-        'age_9',
-        SegmentsSuper.get_segment(SegmentsSuper.AGE).values
-    ],
-    'Sex (2 categories)': [
-        'g', SegmentsSuper.get_segment(SegmentsSuper.GENDER).values
-    ],
-    'Economic activity status (7 categories)': [
-        'pop_econ',
-        SegmentsSuper.get_segment(SegmentsSuper.POP_ECON).values
+# *** ONS MAPPINGS *** #
+ONS_DWELLING_MAPPING = {
+    'Accommodation type (5 categories)': [
+        'accom_h',
+        SegmentsSuper.get_segment(SegmentsSuper.ACCOMODATION_TYPE_H).values
     ]
 }
 
-ECON_6_TO_4_AGGREGATIONS = {
-    'Economically active (excluding full-time students): In employment': 'Economically active employees',
-    'Economically active (excluding full-time students): Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks': 'Economically active unemployed',
-    'Economically active and a full-time student: In employment': 'Students',
-    'Economically active and a full-time student: Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks': 'Students',
-    'Economically inactive (excluding full-time students)': 'Economically inactive',
-    'Economically inactive and a full-time student': 'Students',
-    'Does not apply': 'Economically inactive'
+ONS_CHILDREN_MAPPING = {
+    'Adults and children in household (11 categories)': [
+        'children',
+        SegmentsSuper.get_segment(SegmentsSuper.CHILDREN).values
+    ]
 }
 
-ONS_OCC_AGE_SEX_MAPPINGS = {
-    'Age (11 categories)': [
-        'age_9',
-        SegmentsSuper.get_segment(SegmentsSuper.AGE).values
-    ],
-    'Sex (2 categories)': [
-        'g', SegmentsSuper.get_segment(SegmentsSuper.GENDER).values
-    ],
+ONS_ADULT_MAPPING = {
+    'Adults and children in household (11 categories) Code': [
+        'adults', SegmentsSuper.get_segment(SegmentsSuper.ADULTS).values
+    ]
+}
+
+ONS_CAR_MAPPING = {
+    'Car or van availability (4 categories)': [
+        'car_availability',
+        SegmentsSuper.get_segment(SegmentsSuper.CAR_AVAILABILITY).values
+    ]
+}
+
+ONS_NSSEC_MAPPING = {
+    'National Statistics Socio-economic Classification (NS-SeC) (10 categories)': [
+        'ns_sec', SegmentsSuper.get_segment(SegmentsSuper.NS_SEC).values
+    ]
+}
+
+ONS_OCC_MAPPING = {
     'Occupation (current) (10 categories)': [
         'soc',
         SegmentsSuper.get_segment(SegmentsSuper.SOC).values
     ]
-}
-
-ONS_OCC_MAPPINGS = {
-    'Occupation (current) (10 categories)': [
-        'soc',
-        SegmentsSuper.get_segment(SegmentsSuper.SOC).values
-    ]
-}
-
-SOC_10_TO_4_AGGREGATIONS = {
-    '1. Managers, directors and senior officials': 'SOC1',
-    '2. Professional occupations': 'SOC1',
-    '3. Associate professional and technical occupations': 'SOC1',
-    '4. Administrative and secretarial occupations': 'SOC2',
-    '5. Skilled trades occupations': 'SOC2',
-    '6. Caring, leisure and other service occupations': 'SOC2',
-    '7. Sales and customer service occupations': 'SOC3',
-    '8. Process, plant and machine operatives': 'SOC3',
-    '9. Elementary occupations': 'SOC3',
-    'Does not apply': 'SOC4'
 }
 
 ONS_AGE_11_MAPPING = {
     'Age (11 categories)': [
         'age_9',
         SegmentsSuper.get_segment(SegmentsSuper.AGE).values
+    ]
+}
+
+ONS_SEX_MAPPING = {
+    'Sex (2 categories)': [
+        'g', SegmentsSuper.get_segment(SegmentsSuper.GENDER).values
     ]
 }
 
@@ -192,46 +153,14 @@ ONS_ECONOMIC_STATUS_MAPPING = {
     ]
 }
 
-ONS_CAR_MAPPING = {
-    'Car or van availability (4 categories)': [
-        'car_availability',
-        SegmentsSuper.get_segment(SegmentsSuper.CAR_AVAILABILITY).values
+ONS_POP_ECON_MAPPING = {
+    'Economic activity status (7 categories)': [
+        'pop_econ',
+        SegmentsSuper.get_segment(SegmentsSuper.POP_ECON).values
     ]
 }
 
-ONS_CAR_NSSEC_MAPPINGS = {
-    'Car or van availability (4 categories)': [
-        'car_availability',
-        SegmentsSuper.get_segment(SegmentsSuper.CAR_AVAILABILITY).values
-    ],
-    'National Statistics Socio-economic Classification (NS-SeC) (10 categories)': [
-        'ns_sec', SegmentsSuper.get_segment(SegmentsSuper.NS_SEC).values
-    ]
-}
-
-ONS_NSSEC_10_TO_5_AGGREGATIONS = {
-    'L1, L2 and L3: Higher managerial, administrative and professional occupations': 'HRP managerial / professional',
-    'L4, L5 and L6: Lower managerial, administrative and professional occupations': 'HRP managerial / professional',
-    'L7: Intermediate occupations': 'HRP intermediate / technical',
-    'L8 and L9: Small employers and own account workers': 'HRP intermediate / technical',
-    'L10 and L11: Lower supervisory and technical occupations': 'HRP intermediate / technical',
-    'L12: Semi-routine occupations': 'HRP semi-routine / routine',
-    'L13: Routine occupations': 'HRP semi-routine / routine',
-    'L14.1 and L14.2: Never worked and long-term unemployed': 'HRP never worked / long-term unemployed',
-    'L15: Full-time students': 'HRP no category, inc. full-time student',
-    'Does not apply': 'HRP no category, inc. full-time student'
-}
-
-ONS_ADULT_CHILDREN_MAPPINGS = {
-    'Adults and children in household (11 categories)': [
-        'children',
-        SegmentsSuper.get_segment(SegmentsSuper.CHILDREN).values
-    ],
-    'Adults and children in household (11 categories) Code': [
-        'adults', SegmentsSuper.get_segment(SegmentsSuper.ADULTS).values
-    ]
-}
-
+# *** ONS AGGREGATIONS *** #
 ONS_ADULT_AGGREGATIONS = {
     1: 'No adults or 1 adult in household',
     2: 'No adults or 1 adult in household',
@@ -258,33 +187,54 @@ ONS_CHILDREN_AGGREGATIONS = {
     'Three or more adults: No children': 'Household with no children or all children non-dependent'
 }
 
-ONS_ADULT_CHILDREN_NSSEC_MAPPINGS = {
-    'Adults and children in household (11 categories)': [
-        'children',
-        SegmentsSuper.get_segment(SegmentsSuper.CHILDREN).values
-    ],
-    'Adults and children in household (11 categories) Code': [
-        'adults', SegmentsSuper.get_segment(SegmentsSuper.ADULTS).values
-    ],
-    'National Statistics Socio-economic Classification (NS-SeC) (10 categories)': [
-        'ns_sec', SegmentsSuper.get_segment(SegmentsSuper.NS_SEC).values
-    ]
+ONS_NSSEC_10_TO_5_AGGREGATIONS = {
+    'L1, L2 and L3: Higher managerial, administrative and professional occupations': 'HRP managerial / professional',
+    'L4, L5 and L6: Lower managerial, administrative and professional occupations': 'HRP managerial / professional',
+    'L7: Intermediate occupations': 'HRP intermediate / technical',
+    'L8 and L9: Small employers and own account workers': 'HRP intermediate / technical',
+    'L10 and L11: Lower supervisory and technical occupations': 'HRP intermediate / technical',
+    'L12: Semi-routine occupations': 'HRP semi-routine / routine',
+    'L13: Routine occupations': 'HRP semi-routine / routine',
+    'L14.1 and L14.2: Never worked and long-term unemployed': 'HRP never worked / long-term unemployed',
+    'L15: Full-time students': 'HRP no category, inc. full-time student',
+    'Does not apply': 'HRP no category, inc. full-time student'
 }
 
-ONS_AGE_SEX_MAPPINGS = {
-    'Age (11 categories)': [
-        'age_9',
-        SegmentsSuper.get_segment(SegmentsSuper.AGE).values
-    ],
-    'Sex (2 categories)': [
-        'g', SegmentsSuper.get_segment(SegmentsSuper.GENDER).values
-    ]
+SOC_10_TO_4_AGGREGATIONS = {
+    '1. Managers, directors and senior officials': 'SOC1',
+    '2. Professional occupations': 'SOC1',
+    '3. Associate professional and technical occupations': 'SOC1',
+    '4. Administrative and secretarial occupations': 'SOC2',
+    '5. Skilled trades occupations': 'SOC2',
+    '6. Caring, leisure and other service occupations': 'SOC2',
+    '7. Sales and customer service occupations': 'SOC3',
+    '8. Process, plant and machine operatives': 'SOC3',
+    '9. Elementary occupations': 'SOC3',
+    'Does not apply': 'SOC4'
 }
 
-ONS_NSSEC_MAPPINGS = {
-    'National Statistics Socio-economic Classification (NS-SeC) (10 categories)': [
-        'ns_sec', SegmentsSuper.get_segment(SegmentsSuper.NS_SEC).values
-    ]
+ECON_6_TO_4_AGGREGATIONS = {
+    'Economically active (excluding full-time students): In employment': 'Economically active employees',
+    'Economically active (excluding full-time students): Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks': 'Economically active unemployed',
+    'Economically active and a full-time student: In employment': 'Students',
+    'Economically active and a full-time student: Unemployed: Seeking work or waiting to start a job already obtained: Available to start working within 2 weeks': 'Students',
+    'Economically inactive (excluding full-time students)': 'Economically inactive',
+    'Economically inactive and a full-time student': 'Students',
+    'Does not apply': 'Economically inactive'
+}
+
+AGE_11_TO_9_AGGREGATIONS = {
+    'Aged 4 years and under': '0 to 4 years',
+    'Aged 5 to 9 years': '5 to 9 years',
+    'Aged 10 to 15 years': '10 to 15 years',
+    'Aged 16 to 19 years': '16 to 19 years',
+    'Aged 20 to 24 years': '20 to 34 years',
+    'Aged 25 to 34 years': '20 to 34 years',
+    'Aged 35 to 49 years': '35 to 49 years',
+    'Aged 50 to 64 years': '50 to 64 years',
+    'Aged 65 to 74 years': '65 to 74 years',
+    'Aged 75 to 84 years': '75+ years',
+    'Aged 85 years and over': '75+ years'
 }
 
 # Based on https://onsdigital.github.io/dp-classification-tools/standard-industrial-classification/ONS_SIC_hierarchy_view.html
