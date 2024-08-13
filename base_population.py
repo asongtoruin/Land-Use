@@ -3,6 +3,7 @@ from pathlib import Path
 
 import yaml
 from caf.core import DVector
+from caf.core.data_structures import IpfTarget
 from caf.core.segments import SegmentsSuper
 from caf.core.zoning import TranslationWeighting
 import numpy as np
@@ -427,6 +428,31 @@ for GOR in constants.GORS:
         detailed_logs=True
     )
 
+    # --- Step 9 --- #
+    LOGGER.info('--- Step 9 ---')
+    LOGGER.info(f'Applying IPF to rebalance values')
+
+    # Adjust totals to match P8 outputs
+    # todo more sensible way of doing this?
+    hh_age_gender_2021.data = hh_age_gender_2021.data * (adjusted_pop.total / hh_age_gender_2021.total)
+    ons_table_3.data = ons_table_3.data * (adjusted_pop.total / ons_table_3.total)
+
+    rebalanced_pop, rmse = adjusted_pop.ipf(
+        targets=[IpfTarget(dvec) for dvec in (hh_age_gender_2021, ons_table_3)],
+        zone_trans_cache=constants.CACHE_FOLDER
+    )
+
+    LOGGER.info(f'IPF finished with RMSE {rmse}')
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P9_{GOR}',
+        dvector=rebalanced_pop,
+        dvector_dimension='population',
+        detailed_logs=True
+    )
+
     LOGGER.info(f'*****COMPLETED PROCESSING FOR {GOR}*****')
 
     # clear data at the end of the loop
@@ -447,8 +473,8 @@ for GOR in constants.GORS:
 LOGGER.info('Applying regional profiles to Scotland population data')
 area_type_agg = []
 for gor in config['scotland_donor_regions']:
-    LOGGER.debug(f'Re-reading P8 for {gor}')
-    final_pop = DVector.load(OUTPUT_DIR / f'Output P8_{gor}.hdf')
+    LOGGER.debug(f'Re-reading P9 for {gor}')
+    final_pop = DVector.load(OUTPUT_DIR / f'Output P9_{gor}.hdf')
     area_type_agg.append(
         final_pop.translate_zoning(constants.TFN_AT_AGG_ZONING_SYSTEM, cache_path=constants.CACHE_FOLDER)
     )
@@ -481,7 +507,7 @@ scotland_hydrated = scotland_hydrated.aggregate(
 
 data_processing.save_output(
     output_folder=OUTPUT_DIR,
-    output_reference=f'Output P8_Scotland',
+    output_reference=f'Output P9_Scotland',
     dvector=scotland_hydrated,
     dvector_dimension='population',
     detailed_logs=True
