@@ -1,23 +1,15 @@
 from functools import reduce
 from pathlib import Path
-import logging
 
 import yaml
 from caf.core import DVector
+from caf.core.segments import SegmentsSuper
 from caf.core.zoning import TranslationWeighting
 import numpy as np
 
-from land_use import constants
-from land_use import data_processing
+from land_use import constants, data_processing
+from land_use import logging as lu_logging
 
-
-# set up logging
-log_formatter = logging.Formatter(
-    fmt='[%(asctime)-15s] %(levelname)-7s - [%(filename)s#%(lineno)d::%(funcName)s]: %(message)s',
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-
-LOGGER = logging.getLogger('land_use')
 
 # load configuration file
 with open(r'scenario_configurations\iteration_5\base_population_config.yml', 'r') as text_file:
@@ -30,23 +22,8 @@ OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 # Define whether to output intermediate outputs, recommended to not output loads if debugging
 generate_summary_outputs = bool(config['output_intermediate_outputs'])
 
-# Set up logging
-LOGGER.setLevel(logging.DEBUG)
-
-sh = logging.StreamHandler()
-fh = logging.FileHandler(OUTPUT_DIR / 'population.log', mode='w')
-
-for handler in (sh, fh):
-    handler.setFormatter(log_formatter)
-    handler.setLevel(logging.INFO)
-    LOGGER.addHandler(handler)
-
-detailed_logs = logging.FileHandler(OUTPUT_DIR / 'population_detailed.log', mode='w')
-detailed_logs.setLevel(logging.DEBUG)
-detailed_logs.setFormatter(log_formatter)
-LOGGER.addHandler(detailed_logs)
-
-logging.captureWarnings(True)
+# Set up logger
+LOGGER = lu_logging.configure_logger(output_dir=OUTPUT_DIR, log_name='population')
 
 # loop through GORs to save memory issues further down the line
 for GOR in constants.GORS:
@@ -224,6 +201,8 @@ for GOR in constants.GORS:
     # apply proportional factors based on hh by adults / children / car availability to the hh by nssec
     hh_by_nssec_hc_ha_car = data_processing.apply_proportions(ons_table_2_lsoa, hh_by_nssec)
 
+    hh_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car.add_segments([SegmentsSuper.get_segment(SegmentsSuper.ADULT_NSSEC)])
+
     # check against original addressbase data
     # check = hh_by_nssec_hc_ha_car.aggregate(segs=['accom_h'])
 
@@ -341,8 +320,8 @@ for GOR in constants.GORS:
 
     LOGGER.info(f'Calculating splits of CE type by MSOA')
     # calculate msoa-based splits of CE types
-    ce_pop_by_type_total = ce_pop_by_type.add_segment(
-        constants.CUSTOM_SEGMENTS.get('total')
+    ce_pop_by_type_total = ce_pop_by_type.add_segments(
+        [constants.CUSTOM_SEGMENTS.get('total')]
     )
     ce_type_splits = ce_pop_by_type_total / ce_pop_by_type_total.aggregate(segs=['total'])
     # fill in nan values with 0 (this is where there are no CEs in a given MSOA)
@@ -358,8 +337,8 @@ for GOR in constants.GORS:
 
     LOGGER.info(f'Calculating splits of CE population by age, gender, and economic status')
     # calculate GOR-based splits of person types
-    ce_pop_by_age_gender_econ_total = ce_pop_by_age_gender_econ.add_segment(
-        constants.CUSTOM_SEGMENTS.get('total')
+    ce_pop_by_age_gender_econ_total = ce_pop_by_age_gender_econ.add_segments(
+        [constants.CUSTOM_SEGMENTS.get('total')]
     )
     ce_econ_splits = ce_pop_by_age_gender_econ_total / ce_pop_by_age_gender_econ_total.aggregate(segs=['total'])
     # fill in nan values with 0 (this is where there are no CEs in a given REGION)
@@ -375,8 +354,8 @@ for GOR in constants.GORS:
 
     LOGGER.info(f'Calculating splits of CE population by age, gender, and SOC')
     # calculate GOR-based splits of person types
-    ce_pop_by_age_gender_soc_total = ce_pop_by_age_gender_soc.add_segment(
-        constants.CUSTOM_SEGMENTS.get('total')
+    ce_pop_by_age_gender_soc_total = ce_pop_by_age_gender_soc.add_segments(
+        [constants.CUSTOM_SEGMENTS.get('total')]
     )
     ce_soc_splits = ce_pop_by_age_gender_soc_total / ce_pop_by_age_gender_soc_total.aggregate(segs=['total'])
     # fill in nan values with 0 (this is where there are no CEs in a given REGION)

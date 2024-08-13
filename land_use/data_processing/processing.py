@@ -615,6 +615,8 @@ def apply_proportions(source_dvector: DVector, apply_to: DVector) -> DVector:
     # Expand the segmentation to match the desired - this will apply any exclusions
     expanded_source = source_dvector.expand_to_other(apply_to)
 
+    expanded_source.data = expanded_source.data.replace(to_replace=0, value=0.000000000001)
+
     # Calculate totals - by *only* using the "desired" segmentation, we include all overlaps
     totals = expanded_source.aggregate(apply_to.segmentation)
 
