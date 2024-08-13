@@ -53,6 +53,24 @@ pp.save_preprocessed_hdf(
     df=df
 )
 
+# *** households by ns-sec and LSOA
+file_path = data_path / 'households_nssec_lsoa.csv'
+# read in data and reformat for DVector
+df = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.LSOA_NAME,
+    zoning_column='Lower layer Super Output Areas Code',
+    segment_mappings=pp.ONS_NSSEC_MAPPINGS,
+    segment_aggregations={
+        'National Statistics Socio-economic Classification (NS-SeC) (10 categories)':
+            pp.ONS_NSSEC_10_TO_5_AGGREGATIONS
+    }
+)
+pp.save_preprocessed_hdf(
+    source_file_path=file_path,
+    df=df
+)
+
 # ****** Multi-variate datasets
 # *** households by number of adults and number of children and LSOA
 file_path = data_path / 'households_adults_children_lsoa.csv'
