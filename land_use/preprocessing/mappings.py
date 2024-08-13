@@ -53,21 +53,6 @@ ONS_ECON_EMP_SOC_COMBO = {
         {'pop_econ': 3, 'pop_emp': 3, 'soc': 4}
 }
 
-ONS_CE_MAPPING = {
-    "Medical and care establishment": 1,
-    "Other establishment: Defence": 2,
-    "Other establishment: Prison service": 3,
-    "Other establishment: Approved premises (probation or bail hostel)": 3,
-    "Other establishment: Detention centres and other detention": 3,
-    "Other establishment: Education": 4,
-    "Other establishment: Hotel, guest house, B&B or youth hostel": 5,
-    "Other establishment: Hostel or temporary shelter for the homeless": 5,
-    "Other establishment: Holiday accommodation": 5,
-    "Other establishment: Other travel or temporary accommodation": 5,
-    "Other establishment: Religious": 6,
-    "Other establishment: Staff or worker accommodation or Other": 7
-}
-
 # *** ONS MAPPINGS *** #
 ONS_DWELLING_MAPPING = {
     'Accommodation type (5 categories)': [
@@ -158,6 +143,21 @@ ONS_POP_ECON_MAPPING = {
         'pop_econ',
         SegmentsSuper.get_segment(SegmentsSuper.POP_ECON).values
     ]
+}
+
+ONS_CE_MAPPING = {
+    "Medical and care establishment": 1,
+    "Other establishment: Defence": 2,
+    "Other establishment: Prison service": 3,
+    "Other establishment: Approved premises (probation or bail hostel)": 3,
+    "Other establishment: Detention centres and other detention": 3,
+    "Other establishment: Education": 4,
+    "Other establishment: Hotel, guest house, B&B or youth hostel": 5,
+    "Other establishment: Hostel or temporary shelter for the homeless": 5,
+    "Other establishment: Holiday accommodation": 5,
+    "Other establishment: Other travel or temporary accommodation": 5,
+    "Other establishment: Religious": 6,
+    "Other establishment: Staff or worker accommodation or Other": 7
 }
 
 # *** ONS AGGREGATIONS *** #
