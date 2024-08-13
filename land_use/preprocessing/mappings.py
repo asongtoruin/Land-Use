@@ -193,12 +193,9 @@ ONS_ECONOMIC_STATUS_MAPPING = {
 }
 
 ONS_CAR_MAPPING = {
-    'Car or van availability (3 categories)': [
-        'hh_car',
-        {
-            1: 'No cars or vans in household',
-            2: '1 or more cars or vans in household',
-         }
+    'Car or van availability (4 categories)': [
+        'car_availability',
+        SegmentsSuper.get_segment(SegmentsSuper.CAR_AVAILABILITY).values
     ]
 }
 

@@ -40,7 +40,7 @@ pp.save_preprocessed_hdf(
 )
 
 # *** households by number of cars and LSOA
-file_path = data_path / 'households_cars_lsoa.csv'
+file_path = data_path / 'households_cars_lsoa_3.csv'
 # read in data and reformat for DVector
 df = pp.read_ons(
     file_path=file_path,
