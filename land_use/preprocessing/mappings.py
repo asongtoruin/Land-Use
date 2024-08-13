@@ -53,7 +53,7 @@ ONS_ECON_EMP_SOC_COMBO = {
         {'pop_econ': 3, 'pop_emp': 3, 'soc': 4}
 }
 
-CE_POP_BY_TYPE = {
+ONS_CE_MAPPING = {
     "Medical and care establishment": 1,
     "Other establishment: Defence": 2,
     "Other establishment: Prison service": 3,

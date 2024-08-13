@@ -245,7 +245,7 @@ df = pp.convert_ces_by_type(
     df=df,
     zoning=geographies.MSOA_NAME,
     zoning_column=zone_col,
-    ce_type_map=pp.CE_POP_BY_TYPE
+    ce_type_map=pp.ONS_CE_MAPPING
 )
 
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
