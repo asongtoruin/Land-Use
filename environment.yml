@@ -11,5 +11,5 @@ dependencies:
   - seaborn=0.13.2
   - matplotlib=3.9.1
   - pip:
-      - git+https://github.com/asongtoruin/caf.core@iteration_5_testing
+      - git+https://github.com/Transport-for-the-North/caf.core@IPF
       - git+https://github.com/Transport-for-the-North/caf.space
