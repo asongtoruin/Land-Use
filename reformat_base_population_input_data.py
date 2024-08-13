@@ -6,6 +6,7 @@ import pandas as pd
 import land_use.preprocessing as pp
 from land_use.constants import geographies, segments
 
+# ------ 2021 CENSUS DATA ------ #
 # ****** RM002 Tables
 # Try reading in data with leading and trailing lines, auto-detecting header row based on this string
 header_string = 'output area'
@@ -206,26 +207,6 @@ file_path = Path(
 df = pp.read_abp(file_path=file_path, zoning=geographies.LSOA_NAME)
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
-# ****** MYPE
-# *** MYPE database
-file_path = Path(
-    r'I:\NorMITs Land Use\2023\import\MYPE'
-    r'\sapelsoasyoatablefinal.xlsx'
-)
-# read in mype data and reformat for DVector
-df = pp.read_mype(
-    file_path=file_path,
-    zoning=geographies.LSOA_NAME,
-    age_mapping=SegmentsSuper.get_segment(
-            SegmentsSuper.AGE
-        ).values,
-    gender_mapping=SegmentsSuper.get_segment(
-            SegmentsSuper.GENDER
-        ).values
-)
-
-pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
-
 # ****** ONS Data Downloads
 # *** ONS age and gender by dwelling type
 file_path = Path(
@@ -389,6 +370,48 @@ df = pp.convert_scotland(
     zoning_column='Intermediate Zone - Data Zone 2011',
     age_segmentation={i: j for j, i in segments._CUSTOM_SEGMENT_CATEGORIES['scot_age'].items()},
     gender_segmentation={i: j for j, i in SegmentsSuper.GENDER.get_segment().values.items()}
+)
+
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# ------ 2023 REBASE DATA ------ #
+# ****** MYPE
+# *** MYPE database
+# note this is 2022 based on what was available at time of release (august 2024)
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\MYPE'
+    r'\sapelsoasyoatablefinal.xlsx'
+)
+# read in mype data and reformat for DVector
+df = pp.read_mype_2022(
+    file_path=file_path,
+    zoning=geographies.LSOA_NAME,
+    age_mapping=SegmentsSuper.get_segment(
+            SegmentsSuper.AGE
+        ).values,
+    gender_mapping=SegmentsSuper.get_segment(
+            SegmentsSuper.GENDER
+        ).values
+)
+
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# *** MYPE database
+# note this is 2023 based on what was available at time of release (august 2024)
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\MYPE'
+    r'\myebtablesenglandwales20112023.xlsx'
+)
+# read in mype data and reformat for DVector
+df = pp.read_mype_control(
+    file_path=file_path,
+    zoning=geographies.LAD_NAME,
+    age_mapping=SegmentsSuper.get_segment(
+            SegmentsSuper.AGE
+        ).values,
+    gender_mapping=SegmentsSuper.get_segment(
+            SegmentsSuper.GENDER
+        ).values
 )
 
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)

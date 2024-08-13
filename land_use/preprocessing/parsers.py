@@ -333,87 +333,6 @@ def convert_ons_table_2(
     return pd.concat([dvec, missing]).fillna(0)
 
 
-def read_mype(
-        file_path: Path,
-        zoning: str,
-        age_mapping: dict,
-        gender_mapping: dict,
-        sheet_name: str = 'Mid-2022 LSOA 2021',
-        skip_rows: int = 3
-    ) -> pd.DataFrame:
-    """
-    Read in the AddressBase Premium data
-
-    Parameters
-    ----------
-    file_path : Path
-        path to the excel workbook containing the data
-    zoning : str
-        the zoning level of the input data (e.g. 'lsoa2021') which should match
-        the relevant zoning in the ZONING_CACHE
-    age_mapping : dict
-
-    gender_mapping : dict
-
-    sheet_name : str
-        string of the name of the tab of the excel book to read in, this should
-        have the main datatable in it
-    skip_rows : int
-        Number of rows of the excel workbook to skip before reaching the header row.
-
-    Returns
-    -------
-    pd.DataFrame
-        with index of 'h' and column headers of 'zoning' in the correct format
-        to convert to DVector
-    """
-    # read in the excel sheet with the tab defined
-    df = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=skip_rows).dropna()
-
-    # also want to autodetect this column if possible
-    zoning_col = 'LSOA 2021 Code'
-    df[zoning] = df[zoning_col]
-
-    # melt so the columns of gender and age become distinct long columns
-    pattern = r'([MF]\d{1,2})'
-    melted = df.melt(
-        id_vars=[zoning],
-        value_vars=[col for col in df.columns if re.match(pattern, col)],
-        var_name='gender_age',
-        value_name='population'
-    )
-    melted['gender'] = melted['gender_age'].str[:1]
-    melted['age'] = melted['gender_age'].str[1:].astype(int)
-
-    # define age groups to match with the "age" segments
-    age_groups = [0, 5, 10, 16, 20, 35, 50, 65, 75, 999]
-    labels = ["0 to 4 years", "5 to 9 years", "10 to 15 years", "16 to 19 years",
-              "20 to 34 years", "35 to 49 years", "50 to 64 years", "65 to 74 years", "75+ years"]
-    melted['age_band'] = pd.cut(
-        melted['age'],
-        age_groups,
-        labels=labels,
-        include_lowest=True
-    ).astype(str)
-
-    # remap male and female to definitions in the segments
-    melted.loc[melted['gender'] == 'F', 'gender_seg'] = 'female'
-    melted.loc[melted['gender'] == 'M', 'gender_seg'] = 'male'
-
-    # remap based on segmentations
-    melted['age_9'] = melted['age_band'].map({v: k for k, v in age_mapping.items()})
-    melted['g'] = melted['gender_seg'].map({v: k for k, v in gender_mapping.items()})
-
-    # group by gender and age band and sum total population by LSOA
-    totalled = melted.groupby([zoning, 'age_9', 'g'], as_index=False).agg({'population': 'sum'})
-
-    # set index column to gender/age
-    df = totalled.set_index([zoning, 'g', 'age_9']).unstack(level=[zoning])
-    df.columns = df.columns.get_level_values(zoning)
-
-    return df
-
-
 def convert_ons_table_4(
         df: pd.DataFrame,
         dwelling_segmentation: dict,
@@ -930,3 +849,158 @@ def convert_scotland(
         index_cols=['g', 'scot_age'],
         value_column='Count'
     )
+
+
+def read_mype_2022(
+        file_path: Path,
+        zoning: str,
+        age_mapping: dict,
+        gender_mapping: dict,
+        sheet_name: str = 'Mid-2022 LSOA 2021',
+        skip_rows: int = 3
+    ) -> pd.DataFrame:
+    """Read in the ONS MYPE data at LSOA
+
+    Parameters
+    ----------
+    file_path : Path
+        path to the excel workbook containing the data
+    zoning : str
+        the zoning level of the input data (e.g. 'lsoa2021') which should match
+        the relevant zoning in the ZONING_CACHE
+    age_mapping : dict
+
+    gender_mapping : dict
+
+    sheet_name : str
+        string of the name of the tab of the excel book to read in, this should
+        have the main datatable in it
+    skip_rows : int
+        Number of rows of the excel workbook to skip before reaching the header row.
+
+    Returns
+    -------
+    pd.DataFrame
+        with index of ['age_9', 'g'] and column headers of 'zoning' in the correct format
+        to convert to DVector
+    """
+    # read in the excel sheet with the tab defined
+    df = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=skip_rows).dropna()
+
+    # also want to autodetect this column if possible
+    zoning_col = 'LSOA 2021 Code'
+    df[zoning] = df[zoning_col]
+
+    # melt so the columns of gender and age become distinct long columns
+    pattern = r'([MF]\d{1,2})'
+    melted = df.melt(
+        id_vars=[zoning],
+        value_vars=[col for col in df.columns if re.match(pattern, col)],
+        var_name='gender_age',
+        value_name='population'
+    )
+    melted['gender'] = melted['gender_age'].str[:1]
+    melted['age'] = melted['gender_age'].str[1:].astype(int)
+
+    # define age groups to match with the "age" segments
+    age_groups = [0, 4, 9, 15, 19, 34, 49, 64, 74, 999]
+    labels = ['0 to 4 years', '5 to 9 years', '10 to 15 years', '16 to 19 years',
+              '20 to 34 years', '35 to 49 years', '50 to 64 years', '65 to 74 years', '75+ years']
+    melted['age_band'] = pd.cut(
+        melted['age'],
+        age_groups,
+        labels=labels,
+        include_lowest=True
+    ).astype(str)
+
+    # remap male and female to definitions in the segments
+    melted['gender_seg'] = melted['gender'].map({
+        'F': 'female',
+        'M': 'male'
+    })
+
+    # remap based on segmentations
+    melted['age_9'] = melted['age_band'].map({v: k for k, v in age_mapping.items()})
+    melted['g'] = melted['gender_seg'].map({v: k for k, v in gender_mapping.items()})
+
+    # group by gender and age band and sum total population by LSOA
+    totalled = melted.groupby([zoning, 'age_9', 'g'], as_index=False).agg({'population': 'sum'})
+
+    # set index column to gender/age
+    df = totalled.set_index([zoning, 'g', 'age_9']).unstack(level=[zoning])
+    df.columns = df.columns.get_level_values(zoning)
+
+    return df
+
+
+def read_mype_control(
+        file_path: Path,
+        zoning: str,
+        age_mapping: dict,
+        gender_mapping: dict,
+        sheet_name: str = 'MYEB1',
+        skip_rows: int = 1
+    ) -> pd.DataFrame:
+    """Read in the ONS MYPE data at LAD
+
+    Parameters
+    ----------
+    file_path : Path
+        path to the excel workbook containing the data
+    zoning : str
+        the zoning level of the input data (e.g. 'lsoa2021') which should match
+        the relevant zoning in the ZONING_CACHE
+    age_mapping : dict
+
+    gender_mapping : dict
+
+    sheet_name : str
+        string of the name of the tab of the excel book to read in, this should
+        have the main datatable in it
+    skip_rows : int
+        Number of rows of the excel workbook to skip before reaching the header row.
+
+    Returns
+    -------
+    pd.DataFrame
+        with index of ['age_9', 'g'] and column headers of 'zoning' in the correct format
+        to convert to DVector
+    """
+    # read in the excel sheet with the tab defined
+    df = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=skip_rows).dropna()
+
+    # also want to autodetect this column if possible
+    zoning_col = 'ladcode23'
+    df[zoning] = df[zoning_col]
+
+    # define age groups to match with the "age" segments
+    age_groups = [0, 4, 9, 15, 19, 34, 49, 64, 74, 999]
+    labels = ['0 to 4 years', '5 to 9 years', '10 to 15 years', '16 to 19 years',
+              '20 to 34 years', '35 to 49 years', '50 to 64 years', '65 to 74 years', '75+ years']
+    df['age_band'] = pd.cut(
+        df['age'],
+        age_groups,
+        labels=labels,
+        include_lowest=True
+    ).astype(str)
+
+    # remap male and female to definitions in the segments
+    df['gender_seg'] = df['sex'].map({
+        'F': 'female',
+        'M': 'male'
+    })
+
+    # remap based on segmentations
+    df['age_9'] = df['age_band'].map({v: k for k, v in age_mapping.items()})
+    df['g'] = df['gender_seg'].map({v: k for k, v in gender_mapping.items()})
+
+    # group by gender and age band and sum total population by LSOA
+    totalled = df.groupby(
+        [zoning, 'age_9', 'g'], as_index=False
+    ).agg({'population_2023': 'sum'})
+
+    # set index column to gender/age
+    df = totalled.set_index([zoning, 'g', 'age_9']).unstack(level=[zoning])
+    df.columns = df.columns.get_level_values(zoning)
+
+    return df
