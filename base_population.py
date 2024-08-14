@@ -30,73 +30,107 @@ LOGGER = lu_logging.configure_logger(output_dir=OUTPUT_DIR, log_name='population
 for GOR in constants.GORS:
 
     # --- Step 0 --- #
-    # read in the data from the config file
-    LOGGER.info('Importing data from config file')
+    # read in the base data from the config file
+    block = 'base_data'
+    LOGGER.info(f'Importing base data from config file ({block} block)')
     occupied_households = data_processing.read_dvector_from_config(
         config=config,
+        data_block=block,
         key='occupied_households',
         geography_subset=GOR
     )
     unoccupied_households = data_processing.read_dvector_from_config(
         config=config,
+        data_block=block,
         key='unoccupied_households',
         geography_subset=GOR
     )
     ons_table_1 = data_processing.read_dvector_from_config(
         config=config,
+        data_block=block,
         key='ons_table_1',
         geography_subset=GOR
     )
     addressbase_dwellings = data_processing.read_dvector_from_config(
         config=config,
+        data_block=block,
         key='addressbase_dwellings',
         geography_subset=GOR
     )
     ons_table_2 = data_processing.read_dvector_from_config(
         config=config,
+        data_block=block,
         key='ons_table_2',
-        geography_subset=GOR
-    )
-    mype_2022 = data_processing.read_dvector_from_config(
-        config=config,
-        key='mype_2022',
         geography_subset=GOR
     )
     ons_table_4 = data_processing.read_dvector_from_config(
         config=config,
+        data_block=block,
         key='ons_table_4',
         geography_subset=GOR
     )
     hh_age_gender_2021 = data_processing.read_dvector_from_config(
         config=config,
+        data_block=block,
         key='hh_age_gender_2021',
         geography_subset=GOR
     )
     ons_table_3 = data_processing.read_dvector_from_config(
         config=config,
+        data_block=block,
         key='ons_table_3',
         geography_subset=GOR
     )
     ce_uplift_factor = data_processing.read_dvector_from_config(
         config=config,
+        data_block=block,
         key='ce_uplift_factor',
         geography_subset=GOR
     )
     ce_pop_by_type = data_processing.read_dvector_from_config(
         config=config,
+        data_block=block,
         key='ce_pop_by_type',
         geography_subset=GOR
     )
     ce_pop_by_age_gender_soc = data_processing.read_dvector_from_config(
         config=config,
+        data_block=block,
         key='ce_pop_by_age_gender_soc',
         geography_subset=GOR
     )
     ce_pop_by_age_gender_econ = data_processing.read_dvector_from_config(
         config=config,
+        data_block=block,
         key='ce_pop_by_age_gender_econ',
         geography_subset=GOR
     )
+
+    # read in the household validation data from the config file
+    block = 'household_validation_data'
+    LOGGER.info(f'Importing household validation data from config file ({block} block)')
+    household_validation = {}
+    for key in config[block].keys():
+        df = data_processing.read_dvector_from_config(
+            config=config,
+            data_block=block,
+            key=key,
+            geography_subset=GOR
+        )
+        household_validation[key] = df
+
+    # read in the household validation data from the config file
+    block = 'population_adjustment_data'
+    LOGGER.info(f'Importing population adjustment data from config file ({block} block)')
+    population_adjustment = {}
+    for key in config[block].keys():
+        dfs = data_processing.read_dvector_from_config(
+            config=config,
+            data_block=block,
+            key=key,
+            geography_subset=GOR
+        )
+        population_adjustment[key] = dfs
 
     # --- Step 1 --- #
     LOGGER.info('--- Step 1 ---')
@@ -214,6 +248,8 @@ for GOR in constants.GORS:
         dvector=hh_by_nssec_hc_ha_car,
         dvector_dimension='households'
     )
+
+    # TODO IPF with 3 4 5 6 10 12-newfrommatteo
 
     # --- Step 5 --- #
     LOGGER.info('--- Step 5 ---')

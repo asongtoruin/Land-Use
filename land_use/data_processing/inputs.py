@@ -164,7 +164,12 @@ def try_loading_dvector(
         return None
 
 
-def read_dvector_from_config(config: dict, key: str, **kwargs) -> DVector:
+def read_dvector_from_config(
+        config: dict,
+        data_block: str,
+        key: str,
+        **kwargs
+) -> Union[DVector, list]:
     """Read DVector format input data (assumed to be HDF format) using
     information directly from the config file.
 
@@ -172,17 +177,52 @@ def read_dvector_from_config(config: dict, key: str, **kwargs) -> DVector:
     ----------
     config: dict
         Config dictionary loaded directly from reading the yml file.
+    data_block: dict
+        Name of the block of data (i.e. the top level keys of the config) that
+        contains `key`
     key: str
-        Name of the table in the config file.
+        Name of the table, or list of tables, in the config file.
 
     Returns
     -------
     DVector
-        Calls read_dvector_data() and returns DVector.
+        Calls read_dvector_data() and returns DVector, or a list of DVectors.
 
     """
+    # check if the data_block key exists
+    try:
+        config[data_block]
+    except KeyError:
+        LOGGER.error(f'"{data_block}" is not a first level key in your config '
+                     f'yaml file, and therefore nothing can be read from it. '
+                     f'Please make sure the data_block parameter is a valid '
+                     f'key from your config.')
+
+    # after checking the data_block exists, check for the key
+    try:
+        config[data_block][key]
+    except KeyError:
+        LOGGER.error(f'"{key}" is not a second level key in your config '
+                     f'within the "{data_block}" group in the yaml file. '
+                     f'Please make sure the key parameter is a valid '
+                     f'key from your "{data_block}" config.')
+
+    # if the config has a list of data within a given key
+    if isinstance(config[data_block][key], list):
+        return [
+            read_dvector_data(
+                input_root_directory=config['input_root_directory'],
+                **config[data_block][key][i],
+                **kwargs
+            )
+            for i, _ in enumerate(
+                config[data_block][key]
+            )
+        ]
+
+    # else just return a normal DVector
     return read_dvector_data(
         input_root_directory=config['input_root_directory'],
-        **config[key],
+        **config[data_block][key],
         **kwargs
     )
