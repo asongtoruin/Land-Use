@@ -632,3 +632,63 @@ def apply_proportions(source_dvector: DVector, apply_to: DVector) -> DVector:
 
     return result
 
+
+def match_target_total(
+        list_of_dvectors: list[DVector]
+) -> list[DVector]:
+    """
+
+    Parameters
+    ----------
+    list_of_dvectors: list[DVector]
+        List of DVectors to match totals of. By definition, the first DVector in
+        the list will provide the target total.
+
+        If *you do not want the first DVector to be the target total, then
+        reorder your list*.
+
+    Returns
+    -------
+     list[DVector]
+        List of DVectors, all with the same total based on the first DVector in
+        the list. Order of the list is the same as list_of_dvectors.
+    """
+    if len(list_of_dvectors) < 2:
+        LOGGER.warning(f'You have passed a list of length '
+                       f'{len(list_of_dvectors)} to match_target_total. If '
+                       f'{len(list_of_dvectors)} == 0 then there is nothing to '
+                       f'target, and if {len(list_of_dvectors)} == 1 there is '
+                       f'nothing to match to this target. Please check this is '
+                       f'what you were expecting.')
+        LOGGER.warning(f'This function call will now be skipped because it '
+                       f'wont do anything useful!')
+        return list_of_dvectors
+
+    # run function if the number of DVectors provided is at least 2
+    LOGGER.info(f'Matching the target totals between {len(list_of_dvectors)} '
+                f'DVectors')
+
+    # get the first DVector from the list and get the total, and report
+    target_dvector = list_of_dvectors[0]
+    LOGGER.info(f'Total of the target DVector is {target_dvector.total:,.0f}')
+
+    # create an output list to return
+    output = [target_dvector]
+
+    LOGGER.info(f'Adjusting remaining DVectors to the target')
+    # loop through remaining DVectors and adjust / report adjustment factors
+    for dvector in list_of_dvectors[1:]:
+        # calculate total of dvector and report - this should be checked to see
+        # if the totals are very different!
+        LOGGER.info(f'Total of the DVector is {dvector.total:,.0f}')
+
+        # calculate the adjustment factor required based on the target
+        adjustment_factor = target_dvector.total / dvector.total
+        LOGGER.info(f'Adjustment factor to be applied is '
+                    f'{adjustment_factor:,.5f}')
+
+        # apply the adjustment and append to the list of output DVectors
+        adjusted_dvector = dvector * adjustment_factor
+        output.append(adjusted_dvector)
+
+    return output

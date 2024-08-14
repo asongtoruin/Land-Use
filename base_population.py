@@ -119,7 +119,7 @@ for GOR in constants.GORS:
         )
         household_validation[key] = df
 
-    # read in the household validation data from the config file
+    # read in the population adjustment data from the config file
     block = 'population_adjustment_data'
     LOGGER.info(f'Importing population adjustment data from config file ({block} block)')
     population_adjustment = {}
@@ -244,12 +244,31 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Output P4_{GOR}',
+        output_reference=f'Output P4.1_{GOR}',
         dvector=hh_by_nssec_hc_ha_car,
         dvector_dimension='households'
     )
 
-    # TODO IPF with 3 4 5 6 10 12-newfrommatteo
+    # prepare data for IPF (this is making sure the target totals all match)
+    list_of_dvectors = data_processing.match_target_total(
+        list_of_dvectors=list(household_validation.values())
+    )
+
+    # applying IPF
+    LOGGER.info('Applying IPF for household targets')
+    rebalanced_hh, rmse = hh_by_nssec_hc_ha_car.ipf(
+        targets=[IpfTarget(dvec) for dvec in list_of_dvectors],
+        zone_trans_cache=constants.CACHE_FOLDER
+    )
+    LOGGER.info(f'IPF finished with RMSE {rmse:,.2f}')
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P4.2_{GOR}',
+        dvector=rebalanced_hh,
+        dvector_dimension='households'
+    )
 
     # --- Step 5 --- #
     LOGGER.info('--- Step 5 ---')
@@ -280,7 +299,8 @@ for GOR in constants.GORS:
 
     # --- Step 6 --- #
     LOGGER.info('--- Step 6 ---')
-    LOGGER.info(f'Converting household age and gender figures to LSOA level (only to be used in proportions, totals will be wrong)')
+    LOGGER.info(f'Converting household age and gender figures to LSOA level '
+                f'(only to be used in proportions, totals will be wrong)')
     # convert to LSOA
     hh_age_gender_2021_lsoa = hh_age_gender_2021.translate_zoning(
         new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
@@ -311,7 +331,8 @@ for GOR in constants.GORS:
 
     # --- Step 7 --- #
     LOGGER.info('--- Step 7 ---')
-    LOGGER.info('Converting ONS Table 3 to LSOA level (only to be used in proportions, totals will be wrong)')
+    LOGGER.info('Converting ONS Table 3 to LSOA level '
+                '(only to be used in proportions, totals will be wrong)')
     # convert the factors back to LSOA
     ons_table_3_lsoa = ons_table_3.translate_zoning(
         new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
@@ -325,7 +346,8 @@ for GOR in constants.GORS:
     # tmp = soc_splits_lsoa_age.aggregate(segs=['accom_h', 'age_9', 'ns_sec'])
 
     # apply the splits at LSOA level to main population table
-    LOGGER.info('Applying economic status, employment status, and SOC category splits to population')
+    LOGGER.info('Applying economic status, employment status, and SOC category '
+                'splits to population')
     pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc = data_processing.apply_proportions(
         ons_table_3_lsoa, pop_by_nssec_hc_ha_car_gender_age
     )
@@ -425,7 +447,8 @@ for GOR in constants.GORS:
     ones = ce_uplift_by_ce_age_gender_econ_soc.copy()
     ones.data.loc[:] = 1
 
-    LOGGER.info('Calculating zonal adjustment factors by CE type, age, gender, economic status, and SOC')
+    LOGGER.info('Calculating zonal adjustment factors by CE type, age, gender, '
+                'economic status, and SOC')
     # calculate adjustment factors by ce type, age, gender, economic status, and SOC
     ce_uplift_factor_by_ce_age_gender_econ_soc = ce_uplift_by_ce_age_gender_econ_soc + ones
     # TODO some level of output is needed here? Confirm with Matteo
@@ -477,8 +500,7 @@ for GOR in constants.GORS:
         targets=[IpfTarget(dvec) for dvec in (hh_age_gender_2021, ons_table_3)],
         zone_trans_cache=constants.CACHE_FOLDER
     )
-
-    LOGGER.info(f'IPF finished with RMSE {rmse}')
+    LOGGER.info(f'IPF finished with RMSE {rmse:,.2f}')
 
     # save output to hdf and csvs for checking
     data_processing.save_output(
