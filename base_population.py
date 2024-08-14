@@ -529,6 +529,7 @@ england_totals_scotland_zoning = england_totals.translate_zoning(
 # Read in the Scotland data, and then apply proportions
 scotland_population = data_processing.read_dvector_from_config(
     config=config,
+    data_block='base_data',
     key='scotland_population'
 )
 

@@ -106,13 +106,13 @@ population_adjustment_data:
           input_segments: [soc]
         - file_path: ONS-validation\preprocessing\population_status_lsoa.hdf
           geographical_level: LSOA2021
-          input_segments: [pop_econ]
+          input_segments: [economic_status]
         - file_path: ONS-validation\preprocessing\population_age11_gender_occupation_lad_age-occ-aggregated.hdf
           geographical_level: LAD2021
           input_segments: [age_9, g, soc]
         - file_path: ONS-validation\preprocessing\population_age11_gender_economicstatus_region_age-econ-aggregated.hdf
           geographical_level: RGN2021
-          input_segments: [age_9, g, pop_econ]
+          input_segments: [age_9, g, economic_status]
         - file_path: ONS-validation\preprocessing\population_age11_gender_MSOA_age-aggregated.hdf
           geographical_level: MSOA2021
           input_segments: [age_9, g]
