@@ -25,30 +25,43 @@ LOGGER = lu_logging.configure_logger(OUTPUT_DIR, log_name='employment')
 
 # --- Step 0 --- #
 # read in the data from the config file
+block = 'base_data'
 LOGGER.info("Importing BRES 2022 data from config file")
 # note this data is only for England and Wales
-lad_4_digit_sic = data_processing.read_dvector_from_config(config=config, key='lad_4_digit_sic')
+lad_4_digit_sic = data_processing.read_dvector_from_config(
+    config=config,
+    data_block=block,
+    key='lad_4_digit_sic'
+)
 
 msoa_2011_2_digit_sic = data_processing.read_dvector_from_config(
-        config=config,
-        key='msoa_2011_2_digit_sic'
+    config=config,
+    data_block=block,
+    key='msoa_2011_2_digit_sic'
 )
 
 lsoa_2011_1_digit_sic = data_processing.read_dvector_from_config(
     config=config,
+    data_block=block,
     key='lsoa_2011_1_digit_sic'
 )
 
 msoa_2011_2_digit_sic_1_digit_sic_splits = data_processing.read_dvector_from_config(
     config=config,
+    data_block=block,
     key='msoa_2011_2_digit_sic_1_digit_sic_splits'
 )
 ons_sic_soc_jobs_lu = data_processing.read_dvector_from_config(
     config=config,
+    data_block=block,
     key='ons_sic_soc_jobs_lu'
 )
 
-wfj = data_processing.read_dvector_from_config(config=config, key='wfj')
+wfj = data_processing.read_dvector_from_config(
+    config=config,
+    data_block=block,
+    key='wfj'
+)
 
 # --- Step 0 --- #
 LOGGER.info('--- Step 0 ---')
