@@ -32,11 +32,6 @@ base_data:
         geographical_level: MSOA2021
         input_segments: [accom_h, adults, children, car_availability]
 
-    mype_2022:
-        file_path: MYPE\preprocessing\sapelsoasyoatablefinal.hdf
-        geographical_level: LSOA2021
-        input_segments: [g, age_9]
-
     ons_table_4:
         file_path: ONS custom\preprocessing\ct210215census2021.hdf
         geographical_level: LSOA2021
