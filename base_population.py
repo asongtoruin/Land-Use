@@ -277,7 +277,7 @@ for GOR in constants.GORS:
     # car availability, number of adults and number of children
     # TODO Do we want to do this in a "smarter" way? The occupancy of 1 adult households (for example) should not be more than 1
     # TODO and households with 2+ children should be more than 3 - is this a place for IPF?
-    pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * average_occupancy
+    pop_by_nssec_hc_ha_car = rebalanced_hh * average_occupancy
 
     # calculate expected population based in the addressbase "occupied" dwellings
     addressbase_population = adjusted_addressbase_dwellings * average_occupancy
@@ -511,6 +511,30 @@ for GOR in constants.GORS:
         detailed_logs=True
     )
 
+    # --- Step 10 --- #
+    LOGGER.info('--- Step 10 ---')
+
+    # Adjust totals to match P9 outputs
+    list_of_dvectors = data_processing.match_target_total(
+        list_of_dvectors=[rebalanced_pop] + list(population_adjustment['validation_data'])
+    )
+
+    LOGGER.info(f'Applying IPF to validation data')
+    ipfed_pop, rmse = rebalanced_pop.ipf(
+        targets=[IpfTarget(dvec) for dvec in list_of_dvectors[1:]],
+        zone_trans_cache=constants.CACHE_FOLDER
+    )
+    LOGGER.info(f'IPF finished with RMSE {rmse:,.2f}')
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P10_{GOR}',
+        dvector=ipfed_pop,
+        dvector_dimension='population',
+        detailed_logs=True
+    )
+
     LOGGER.info(f'*****COMPLETED PROCESSING FOR {GOR}*****')
 
     # clear data at the end of the loop
@@ -531,8 +555,8 @@ for GOR in constants.GORS:
 LOGGER.info('Applying regional profiles to Scotland population data')
 area_type_agg = []
 for gor in config['scotland_donor_regions']:
-    LOGGER.debug(f'Re-reading P9 for {gor}')
-    final_pop = DVector.load(OUTPUT_DIR / f'Output P9_{gor}.hdf')
+    LOGGER.debug(f'Re-reading 10 for {gor}')
+    final_pop = DVector.load(OUTPUT_DIR / f'Output P10_{gor}.hdf')
     area_type_agg.append(
         final_pop.translate_zoning(constants.TFN_AT_AGG_ZONING_SYSTEM, cache_path=constants.CACHE_FOLDER)
     )
@@ -566,7 +590,7 @@ scotland_hydrated = scotland_hydrated.aggregate(
 
 data_processing.save_output(
     output_folder=OUTPUT_DIR,
-    output_reference=f'Output P9_Scotland',
+    output_reference=f'Output P10_Scotland',
     dvector=scotland_hydrated,
     dvector_dimension='population',
     detailed_logs=True
