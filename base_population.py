@@ -249,18 +249,13 @@ for GOR in constants.GORS:
         dvector_dimension='households'
     )
 
-    # prepare data for IPF (this is making sure the target totals all match)
-    list_of_dvectors = data_processing.match_target_total(
-        list_of_dvectors=list(household_validation.values())
-    )
-
     # applying IPF
     LOGGER.info('Applying IPF for household targets')
-    rebalanced_hh, rmse = hh_by_nssec_hc_ha_car.ipf(
-        targets=[IpfTarget(dvec) for dvec in list_of_dvectors],
-        zone_trans_cache=constants.CACHE_FOLDER
+    rebalanced_hh = data_processing.apply_ipf(
+        seed_data=hh_by_nssec_hc_ha_car,
+        target_dvectors=list(household_validation.values()),
+        cache_folder=constants.CACHE_FOLDER
     )
-    LOGGER.info(f'IPF finished with RMSE {rmse:,.2f}')
 
     # save output to hdf and csvs for checking
     data_processing.save_output(
@@ -489,18 +484,15 @@ for GOR in constants.GORS:
 
     # --- Step 9 --- #
     LOGGER.info('--- Step 9 ---')
-    LOGGER.info(f'Applying IPF to rebalance values')
 
-    # Adjust totals to match P8 outputs
-    # todo more sensible way of doing this?
-    hh_age_gender_2021.data = hh_age_gender_2021.data * (adjusted_pop.total / hh_age_gender_2021.total)
-    ons_table_3.data = ons_table_3.data * (adjusted_pop.total / ons_table_3.total)
-
-    rebalanced_pop, rmse = adjusted_pop.ipf(
-        targets=[IpfTarget(dvec) for dvec in (hh_age_gender_2021, ons_table_3)],
-        zone_trans_cache=constants.CACHE_FOLDER
+    # applying IPF (adjusting totals to match P9 outputs)
+    LOGGER.info('Applying IPF to rebalance values')
+    rebalanced_pop = data_processing.apply_ipf(
+        seed_data=adjusted_pop,
+        target_dvectors=(hh_age_gender_2021, ons_table_3),
+        cache_folder=constants.CACHE_FOLDER,
+        target_dvector=adjusted_pop
     )
-    LOGGER.info(f'IPF finished with RMSE {rmse:,.2f}')
 
     # save output to hdf and csvs for checking
     data_processing.save_output(
@@ -514,17 +506,14 @@ for GOR in constants.GORS:
     # --- Step 10 --- #
     LOGGER.info('--- Step 10 ---')
 
-    # Adjust totals to match P9 outputs
-    list_of_dvectors = data_processing.match_target_total(
-        list_of_dvectors=[rebalanced_pop] + list(population_adjustment['validation_data'])
+    # applying IPF (adjusting totals to match P9 outputs)
+    LOGGER.info('Applying IPF for population targets')
+    ipfed_pop = data_processing.apply_ipf(
+        seed_data=rebalanced_pop,
+        target_dvectors=list(population_adjustment['validation_data']),
+        cache_folder=constants.CACHE_FOLDER,
+        target_dvector=rebalanced_pop
     )
-
-    LOGGER.info(f'Applying IPF to validation data')
-    ipfed_pop, rmse = rebalanced_pop.ipf(
-        targets=[IpfTarget(dvec) for dvec in list_of_dvectors[1:]],
-        zone_trans_cache=constants.CACHE_FOLDER
-    )
-    LOGGER.info(f'IPF finished with RMSE {rmse:,.2f}')
 
     # save output to hdf and csvs for checking
     data_processing.save_output(

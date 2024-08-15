@@ -3,10 +3,10 @@ from pathlib import Path
 import warnings
 import psutil
 from warnings import warn
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional
 from functools import reduce
 
-from caf.core.data_structures import DVector
+from caf.core.data_structures import DVector, IpfTarget
 from caf.core.zoning import ZoningSystem, TranslationWeighting, TranslationWarning
 from caf.core.segmentation import Segmentation, SegmentationInput, Segment, SegmentsSuper
 import pandas as pd
@@ -692,3 +692,65 @@ def match_target_total(
         output.append(adjusted_dvector)
 
     return output
+
+
+def apply_ipf(
+        seed_data: DVector,
+        target_dvectors: Union[list, tuple],
+        cache_folder: Path,
+        target_dvector: Optional[DVector] = None
+) -> DVector:
+    """Apply the IPF to furness the seed_data to the multiple constraints of
+    the target_dvectors.
+
+    target_dvectors will be first processed to make sure the totals of the
+    target_dvectors all match; this is a requirement for the IPF to function
+    properly. By definition, the first element of the list target_dvectors will
+    be used to define this target total.
+
+    Parameters
+    ----------
+    seed_data: DVector
+        DVector with dvector.data you wish to furness to the target_dvector
+        targets.
+    target_dvectors: list
+        A list of dvectors you want to use as targets in the furnessing. These
+        can be in various zone systems / segmentations, as long as translations
+        between the zone systems / segmentations exist. See IpfTarget
+        documentation for clarity.
+    cache_folder: Path
+        Folder containing any zone systems and zone translations
+    target_dvector: Optional[DVector], default None
+        Provide target_dvector if there is a separate DVector from
+        target_dvectors that you want to match the totals of. If None, then by
+        default the first element of target_dvectors will be used, otherwise
+        this will be used.
+
+    Returns
+    -------
+    DVector
+        The post-IPF seed_data which has been adjusted based on the provided
+        targets.
+
+    """
+    LOGGER.info('Preparing data for the IPF')
+    # make sure target totals match before calling IPF
+    if target_dvector is None:
+        list_of_dvectors = match_target_total(
+            list_of_dvectors=list(target_dvectors)
+        )
+    else:
+        all_dvectors = match_target_total(
+            list_of_dvectors=[target_dvector] + list(target_dvectors)
+        )
+        list_of_dvectors = all_dvectors[1:]
+
+    LOGGER.info('Applying the IPF')
+    rebalanced_data, rmse = seed_data.ipf(
+        targets=[IpfTarget(dvec) for dvec in list_of_dvectors],
+        zone_trans_cache=cache_folder
+    )
+
+    LOGGER.info(f'IPF finished with RMSE {rmse:,.2f}')
+
+    return rebalanced_data
