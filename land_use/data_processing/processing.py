@@ -680,11 +680,11 @@ def match_target_total(
     for dvector in list_of_dvectors[1:]:
         # calculate total of dvector and report - this should be checked to see
         # if the totals are very different!
-        LOGGER.info(f'Total of the DVector is {dvector.total:,.0f}')
+        LOGGER.debug(f'Total of the DVector is {dvector.total:,.0f}')
 
         # calculate the adjustment factor required based on the target
         adjustment_factor = target_dvector.total / dvector.total
-        LOGGER.info(f'Adjustment factor to be applied is '
+        LOGGER.debug(f'Adjustment factor to be applied is '
                     f'{adjustment_factor:,.5f}')
 
         # apply the adjustment and append to the list of output DVectors
