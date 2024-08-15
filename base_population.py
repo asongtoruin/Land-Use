@@ -3,7 +3,6 @@ from pathlib import Path
 
 import yaml
 from caf.core import DVector
-from caf.core.data_structures import IpfTarget
 from caf.core.segments import SegmentsSuper
 from caf.core.zoning import TranslationWeighting
 import numpy as np
