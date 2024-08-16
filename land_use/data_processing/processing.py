@@ -699,7 +699,7 @@ def apply_ipf(
         target_dvectors: Union[list, tuple],
         cache_folder: Path,
         target_dvector: Optional[DVector] = None
-) -> DVector:
+) -> tuple[DVector, pd.DataFrame]:
     """Apply the IPF to furness the seed_data to the multiple constraints of
     the target_dvectors.
 
@@ -728,9 +728,12 @@ def apply_ipf(
 
     Returns
     -------
-    DVector
-        The post-IPF seed_data which has been adjusted based on the provided
-        targets.
+    tuple[DVector, pd.DataFrame]
+        DVector: The post-IPF seed_data which has been adjusted based on the
+        provided targets.
+        pd.DataFrame: A summary of the differences between the post-IPF data
+        and the input targets. This is a validation that any observed
+        relationships in the input targets are maintained through the IPF.
 
     """
     LOGGER.info('Preparing data for the IPF')
@@ -753,4 +756,36 @@ def apply_ipf(
 
     LOGGER.info(f'IPF finished with RMSE {rmse:,.2f}')
 
-    return rebalanced_data
+    # run validation of IPF
+    summary = []
+    for dvec in list_of_dvectors:
+        # get the post-IPF DVector in the same segmentation as the target data
+        result = collapse_segmentation_to_match(
+            dvector=rebalanced_data,
+            match_to=dvec
+        )
+
+        # find the largest zone system and aggregate if they are not the same
+        # and calculate absolute difference from the target dvector
+        difference_from_target = aggregate_and_compare(
+            first_dvector=result,
+            second_dvector=dvec
+        )
+
+        # calculate total, min, max, average error
+        df = difference_from_target.data.copy()
+        zone_cols = list(difference_from_target.data.columns)
+        df['total_error'] = df[zone_cols].sum(axis=1)
+        df['average_error'] = df[zone_cols].mean(axis=1)
+        df['max_error'] = df[zone_cols].max(axis=1)
+        df['min_error'] = df[zone_cols].min(axis=1)
+        df['zoning'] = difference_from_target.zoning_system.name
+        df['description'] = str(difference_from_target.segmentation.naming_order)
+        df['segmentation'] = df.index
+        cols = [
+            'segmentation', 'description', 'zoning', 'total_error',
+            'average_error', 'max_error', 'min_error'
+        ]
+        summary.append(df[cols])
+
+    return rebalanced_data, pd.concat(summary)
