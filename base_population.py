@@ -250,7 +250,7 @@ for GOR in constants.GORS:
 
     # applying IPF
     LOGGER.info('Applying IPF for household targets')
-    rebalanced_hh, summary = data_processing.apply_ipf(
+    rebalanced_hh, summary, differences = data_processing.apply_ipf(
         seed_data=hh_by_nssec_hc_ha_car,
         target_dvectors=list(household_validation.values()),
         cache_folder=constants.CACHE_FOLDER
@@ -266,6 +266,11 @@ for GOR in constants.GORS:
     summary.to_csv(
         OUTPUT_DIR / f'Output P4.2_{GOR}_VALIDATION.csv',
         float_format='%.5f', index=False
+    )
+    data_processing.write_to_excel(
+        output_folder=OUTPUT_DIR,
+        file=f'Output P4.2_{GOR}_VALIDATION.xlsx',
+        dfs=differences
     )
 
     # --- Step 5 --- #
@@ -490,7 +495,7 @@ for GOR in constants.GORS:
 
     # applying IPF (adjusting totals to match P9 outputs)
     LOGGER.info('Applying IPF to rebalance values')
-    rebalanced_pop, summary = data_processing.apply_ipf(
+    rebalanced_pop, summary, differences = data_processing.apply_ipf(
         seed_data=adjusted_pop,
         target_dvectors=(hh_age_gender_2021, ons_table_3),
         cache_folder=constants.CACHE_FOLDER,
@@ -509,13 +514,18 @@ for GOR in constants.GORS:
         OUTPUT_DIR / f'Output P9_{GOR}_VALIDATION.csv',
         float_format='%.5f', index=False
     )
+    data_processing.write_to_excel(
+        output_folder=OUTPUT_DIR,
+        file=f'Output P9_{GOR}_VALIDATION.xlsx',
+        dfs=differences
+    )
 
     # --- Step 10 --- #
     LOGGER.info('--- Step 10 ---')
 
     # applying IPF (adjusting totals to match P9 outputs)
     LOGGER.info('Applying IPF for population targets')
-    ipfed_pop, summary = data_processing.apply_ipf(
+    ipfed_pop, summary, differences = data_processing.apply_ipf(
         seed_data=rebalanced_pop,
         target_dvectors=list(population_adjustment['validation_data']),
         cache_folder=constants.CACHE_FOLDER,
@@ -533,6 +543,11 @@ for GOR in constants.GORS:
     summary.to_csv(
         OUTPUT_DIR / f'Output P10_{GOR}_VALIDATION.csv',
         float_format='%.5f', index=False
+    )
+    data_processing.write_to_excel(
+        output_folder=OUTPUT_DIR,
+        file=f'Output P10_{GOR}_VALIDATION.xlsx',
+        dfs=differences
     )
 
     LOGGER.info(f'*****COMPLETED PROCESSING FOR {GOR}*****')

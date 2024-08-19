@@ -518,8 +518,9 @@ def aggregate_and_compare(
         first_dvector: DVector, 
         second_dvector: DVector, 
         strict: bool = False,
-        cache_path: Path = CACHE_FOLDER
-    ) -> DVector:
+        cache_path: Path = CACHE_FOLDER,
+        return_absolutes: bool = False
+    ) -> Union[DVector, tuple[DVector, DVector]]:
     """Aggregates and compares two DVector files
 
     The two must have compatible segmentation (i.e. one a complete subset of 
@@ -538,6 +539,9 @@ def aggregate_and_compare(
         if True, the segmentation of one DVector is entirely contained within 
         the segmentation of the other. If False, use the intersection of the 
         segmentation of the two DVectors. By default, False.
+    return_absolutes : bool, default False
+        if True, both the actual DVectors are returned, instead of just a
+        DVector of differences
 
     Returns
     -------
@@ -593,7 +597,10 @@ def aggregate_and_compare(
                 raise ValueError(incompatibility_message)
         else:
             raise ValueError(incompatibility_message)
-    
+
+    if return_absolutes:
+        return working_first_dvector, working_second_dvector
+
     # Step 4: do the difference calc
     return working_first_dvector - working_second_dvector
 
@@ -699,7 +706,7 @@ def apply_ipf(
         target_dvectors: Union[list, tuple],
         cache_folder: Path,
         target_dvector: Optional[DVector] = None
-) -> tuple[DVector, pd.DataFrame]:
+) -> tuple[DVector, pd.DataFrame, list]:
     """Apply the IPF to furness the seed_data to the multiple constraints of
     the target_dvectors.
 
@@ -728,12 +735,14 @@ def apply_ipf(
 
     Returns
     -------
-    tuple[DVector, pd.DataFrame]
+    tuple[DVector, pd.DataFrame, list]
         DVector: The post-IPF seed_data which has been adjusted based on the
         provided targets.
         pd.DataFrame: A summary of the differences between the post-IPF data
         and the input targets. This is a validation that any observed
         relationships in the input targets are maintained through the IPF.
+        list: A summary of the differences in the post-ipf and target proportions
+        by zone.
 
     """
     LOGGER.info('Preparing data for the IPF')
@@ -758,6 +767,7 @@ def apply_ipf(
 
     # run validation of IPF
     summary = []
+    differences = []
     for dvec in list_of_dvectors:
         # get the post-IPF DVector in the same segmentation as the target data
         result = collapse_segmentation_to_match(
@@ -771,21 +781,76 @@ def apply_ipf(
             first_dvector=result,
             second_dvector=dvec
         )
+        zone_cols = list(difference_from_target.data.columns)
+        ipfed, target = aggregate_and_compare(
+            first_dvector=result,
+            second_dvector=dvec,
+            return_absolutes=True
+        )
+
+        # get post-ipf and target totals across all zones
+        ipfed = ipfed.data.copy()
+        target = target.data.copy()
+        ipfed['post_ipf_total'] = ipfed.sum(axis=1)
+        target['input_target_total'] = target.sum(axis=1)
 
         # calculate total, min, max, average error
         df = difference_from_target.data.copy()
-        zone_cols = list(difference_from_target.data.columns)
+        df = pd.merge(
+            df, target[['input_target_total']],
+            left_index=True, right_index=True
+        )
+        df = pd.merge(
+            df, ipfed[['post_ipf_total']],
+            left_index=True, right_index=True
+        )
         df['total_error'] = df[zone_cols].sum(axis=1)
         df['average_error'] = df[zone_cols].mean(axis=1)
         df['max_error'] = df[zone_cols].max(axis=1)
         df['min_error'] = df[zone_cols].min(axis=1)
         df['zoning'] = difference_from_target.zoning_system.name
-        df['description'] = str(difference_from_target.segmentation.naming_order)
+        df['description'] = str(df.index.names)
         df['segmentation'] = df.index
         cols = [
-            'segmentation', 'description', 'zoning', 'total_error',
-            'average_error', 'max_error', 'min_error'
+            'segmentation', 'description', 'zoning', 'input_target_total',
+            'post_ipf_total', 'total_error', 'average_error', 'max_error',
+            'min_error'
         ]
         summary.append(df[cols])
 
-    return rebalanced_data, pd.concat(summary)
+        # get distribution of population across zones within each segment for
+        # both the post-ipf data and the target data
+        ipf_pivot = ipfed.reset_index().melt(
+            id_vars=ipfed.index.names,
+            value_vars=zone_cols,
+            var_name=difference_from_target.zoning_system.name,
+            value_name='ipf_total'
+        )
+        target_pivot = target.reset_index().melt(
+            id_vars=target.index.names,
+            value_vars=zone_cols,
+            var_name=difference_from_target.zoning_system.name,
+            value_name='target_total'
+        )
+        merging_cols = (
+                target.index.names + [difference_from_target.zoning_system.name]
+        )
+        comparison = pd.merge(
+            target_pivot, ipf_pivot, on=merging_cols, how='left'
+        )
+        comparison['target_distribution'] = (
+            comparison['target_total'] / comparison.groupby(
+                difference_from_target.zoning_system.name
+            )['target_total'].transform('sum')
+        )
+        comparison['ipf_distribution'] = (
+            comparison['ipf_total'] / comparison.groupby(
+                difference_from_target.zoning_system.name
+            )['ipf_total'].transform('sum')
+        )
+        comparison['pp_from_target'] = (
+                comparison['ipf_distribution'] - comparison['target_distribution']
+        )
+        differences.append(comparison)
+
+    return rebalanced_data, pd.concat(summary), differences
