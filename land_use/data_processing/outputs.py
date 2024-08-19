@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from pathlib import Path
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 import pandas as pd
 from caf.core.data_structures import DVector
@@ -287,3 +287,56 @@ def save_output(
             output_reference=output_reference,
             value_name=dvector_dimension
         )
+
+
+def write_to_excel(
+        output_folder: Path,
+        file: str,
+        dfs: list,
+        sheet_names: Optional[list] = None
+):
+    """Output dataframes to an excel file. Different data can be put on
+    different tabs with different names.
+
+    Parameters
+    ----------
+    output_folder: Path
+        Directory to save the output file.
+    file: str
+        Filename to be written to.
+    dfs: list[pd.DataFrame]
+        List of dataframes you wish to output
+    sheet_names: Optional[list[str]]
+        List of tab names that each element of dfs will be written to.
+        If not provided, sheet names will be named ['Sheet1', 'Sheet2', ...,
+        'Sheetx']
+        LENGTH OF SHEET_NAMES MUST MATCH LENGTH OF DFS.
+    """
+    output_file = output_folder / file
+    LOGGER.info(f'Writing to {output_file}')
+
+    # delete file if it exists
+    if output_file.is_file():
+        output_file.unlink()
+
+    # check dfs and sheet names are the same length
+    if sheet_names is not None:
+        if not len(dfs) == len(sheet_names):
+            raise RuntimeError('Number of dataframes to output and number of excel '
+                               'sheet names must be the same.')
+
+    # write all dfs to each sheet name in a single excel file
+    with pd.ExcelWriter(str(output_folder / file)) as writer:
+        for count, _ in enumerate(dfs):
+            if sheet_names is None:
+                sheet = f'Sheet{count + 1}'
+            else:
+                sheet = sheet_names[count]
+            df = dfs[count]
+
+            df.to_excel(
+                writer,
+                sheet_name=sheet,
+                index=False,
+                float_format='%.5f'
+            )
