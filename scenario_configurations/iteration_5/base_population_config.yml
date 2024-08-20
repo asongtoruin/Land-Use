@@ -125,6 +125,9 @@ population_adjustment_data:
           input_segments: [car_availability, age_9, g]
 
     rebase_data:
+        - file_path: MYPE\preprocessing\myebtablesenglandwales20112023.hdf
+          geographical_level: LAD2023
+          input_segments: [g, age_9]
         - file_path: MYPE\preprocessing\sapelsoasyoatablefinal.hdf
           geographical_level: LSOA2021
           input_segments: [g, age_9]
