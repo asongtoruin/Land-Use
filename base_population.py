@@ -248,11 +248,16 @@ for GOR in constants.GORS:
         dvector_dimension='households'
     )
 
+    # prepare ons_table_2 for ipf targets (drop accom_h segmentation)
+    ons_table_2_target = ons_table_2.aggregate(
+        segs=[seg for seg in ons_table_2.data.index.names if seg != 'accom_h']
+    )
+
     # applying IPF
-    LOGGER.info('Applying IPF for household targets')
-    rebalanced_hh, summary, differences = data_processing.apply_ipf(
+    LOGGER.info('Applying IPF for internal validation household targets')
+    internal_rebalanced_hh, summary, differences = data_processing.apply_ipf(
         seed_data=hh_by_nssec_hc_ha_car,
-        target_dvectors=list(household_validation.values()),
+        target_dvectors=[ons_table_2_target],
         cache_folder=constants.CACHE_FOLDER
     )
 
@@ -260,7 +265,7 @@ for GOR in constants.GORS:
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
         output_reference=f'Output P4.2_{GOR}',
-        dvector=rebalanced_hh,
+        dvector=internal_rebalanced_hh,
         dvector_dimension='households'
     )
     summary.to_csv(
@@ -270,6 +275,31 @@ for GOR in constants.GORS:
     data_processing.write_to_excel(
         output_folder=OUTPUT_DIR,
         file=f'Output P4.2_{GOR}_VALIDATION.xlsx',
+        dfs=differences
+    )
+
+    # applying IPF
+    LOGGER.info('Applying IPF for independent household targets')
+    rebalanced_hh, summary, differences = data_processing.apply_ipf(
+        seed_data=internal_rebalanced_hh,
+        target_dvectors=list(household_validation.values()),
+        cache_folder=constants.CACHE_FOLDER
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P4.3_{GOR}',
+        dvector=rebalanced_hh,
+        dvector_dimension='households'
+    )
+    summary.to_csv(
+        OUTPUT_DIR / f'Output P4.3_{GOR}_VALIDATION.csv',
+        float_format='%.5f', index=False
+    )
+    data_processing.write_to_excel(
+        output_folder=OUTPUT_DIR,
+        file=f'Output P4.3_{GOR}_VALIDATION.xlsx',
         dfs=differences
     )
 
@@ -493,11 +523,16 @@ for GOR in constants.GORS:
     # --- Step 9 --- #
     LOGGER.info('--- Step 9 ---')
 
+    # prepare ons_table_3 for ipf targets (drop accom_h segmentation)
+    ons_table_3_target = ons_table_3.aggregate(
+        segs=[seg for seg in ons_table_3.data.index.names if seg != 'accom_h']
+    )
+
     # applying IPF (adjusting totals to match P9 outputs)
-    LOGGER.info('Applying IPF to rebalance values')
+    LOGGER.info('Applying IPF for internal validation population targets')
     rebalanced_pop, summary, differences = data_processing.apply_ipf(
         seed_data=adjusted_pop,
-        target_dvectors=(hh_age_gender_2021, ons_table_3),
+        target_dvectors=(hh_age_gender_2021, ons_table_3_target),
         cache_folder=constants.CACHE_FOLDER,
         target_dvector=adjusted_pop
     )
@@ -524,7 +559,7 @@ for GOR in constants.GORS:
     LOGGER.info('--- Step 10 ---')
 
     # applying IPF (adjusting totals to match P9 outputs)
-    LOGGER.info('Applying IPF for population targets')
+    LOGGER.info('Applying IPF for independent population targets')
     ipfed_pop, summary, differences = data_processing.apply_ipf(
         seed_data=rebalanced_pop,
         target_dvectors=list(population_adjustment['validation_data']),
