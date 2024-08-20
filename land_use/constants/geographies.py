@@ -116,6 +116,12 @@ LAD_ZONING_SYSTEM = generate_zoning_system(
     shapefile_path=SHAPEFILE_DIRECTORY / 'LAD (2021)' / 'LAD_2021_EnglandWales.shp',
     id_col='LAD21CD', desc_col='LAD21NM'
 )
+LAD23_NAME = 'LAD2023'
+LAD23_ZONING_SYSTEM = generate_zoning_system(
+    name=LAD23_NAME,
+    shapefile_path=SHAPEFILE_DIRECTORY / 'LAD (2023)' / 'LAD_2023_EnglandWales.shp',
+    id_col='LAD23CD', desc_col='LAD23NM'
+)
 
 # --- REGION ZONE SYSTEMS (ENGLAND AND WALES ONLY) --- #
 RGN_NAME = 'RGN2021'
@@ -149,6 +155,7 @@ TFN_AT_AGG_ZONING_SYSTEM = generate_zoning_system(
 LSOAS_BY_GOR = dict()
 MSOAS_BY_GOR = dict()
 LADS_BY_GOR = dict()
+LADS23_BY_GOR = dict()
 RGNS_BY_GOR = dict()
 for gor in GORS:
     # LSOA CORRESPONDENCES
@@ -177,6 +184,14 @@ for gor in GORS:
         id_col='LAD21CD', desc_col='LAD21NM'
     )
     LADS_BY_GOR[lad_zone_name] = lad_zone_system
+
+    lad23_zone_name = f'LAD2023-{gor}'
+    lad23_zone_system = generate_zoning_system(
+        name=lad23_zone_name,
+        shapefile_path=SHAPEFILE_DIRECTORY / 'LAD (2023)' / f'LAD_2023_EnglandWales_{gor}.shp',
+        id_col='LAD23CD', desc_col='LAD23NM'
+    )
+    LADS23_BY_GOR[lad23_zone_name] = lad23_zone_system
 
     # REGION CORRESPONDENCES
     rgn_zone_name = f'RGN2021-{gor}'
@@ -208,6 +223,7 @@ KNOWN_GEOGRAPHIES = {
     **LSOAS_BY_GOR,
     **MSOAS_BY_GOR,
     **LADS_BY_GOR,
+    **LADS23_BY_GOR,
     **RGNS_BY_GOR
 }
 
@@ -248,11 +264,19 @@ KNOWN_GEOGRAPHIES = {
 #         cache_path=CACHE_FOLDER
 #     )
 #     LSOA_ZONING_SYSTEM.translate(
+#         LAD23_ZONING_SYSTEM,
+#         cache_path=CACHE_FOLDER
+#     )
+#     LSOA_ZONING_SYSTEM.translate(
 #         RGN_ZONING_SYSTEM,
 #         cache_path=CACHE_FOLDER
 #     )
 #     MSOA_ZONING_SYSTEM.translate(
 #         LAD_ZONING_SYSTEM,
+#         cache_path=CACHE_FOLDER
+#     )
+#     MSOA_ZONING_SYSTEM.translate(
+#         LAD23_ZONING_SYSTEM,
 #         cache_path=CACHE_FOLDER
 #     )
 #     MSOA_ZONING_SYSTEM.translate(
@@ -263,12 +287,17 @@ KNOWN_GEOGRAPHIES = {
 #         RGN_ZONING_SYSTEM,
 #         cache_path=CACHE_FOLDER
 #     )
+#     LAD23_ZONING_SYSTEM.translate(
+#         RGN_ZONING_SYSTEM,
+#         cache_path=CACHE_FOLDER
+#     )
 #
 #     for i in range(0, len(GORS)):
 #
 #         lsoa = list(LSOAS_BY_GOR.values())[i]
 #         msoa = list(MSOAS_BY_GOR.values())[i]
 #         lad = list(LADS_BY_GOR.values())[i]
+#         lad23 = list(LADS23_BY_GOR.values())[i]
 #         gor = list(RGNS_BY_GOR.values())[i]
 #
 #         lsoa.translate(
@@ -280,6 +309,10 @@ KNOWN_GEOGRAPHIES = {
 #             cache_path=CACHE_FOLDER
 #         )
 #         lsoa.translate(
+#             lad23,
+#             cache_path=CACHE_FOLDER
+#         )
+#         lsoa.translate(
 #             gor,
 #             cache_path=CACHE_FOLDER
 #         )
@@ -288,10 +321,18 @@ KNOWN_GEOGRAPHIES = {
 #             cache_path=CACHE_FOLDER
 #         )
 #         msoa.translate(
+#             lad23,
+#             cache_path=CACHE_FOLDER
+#         )
+#         msoa.translate(
 #             gor,
 #             cache_path=CACHE_FOLDER
 #         )
 #         lad.translate(
+#             gor,
+#             cache_path=CACHE_FOLDER
+#         )
+#         lad23.translate(
 #             gor,
 #             cache_path=CACHE_FOLDER
 #         )
