@@ -34,6 +34,9 @@ Population
 
             ce_output [label="Communal Establishments|Population by CE type, age, gender, \neconomic status, SOC|LSOA"];
 
+            mype_2022 [label="MYPE 2022|Population by age, gender|LSOA"]
+            mype_2023 [label="MYPE 2023|Population by age, gender|LAD"]
+
         node [style=rounded, color=black]
 
             output_p11 [label="Output P1.1|Occupied Households|LSOA"];
@@ -41,13 +44,17 @@ Population
             output_p13 [label="Output P1.3|Average Household Occupancy|LSOA"];
             output_p2 [label="Output P2|Adjusted Number of Dwellings|LSOA"];
             output_p3 [label="Output P3|Households by dwelling type, NS-Sec|LSOA"];
-            output_p4 [label="Output P4|Households by dwelling type, NS-SeC\n#adults, #children, #cars|LSOA"];
+            output_p41 [label="Output P4.1|Households by dwelling type, NS-SeC\n#adults, #children, #cars|LSOA"];
+            output_p42 [label="Output P4.2|Households rebalanced with input datasets|LSOA"];
+            output_p43 [label="Output P4.3|Households rebalanced with indpendent datasets|LSOA"];
             output_p5 [label="Output P5|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars|LSOA"];
             output_p6 [label="Output P6|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars,\nage, gender|LSOA"];
             output_p7 [label="Output P7|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars,\nage, gender, economic status,\nemployment status, SOC|LSOA"];
             output_p8 [label="Output P8|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars,\nage, gender, economic status,\nemployment status, SOC|LSOA"];
-            output_p9 [label="Output P9|Population rebalanced with IPF|LSOA"];
-        
+            output_p9 [label="Output P9|Population rebalanced with input datasets|LSOA"];
+            output_p10 [label="Output P10|Population rebalanced with indpendent datasets|LSOA"];
+            output_p11 [label="Output P11|Population uplifted to 2023 totals|LSOA"];
+
 
         occupied -> output_p11;
         unoccupied -> output_p12;
@@ -62,10 +69,14 @@ Population
 
         table_4 -> output_p3;
         output_p2 -> output_p3;
-        output_p3 -> output_p4;
-        table_2 -> output_p4
+        output_p3 -> output_p41;
+        table_2 -> output_p41
 
-        output_p4 -> output_p5;
+        output_p41 -> output_p42;
+        table_2 -> output_p42;
+        output_p42 -> output_p43
+
+        output_p43 -> output_p5;
         output_p13 -> output_p5
 
         age_gender -> output_p6;
@@ -80,10 +91,16 @@ Population
         ce_pop_econ -> ce_output
         ce_output -> output_p8;
         output_p7 -> output_p8
-        
+
         output_p8 -> output_p9
         age_gender -> output_p9
         table_3 -> output_p9
+
+        output_p9 -> output_p10
+
+        mype_2022 -> output_p11
+        mype_2023 -> output_p11
+        output_p10 -> output_p11
     }
 
 
