@@ -585,6 +585,35 @@ for GOR in constants.GORS:
         dfs=differences
     )
 
+    # --- Step 11 --- #
+    LOGGER.info('--- Step 11 ---')
+
+    # applying IPF (adjusting totals to match P9 outputs)
+    LOGGER.info('Applying IPF for population rebase targets')
+    rebased_pop, summary, differences = data_processing.apply_ipf(
+        seed_data=rebalanced_pop,
+        target_dvectors=list(population_adjustment['rebase_data']),
+        cache_folder=constants.CACHE_FOLDER
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P11_{GOR}',
+        dvector=rebased_pop,
+        dvector_dimension='population',
+        detailed_logs=True
+    )
+    summary.to_csv(
+        OUTPUT_DIR / f'Output P11_{GOR}_VALIDATION.csv',
+        float_format='%.5f', index=False
+    )
+    data_processing.write_to_excel(
+        output_folder=OUTPUT_DIR,
+        file=f'Output P11_{GOR}_VALIDATION.xlsx',
+        dfs=differences
+    )
+
     LOGGER.info(f'*****COMPLETED PROCESSING FOR {GOR}*****')
 
     # clear data at the end of the loop
