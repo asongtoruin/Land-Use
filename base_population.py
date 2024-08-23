@@ -12,7 +12,7 @@ from land_use import logging as lu_logging
 
 
 # load configuration file
-with open(r'scenario_configurations\iteration_5\base_population_config.yml', 'r') as text_file:
+with open(r'scenario_configurations\iteration_5\base_population_simplified_config.yml', 'r') as text_file:
     config = yaml.load(text_file, yaml.SafeLoader)
 
 # Get output directory for intermediate outputs from config file
@@ -23,7 +23,7 @@ OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 generate_summary_outputs = bool(config['output_intermediate_outputs'])
 
 # Set up logger
-LOGGER = lu_logging.configure_logger(output_dir=OUTPUT_DIR, log_name='scotland')
+LOGGER = lu_logging.configure_logger(output_dir=OUTPUT_DIR, log_name='population')
 
 # loop through GORs to save memory issues further down the line
 for GOR in constants.GORS:
@@ -626,7 +626,9 @@ for GOR in constants.GORS:
         ce_pop_by_age_gender_soc_total, ce_soc_splits,
         ce_soc_splits_lsoa, ce_uplift_by_ce, ce_uplift_by_ce_age_gender_econ,
         ce_uplift_by_ce_age_gender_econ_soc, ones,
-        ce_uplift_factor_by_ce_age_gender_econ_soc, adjusted_pop
+        ce_uplift_factor_by_ce_age_gender_econ_soc, adjusted_pop,
+        *population_adjustment['validation_data'],
+        *population_adjustment['rebase_data']
     )
 
 
