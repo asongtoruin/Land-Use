@@ -23,7 +23,7 @@ OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 generate_summary_outputs = bool(config['output_intermediate_outputs'])
 
 # Set up logger
-LOGGER = lu_logging.configure_logger(output_dir=OUTPUT_DIR, log_name='population')
+LOGGER = lu_logging.configure_logger(output_dir=OUTPUT_DIR, log_name='scotland')
 
 # loop through GORs to save memory issues further down the line
 for GOR in constants.GORS:
@@ -524,15 +524,15 @@ for GOR in constants.GORS:
     LOGGER.info('--- Step 9 ---')
 
     # prepare ons_table_3 for ipf targets (drop accom_h segmentation)
-    ons_table_3_target = ons_table_3.aggregate(
-        segs=[seg for seg in ons_table_3.data.index.names if seg != 'accom_h']
+    hh_age_gender_2021_target = hh_age_gender_2021.aggregate(
+        segs=[seg for seg in hh_age_gender_2021.data.index.names if seg != 'accom_h']
     )
 
     # applying IPF (adjusting totals to match P9 outputs)
     LOGGER.info('Applying IPF for internal validation population targets')
     rebalanced_pop, summary, differences = data_processing.apply_ipf(
         seed_data=adjusted_pop,
-        target_dvectors=(hh_age_gender_2021, ons_table_3_target),
+        target_dvectors=[hh_age_gender_2021_target],
         cache_folder=constants.CACHE_FOLDER,
         target_dvector=adjusted_pop
     )
@@ -635,7 +635,7 @@ LOGGER.info('Applying regional profiles to Scotland population data')
 area_type_agg = []
 for gor in config['scotland_donor_regions']:
     LOGGER.debug(f'Re-reading 10 for {gor}')
-    final_pop = DVector.load(OUTPUT_DIR / f'Output P10_{gor}.hdf')
+    final_pop = DVector.load(OUTPUT_DIR / f'Output P11_{gor}.hdf')
     area_type_agg.append(
         final_pop.translate_zoning(constants.TFN_AT_AGG_ZONING_SYSTEM, cache_path=constants.CACHE_FOLDER)
     )
@@ -669,7 +669,7 @@ scotland_hydrated = scotland_hydrated.aggregate(
 
 data_processing.save_output(
     output_folder=OUTPUT_DIR,
-    output_reference=f'Output P10_Scotland',
+    output_reference=f'Output P11_Scotland',
     dvector=scotland_hydrated,
     dvector_dimension='population',
     detailed_logs=True

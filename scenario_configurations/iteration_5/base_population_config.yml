@@ -1,7 +1,7 @@
 # Configuration file specifying the segmentation and geographical level of the input data.
 # All files here are assumed to be in a format ready for DVectors.
 input_root_directory: I:\NorMITs Land Use\2023\import
-output_directory: F:\Working\Land-Use\OUTPUTS_validation testing revamp 2
+output_directory: F:\Working\Land-Use\OUTPUTS_full run
 output_intermediate_outputs: False
 scotland_donor_regions: [NE, NW, YH]
 
@@ -108,9 +108,6 @@ population_adjustment_data:
         - file_path: ONS-validation\preprocessing\population_age11_gender_economicstatus_region_age-econ-aggregated.hdf
           geographical_level: RGN2021
           input_segments: [age_9, g, economic_status]
-        - file_path: ONS-validation\preprocessing\population_age11_gender_MSOA_age-aggregated.hdf
-          geographical_level: MSOA2021
-          input_segments: [age_9, g]
         - file_path: ONS-validation\preprocessing\population_adults_children_status_region_adults-children-aggregated.hdf
           geographical_level: RGN2021
           input_segments: [adults, children, economic_status]
