@@ -204,23 +204,9 @@ ons_sic_soc_jobs_lsoa = ons_sic_soc_jobs_lu.translate_zoning(
     check_totals=False
 )
 
-# write to file and then read back in as had issues passing straight through to apply_prop
-
-from caf.core.data_structures import DVector
-ons_sic_soc_jobs_lsoa.save(Path("ons_sic_soc_jobs_lsoa.hdf"))
-lsoa_2021_1_digit_sic.save(Path("lsoa_2021_1_digit_sic.hdf"))
-
-data_dir = Path(r"C:\OneDrive\OneDrive - AECOM\Desktop\TfN")
-ons_sic_soc_jobs_lsoa_path = Path(data_dir / "ons_sic_soc_jobs_lsoa.hdf")
-ons_sic_soc_jobs_lsoa = DVector.load(ons_sic_soc_jobs_lsoa_path)
-
-lsoa_2021_1_digit_sic_path = Path(data_dir / "lsoa_2021_1_digit_sic.hdf")
-lsoa_2021_1_digit_sic = DVector.load(lsoa_2021_1_digit_sic_path)
-
 jobs_by_lsoa_with_soc_group = data_processing.apply_proportions(
     ons_sic_soc_jobs_lsoa, lsoa_2021_1_digit_sic
 )
-
 
 # Note a warning is generated here about combinations with SOC as 4. We can ignore it.
 LOGGER.info(f'Applying SOC group proportions to BRES 1-digit SIC jobs')
@@ -237,18 +223,12 @@ lsoa_2021_2_digit_sic_1_splits = msoa_2011_2_digit_sic_1_digit_sic_splits.transl
         check_totals=False
 )
 
-# write then read back in to avoid issue
-lsoa_2021_2_digit_sic_1_splits.save(Path("lsoa_2021_2_digit_sic_1_splits.hdf"))
-lsoa_2021_2_digit_sic_1_splits = DVector.load(Path("lsoa_2021_2_digit_sic_1_splits.hdf"))
-
-
 # Note a warning is generated here about combinations with SOC as 4. We can ignore it.
 LOGGER.info(f'Applying SOC group proportions to BRES 2-digit SIC jobs')
 jobs_by_sic_soc_lsoa_no_soc_4 = data_processing.apply_proportions(
     source_dvector=lsoa_2021_2_digit_sic_1_splits,
     apply_to=jobs_by_lsoa_with_soc_group
 )
-
 
 totals = jobs_by_sic_soc_lsoa_no_soc_4.add_segments(
     [constants.CUSTOM_SEGMENTS['total']]).aggregate(['total'])
