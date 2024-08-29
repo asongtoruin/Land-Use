@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from caf.core.segments import SegmentsSuper
+
 import land_use.preprocessing as pp
 from land_use.constants import geographies, segments
 import pandas as pd
@@ -35,7 +37,7 @@ def lad_4_digit():
         file_path=file_path, header_string=header_string, encoding="Latin-1"
     )
 
-    segmentation = segments._CUSTOM_SEGMENT_CATEGORIES[seg_name]
+    segmentation = SegmentsSuper(seg_name).get_segment().values
 
     lad_lu = fetch_lad_lu(zoning=zoning)
 
@@ -86,7 +88,7 @@ def msoa_2_digit():
         file_path=file_path, header_string=header_string, low_memory=False
     )
 
-    segmentation = segments._CUSTOM_SEGMENT_CATEGORIES[seg_name]
+    segmentation = SegmentsSuper(seg_name).get_segment().values
 
     df_wide = pp.reformat_xsoa_sic_digits_to_dvector(
         df=df,
@@ -143,7 +145,7 @@ def lsoa_1_digit():
         file_path=file_path, header_string=header_string, low_memory=False
     )
 
-    segmentation = segments._CUSTOM_SEGMENT_CATEGORIES[seg_name]
+    segmentation = SegmentsSuper(seg_name).get_segment().values
 
     df_wide = pp.reformat_xsoa_sic_digits_to_dvector(
         df=df,
