@@ -23,6 +23,7 @@ def main():
     lsoa_1_digit()
     find_sic_soc_splits_by_region()
     wfj_2023()
+    soc_4_factors()
 
 
 def lad_4_digit():
@@ -208,6 +209,42 @@ def wfj_2023():
     )
 
     pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
+
+
+def soc_4_factors():
+    soc_4_path = INPUT_DIR / "SOC" / "Table 8 WFJ-adjusted Land Use SOC4.csv"
+
+    soc_4 = pd.read_csv(soc_4_path, usecols=["Regions", "WFJ-adjusted SOC 4%"])
+
+    soc_4 = soc_4.rename(columns={"WFJ-adjusted SOC 4%": "soc_4_perc"})
+
+    soc_4["soc_4_perc"] = soc_4["soc_4_perc"].str.replace("%", "").astype(float)
+
+    soc_4["soc_4_factor"] = soc_4["soc_4_perc"] / (100 - soc_4["soc_4_perc"])
+
+    soc_4["total"] = 1
+
+    # update reference to match lu
+    soc_4["Regions"] = soc_4["Regions"].str.replace(
+        "Yorkshire and the Humber", "Yorkshire and The Humber"
+    )
+
+    # attach codes for the regions
+    gor_lu_file_path = (
+        INPUT_DIR / "ONS" / "Correspondence_lists" / "gor_ew_code_to_labels.csv"
+    )
+    gor_lu = pd.read_csv(gor_lu_file_path, usecols=["RGN21CD", "RGN21NM"])
+    gor_lu = gor_lu.rename(columns={"RGN21NM": "Regions"})
+
+    df_with_codes = pd.merge(soc_4, gor_lu, how="left", on=["Regions"])
+    df_with_codes = df_with_codes.dropna(subset=["RGN21CD"])
+
+    df_wide = df_with_codes.pivot(
+        index=["total"], columns=["RGN21CD"], values="soc_4_factor"
+    )
+
+    pp.save_preprocessed_hdf(source_file_path=soc_4_path, df=df_wide)
+
 
 if __name__ == "__main__":
     main()
