@@ -269,15 +269,18 @@ soc_4_factors_lsoa.data = soc_4_factors_lsoa.data / len(test_lsoa.data)
 
 #### workaround end ##################################################################
 
-temp = soc_4_factors_lsoa.add_segments(["sic_2_digit", "soc", "sic_1_digit"])
-temp2 = temp.aggregate(["sic_2_digit", "soc", "sic_1_digit"])
-temp3 = temp2.filter_segment_value("sic_2_digit", -1)
+# sort out the segmentations to match the full dataset
+soc_4_factors_lsoa = (
+    soc_4_factors_lsoa
+    .add_segments(["sic_2_digit", "soc", "sic_1_digit"])
+    .aggregate(["sic_2_digit", "soc", "sic_1_digit"])
+    .filter_segment_value("sic_2_digit", -1)
+    )
 
-
-soc_4_row = soc_1_3_totals * temp3
+# apply factors to soc 1-3 totals to give the number of soc_4 people by lsoa
+soc_4_row = soc_1_3_totals * soc_4_factors_lsoa
 
 jobs_by_sic_soc_lsoa = jobs_by_sic_soc_lsoa_no_soc_4.concat(soc_4_row)
-
 
 # save output to hdf and csvs for checking
 data_processing.save_output(
