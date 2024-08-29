@@ -36,3 +36,8 @@ base_data:
         file_path: BRES2022\Employment\Employment Investigation\preprocessing\WFJ.hdf
         geographical_level: RGN2021
         input_segments: [total]
+
+    soc_4_factors:
+        file_path: SOC\preprocessing\Table 8 WFJ-adjusted Land Use SOC4.hdf
+        geographical_level: RGN2021
+        input_segments: [total]
