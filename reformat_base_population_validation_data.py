@@ -32,10 +32,7 @@ df = pp.read_ons(
     file_path=file_path,
     zoning=geographies.LSOA_NAME,
     zoning_column='Lower layer Super Output Areas Code',
-    segment_mappings=pp.ONS_POP_ECON_MAPPING,
-    segment_aggregations={
-        'Economic activity status (7 categories)': pp.ECON_6_TO_4_AGGREGATIONS
-    }
+    segment_mappings=pp.ONS_ECON_STATUS_MAPPING,
 )
 pp.save_preprocessed_hdf(
     source_file_path=file_path,
@@ -204,11 +201,10 @@ df = pp.read_ons(
     segment_mappings={
         **pp.ONS_AGE_11_MAPPING,
         **pp.ONS_SEX_MAPPING,
-        **pp.ONS_POP_ECON_MAPPING
+        **pp.ONS_ECON_STATUS_MAPPING
     },
     segment_aggregations={
-        'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS,
-        'Economic activity status (7 categories)': pp.ECON_6_TO_4_AGGREGATIONS
+        'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS
     }
 )
 pp.save_preprocessed_hdf(
@@ -227,11 +223,10 @@ df = pp.read_ons(
     segment_mappings={
         **pp.ONS_AGE_11_MAPPING,
         **pp.ONS_SEX_MAPPING,
-        **pp.ONS_POP_ECON_MAPPING
+        **pp.ONS_ECON_STATUS_MAPPING
     },
     segment_aggregations={
-        'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS,
-        'Economic activity status (7 categories)': pp.ECON_6_TO_4_AGGREGATIONS
+        'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS
     }
 )
 pp.save_preprocessed_hdf(
@@ -271,6 +266,110 @@ df = pp.read_ons(
     segment_mappings={
         **pp.ONS_AGE_11_MAPPING,
         **pp.ONS_SEX_MAPPING
+    },
+    segment_aggregations={
+        'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS
+    }
+)
+pp.save_preprocessed_hdf(
+    source_file_path=file_path,
+    df=df,
+    multiple_output_ref='age-aggregated'
+)
+
+# *** population by number of adults in household, number of children in
+# household, economic status, and region
+file_path = data_path / 'population_adults_children_status_region.csv'
+# read in data and reformat for DVector
+df = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.RGN_NAME,
+    zoning_column='Regions Code',
+    segment_mappings={
+        **pp.ONS_ADULT_MAPPING,
+        **pp.ONS_CHILDREN_MAPPING,
+        **pp.ONS_ECON_STATUS_MAPPING
+    },
+    segment_aggregations={
+        'Adults and children in household (11 categories)':
+            pp.ONS_CHILDREN_AGGREGATIONS,
+        'Adults and children in household (11 categories) Code':
+            pp.ONS_ADULT_AGGREGATIONS
+    }
+)
+pp.save_preprocessed_hdf(
+    source_file_path=file_path,
+    df=df,
+    multiple_output_ref='adults-children-aggregated'
+)
+
+# *** population by number of adults in household, number of children in
+# household, soc, and LAD
+file_path = data_path / 'population_adults_children_occupation_lad.csv'
+# read in data and reformat for DVector
+df = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.LAD_NAME,
+    zoning_column='Lower tier local authorities Code',
+    segment_mappings={
+        **pp.ONS_ADULT_MAPPING,
+        **pp.ONS_CHILDREN_MAPPING,
+        **pp.ONS_OCC_MAPPING
+    },
+    segment_aggregations={
+        'Adults and children in household (11 categories)':
+            pp.ONS_CHILDREN_AGGREGATIONS,
+        'Adults and children in household (11 categories) Code':
+            pp.ONS_ADULT_AGGREGATIONS,
+        'Occupation (current) (10 categories)': pp.SOC_10_TO_4_AGGREGATIONS
+    }
+)
+pp.save_preprocessed_hdf(
+    source_file_path=file_path,
+    df=df,
+    multiple_output_ref='adults-children-soc-aggregated'
+)
+
+# *** population by number of adults in household, number of children in
+# household, age, gender, and MSOA
+file_path = data_path / 'population_adults_children_age_gender_MSOA.csv'
+# read in data and reformat for DVector
+df = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.MSOA_NAME,
+    zoning_column='Middle layer Super Output Areas Code',
+    segment_mappings={
+        **pp.ONS_ADULT_MAPPING,
+        **pp.ONS_CHILDREN_MAPPING,
+        **pp.ONS_AGE_11_MAPPING,
+        **pp.ONS_SEX_MAPPING
+    },
+    segment_aggregations={
+        'Adults and children in household (11 categories)':
+            pp.ONS_CHILDREN_AGGREGATIONS,
+        'Adults and children in household (11 categories) Code':
+            pp.ONS_ADULT_AGGREGATIONS,
+        'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS
+    }
+)
+pp.save_preprocessed_hdf(
+    source_file_path=file_path,
+    df=df,
+    multiple_output_ref='adults-children-age-aggregated'
+)
+
+# *** population by number of adults in household, number of children in
+# household, age, gender, and MSOA
+file_path = data_path / 'population_age_gender_car_msoa.csv'
+# read in data and reformat for DVector
+df = pp.read_ons(
+    file_path=file_path,
+    zoning=geographies.MSOA_NAME,
+    zoning_column='Middle layer Super Output Areas Code',
+    segment_mappings={
+        **pp.ONS_AGE_11_MAPPING,
+        **pp.ONS_SEX_MAPPING,
+        **pp.ONS_CAR_MAPPING
     },
     segment_aggregations={
         'Age (11 categories)': pp.AGE_11_TO_9_AGGREGATIONS

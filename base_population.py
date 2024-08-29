@@ -3,7 +3,6 @@ from pathlib import Path
 
 import yaml
 from caf.core import DVector
-from caf.core.data_structures import IpfTarget
 from caf.core.segments import SegmentsSuper
 from caf.core.zoning import TranslationWeighting
 import numpy as np
@@ -13,7 +12,7 @@ from land_use import logging as lu_logging
 
 
 # load configuration file
-with open(r'scenario_configurations\iteration_5\base_population_config.yml', 'r') as text_file:
+with open(r'scenario_configurations\iteration_5\base_population_simplified_config.yml', 'r') as text_file:
     config = yaml.load(text_file, yaml.SafeLoader)
 
 # Get output directory for intermediate outputs from config file
@@ -119,7 +118,7 @@ for GOR in constants.GORS:
         )
         household_validation[key] = df
 
-    # read in the household validation data from the config file
+    # read in the population adjustment data from the config file
     block = 'population_adjustment_data'
     LOGGER.info(f'Importing population adjustment data from config file ({block} block)')
     population_adjustment = {}
@@ -244,12 +243,65 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Output P4_{GOR}',
+        output_reference=f'Output P4.1_{GOR}',
         dvector=hh_by_nssec_hc_ha_car,
         dvector_dimension='households'
     )
 
-    # TODO IPF with 3 4 5 6 10 12-newfrommatteo
+    # prepare ons_table_2 for ipf targets (drop accom_h segmentation)
+    ons_table_2_target = ons_table_2.aggregate(
+        segs=[seg for seg in ons_table_2.data.index.names if seg != 'accom_h']
+    )
+
+    # applying IPF
+    LOGGER.info('Applying IPF for internal validation household targets')
+    internal_rebalanced_hh, summary, differences = data_processing.apply_ipf(
+        seed_data=hh_by_nssec_hc_ha_car,
+        target_dvectors=[ons_table_2_target],
+        cache_folder=constants.CACHE_FOLDER
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P4.2_{GOR}',
+        dvector=internal_rebalanced_hh,
+        dvector_dimension='households'
+    )
+    summary.to_csv(
+        OUTPUT_DIR / f'Output P4.2_{GOR}_VALIDATION.csv',
+        float_format='%.5f', index=False
+    )
+    data_processing.write_to_excel(
+        output_folder=OUTPUT_DIR,
+        file=f'Output P4.2_{GOR}_VALIDATION.xlsx',
+        dfs=differences
+    )
+
+    # applying IPF
+    LOGGER.info('Applying IPF for independent household targets')
+    rebalanced_hh, summary, differences = data_processing.apply_ipf(
+        seed_data=internal_rebalanced_hh,
+        target_dvectors=list(household_validation.values()),
+        cache_folder=constants.CACHE_FOLDER
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P4.3_{GOR}',
+        dvector=rebalanced_hh,
+        dvector_dimension='households'
+    )
+    summary.to_csv(
+        OUTPUT_DIR / f'Output P4.3_{GOR}_VALIDATION.csv',
+        float_format='%.5f', index=False
+    )
+    data_processing.write_to_excel(
+        output_folder=OUTPUT_DIR,
+        file=f'Output P4.3_{GOR}_VALIDATION.xlsx',
+        dfs=differences
+    )
 
     # --- Step 5 --- #
     LOGGER.info('--- Step 5 ---')
@@ -258,7 +310,7 @@ for GOR in constants.GORS:
     # car availability, number of adults and number of children
     # TODO Do we want to do this in a "smarter" way? The occupancy of 1 adult households (for example) should not be more than 1
     # TODO and households with 2+ children should be more than 3 - is this a place for IPF?
-    pop_by_nssec_hc_ha_car = hh_by_nssec_hc_ha_car * average_occupancy
+    pop_by_nssec_hc_ha_car = rebalanced_hh * average_occupancy
 
     # calculate expected population based in the addressbase "occupied" dwellings
     addressbase_population = adjusted_addressbase_dwellings * average_occupancy
@@ -280,7 +332,8 @@ for GOR in constants.GORS:
 
     # --- Step 6 --- #
     LOGGER.info('--- Step 6 ---')
-    LOGGER.info(f'Converting household age and gender figures to LSOA level (only to be used in proportions, totals will be wrong)')
+    LOGGER.info(f'Converting household age and gender figures to LSOA level '
+                f'(only to be used in proportions, totals will be wrong)')
     # convert to LSOA
     hh_age_gender_2021_lsoa = hh_age_gender_2021.translate_zoning(
         new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
@@ -311,7 +364,8 @@ for GOR in constants.GORS:
 
     # --- Step 7 --- #
     LOGGER.info('--- Step 7 ---')
-    LOGGER.info('Converting ONS Table 3 to LSOA level (only to be used in proportions, totals will be wrong)')
+    LOGGER.info('Converting ONS Table 3 to LSOA level '
+                '(only to be used in proportions, totals will be wrong)')
     # convert the factors back to LSOA
     ons_table_3_lsoa = ons_table_3.translate_zoning(
         new_zoning=constants.KNOWN_GEOGRAPHIES.get(f'LSOA2021-{GOR}'),
@@ -325,7 +379,8 @@ for GOR in constants.GORS:
     # tmp = soc_splits_lsoa_age.aggregate(segs=['accom_h', 'age_9', 'ns_sec'])
 
     # apply the splits at LSOA level to main population table
-    LOGGER.info('Applying economic status, employment status, and SOC category splits to population')
+    LOGGER.info('Applying economic status, employment status, and SOC category '
+                'splits to population')
     pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc = data_processing.apply_proportions(
         ons_table_3_lsoa, pop_by_nssec_hc_ha_car_gender_age
     )
@@ -425,7 +480,8 @@ for GOR in constants.GORS:
     ones = ce_uplift_by_ce_age_gender_econ_soc.copy()
     ones.data.loc[:] = 1
 
-    LOGGER.info('Calculating zonal adjustment factors by CE type, age, gender, economic status, and SOC')
+    LOGGER.info('Calculating zonal adjustment factors by CE type, age, gender, '
+                'economic status, and SOC')
     # calculate adjustment factors by ce type, age, gender, economic status, and SOC
     ce_uplift_factor_by_ce_age_gender_econ_soc = ce_uplift_by_ce_age_gender_econ_soc + ones
     # TODO some level of output is needed here? Confirm with Matteo
@@ -466,19 +522,20 @@ for GOR in constants.GORS:
 
     # --- Step 9 --- #
     LOGGER.info('--- Step 9 ---')
-    LOGGER.info(f'Applying IPF to rebalance values')
 
-    # Adjust totals to match P8 outputs
-    # todo more sensible way of doing this?
-    hh_age_gender_2021.data = hh_age_gender_2021.data * (adjusted_pop.total / hh_age_gender_2021.total)
-    ons_table_3.data = ons_table_3.data * (adjusted_pop.total / ons_table_3.total)
-
-    rebalanced_pop, rmse = adjusted_pop.ipf(
-        targets=[IpfTarget(dvec) for dvec in (hh_age_gender_2021, ons_table_3)],
-        zone_trans_cache=constants.CACHE_FOLDER
+    # prepare ons_table_3 for ipf targets (drop accom_h segmentation)
+    hh_age_gender_2021_target = hh_age_gender_2021.aggregate(
+        segs=[seg for seg in hh_age_gender_2021.data.index.names if seg != 'accom_h']
     )
 
-    LOGGER.info(f'IPF finished with RMSE {rmse}')
+    # applying IPF (adjusting totals to match P9 outputs)
+    LOGGER.info('Applying IPF for internal validation population targets')
+    rebalanced_pop, summary, differences = data_processing.apply_ipf(
+        seed_data=adjusted_pop,
+        target_dvectors=[hh_age_gender_2021_target],
+        cache_folder=constants.CACHE_FOLDER,
+        target_dvector=adjusted_pop
+    )
 
     # save output to hdf and csvs for checking
     data_processing.save_output(
@@ -487,6 +544,74 @@ for GOR in constants.GORS:
         dvector=rebalanced_pop,
         dvector_dimension='population',
         detailed_logs=True
+    )
+    summary.to_csv(
+        OUTPUT_DIR / f'Output P9_{GOR}_VALIDATION.csv',
+        float_format='%.5f', index=False
+    )
+    data_processing.write_to_excel(
+        output_folder=OUTPUT_DIR,
+        file=f'Output P9_{GOR}_VALIDATION.xlsx',
+        dfs=differences
+    )
+
+    # --- Step 10 --- #
+    LOGGER.info('--- Step 10 ---')
+
+    # applying IPF (adjusting totals to match P9 outputs)
+    LOGGER.info('Applying IPF for independent population targets')
+    ipfed_pop, summary, differences = data_processing.apply_ipf(
+        seed_data=rebalanced_pop,
+        target_dvectors=list(population_adjustment['validation_data']),
+        cache_folder=constants.CACHE_FOLDER,
+        target_dvector=rebalanced_pop
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P10_{GOR}',
+        dvector=ipfed_pop,
+        dvector_dimension='population',
+        detailed_logs=True
+    )
+    summary.to_csv(
+        OUTPUT_DIR / f'Output P10_{GOR}_VALIDATION.csv',
+        float_format='%.5f', index=False
+    )
+    data_processing.write_to_excel(
+        output_folder=OUTPUT_DIR,
+        file=f'Output P10_{GOR}_VALIDATION.xlsx',
+        dfs=differences
+    )
+
+    # --- Step 11 --- #
+    LOGGER.info('--- Step 11 ---')
+
+    # applying IPF (adjusting totals to match P9 outputs)
+    LOGGER.info('Applying IPF for population rebase targets')
+    rebased_pop, summary, differences = data_processing.apply_ipf(
+        seed_data=rebalanced_pop,
+        target_dvectors=list(population_adjustment['rebase_data']),
+        cache_folder=constants.CACHE_FOLDER
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P11_{GOR}',
+        dvector=rebased_pop,
+        dvector_dimension='population',
+        detailed_logs=True
+    )
+    summary.to_csv(
+        OUTPUT_DIR / f'Output P11_{GOR}_VALIDATION.csv',
+        float_format='%.5f', index=False
+    )
+    data_processing.write_to_excel(
+        output_folder=OUTPUT_DIR,
+        file=f'Output P11_{GOR}_VALIDATION.xlsx',
+        dfs=differences
     )
 
     LOGGER.info(f'*****COMPLETED PROCESSING FOR {GOR}*****')
@@ -501,7 +626,9 @@ for GOR in constants.GORS:
         ce_pop_by_age_gender_soc_total, ce_soc_splits,
         ce_soc_splits_lsoa, ce_uplift_by_ce, ce_uplift_by_ce_age_gender_econ,
         ce_uplift_by_ce_age_gender_econ_soc, ones,
-        ce_uplift_factor_by_ce_age_gender_econ_soc, adjusted_pop
+        ce_uplift_factor_by_ce_age_gender_econ_soc, adjusted_pop,
+        *population_adjustment['validation_data'],
+        *population_adjustment['rebase_data']
     )
 
 
@@ -509,8 +636,8 @@ for GOR in constants.GORS:
 LOGGER.info('Applying regional profiles to Scotland population data')
 area_type_agg = []
 for gor in config['scotland_donor_regions']:
-    LOGGER.debug(f'Re-reading P9 for {gor}')
-    final_pop = DVector.load(OUTPUT_DIR / f'Output P9_{gor}.hdf')
+    LOGGER.debug(f'Re-reading 10 for {gor}')
+    final_pop = DVector.load(OUTPUT_DIR / f'Output P11_{gor}.hdf')
     area_type_agg.append(
         final_pop.translate_zoning(constants.TFN_AT_AGG_ZONING_SYSTEM, cache_path=constants.CACHE_FOLDER)
     )
@@ -529,6 +656,7 @@ england_totals_scotland_zoning = england_totals.translate_zoning(
 # Read in the Scotland data, and then apply proportions
 scotland_population = data_processing.read_dvector_from_config(
     config=config,
+    data_block='base_data',
     key='scotland_population'
 )
 
@@ -543,7 +671,7 @@ scotland_hydrated = scotland_hydrated.aggregate(
 
 data_processing.save_output(
     output_folder=OUTPUT_DIR,
-    output_reference=f'Output P9_Scotland',
+    output_reference=f'Output P11_Scotland',
     dvector=scotland_hydrated,
     dvector_dimension='population',
     detailed_logs=True

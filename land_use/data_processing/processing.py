@@ -3,10 +3,10 @@ from pathlib import Path
 import warnings
 import psutil
 from warnings import warn
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional
 from functools import reduce
 
-from caf.core.data_structures import DVector
+from caf.core.data_structures import DVector, IpfTarget
 from caf.core.zoning import ZoningSystem, TranslationWeighting, TranslationWarning
 from caf.core.segmentation import Segmentation, SegmentationInput, Segment, SegmentsSuper
 import pandas as pd
@@ -518,8 +518,9 @@ def aggregate_and_compare(
         first_dvector: DVector, 
         second_dvector: DVector, 
         strict: bool = False,
-        cache_path: Path = CACHE_FOLDER
-    ) -> DVector:
+        cache_path: Path = CACHE_FOLDER,
+        return_absolutes: bool = False
+    ) -> Union[DVector, tuple[DVector, DVector]]:
     """Aggregates and compares two DVector files
 
     The two must have compatible segmentation (i.e. one a complete subset of 
@@ -538,6 +539,9 @@ def aggregate_and_compare(
         if True, the segmentation of one DVector is entirely contained within 
         the segmentation of the other. If False, use the intersection of the 
         segmentation of the two DVectors. By default, False.
+    return_absolutes : bool, default False
+        if True, both the actual DVectors are returned, instead of just a
+        DVector of differences
 
     Returns
     -------
@@ -593,7 +597,10 @@ def aggregate_and_compare(
                 raise ValueError(incompatibility_message)
         else:
             raise ValueError(incompatibility_message)
-    
+
+    if return_absolutes:
+        return working_first_dvector, working_second_dvector
+
     # Step 4: do the difference calc
     return working_first_dvector - working_second_dvector
 
@@ -632,3 +639,218 @@ def apply_proportions(source_dvector: DVector, apply_to: DVector) -> DVector:
 
     return result
 
+
+def match_target_total(
+        list_of_dvectors: list[DVector]
+) -> list[DVector]:
+    """
+
+    Parameters
+    ----------
+    list_of_dvectors: list[DVector]
+        List of DVectors to match totals of. By definition, the first DVector in
+        the list will provide the target total.
+
+        If *you do not want the first DVector to be the target total, then
+        reorder your list*.
+
+    Returns
+    -------
+     list[DVector]
+        List of DVectors, all with the same total based on the first DVector in
+        the list. Order of the list is the same as list_of_dvectors.
+    """
+    if len(list_of_dvectors) < 2:
+        LOGGER.warning(f'You have passed a list of length '
+                       f'{len(list_of_dvectors)} to match_target_total. If '
+                       f'{len(list_of_dvectors)} == 0 then there is nothing to '
+                       f'target, and if {len(list_of_dvectors)} == 1 there is '
+                       f'nothing to match to this target. Please check this is '
+                       f'what you were expecting.')
+        LOGGER.warning(f'This function call will now be skipped because it '
+                       f'wont do anything useful!')
+        return list_of_dvectors
+
+    # run function if the number of DVectors provided is at least 2
+    LOGGER.info(f'Matching the target totals between {len(list_of_dvectors)} '
+                f'DVectors')
+
+    # get the first DVector from the list and get the total, and report
+    target_dvector = list_of_dvectors[0]
+    LOGGER.info(f'Total of the target DVector is {target_dvector.total:,.0f}')
+
+    # create an output list to return
+    output = [target_dvector]
+
+    LOGGER.info(f'Adjusting remaining DVectors to the target')
+    # loop through remaining DVectors and adjust / report adjustment factors
+    for dvector in list_of_dvectors[1:]:
+        # calculate total of dvector and report - this should be checked to see
+        # if the totals are very different!
+        LOGGER.debug(f'Total of the DVector is {dvector.total:,.0f}')
+
+        # calculate the adjustment factor required based on the target
+        adjustment_factor = target_dvector.total / dvector.total
+        LOGGER.debug(f'Adjustment factor to be applied is '
+                    f'{adjustment_factor:,.5f}')
+
+        # apply the adjustment and append to the list of output DVectors
+        adjusted_dvector = dvector * adjustment_factor
+        output.append(adjusted_dvector)
+
+    return output
+
+
+def apply_ipf(
+        seed_data: DVector,
+        target_dvectors: Union[list, tuple],
+        cache_folder: Path,
+        target_dvector: Optional[DVector] = None
+) -> tuple[DVector, pd.DataFrame, list]:
+    """Apply the IPF to furness the seed_data to the multiple constraints of
+    the target_dvectors.
+
+    target_dvectors will be first processed to make sure the totals of the
+    target_dvectors all match; this is a requirement for the IPF to function
+    properly. By definition, the first element of the list target_dvectors will
+    be used to define this target total.
+
+    Parameters
+    ----------
+    seed_data: DVector
+        DVector with dvector.data you wish to furness to the target_dvector
+        targets.
+    target_dvectors: list
+        A list of dvectors you want to use as targets in the furnessing. These
+        can be in various zone systems / segmentations, as long as translations
+        between the zone systems / segmentations exist. See IpfTarget
+        documentation for clarity.
+    cache_folder: Path
+        Folder containing any zone systems and zone translations
+    target_dvector: Optional[DVector], default None
+        Provide target_dvector if there is a separate DVector from
+        target_dvectors that you want to match the totals of. If None, then by
+        default the first element of target_dvectors will be used, otherwise
+        this will be used.
+
+    Returns
+    -------
+    tuple[DVector, pd.DataFrame, list]
+        DVector: The post-IPF seed_data which has been adjusted based on the
+        provided targets.
+        pd.DataFrame: A summary of the differences between the post-IPF data
+        and the input targets. This is a validation that any observed
+        relationships in the input targets are maintained through the IPF.
+        list: A summary of the differences in the post-ipf and target proportions
+        by zone.
+
+    """
+    LOGGER.info('Preparing data for the IPF')
+    # make sure target totals match before calling IPF
+    if target_dvector is None:
+        list_of_dvectors = match_target_total(
+            list_of_dvectors=list(target_dvectors)
+        )
+    else:
+        all_dvectors = match_target_total(
+            list_of_dvectors=[target_dvector] + list(target_dvectors)
+        )
+        list_of_dvectors = all_dvectors[1:]
+
+    LOGGER.info('Applying the IPF')
+    rebalanced_data, rmse = seed_data.ipf(
+        targets=[IpfTarget(dvec) for dvec in list_of_dvectors],
+        zone_trans_cache=cache_folder
+    )
+
+    LOGGER.info(f'IPF finished with RMSE {rmse:,.2f}')
+
+    # run validation of IPF
+    summary = []
+    differences = []
+    for dvec in list_of_dvectors:
+        # get the post-IPF DVector in the same segmentation as the target data
+        result = collapse_segmentation_to_match(
+            dvector=rebalanced_data,
+            match_to=dvec
+        )
+
+        # find the largest zone system and aggregate if they are not the same
+        # and calculate absolute difference from the target dvector
+        difference_from_target = aggregate_and_compare(
+            first_dvector=result,
+            second_dvector=dvec
+        )
+        zone_cols = list(difference_from_target.data.columns)
+        ipfed, target = aggregate_and_compare(
+            first_dvector=result,
+            second_dvector=dvec,
+            return_absolutes=True
+        )
+
+        # get post-ipf and target totals across all zones
+        ipfed = ipfed.data.copy()
+        target = target.data.copy()
+        ipfed['post_ipf_total'] = ipfed.sum(axis=1)
+        target['input_target_total'] = target.sum(axis=1)
+
+        # calculate total, min, max, average error
+        df = difference_from_target.data.copy()
+        df = pd.merge(
+            df, target[['input_target_total']],
+            left_index=True, right_index=True
+        )
+        df = pd.merge(
+            df, ipfed[['post_ipf_total']],
+            left_index=True, right_index=True
+        )
+        df['total_error'] = df[zone_cols].sum(axis=1)
+        df['average_error'] = df[zone_cols].mean(axis=1)
+        df['max_error'] = df[zone_cols].max(axis=1)
+        df['min_error'] = df[zone_cols].min(axis=1)
+        df['zoning'] = difference_from_target.zoning_system.name
+        df['description'] = str(df.index.names)
+        df['segmentation'] = df.index
+        cols = [
+            'segmentation', 'description', 'zoning', 'input_target_total',
+            'post_ipf_total', 'total_error', 'average_error', 'max_error',
+            'min_error'
+        ]
+        summary.append(df[cols])
+
+        # get distribution of population across zones within each segment for
+        # both the post-ipf data and the target data
+        ipf_pivot = ipfed.reset_index().melt(
+            id_vars=ipfed.index.names,
+            value_vars=zone_cols,
+            var_name=difference_from_target.zoning_system.name,
+            value_name='ipf_total'
+        )
+        target_pivot = target.reset_index().melt(
+            id_vars=target.index.names,
+            value_vars=zone_cols,
+            var_name=difference_from_target.zoning_system.name,
+            value_name='target_total'
+        )
+        merging_cols = (
+                target.index.names + [difference_from_target.zoning_system.name]
+        )
+        comparison = pd.merge(
+            target_pivot, ipf_pivot, on=merging_cols, how='left'
+        )
+        comparison['target_distribution'] = (
+            comparison['target_total'] / comparison.groupby(
+                difference_from_target.zoning_system.name
+            )['target_total'].transform('sum')
+        )
+        comparison['ipf_distribution'] = (
+            comparison['ipf_total'] / comparison.groupby(
+                difference_from_target.zoning_system.name
+            )['ipf_total'].transform('sum')
+        )
+        comparison['pp_from_target'] = (
+                comparison['ipf_distribution'] - comparison['target_distribution']
+        )
+        differences.append(comparison)
+
+    return rebalanced_data, pd.concat(summary), differences
