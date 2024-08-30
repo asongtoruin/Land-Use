@@ -3,7 +3,7 @@ from os import PathLike
 from pathlib import Path
 
 from caf.core.zoning import ZoningSystem, ZoningSystemMetaData
-# import geopandas as gpd
+import geopandas as gpd
 import pandas as pd
 
 LOGGER = logging.getLogger(__name__)
@@ -73,6 +73,68 @@ def generate_zoning_system(
     zs.save(CACHE_FOLDER)
 
     return zs
+
+
+def combine_zoning_systems(
+        *zoning_systems: ZoningSystem,
+) -> ZoningSystem:
+    """Combines several ZoningSystem objects into a unified one.
+
+    Naming of the new ZoningSystem is detemined by adding a + between a *sorted*
+    list of the individual ZoningSystem names, e.g. if we have "zones_b" and
+    "zones_a" as input names, the combined system has the name "zones_a+zones_b"."""
+
+    # Figure out the unified name for the zoning systems, and try to read
+    combined_name = '+'.join(sorted(zs.name for zs in zoning_systems))
+
+    try:
+        LOGGER.info(
+            f'Reading ZoningSystem for {combined_name} from cache'
+        )
+        zs = ZoningSystem.get_zoning(combined_name, search_dir=CACHE_FOLDER)
+        # TODO: could we put some checks on this to ensure no parameters have changed?
+        return zs
+
+    except FileNotFoundError:
+        LOGGER.info(
+            f'Could not find "{combined_name}" in zone system cache folder '
+            f'({CACHE_FOLDER.absolute()}), attempting to combine'
+        )
+
+    all_spatial_reps = []
+
+    # Read in all the spatial representation, get just the identifier and the shape itself
+    for zs in zoning_systems:
+        spatial_zones = gpd.read_file(zs.metadata.shapefile_path)
+        id_col = zs.metadata.shapefile_id_col
+        spatial_zones = spatial_zones[[id_col, 'geometry']].rename(columns={id_col: 'zone_id'})
+
+        all_spatial_reps.append(spatial_zones)
+
+    # Simply combine into one large GeoDataFrame.
+    # TODO: this assumes consistent CRS, might be worth ensuring that
+    combined_spatial = gpd.GeoDataFrame(pd.concat(all_spatial_reps))
+
+    # Combine all of the information (ids and descriptions), reset index so Zone IDs are actually present!
+    combined_info = pd.concat(zs._zones for zs in zoning_systems).reset_index()
+
+    output_dir = CACHE_FOLDER / combined_name
+    output_dir.mkdir(exist_ok=False)
+    output_path = output_dir / 'Combined Zones.shp'
+    combined_spatial.to_file(output_path)
+
+    meta = ZoningSystemMetaData(
+        name=combined_name, shapefile_id_col='zone_id',
+        shapefile_path=output_path,
+    )
+
+    print(combined_info)
+
+    # Create and save the object
+    combined_zs = ZoningSystem(name=combined_name, unique_zones=combined_info, metadata=meta)
+    combined_zs.save(CACHE_FOLDER)
+
+    return combined_zs
 
 
 # Define location of zoning cache folder
