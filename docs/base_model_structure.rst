@@ -137,7 +137,7 @@ Where the year for geographical area is not stated then it is 2021.
             subgraph cluster_inputs{
                 rank="same"
                 peripheries=0
-                table_4 [label="ONS Industry to Occupation|Number of jobs by\nIndustry (A-U), SOC group (1-3)|GOR"];
+                table_4 [label="ONS Industry to Occupation|Number of jobs by\nIndustry (A-U), SOC group (1-4)|GOR"];
                 table_5 [label="ONS Industry to SIC Section|Correspondence between\nIndustry and SIC Section (1 digit)"];
             }
             
@@ -161,15 +161,15 @@ Where the year for geographical area is not stated then it is 2021.
             }
                 
         node [shape=record, color=blue width=3.4]
-            table_7 [label="Jobs by LSOA with SOC group|Jobs by LSOA, SOC group (1-3)|LSOA"];
+            table_7 [label="Jobs by LSOA with SOC group|Jobs by LSOA, SOC group (1-4)|LSOA"];
         
         node [shape=record, color=blue width=3.4]
             wfj_2023 [label="WFJ 2023|Total workforce jobs by region|GOR"];
             
         node [style=rounded, color=black]
-            output_e4 [label="Output E4|Jobs by LSOA, SIC (1 and 2 digit),\nSOC group (1-3)|LSOA"];
-            output_e4_2 [label="Output E4_2|Jobs by LSOA, SIC Division (2 digit),\nSOC group (1-3)\nweighted to WFJ|LSOA"];
-            output_e5 [label="Output E5|Jobs by LSOA, SIC Division (2 digit),\nSIC Division (4 digit), SOC group (1-3)|LSOA"];
+            output_e4 [label="Output E4|Jobs by LSOA, SIC (1 and 2 digit),\nSOC group (1-4)|LSOA"];
+            output_e4_2 [label="Output E4.2|Jobs by LSOA, SIC Division (2 digit),\nSOC group (1-4)\nweighted to WFJ|LSOA"];
+            output_e5 [label="Output E5|Jobs by LSOA, SIC Division (2 digit),\nSIC Division (4 digit), SOC group (1-4)|LSOA"];
         
         {rank="same" output_e3 table_6 table_8}    
 
