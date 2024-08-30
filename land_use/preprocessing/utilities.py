@@ -302,7 +302,7 @@ def reformat_xsoa_sic_digits_to_dvector(
     """
 
     # Extract geocodes and filter to England+Wales
-    df[zoning] = extract_geo_code(df[heading_col], scotland=False, nireland=False)
+    df[zoning] = extract_geo_code(df[heading_col], nireland=False)
     df = df.dropna(subset=[zoning])
     df = df.drop(columns=[heading_col])
 
@@ -407,9 +407,7 @@ def reformat_2021_lad_4digit(
 
     df_with_codes = pd.merge(df_long, lad_lu, how="left", on=["LAD21NM"])
 
-    df_with_codes[zoning] = extract_geo_code(
-        df_with_codes[zoning], scotland=False, nireland=False
-    )
+    df_with_codes[zoning] = extract_geo_code(df_with_codes[zoning], nireland=False)
     df_with_codes = df_with_codes.dropna(subset=[zoning])
 
     df_wide = pivot_to_dvector(

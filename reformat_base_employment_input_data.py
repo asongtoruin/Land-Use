@@ -25,7 +25,6 @@ def main():
     wfj_2023()
     soc_4_factors()
 
-
 def lad_4_digit():
     filename = "bres_employment22_lad_4digit_sic.csv"
     zoning = geographies.LAD_NAME
@@ -65,7 +64,7 @@ def fetch_lad_lu(zoning: str) -> pd.DataFrame:
         pd.DataFrame: Correspondence between the LAD names and geo codes
     """
     lad_lu_file_path = (
-        INPUT_DIR / "ONS" / "Correspondence_lists" / "LAD_2021_EW_LADS_BFC.csv"
+        INPUT_DIR / "ONS" / "Correspondence_lists" / "LAD2021_CD_NM_EWS.csv"
     )
     lad_lu = pd.read_csv(lad_lu_file_path, usecols=["LAD21CD", "LAD21NM"])
     lad_lu = lad_lu.rename(columns={"LAD21CD": zoning})
@@ -177,6 +176,10 @@ def find_sic_soc_splits_by_region():
 
     df_wide = pp.reformat_ons_sic_soc_correspondence(df=df)
 
+    # Infill Scotland (S92000003) based on NE (E12000001) + North-West (E12000002) + Yorkshire & Humber (E12000003)
+    # As we are only using proportions then the totals do not matter
+    df_wide["S92000003"] = df_wide["E12000001"] + df_wide["E12000002"] + df_wide["E12000003"]
+
     pp.save_preprocessed_hdf(source_file_path=file_path, df=df_wide)
 
 
@@ -189,7 +192,7 @@ def wfj_2023():
     df.loc[df["region"] == "East", "region"] = "East of England"
 
     # attach codes for the regions
-    gor_lu_file_path = INPUT_DIR / "ONS" / "Correspondence_lists" / "gor_ew_code_to_labels.csv"
+    gor_lu_file_path = INPUT_DIR / "ONS" / "Correspondence_lists" / "GOR2021_CD_NM_EWS.csv"
     gor_lu = pd.read_csv(gor_lu_file_path, usecols=["RGN21CD", "RGN21NM"])
     gor_lu = gor_lu.rename(columns={"RGN21NM": "region"})
 
@@ -231,7 +234,7 @@ def soc_4_factors():
 
     # attach codes for the regions
     gor_lu_file_path = (
-        INPUT_DIR / "ONS" / "Correspondence_lists" / "gor_ew_code_to_labels.csv"
+        INPUT_DIR / "ONS" / "Correspondence_lists" / "GOR2021_CD_NM_EWS.csv"
     )
     gor_lu = pd.read_csv(gor_lu_file_path, usecols=["RGN21CD", "RGN21NM"])
     gor_lu = gor_lu.rename(columns={"RGN21NM": "Regions"})
