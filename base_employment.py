@@ -1,6 +1,10 @@
 from pathlib import Path
 
+import pandas as pd
 import yaml
+
+import caf.core as cc
+from caf.core.data_structures import DVector
 from caf.core.segments import SegmentsSuper
 from caf.core.zoning import TranslationWeighting
 
@@ -334,14 +338,38 @@ data_processing.save_output(
 )
 
 LOGGER.info('--- Step 5 ---')
-LOGGER.info(f'Combining Output E1 and E4 to give Jobs by LSOA SIC 4 digit and SOC group (1-4) (Output E5)')
+LOGGER.info(f'Combining Output E1 (+soc 4) and E4 to give Jobs by LSOA SIC 4 digit and SOC group (1-4) (Output E5)')
 # Output E5
-e1_with_sic_2_lad = lad_4_digit_sic.translate_segment(
+
+# First need to create a Dummy DVector of 1's to concat to E1
+columns = list(lad_4_digit_sic.data.columns)
+
+# infill with 1's as we will be taking all the proportion for these rows from e4
+e1_soc_4_row = pd.DataFrame(1.0, index=range(1), columns=columns)
+e1_soc_4_row["sic_4_digit"] = -1
+e1_soc_4_row = e1_soc_4_row.set_index("sic_4_digit")
+
+seg_new = cc.Segmentation(
+    cc.SegmentationInput(
+        enum_segments=["sic_4_digit"],
+        naming_order=["sic_4_digit"],
+        subsets={"sic_4_digit": [-1]},
+    )
+)
+soc_4_dummy = DVector(
+    segmentation=seg_new,
+    import_data=e1_soc_4_row,
+    zoning_system=lad_4_digit_sic.zoning_system,
+)
+# Add on dummy row for soc 4
+adjusted_e1 = lad_4_digit_sic.concat(soc_4_dummy)
+
+# Now having got the adjusted e1 we can prepare it for merging with e4
+e1_with_sic_2_lad = adjusted_e1.translate_segment(
     from_seg=SegmentsSuper('sic_4_digit').get_segment(),
     to_seg=SegmentsSuper('sic_2_digit').get_segment(),
     drop_from=False
 )
-
 e1_with_sic_2_lsoa = e1_with_sic_2_lad.translate_zoning(
     new_zoning=constants.LSOA_EWS_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
@@ -349,9 +377,10 @@ e1_with_sic_2_lsoa = e1_with_sic_2_lad.translate_zoning(
     check_totals=False
 )
 
+# apply proportions, including getting soc 4 values to match e4
 jobs_by_sic_2_4_soc_lsoa = data_processing.apply_proportions(
     source_dvector=e1_with_sic_2_lsoa, 
-    apply_to=jobs_by_sic_soc_lsoa_no_soc_4
+    apply_to=jobs_by_sic_soc_lsoa
 )
 
 data_processing.save_output(
