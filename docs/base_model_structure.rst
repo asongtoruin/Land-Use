@@ -109,7 +109,7 @@ Employment
 
 **Work in progress**
 
-Where the year for geographical area is not stated then it is 2021.
+Where the year for geographical area is not stated then it is 2021. Geographies cover England, Scotland and Wales.
 
 .. graphviz::
 
