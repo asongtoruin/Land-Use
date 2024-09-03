@@ -655,7 +655,7 @@ england_totals = reduce(lambda x, y: x+y, area_type_agg)
 data_processing.clear_dvectors(*area_type_agg)
 
 england_totals_scotland_zoning = england_totals.translate_zoning(
-    constants.SCOTLAND_ZONING_SYSTEM, cache_path=constants.CACHE_FOLDER
+    constants.SCOTLAND_DZONE_ZONING_SYSTEM, cache_path=constants.CACHE_FOLDER
 )
 
 # Read in the Scotland data, and then apply proportions

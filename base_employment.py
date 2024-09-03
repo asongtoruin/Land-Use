@@ -1,6 +1,10 @@
 from pathlib import Path
 
+import pandas as pd
 import yaml
+
+import caf.core as cc
+from caf.core.data_structures import DVector
 from caf.core.segments import SegmentsSuper
 from caf.core.zoning import TranslationWeighting
 
@@ -77,7 +81,7 @@ LOGGER.info(
 
 lad_2011_2_digit_sic = (
     msoa_2011_2_digit_sic.translate_zoning(
-        new_zoning=constants.LAD_ZONING_SYSTEM,
+        new_zoning=constants.LAD_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.SPATIAL,
         check_totals=False,
@@ -86,7 +90,7 @@ lad_2011_2_digit_sic = (
 
 lad_2011_1_digit_sic = (
     lsoa_2011_1_digit_sic.translate_zoning(
-        new_zoning=constants.LAD_ZONING_SYSTEM,
+        new_zoning=constants.LAD_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.SPATIAL,
         check_totals=False,
@@ -118,7 +122,7 @@ rehydrated_adj_factors_for_msoa = (
     msoa_adj_factors.add_segments([SegmentsSuper('sic_2_digit').get_segment()])
     .aggregate([SegmentsSuper('sic_2_digit').get_segment().name])
     .translate_zoning(
-        new_zoning=constants.MSOA_2011_ZONING_SYSTEM,
+        new_zoning=constants.MSOA_2011_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False,
@@ -129,7 +133,7 @@ rehydrated_adj_factors_for_lsoa = (
     lsoa_adj_factors.add_segments([SegmentsSuper('sic_1_digit').get_segment()])
     .aggregate([SegmentsSuper('sic_1_digit').get_segment().name])
     .translate_zoning(
-        new_zoning=constants.LSOA_2011_ZONING_SYSTEM,
+        new_zoning=constants.LSOA_2011_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False,
@@ -161,7 +165,7 @@ LOGGER.info('--- Step 2 ---')
 LOGGER.info('Convert 2 Digit SIC 2022 BRES data held in MSOA 2011 zoning to 2021 MSOA (Output E2)')
 # LAD is already at LAD 2021 zoning so doesn't need translating
 msoa_2021_2_digit_sic = adj_msoa_2011_2_digit_sic.translate_zoning(
-        new_zoning=constants.MSOA_ZONING_SYSTEM,
+        new_zoning=constants.MSOA_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.SPATIAL,
         check_totals=True
@@ -180,7 +184,7 @@ data_processing.save_output(
 LOGGER.info('--- Step 3 ---')
 LOGGER.info('Convert 1 Digit SIC 2022 BRES data held in LSOA 2011 zoning to 2021 LSOA (Output E3)')
 lsoa_2021_1_digit_sic = adj_lsoa_2011_1_digit_sic.translate_zoning(
-        new_zoning=constants.LSOA_ZONING_SYSTEM,
+        new_zoning=constants.LSOA_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.SPATIAL,
         check_totals=True
@@ -198,7 +202,7 @@ data_processing.save_output(
 LOGGER.info('--- Step 4 ---')
 LOGGER.info(f'Converting SIC SOC jobs from Region to LSOA 2021 level (Output E4)')
 ons_sic_soc_jobs_lsoa = ons_sic_soc_jobs_lu.translate_zoning(
-    new_zoning=constants.LSOA_ZONING_SYSTEM,
+    new_zoning=constants.LSOA_EWS_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
     weighting=TranslationWeighting.NO_WEIGHT,
     check_totals=False
@@ -217,7 +221,7 @@ jobs_by_lsoa_with_soc_group = data_processing.apply_proportions(
 
 LOGGER.info('Converting proportions of SIC 2 digit by SIC 1 digit by SOC groups jobs to LSOA 2021')
 lsoa_2021_2_digit_sic_1_splits = msoa_2011_2_digit_sic_1_digit_sic_splits.translate_zoning(
-        new_zoning=constants.LSOA_ZONING_SYSTEM,
+        new_zoning=constants.LSOA_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False
@@ -247,7 +251,7 @@ soc_1_3_totals = soc_1_3_totals.add_segments([SegmentsSuper('sic_1_digit').get_s
 # TODO: switch to using translate zoning directly, 
 # however currently doesn't work with one row df, needs fix in caf.toolkit
 # soc_4_factors_lsoa = soc_4_factors.translate_zoning(
-#         new_zoning=constants.LSOA_ZONING_SYSTEM,
+#         new_zoning=constants.LSOA_EWS_ZONING_SYSTEM,
 #         cache_path=constants.CACHE_FOLDER,
 #         weighting=TranslationWeighting.NO_WEIGHT,
 #         check_totals=True,
@@ -257,7 +261,7 @@ soc_1_3_totals = soc_1_3_totals.add_segments([SegmentsSuper('sic_1_digit').get_s
 soc_4_factors_with_soc = soc_4_factors.add_segments(["soc"])
 
 test_lsoa = soc_4_factors_with_soc.translate_zoning(
-        new_zoning=constants.LSOA_ZONING_SYSTEM,
+        new_zoning=constants.LSOA_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False,
@@ -293,7 +297,7 @@ data_processing.save_output(
 LOGGER.info(f'Uplifting Output E4 to Workforce jobs (WFJ) levels by region (Output E4_2)')
 
 output_e4_by_rgn = jobs_by_sic_soc_lsoa_no_soc_4.translate_zoning(
-    new_zoning=constants.RGN_ZONING_SYSTEM,
+    new_zoning=constants.RGN_EWS_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
     weighting=TranslationWeighting.SPATIAL,
     check_totals=False
@@ -317,7 +321,7 @@ rehydrated_adj_factors_for_e4_2 = (
         SegmentsSuper('soc').get_segment().name
         ])
     .translate_zoning(
-        new_zoning=constants.LSOA_ZONING_SYSTEM,
+        new_zoning=constants.LSOA_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False
@@ -334,24 +338,49 @@ data_processing.save_output(
 )
 
 LOGGER.info('--- Step 5 ---')
-LOGGER.info(f'Combining Output E1 and E4 to give Jobs by LSOA SIC 4 digit and SOC group (1-4) (Output E5)')
+LOGGER.info(f'Combining Output E1 (+soc 4) and E4 to give Jobs by LSOA SIC 4 digit and SOC group (1-4) (Output E5)')
 # Output E5
-e1_with_sic_2_lad = lad_4_digit_sic.translate_segment(
+
+# First need to create a Dummy DVector of 1's to concat to E1
+columns = list(lad_4_digit_sic.data.columns)
+
+# infill with 1's as we will be taking all the proportion for these rows from e4
+e1_soc_4_row = pd.DataFrame(1.0, index=range(1), columns=columns)
+e1_soc_4_row["sic_4_digit"] = -1
+e1_soc_4_row = e1_soc_4_row.set_index("sic_4_digit")
+
+seg_new = cc.Segmentation(
+    cc.SegmentationInput(
+        enum_segments=["sic_4_digit"],
+        naming_order=["sic_4_digit"],
+        subsets={"sic_4_digit": [-1]},
+    )
+)
+soc_4_dummy = DVector(
+    segmentation=seg_new,
+    import_data=e1_soc_4_row,
+    zoning_system=lad_4_digit_sic.zoning_system,
+)
+# Add on dummy row for soc 4
+adjusted_e1 = lad_4_digit_sic.concat(soc_4_dummy)
+
+# Now having got the adjusted e1 we can prepare it for merging with e4
+e1_with_sic_2_lad = adjusted_e1.translate_segment(
     from_seg=SegmentsSuper('sic_4_digit').get_segment(),
     to_seg=SegmentsSuper('sic_2_digit').get_segment(),
     drop_from=False
 )
-
 e1_with_sic_2_lsoa = e1_with_sic_2_lad.translate_zoning(
-    new_zoning=constants.LSOA_ZONING_SYSTEM,
+    new_zoning=constants.LSOA_EWS_ZONING_SYSTEM,
     cache_path=constants.CACHE_FOLDER,
     weighting=TranslationWeighting.SPATIAL,
     check_totals=False
 )
 
+# apply proportions, including getting soc 4 values to match e4
 jobs_by_sic_2_4_soc_lsoa = data_processing.apply_proportions(
     source_dvector=e1_with_sic_2_lsoa, 
-    apply_to=jobs_by_sic_soc_lsoa_no_soc_4
+    apply_to=jobs_by_sic_soc_lsoa
 )
 
 data_processing.save_output(

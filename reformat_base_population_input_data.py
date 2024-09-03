@@ -378,7 +378,7 @@ df = df[1:]
 
 df = pp.convert_scotland(
     df=df,
-    zoning=geographies.SCOTLAND_NAME,
+    zoning=geographies.SCOTLAND_DZONE_NAME,
     zoning_column='Intermediate Zone - Data Zone 2011',
     age_segmentation={i: j for j, i in segments._CUSTOM_SEGMENT_CATEGORIES['scot_age'].items()},
     gender_segmentation={i: j for j, i in SegmentsSuper.GENDER.get_segment().values.items()}
