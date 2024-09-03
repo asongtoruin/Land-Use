@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 from functools import reduce
 from pathlib import Path
 
@@ -11,8 +12,12 @@ from land_use import constants, data_processing
 from land_use import logging as lu_logging
 
 
+parser = ArgumentParser('Land-Use command line runner')
+parser.add_argument('config_file', type=Path)
+args = parser.parse_args()
+
 # load configuration file
-with open(r'scenario_configurations\iteration_5\base_population_simplified_config.yml', 'r') as text_file:
+with open(args.config_file, 'r') as text_file:
     config = yaml.load(text_file, yaml.SafeLoader)
 
 # Get output directory for intermediate outputs from config file
@@ -317,7 +322,7 @@ for GOR in constants.GORS:
 
     # TODO: Review this. This step will correct the zone totals to match what's in our uplifted AddressBase. Is this going to give the correct number?
     # Rebalance the zone totals
-    data_processing.processing.rebalance_zone_totals(
+    land_use.data_processing.processing.rebalance_zone_totals(
         input_dvector=pop_by_nssec_hc_ha_car,
         desired_totals=addressbase_population
     )
