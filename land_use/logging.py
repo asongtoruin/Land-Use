@@ -37,8 +37,8 @@ def configure_logger(output_dir: Path, log_name: str) -> logging.Logger:
         # - "standard" output log file
         # - "detailed" output log file, including reporting at every stage
         sh = logging.StreamHandler()
-        fh = logging.FileHandler(output_dir / f'{log_name}.log', mode='w')
-        detailed_logs = logging.FileHandler(output_dir / f'{log_name}_detailed.log', mode='w')
+        fh = logging.FileHandler(output_dir / f'{log_name}_{logger.name}.log', mode='w')
+        detailed_logs = logging.FileHandler(output_dir / f'{log_name}_{logger.name}_detailed.log', mode='w')
 
         # Stream and standard need level setting
         for handler in (sh, fh):
