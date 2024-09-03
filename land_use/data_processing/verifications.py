@@ -153,3 +153,5 @@ def generate_segment_heatmaps(
         fig.set_size_inches(15, 15)
 
         yield fig, ax, row_seg, col_seg
+
+        plt.close(fig)
