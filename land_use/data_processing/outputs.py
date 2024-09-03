@@ -1,7 +1,6 @@
-from collections.abc import Iterator
 from pathlib import Path
 import logging
-from typing import Dict, Optional
+from typing import Optional
 
 import pandas as pd
 from caf.core.data_structures import DVector

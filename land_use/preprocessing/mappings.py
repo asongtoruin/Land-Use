@@ -1,6 +1,5 @@
 from caf.core.segments import SegmentsSuper
 
-from land_use.constants import segments
 
 # TODO: This is very similar to "h". Could we standardise?
 ONS_DWELLINGS = {

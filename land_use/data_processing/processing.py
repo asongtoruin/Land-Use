@@ -2,7 +2,6 @@ import logging
 from pathlib import Path
 import warnings
 import psutil
-from warnings import warn
 from typing import Any, Dict, List, Union, Optional
 from functools import reduce
 
@@ -13,7 +12,7 @@ import pandas as pd
 import numpy as np
 
 from land_use.constants import segments, split_input_segments, CUSTOM_SEGMENTS
-from land_use.constants.geographies import KNOWN_GEOGRAPHIES, CACHE_FOLDER
+from land_use.constants.geographies import CACHE_FOLDER
 
 
 LOGGER = logging.getLogger(__name__)
@@ -274,10 +273,10 @@ def _report_memory() -> str:
 
 
 def clear_dvectors(*dvectors: List[DVector]) -> None:
-    logging.info(f'About to clear dataframes, current usage: {_report_memory()}')
+    LOGGER.info(f'About to clear dataframes, current usage: {_report_memory()}')
     for dvec in dvectors:
         dvec._data = None
-    logging.info(f'Finished clearing dataframes, current usage: {_report_memory()}')
+    LOGGER.info(f'Finished clearing dataframes, current usage: {_report_memory()}')
 
 
 def expand_segmentation_to_match(

@@ -5,11 +5,9 @@ import logging
 from pathlib import Path
 import re
 
-import numpy as np
 import pandas as pd
 
-from land_use.constants import segments
-from .utilities import extract_geo_code, read_headered_csv, read_in_excel, pivot_to_dvector
+from .utilities import read_headered_csv, read_in_excel, pivot_to_dvector
 
 
 def read_rm002(
