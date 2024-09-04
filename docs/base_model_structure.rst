@@ -39,14 +39,14 @@ Population
 
         node [style=rounded, color=black]
 
-            output_p11 [label="Output P1.1|Occupied Households|LSOA"];
-            output_p12 [label="Output P1.2|Unoccupied Households|LSOA"];
-            output_p13 [label="Output P1.3|Average Household Occupancy|LSOA"];
+            output_p1_1 [label="Output P1.1|Occupied Households|LSOA"];
+            output_p1_2 [label="Output P1.2|Unoccupied Households|LSOA"];
+            output_p1_3 [label="Output P1.3|Average Household Occupancy|LSOA"];
             output_p2 [label="Output P2|Adjusted Number of Dwellings|LSOA"];
             output_p3 [label="Output P3|Households by dwelling type, NS-Sec|LSOA"];
-            output_p41 [label="Output P4.1|Households by dwelling type, NS-SeC\n#adults, #children, #cars|LSOA"];
-            output_p42 [label="Output P4.2|Households rebalanced with input datasets|LSOA"];
-            output_p43 [label="Output P4.3|Households rebalanced with indpendent datasets|LSOA"];
+            output_p4_1 [label="Output P4.1|Households by dwelling type, NS-SeC\n#adults, #children, #cars|LSOA"];
+            output_p4_2 [label="Output P4.2|Households rebalanced with input datasets|LSOA"];
+            output_p4_3 [label="Output P4.3|Households rebalanced with indpendent datasets|LSOA"];
             output_p5 [label="Output P5|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars|LSOA"];
             output_p6 [label="Output P6|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars,\nage, gender|LSOA"];
             output_p7 [label="Output P7|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars,\nage, gender, economic status,\nemployment status, SOC|LSOA"];
@@ -56,28 +56,28 @@ Population
             output_p11 [label="Output P11|Population uplifted to 2023 totals|LSOA"];
 
 
-        occupied -> output_p11;
-        unoccupied -> output_p12;
+        occupied -> output_p1_1;
+        unoccupied -> output_p1_2;
 
-        occupied -> output_p13;
-        unoccupied -> output_p13;
-        table_1 -> output_p13;
+        occupied -> output_p1_3;
+        unoccupied -> output_p1_3;
+        table_1 -> output_p1_3;
 
-        output_p11 -> output_p2;
-        output_p12 -> output_p2;
+        output_p1_1 -> output_p2;
+        output_p1_2 -> output_p2;
         addressbase -> output_p2
 
         table_4 -> output_p3;
         output_p2 -> output_p3;
-        output_p3 -> output_p41;
-        table_2 -> output_p41
+        output_p3 -> output_p4_1;
+        table_2 -> output_p4_1
 
-        output_p41 -> output_p42;
-        table_2 -> output_p42;
-        output_p42 -> output_p43
+        output_p4_1 -> output_p4_2;
+        table_2 -> output_p4_2;
+        output_p4_2 -> output_p4_3
 
-        output_p43 -> output_p5;
-        output_p13 -> output_p5
+        output_p4_3 -> output_p5;
+        output_p1_3 -> output_p5
 
         age_gender -> output_p6;
         output_p5 -> output_p6
