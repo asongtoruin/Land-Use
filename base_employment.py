@@ -328,7 +328,8 @@ rehydrated_adj_factors_for_e4_2 = (
     )
 )
 
-output_e4_2 = jobs_by_sic_soc_lsoa_no_soc_4 * rehydrated_adj_factors_for_e4_2
+# Apply WFJ adjustment factors to *all* population - i.e. we assume Unemployed get the same uplift as employed.
+output_e4_2 = jobs_by_sic_soc_lsoa * rehydrated_adj_factors_for_e4_2
 
 data_processing.save_output(
         output_folder=OUTPUT_DIR,
