@@ -322,7 +322,7 @@ for GOR in constants.GORS:
 
     # TODO: Review this. This step will correct the zone totals to match what's in our uplifted AddressBase. Is this going to give the correct number?
     # Rebalance the zone totals
-    land_use.data_processing.processing.rebalance_zone_totals(
+    data_processing.rebalance_zone_totals(
         input_dvector=pop_by_nssec_hc_ha_car,
         desired_totals=addressbase_population
     )
