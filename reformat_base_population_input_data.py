@@ -197,24 +197,13 @@ pp.save_preprocessed_hdf(
     multiple_output_ref='-8_modified'
 )
 
-# ****** AddressBase 
-# *** AddressBase database
-file_path = Path(
-    r'I:\NorMITs Land Use\2023\import\ABP\ABP2021'
-    r'\output_results_all_2021(no red).xlsx'
-)
-# read in addressbase data and reformat for DVector
-df = pp.read_abp(file_path=file_path, zoning=geographies.LSOA_NAME)
-pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+# ****** AddressBase
+abp_folder = Path(r'I:\NorMITs Land Use\2023\import\ABP')
 
-# *** AddressBase 2023 database
-file_path = Path(
-    r'I:\NorMITs Land Use\2023\import\ABP\ABP2023'
-    r'\output_results_all_2023(no red).xlsx'
-)
-# read in addressbase data and reformat for DVector
-df = pp.read_abp(file_path=file_path, zoning=geographies.LSOA_NAME)
-pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+for year in (2021, 2023):
+    file_path = abp_folder / f'ABP{year}' / f'output_results_all_{year}(no red).xlsx'
+    df = pp.read_abp(file_path=file_path, zoning=geographies.LSOA_NAME)
+    pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
 # ****** ONS Data Downloads
 # *** ONS age and gender by dwelling type
