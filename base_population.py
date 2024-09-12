@@ -116,30 +116,28 @@ for GOR in constants.GORS:
     )
 
     # read in the household validation data from the config file
-    block = 'household_validation_data'
     LOGGER.info(f'Importing household validation data from config file ({block} block)')
-    household_validation = {}
-    for key in config[block].keys():
-        df = data_processing.read_dvector_from_config(
+    household_validation = {
+        key: data_processing.read_dvector_from_config(
             config=config,
-            data_block=block,
+            data_block='household_validation_data',
             key=key,
             geography_subset=GOR
         )
-        household_validation[key] = df
+        for key in config['household_validation_data'].keys()
+    }
 
     # read in the population adjustment data from the config file
-    block = 'population_adjustment_data'
     LOGGER.info(f'Importing population adjustment data from config file ({block} block)')
-    population_adjustment = {}
-    for key in config[block].keys():
-        dfs = data_processing.read_dvector_from_config(
+    population_adjustment = {
+        key: data_processing.read_dvector_from_config(
             config=config,
-            data_block=block,
+            data_block='population_adjustment_data',
             key=key,
             geography_subset=GOR
         )
-        population_adjustment[key] = dfs
+        for key in config['population_adjustment_data'].keys()
+    }
 
     # --- Step 1 --- #
     LOGGER.info('--- Step 1 ---')
