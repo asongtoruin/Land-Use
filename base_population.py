@@ -12,12 +12,17 @@ from land_use import constants, data_processing
 from land_use import logging as lu_logging
 
 
-parser = ArgumentParser('Land-Use command line runner')
-parser.add_argument('config_file', type=Path)
-args = parser.parse_args()
+# parser = ArgumentParser('Land-Use command line runner')
+# parser.add_argument('config_file', type=Path)
+# args = parser.parse_args()
+#
+# # load configuration file
+# with open(args.config_file, 'r') as text_file:
+#     config = yaml.load(text_file, yaml.SafeLoader)
 
+config_file = r'scenario_configurations\iteration_5\base_population_config.yml'
 # load configuration file
-with open(args.config_file, 'r') as text_file:
+with open(config_file, 'r') as text_file:
     config = yaml.load(text_file, yaml.SafeLoader)
 
 # Get output directory for intermediate outputs from config file
@@ -616,6 +621,35 @@ for GOR in constants.GORS:
     data_processing.write_to_excel(
         output_folder=OUTPUT_DIR,
         file=f'Output P11_{GOR}_VALIDATION.xlsx',
+        dfs=differences
+    )
+
+    # --- Step 12 --- #
+    LOGGER.info('--- Step 12 ---')
+
+    # applying IPF (adjusting totals to match P9 outputs)
+    LOGGER.info('Applying IPF for population APS rebase targets')
+    rebased_pop, summary, differences = data_processing.apply_ipf(
+        seed_data=rebased_pop,
+        target_dvectors=list(population_adjustment['aps_data']),
+        cache_folder=constants.CACHE_FOLDER
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P12_{GOR}',
+        dvector=rebased_pop,
+        dvector_dimension='population',
+        detailed_logs=True
+    )
+    summary.to_csv(
+        OUTPUT_DIR / f'Output P12_{GOR}_VALIDATION.csv',
+        float_format='%.5f', index=False
+    )
+    data_processing.write_to_excel(
+        output_folder=OUTPUT_DIR,
+        file=f'Output P12_{GOR}_VALIDATION.xlsx',
         dfs=differences
     )
 

@@ -427,3 +427,55 @@ df = pp.read_mype_control(
 )
 
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
+# ****** APS datasets (NOT ALL SEGMENTS IN THE SEGMENTATIONS!)
+# *** in-work population by gender, economic status (aggregated) and GOR
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\APS 2023 for IPF\Regional-based-targets'
+    r'\APS-24-regional-based-targets_revamp.xlsx'
+)
+
+# read in specific tabs
+t01 = pd.read_excel(
+    file_path, sheet_name='T01'
+)
+t08 = pd.read_excel(
+    file_path, sheet_name='T08'
+)
+# update zoning to be consistent with constants defined
+zoning = geographies.RGN_NAME
+zoning_col = 'gor'
+for df in [t01, t08]:
+    df[zoning] = df[zoning_col]
+
+# map the gender columns
+t01['g'] = t01.pop('gender_id')
+t08['g'] = t08.pop('gender_id')
+# map the economic status (aps economic status, not tfn economic status)
+t01['status_aps'] = t01.pop('status_id')
+# map the subset of employment status
+t08['pop_emp'] = t08.pop('ftpt_id')
+# pivot to dvector
+pivoted_t01 = pp.pivot_to_dvector(
+    data=t01,
+    zoning_column=zoning,
+    index_cols=['g', 'status_aps'],
+    value_column='value'
+)
+pivoted_t08 = pp.pivot_to_dvector(
+    data=t08,
+    zoning_column=zoning,
+    index_cols=['g', 'pop_emp'],
+    value_column='value'
+)
+# save outputs
+pp.save_preprocessed_hdf(
+    source_file_path=file_path,
+    df=pivoted_t01,
+    multiple_output_ref='t01'
+)
+pp.save_preprocessed_hdf(
+    source_file_path=file_path,
+    df=pivoted_t08,
+    multiple_output_ref='t08'
+)
