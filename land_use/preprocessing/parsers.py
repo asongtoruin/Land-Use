@@ -219,6 +219,9 @@ def read_abp(
     # TODO: consider what happens if this doesn't match any records?
     pattern = r'RD\d{2}'
     cols = [col for col in df.columns if re.search(pattern, col)]
+    # (re)calculate total dwellings across all types, for some reason the 2023
+    # data do not have this total, but the 2021 data do
+    df['Total RD'] = df[cols].sum(axis=1)
     for col in cols:
         df[col] = (df[col] + (df['RD'] * (df[col] / df['Total RD'])))
 

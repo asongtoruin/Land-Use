@@ -207,6 +207,15 @@ file_path = Path(
 df = pp.read_abp(file_path=file_path, zoning=geographies.LSOA_NAME)
 pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 
+# *** AddressBase 2023 database
+file_path = Path(
+    r'I:\NorMITs Land Use\2023\import\ABP\ABP2023'
+    r'\output_results_all_2023(no red).xlsx'
+)
+# read in addressbase data and reformat for DVector
+df = pp.read_abp(file_path=file_path, zoning=geographies.LSOA_NAME)
+pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
+
 # ****** ONS Data Downloads
 # *** ONS age and gender by dwelling type
 file_path = Path(
