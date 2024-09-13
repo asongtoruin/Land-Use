@@ -756,6 +756,28 @@ def apply_ipf(
         )
         list_of_dvectors = all_dvectors[1:]
 
+    # making sure all the segmentations in the targets are in the seed (not the
+    # case if one of the targets is at an aggregated segmentation)
+    existing_segmentations = seed_data.segmentation.names
+    required_segmentations = list()
+    for target in target_dvectors:
+        required_segmentations += target.segmentation.names
+
+    # get non-duplicated list of segmentations required in the target DVectors
+    required_segmentations = list(set(required_segmentations))
+    # find out the segmentations that are in the targets but are not in the
+    # existing segmentation, ORDER OF THIS MATTERS HERE!!
+    missing_segmentations = list(
+        set(required_segmentations) - set(existing_segmentations)
+    )
+    # if there are missing segmentations, add segments to the seed
+    # (lookups must exist in caf.core)
+    if len(missing_segmentations) > 0:
+        LOGGER.info(f'Adding {missing_segmentations} to the seed data for the IPF')
+        seed_data = seed_data.copy().add_segments(
+            new_segs=missing_segmentations
+        )
+
     LOGGER.info('Applying the IPF')
     rebalanced_data, rmse = seed_data.ipf(
         targets=[IpfTarget(dvec) for dvec in list_of_dvectors],
