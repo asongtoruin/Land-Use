@@ -10,6 +10,9 @@ dependencies:
   - pyyaml=6.0.1
   - seaborn=0.13.2
   - matplotlib=3.9.1
+  # Setup for interactive maps
+  - folium=0.17.0
+  - mapclassify=2.5.0
   - pip:
       - git+https://github.com/Transport-for-the-North/caf.core@IPF
       - git+https://github.com/Transport-for-the-North/caf.space
