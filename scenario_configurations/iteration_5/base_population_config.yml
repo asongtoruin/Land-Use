@@ -1,7 +1,7 @@
 # Configuration file specifying the segmentation and geographical level of the input data.
 # All files here are assumed to be in a format ready for DVectors.
 input_root_directory: I:\NorMITs Land Use\2023\import
-output_directory: F:\Working\Land-Use\OUTPUTS_aps testing
+output_directory: F:\Working\Land-Use\OUTPUTS_base population
 output_intermediate_outputs: False
 scotland_donor_regions: [NE, NW, YH]
 
@@ -72,27 +72,27 @@ base_data:
         geographical_level: DZ2011
         input_segments: [g, scot_age]
 
-household_validation_data:
-    car_availability:
-        file_path: ONS-validation\preprocessing\households_cars_lsoa_3.hdf
-        geographical_level: LSOA2021
-        input_segments: [car_availability]
-    adults_children:
-        file_path: ONS-validation\preprocessing\households_adults_children_lsoa_adults-children-aggregated.hdf
-        geographical_level: LSOA2021
-        input_segments: [adults, children]
-    adults_children_nssec:
-        file_path: ONS-validation\preprocessing\households_nssec_adults_children_lad_adults-children-nssec-aggregated.hdf
-        geographical_level: LAD2021
-        input_segments: [adults, children, ns_sec]
-    car_availability_nssec:
-        file_path: ONS-validation\preprocessing\households_nssec_car_lad_nssec-aggregated.hdf
-        geographical_level: LAD2021
-        input_segments: [car_availability, ns_sec]
-    nssec:
-        file_path: ONS-validation\preprocessing\households_nssec_lsoa.hdf
-        geographical_level: LSOA2021
-        input_segments: [ns_sec]
+household_adjustment_data:
+    validation_data:
+        - file_path: ONS-validation\preprocessing\households_cars_lsoa_3.hdf
+          geographical_level: LSOA2021
+          input_segments: [car_availability]
+        - file_path: ONS-validation\preprocessing\households_adults_children_lsoa_adults-children-aggregated.hdf
+          geographical_level: LSOA2021
+          input_segments: [adults, children]
+        - file_path: ONS-validation\preprocessing\households_nssec_adults_children_lad_adults-children-nssec-aggregated.hdf
+          geographical_level: LAD2021
+          input_segments: [adults, children, ns_sec]
+        - file_path: ONS-validation\preprocessing\households_nssec_car_lad_nssec-aggregated.hdf
+          geographical_level: LAD2021
+          input_segments: [car_availability, ns_sec]
+        - file_path: ONS-validation\preprocessing\households_nssec_lsoa.hdf
+          geographical_level: LSOA2021
+          input_segments: [ns_sec]
+    rebase_data:
+        - file_path: ABP\ABP2023\preprocessing\output_results_all_2023(no red).hdf
+          geographical_level: LSOA2021
+          input_segments: [accom_h]
 
 population_adjustment_data:
     validation_data:

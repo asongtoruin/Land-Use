@@ -12,17 +12,12 @@ from land_use import constants, data_processing
 from land_use import logging as lu_logging
 
 
-# parser = ArgumentParser('Land-Use command line runner')
-# parser.add_argument('config_file', type=Path)
-# args = parser.parse_args()
-#
-# # load configuration file
-# with open(args.config_file, 'r') as text_file:
-#     config = yaml.load(text_file, yaml.SafeLoader)
+parser = ArgumentParser('Land-Use command line runner')
+parser.add_argument('config_file', type=Path)
+args = parser.parse_args()
 
-config_file = r'scenario_configurations\iteration_5\base_population_config.yml'
 # load configuration file
-with open(config_file, 'r') as text_file:
+with open(args.config_file, 'r') as text_file:
     config = yaml.load(text_file, yaml.SafeLoader)
 
 # Get output directory for intermediate outputs from config file
@@ -117,14 +112,14 @@ for GOR in constants.GORS:
 
     # read in the household validation data from the config file
     LOGGER.info(f'Importing household validation data from config file ({block} block)')
-    household_validation = {
+    household_adjustment = {
         key: data_processing.read_dvector_from_config(
             config=config,
-            data_block='household_validation_data',
+            data_block='household_adjustment_data',
             key=key,
             geography_subset=GOR
         )
-        for key in config['household_validation_data'].keys()
+        for key in config['household_adjustment_data'].keys()
     }
 
     # read in the population adjustment data from the config file
@@ -192,6 +187,11 @@ for GOR in constants.GORS:
         dvector_dimension='occupancy'
     )
 
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        occupied_households, unoccupied_households
+    )
+
     # --- Step 2 --- #
     LOGGER.info('--- Step 2 ---')
     LOGGER.info(f'Adjusting addressbase buildings to reflect unoccupied dwellings')
@@ -205,6 +205,11 @@ for GOR in constants.GORS:
         output_reference=f'Output P2_{GOR}',
         dvector=adjusted_addressbase_dwellings,
         dvector_dimension='households'
+    )
+
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        addressbase_dwellings
     )
 
     # --- Step 3 --- #
@@ -222,6 +227,11 @@ for GOR in constants.GORS:
         output_reference=f'Output P3_{GOR}',
         dvector=hh_by_nssec,
         dvector_dimension='households'
+    )
+
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        ons_table_4
     )
 
     # --- Step 4 --- #
@@ -290,7 +300,7 @@ for GOR in constants.GORS:
     LOGGER.info('Applying IPF for independent household targets')
     rebalanced_hh, summary, differences = data_processing.apply_ipf(
         seed_data=internal_rebalanced_hh,
-        target_dvectors=list(household_validation.values()),
+        target_dvectors=list(list(household_adjustment['validation_data'])),
         cache_folder=constants.CACHE_FOLDER
     )
 
@@ -309,6 +319,12 @@ for GOR in constants.GORS:
         output_folder=OUTPUT_DIR,
         file=f'Output P4.3_{GOR}_VALIDATION.xlsx',
         dfs=differences
+    )
+
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        ons_table_2_target, ons_table_2, hh_by_nssec_hc_ha_car,
+         internal_rebalanced_hh
     )
 
     # --- Step 5 --- #
@@ -336,6 +352,11 @@ for GOR in constants.GORS:
         output_reference=f'Output P5_{GOR}',
         dvector=pop_by_nssec_hc_ha_car,
         dvector_dimension='population'
+    )
+
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        addressbase_population, adjusted_addressbase_dwellings
     )
 
     # --- Step 6 --- #
@@ -368,6 +389,11 @@ for GOR in constants.GORS:
         output_reference=f'Output P6_{GOR}',
         dvector=pop_by_nssec_hc_ha_car_gender_age,
         dvector_dimension='population'
+    )
+
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        pop_by_nssec_hc_ha_car, hh_age_gender_2021_lsoa
     )
 
     # --- Step 7 --- #
@@ -405,6 +431,11 @@ for GOR in constants.GORS:
         output_reference=f'Output P7_{GOR}',
         dvector=pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
         dvector_dimension='population'
+    )
+
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        ons_table_3, ons_table_3_lsoa, pop_by_nssec_hc_ha_car_gender_age
     )
 
     # --- Step 8 --- #
@@ -528,10 +559,20 @@ for GOR in constants.GORS:
         detailed_logs=True
     )
 
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        ce_pop_by_age_gender_econ_total, ce_pop_by_age_gender_econ,
+         ce_econ_splits, ce_econ_splits_lsoa, ce_soc_splits, ce_soc_splits_lsoa,
+         ce_uplift_by_ce_age_gender_econ_soc, ones,
+        ce_uplift_factor_by_ce_age_gender_econ_soc,
+         pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
+        ce_uplift_factor, ce_change
+    )
+
     # --- Step 9 --- #
     LOGGER.info('--- Step 9 ---')
 
-    # prepare ons_table_3 for ipf targets (drop accom_h segmentation)
+    # prepare ipf targets (drop accom_h segmentation)
     hh_age_gender_2021_target = hh_age_gender_2021.aggregate(
         segs=[seg for seg in hh_age_gender_2021.data.index.names if seg != 'accom_h']
     )
@@ -561,6 +602,11 @@ for GOR in constants.GORS:
         output_folder=OUTPUT_DIR,
         file=f'Output P9_{GOR}_VALIDATION.xlsx',
         dfs=differences
+    )
+
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        hh_age_gender_2021_target, adjusted_pop
     )
 
     # --- Step 10 --- #
@@ -593,13 +639,95 @@ for GOR in constants.GORS:
         dfs=differences
     )
 
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        rebalanced_pop, *population_adjustment['validation_data']
+    )
+
     # --- Step 11 --- #
     LOGGER.info('--- Step 11 ---')
+    LOGGER.info('Rebasing households to 2023')
+
+    # get the 2023 addresses by dwelling type
+    # TODO: the way the config is set up means this will be a list of one DVector so for now am just popping the first one out, although maybe we should be more explicit about this
+    dwellings_rebase = household_adjustment['rebase_data'][0]
+
+    LOGGER.info(f'Adjusting addressbase buildings to reflect unoccupied dwellings')
+    # apply factors of proportion of total households that are occupied by LSOA
+    adjusted_hh_rebase = dwellings_rebase * non_empty_proportion
+
+    # get proportions of households by segment and zone from the output of the
+    # 2021 IPFed households
+    hh_rebase = data_processing.apply_proportions(
+        source_dvector=rebalanced_hh,
+        apply_to=adjusted_hh_rebase
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P11_{GOR}',
+        dvector=hh_rebase,
+        dvector_dimension='households'
+    )
+
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        dwellings_rebase, non_empty_proportion
+    )
+
+    # --- Step 12 --- #
+    LOGGER.info('--- Step 12 ---')
+    LOGGER.info('Rebasing population to 2023')
+    LOGGER.info(f'Applying average occupancy to households')
+    # apply average occupancy by dwelling type
+    pop_rebase = hh_rebase * average_occupancy
+
+    # calculate expected population based in the addressbase "occupied" dwellings
+    addressbase_rebase = adjusted_hh_rebase * average_occupancy
+
+    # TODO: Review this. This step will correct the zone totals to match what's in our uplifted AddressBase. Is this going to give the correct number?
+    # Rebalance the zone totals
+    data_processing.rebalance_zone_totals(
+        input_dvector=pop_rebase,
+        desired_totals=addressbase_rebase
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P12.1_{GOR}',
+        dvector=pop_rebase,
+        dvector_dimension='population'
+    )
+
+    LOGGER.info(f'Applying population proportional splits to average occupancy')
+    # apply average occupancy by dwelling type
+    segmented_pop_rebase = data_processing.apply_proportions(
+        source_dvector=ipfed_pop,
+        apply_to=pop_rebase
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P12.2_{GOR}',
+        dvector=segmented_pop_rebase,
+        dvector_dimension='population'
+    )
+
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        average_occupancy, pop_rebase, ipfed_pop, addressbase_rebase
+    )
+
+    # --- Step 13 --- #
+    LOGGER.info('--- Step 13 ---')
 
     # applying IPF (adjusting totals to match P9 outputs)
     LOGGER.info('Applying IPF for population rebase targets')
     rebased_pop, summary, differences = data_processing.apply_ipf(
-        seed_data=rebalanced_pop,
+        seed_data=segmented_pop_rebase,
         target_dvectors=list(population_adjustment['rebase_data']),
         cache_folder=constants.CACHE_FOLDER
     )
@@ -607,23 +735,28 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Output P11_{GOR}',
+        output_reference=f'Output P13_{GOR}',
         dvector=rebased_pop,
         dvector_dimension='population',
         detailed_logs=True
     )
     summary.to_csv(
-        OUTPUT_DIR / f'Output P11_{GOR}_VALIDATION.csv',
+        OUTPUT_DIR / f'Output P13_{GOR}_VALIDATION.csv',
         float_format='%.5f', index=False
     )
     data_processing.write_to_excel(
         output_folder=OUTPUT_DIR,
-        file=f'Output P11_{GOR}_VALIDATION.xlsx',
+        file=f'Output P13_{GOR}_VALIDATION.xlsx',
         dfs=differences
     )
 
-    # --- Step 12 --- #
-    LOGGER.info('--- Step 12 ---')
+    # clear data at the end of the loop
+    data_processing.clear_dvectors(
+        segmented_pop_rebase, *population_adjustment['rebase_data']
+    )
+
+    # --- Step 14 --- #
+    LOGGER.info('--- Step 14 ---')
 
     # applying IPF (adjusting totals to match P9 outputs)
     LOGGER.info('Applying IPF for population APS rebase targets')
@@ -636,37 +769,27 @@ for GOR in constants.GORS:
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Output P12_{GOR}',
+        output_reference=f'Output P14_{GOR}',
         dvector=rebased_pop,
         dvector_dimension='population',
         detailed_logs=True
     )
     summary.to_csv(
-        OUTPUT_DIR / f'Output P12_{GOR}_VALIDATION.csv',
+        OUTPUT_DIR / f'Output P14_{GOR}_VALIDATION.csv',
         float_format='%.5f', index=False
     )
     data_processing.write_to_excel(
         output_folder=OUTPUT_DIR,
-        file=f'Output P12_{GOR}_VALIDATION.xlsx',
+        file=f'Output P14_{GOR}_VALIDATION.xlsx',
         dfs=differences
     )
 
-    LOGGER.info(f'*****COMPLETED PROCESSING FOR {GOR}*****')
-
     # clear data at the end of the loop
     data_processing.clear_dvectors(
-        pop_by_nssec_hc_ha_car_gender_age_econ_emp_soc,
-        ce_uplift_factor,
-        ce_uplift, ce_pop_by_type_total, ce_type_splits,
-        ce_type_splits_lsoa, ce_pop_by_age_gender_econ_total,
-        ce_econ_splits, ce_econ_splits_lsoa,
-        ce_pop_by_age_gender_soc_total, ce_soc_splits,
-        ce_soc_splits_lsoa, ce_uplift_by_ce, ce_uplift_by_ce_age_gender_econ,
-        ce_uplift_by_ce_age_gender_econ_soc, ones,
-        ce_uplift_factor_by_ce_age_gender_econ_soc, adjusted_pop,
-        *population_adjustment['validation_data'],
-        *population_adjustment['rebase_data']
+        rebased_pop, *population_adjustment['aps_data']
     )
+
+    LOGGER.info(f'*****COMPLETED PROCESSING FOR {GOR}*****')
 
 
 # SCOTLAND-SPECIFIC PROCESSING
