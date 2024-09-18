@@ -50,11 +50,12 @@ lsoa_2011_1_digit_sic = data_processing.read_dvector_from_config(
     key='lsoa_2011_1_digit_sic'
 )
 
-msoa_2011_2_digit_sic_1_digit_sic_splits = data_processing.read_dvector_from_config(
+msoa_2011_splits_sic_1_digit_to_2_digit = data_processing.read_dvector_from_config(
     config=config,
     data_block=block,
     key='msoa_2011_2_digit_sic_1_digit_sic_splits'
 )
+
 ons_sic_soc_jobs_lu = data_processing.read_dvector_from_config(
     config=config,
     data_block=block,
@@ -209,18 +210,19 @@ ons_sic_soc_jobs_lsoa = ons_sic_soc_jobs_lu.translate_zoning(
 )
 
 jobs_by_lsoa_with_soc_group = data_processing.apply_proportions(
-    ons_sic_soc_jobs_lsoa, lsoa_2021_1_digit_sic
+    source_dvector=ons_sic_soc_jobs_lsoa, 
+    apply_to=lsoa_2021_1_digit_sic
 )
 
 # Note a warning is generated here about combinations with SOC as 4. We can ignore it.
 LOGGER.info(f'Applying SOC group proportions to BRES 1-digit SIC jobs')
 jobs_by_lsoa_with_soc_group = data_processing.apply_proportions(
-    ons_sic_soc_jobs_lsoa,
-    lsoa_2021_1_digit_sic
+    source_dvector=ons_sic_soc_jobs_lsoa,
+    apply_to=lsoa_2021_1_digit_sic
 )
 
 LOGGER.info('Converting proportions of SIC 2 digit by SIC 1 digit by SOC groups jobs to LSOA 2021')
-lsoa_2021_2_digit_sic_1_splits = msoa_2011_2_digit_sic_1_digit_sic_splits.translate_zoning(
+lsoa_2021_1_digit_2_digit_sic_splits = msoa_2011_splits_sic_1_digit_to_2_digit.translate_zoning(
         new_zoning=constants.LSOA_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
@@ -230,10 +232,11 @@ lsoa_2021_2_digit_sic_1_splits = msoa_2011_2_digit_sic_1_digit_sic_splits.transl
 # Note a warning is generated here about combinations with SOC as 4. We can ignore it.
 LOGGER.info(f'Applying SOC group proportions to BRES 2-digit SIC jobs')
 jobs_by_sic_soc_lsoa_no_soc_4 = data_processing.apply_proportions(
-    source_dvector=lsoa_2021_2_digit_sic_1_splits,
+    source_dvector=lsoa_2021_1_digit_2_digit_sic_splits,
     apply_to=jobs_by_lsoa_with_soc_group
 )
 
+# now need to expand the data to include soc 4 (unemployed) based on factors
 totals = jobs_by_sic_soc_lsoa_no_soc_4.add_segments(
     [constants.CUSTOM_SEGMENTS['total']]).aggregate(['total'])
 
@@ -260,16 +263,16 @@ soc_1_3_totals = soc_1_3_totals.add_segments([SegmentsSuper('sic_1_digit').get_s
 #### workaround start ################################################################
 soc_4_factors_with_soc = soc_4_factors.add_segments(["soc"])
 
-test_lsoa = soc_4_factors_with_soc.translate_zoning(
+soc_4_factors_with_soc_lsoa = soc_4_factors_with_soc.translate_zoning(
         new_zoning=constants.LSOA_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
         weighting=TranslationWeighting.NO_WEIGHT,
         check_totals=False,
 )
 
-soc_4_factors_lsoa = test_lsoa.aggregate(["total"])
+soc_4_factors_lsoa = soc_4_factors_with_soc_lsoa.aggregate(["total"])
 
-soc_4_factors_lsoa.data = soc_4_factors_lsoa.data / len(test_lsoa.data)
+soc_4_factors_lsoa.data = soc_4_factors_lsoa.data / len(soc_4_factors_with_soc_lsoa.data)
 
 #### workaround end ##################################################################
 
