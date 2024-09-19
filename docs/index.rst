@@ -94,18 +94,19 @@ Units are in people, households are also provided as a secondary output.
 Base Year Employment Model
 --------------------------
 
-Base year employment model is simple model designed to:
+Base year employment model is a simple model designed to:
 
-- Overlay an employment vector, segmented by e-category, by skill level
+- Overlay an employment vector, segmented by industry and occupation
 
 *Inputs*
 
-- Employment by e-category
-- Employment by skill level
+- Employment by industry and occupation (from ONS and BRES)
+- Workers by region (Workforce Jobs Survey)
+- Unemployment rate estimated by region
 
 *Outputs*
 
-- Employment by e-category and skill level
+- Employment by industry (SIC) and occupation (SOC)
 
 
 Future Year Population Model
