@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 from pathlib import Path
 
 import pandas as pd
@@ -12,10 +13,13 @@ from land_use import constants, data_processing
 from land_use import logging as lu_logging
 
 
+# TODO: expand on the documentation here
+parser = ArgumentParser('Land-Use base population command line runner')
+parser.add_argument('config_file', type=Path)
+args = parser.parse_args()
+
 # load configuration file
-with open(
-    r"scenario_configurations\iteration_5\base_employment_config.yml", "r"
-) as text_file:
+with open(args.config_file, 'r') as text_file:
     config = yaml.load(text_file, yaml.SafeLoader)
 
 # Get output directory for intermediate outputs from config file
