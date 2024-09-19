@@ -120,6 +120,27 @@ England and Wales Census Data
    * - Access
      - Freely available to download
 
+``Unoccupied Households``
+-----------------------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Households with zero occupants
+   * - Geography
+     - LSOA 2021
+   * - Segmentation
+     - Accomodation type
+   * - Source
+     - https://www.nomisweb.co.uk/datasets/c2021rm002
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/RM002 accom type by household size/2072764328175065 zero.csv
+   * - Access
+     - Freely available to download
+
 ``Age and Gender``
 ------------------
 
