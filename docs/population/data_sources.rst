@@ -269,6 +269,27 @@ Office for National Statistics
    * - Access
      - Freely available to download
 
+``2023 MYPE``
+-------------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Population
+   * - Geography
+     - LAD 2023
+   * - Segmentation
+     - Age, gender
+   * - Source
+     - `ONS Mid-Year Population Estimate Downloads <https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/estimatesofthepopulationforenglandandwales>`_
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/MYPE/myebtablesenglandwales20112023.xlsx
+   * - Access
+     - Freely available to download
+
 AddressBase
 ===========
 ``2021 AddressBase Dwellings``
