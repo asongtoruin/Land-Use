@@ -12,7 +12,7 @@ The sections below describe each input dataset with the:
 - the file location stored on TfN's local drive, and
 - the access requirements for the data.
 
-England and Wales Census Data
+2021 England and Wales Census Data
 =============================
 
 ``ONS Table 1``
@@ -292,3 +292,23 @@ AddressBase
    * - Access
      - Licensed through TfN, not open access
 
+``2023 AddressBase Dwellings``
+------------------------------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Dwellings
+   * - Geography
+     - LSOA 2021
+   * - Segmentation
+     - Accommodation type
+   * - Source
+     - https://www.ordnancesurvey.co.uk/products/addressbase-premium#get
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ABP/ABP2023/output_results_all_2023(no red).xlsx
+   * - Access
+     - Licensed through TfN, not open access
