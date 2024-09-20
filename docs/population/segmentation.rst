@@ -101,6 +101,30 @@ Standard Segments
      - Household with one or more dependent children
 
 
+``economic_status``
+-------------------
+
+.. list-table::
+   :header-rows: 1
+
+   * - Value
+     - Description
+   * - 1
+     - Economically active employment
+   * - 2
+     - Economically active unemployed
+   * - 3
+     - Economically active student employment
+   * - 4
+     - Economically active student unemployed
+   * - 5
+     - Economically inactive student
+   * - 6
+     - Economically inactive
+   * - -8
+     - Other
+
+
 ``g``
 -----
 
@@ -132,25 +156,7 @@ Standard Segments
    * - 4
      - HRP never worked / long-term unemployed
    * - 5
-     - HRP full-time student
-
-
-``pop_econ``
-------------
-
-.. list-table::
-   :header-rows: 1
-
-   * - Value
-     - Description
-   * - 1
-     - Economically active employees
-   * - 2
-     - Economically active unemployed
-   * - 3
-     - Economically inactive
-   * - 4
-     - Students
+     - HRP no category, inc. full-time student
 
 
 ``pop_emp``
@@ -191,6 +197,24 @@ Standard Segments
      - SOC4
 
 
+``status_aps``
+--------------
+
+.. list-table::
+   :header-rows: 1
+
+   * - Value
+     - Description
+   * - 1
+     - Economically active employed
+   * - 2
+     - Economically active unemployed
+   * - 3
+     - Economically inactive
+   * - -8
+     - Other
+
+
 Custom Segments
 ===============
 ``ce``
@@ -215,6 +239,28 @@ Custom Segments
      - Religion
    * - 7
      - Staff
+
+
+``scot_age``
+------------
+
+.. list-table::
+   :header-rows: 1
+
+   * - Value
+     - Description
+   * - 1
+     - 0 - 15
+   * - 2
+     - 16 - 24
+   * - 3
+     - 25 - 34
+   * - 4
+     - 35 - 49
+   * - 5
+     - 50 - 64
+   * - 6
+     - 65 and over
 
 
 ``total``
