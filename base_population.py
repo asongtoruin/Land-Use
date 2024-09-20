@@ -12,7 +12,8 @@ from land_use import constants, data_processing
 from land_use import logging as lu_logging
 
 
-parser = ArgumentParser('Land-Use command line runner')
+# TODO: expand on the documentation here
+parser = ArgumentParser('Land-Use base population command line runner')
 parser.add_argument('config_file', type=Path)
 args = parser.parse_args()
 

@@ -4,8 +4,6 @@ input_root_directory: I:\NorMITs Land Use\2023\import
 output_directory: F:\Working\Land-Use\OUTPUTS_base_employment_inc_scotland_v2
 output_intermediate_outputs: False
 
-# Currently bres data only includes England and Wales
-
 base_data:
     lad_4_digit_sic:
         file_path: BRES2022\Employment\preprocessing\bres_employment22_lad_4digit_sic.hdf

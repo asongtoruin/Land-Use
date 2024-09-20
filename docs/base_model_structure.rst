@@ -131,6 +131,13 @@ Employment
 **Work in progress**
 
 Where the year for geographical area is not stated then it is 2021. Geographies cover England, Scotland and Wales.
+SIC Section is the first level (at 1 digit)
+SIC Division is the second level (at 2 digit)
+SIC Groups is the third level (at 3 digits) which is not used in this process
+SIC Class is the forth level (at 4 digit)
+
+SOC has 4 categories, but some of the datasets do not include the full range as SOC=4 represents unemployed people.
+For datasets with a SOC Segmentation but where the range is not stated then it will be the full range (1-4).
 
 .. graphviz::
 
@@ -141,25 +148,18 @@ Where the year for geographical area is not stated then it is 2021. Geographies 
             subgraph cluster_inputs{
                 peripheries=0
                 rank="same"
-                table_2 [label="BRES 2022 Employment MSOA|Jobs by MSOA, SIC Division (2 digit)|MSOA 2011"];
-                table_1 [label="BRES 2022 Employment LAD|Jobs by LAD, SIC Class (4 digit)|LAD"];
-                table_3 [label="BRES 2022 Employment LSOA|Jobs by LSOA, SIC Section (1 digit)|LSOA 2011"];
+                table_1 [label="BRES 2022 Employment LAD|Jobs by LAD, SIC Class|LAD"];
+                table_2 [label="BRES 2022 Employment MSOA|Jobs by MSOA, SIC Division|MSOA 2011"];
+                table_2a [label="BRES 2022 Employment MSOA SIC splits|SIC Section and SIC Division splits|MSOA 2011"];
+                table_3 [label="BRES 2022 Employment LSOA|Jobs by LSOA, SIC Section|LSOA 2011"];
             }
         
         node [shape=record, color=blue width=3.4]
             subgraph cluster_inputs{
                 peripheries=0
                 rank="same"
-                table_2a [label="Balanced BRES 2022 Employment MSOA|Jobs by MSOA, SIC Division (2 digit)|MSOA 2011"];
-                table_3a [label="Balanced BRES 2022 Employment LSOA|Jobs by LSOA, SIC Section (1 digit)|LSOA 2011"];
-            }
-        
-        node [shape=record, color=blue width=3.4]
-            subgraph cluster_inputs{
-                rank="same"
-                peripheries=0
-                table_4 [label="ONS Industry to Occupation|Number of jobs by\nIndustry (A-U), SOC group (1-4)|GOR"];
-                table_5 [label="ONS Industry to SIC Section|Correspondence between\nIndustry and SIC Section (1 digit)"];
+                table_2a [label="Balanced BRES 2022 Employment MSOA|SIC Division|MSOA 2011"];
+                table_3a [label="Balanced BRES 2022 Employment LSOA|SIC Section|LSOA 2011"];
             }
             
         node [shape=record, color=blue width=3.4]
@@ -167,8 +167,8 @@ Where the year for geographical area is not stated then it is 2021. Geographies 
                 peripheries=0
                 rank="same"
 
-                table_6 [label="Occupation Splits by Industry|% splits by Occupation, Industry, Region|GOR"];
-                table_8 [label="SIC Division by SIC Section|% splits by SIC Division (2 digit)\nby SIC Section (1 digit)|MSOA 2011"];
+                table_6 [label="ONS Jobs by SIC and SOC|SIC Section and SOC (1-3)|GOR"];
+                table_8 [label="BRES SIC Section by SIC Division|Jobs by SIC Division and Section|MSOA 2011"];
             
             }
         
@@ -176,23 +176,25 @@ Where the year for geographical area is not stated then it is 2021. Geographies 
                 subgraph cluster_inputs{
                 peripheries=0
                 rank="same"
-                output_e1 [label="Output E1|Jobs by LAD, SIC Class (4 digit)|LAD"];
-                output_e2 [label="Output E2|Jobs by MSOA, SIC Division (2 digit)|MSOA"];
-                output_e3 [label="Output E3|Jobs by LSOA, SIC Section (1 digit)|LSOA"];
+                output_e1 [label="Output E1|Jobs by LAD, SIC Class|LAD"];
+                output_e2 [label="Output E2|Jobs by MSOA, SIC Division|MSOA"];
+                output_e3 [label="Output E3|Jobs by LSOA, SIC Section|LSOA"];
             }
                 
         node [shape=record, color=blue width=3.4]
-            table_7 [label="Jobs by LSOA with SOC group|Jobs by LSOA, SOC group (1-4)|LSOA"];
+            table_7 [label="Jobs by LSOA|SIC Section and SOC (1-3)|LSOA"];
+            table_7a [label="Jobs by LSOA|SIC (Section and Division) and SOC (1-3)|LSOA"];
+            table_11 [label="Jobs by LSOA|SIC (Section and Division) and SOC|LSOA"];
+            table_10 [label="SOC 4 Factors|SOC 4 proportions by region|GOR"];
         
         node [shape=record, color=blue width=3.4]
-            wfj_2023 [label="WFJ 2023|Total workforce jobs by region|GOR"];
+            table_4 [label="WFJ 2023|Total workforce jobs by region|GOR"];
             
         node [style=rounded, color=black]
-            output_e4 [label="Output E4|Jobs by LSOA, SIC (1 and 2 digit),\nSOC group (1-4)|LSOA"];
-            output_e4_2 [label="Output E4.2|Jobs by LSOA, SIC Division (2 digit),\nSOC group (1-4)\nweighted to WFJ|LSOA"];
-            output_e5 [label="Output E5|Jobs by LSOA, SIC Division (2 digit),\nSIC Division (4 digit), SOC group (1-4)|LSOA"];
+            output_e4 [label="Output E4|Jobs by LSOA, \nSIC (Section and Division), SOC|LSOA"];
+            output_e4_2 [label="Output E4.2|Jobs by LSOA, SIC Division,\nSOC weighted to WFJ|LSOA"];
+            output_e5 [label="Output E5|Jobs by LSOA, SIC Division,\nSIC Class, SOC|LSOA"];
         
-        {rank="same" output_e3 table_6 table_8}    
 
         table_1 -> output_e1;
         output_e1 -> output_e5
@@ -202,16 +204,14 @@ Where the year for geographical area is not stated then it is 2021. Geographies 
         table_2a -> output_e2;
         table_3 -> table_3a;
         table_3a -> output_e3;
-        table_4 -> table_6;
-        table_5 -> table_6;
         output_e3 -> table_7;
         table_6 -> table_7;
-        table_8 -> output_e4
-        table_7 -> output_e4
-        table_2 -> table_8
-        wfj_2023 -> output_e4_2
+        table_8 -> table_7a
+        table_11 -> output_e4
+        table_7 -> table_7a
+        table_7a -> table_11
+        table_10 -> table_11
+        table_4 -> output_e4_2
         output_e4 -> output_e4_2
         output_e4 -> output_e5
     }
-
-

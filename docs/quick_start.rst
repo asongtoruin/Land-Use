@@ -19,6 +19,9 @@ on your machine (ideally Miniforge), with the following three lines
     cd Land-Use
     conda env create -f environment.yml
 
+This will create an environment called :code:`normits_lu` which will need to be activated before 
+running any code.
+
 Choosing an entry point
 =======================
 
@@ -32,9 +35,6 @@ are trying to accomplish:
 - :code:`base_population.py` allows for rebuilding of base year population figures
 - :code:`base_employment.py` allows for rebuilding of base year employment figures
 
-This will create an environment called :code:`normits_lu` which will need to be activated before 
-running any code.
-
 Running a scenario
 ==================
 
@@ -45,3 +45,13 @@ Standard scenario configuration files can be found in the :code:`scenario_config
 In many cases, running one of these existing configurations will be sufficient, however 
 modifications can be made if required (e.g. to swap input files)
 
+Running
+-------
+
+The various entry points are designed to be called from the command line, with the configuration 
+file passed as the first argument to the script. So, for example, from the root directory of the
+repository you could call:
+
+.. code-block:: shell
+
+    python base_population.py "scenario_configurations\iteration_5\base_population_config.yml"
