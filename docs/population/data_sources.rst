@@ -249,6 +249,30 @@ CE Economic Status
    * - Access
      - Freely available to download
 
+2022 Scotland Census Data
+=========================
+
+Scotland Population
+-------------------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Population (all usual residents)
+   * - Geography
+     - Data Zone 2021
+   * - Segmentation
+     - Gender, Scotland age groups
+   * - Source
+     - ???
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/Census Scotland/Population_age6_gender_DZ2011.csv
+   * - Access
+     - ???
+
 Office for National Statistics
 ==============================
 
