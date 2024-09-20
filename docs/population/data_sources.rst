@@ -470,3 +470,174 @@ Dataset 6
      - I:/NorMITs Land Use/2023/import/ONS-validation/households_nssec_lsoa.csv
    * - Access
      - Freely available to download
+
+Population Data
+===============
+
+Dataset 1
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Population (all usual residents)
+   * - Geography
+     - LSOA 2021
+   * - Segmentation
+     - SOC group
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/population_soc9_lsoa.csv
+   * - Access
+     - Freely available to download
+
+Dataset 2
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Population (all usual residents)
+   * - Geography
+     - LSOA 2021
+   * - Segmentation
+     - Economic status
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/population_status_lsoa.csv
+   * - Access
+     - Freely available to download
+
+Dataset 3
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Population (all usual residents)
+   * - Geography
+     - LAD 2021
+   * - Segmentation
+     - Age, gender, SOC group
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/population_age11_gender_occupation_lad.csv
+   * - Access
+     - Freely available to download
+
+Dataset 4
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Population (all usual residents)
+   * - Geography
+     - GOR 2021
+   * - Segmentation
+     - Age, gender, economic status
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/population_age11_gender_economicstatus_region.csv
+   * - Access
+     - Freely available to download
+
+Dataset 5
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Population (all usual residents)
+   * - Geography
+     - GOR 2021
+   * - Segmentation
+     - Number of adults in the household, number of children in the household, economic status
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/population_adults_children_status_region.csv
+   * - Access
+     - Freely available to download
+
+Dataset 6
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Population (all usual residents)
+   * - Geography
+     - LAD 2021
+   * - Segmentation
+     - Number of adults in the household, number of children in the household, SOC group
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/population_adults_children_occupation_lad.csv
+   * - Access
+     - Freely available to download
+
+Dataset 7
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Population (all usual residents)
+   * - Geography
+     - MSOA 2021
+   * - Segmentation
+     - Number of adults in the household, number of children in the household, age, gender
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/population_adults_children_age_gender_MSOA.csv
+   * - Access
+     - Freely available to download
+
+Dataset 8
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Population (all usual residents)
+   * - Geography
+     - MSOA 2021
+   * - Segmentation
+     - Age, gender, car availability
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/population_age_gender_car_msoa.csv
+   * - Access
+     - Freely available to download
