@@ -366,8 +366,8 @@ AddressBase
 Annual Population Survey
 ========================
 
-Dataset 1
----------
+T01
+---
 
 .. list-table::
    :header-rows: 0
@@ -381,14 +381,14 @@ Dataset 1
    * - Segmentation
      - Gender, APS economic status
    * - Source
-     - ???
+     - `Nomis Statistical Queries <https://www.nomisweb.co.uk/datasets/apsnew>`_
    * - File Location
      - I:/NorMITs Land Use/2023/import/APS 2023 for IPF/Regional-based-targets/APS-24-regional-based-targets_revamp.xlsx
    * - Access
-     - ???
+     - Freely available to download
 
-Dataset 2
----------
+T08
+---
 
 .. list-table::
    :header-rows: 0
@@ -402,11 +402,11 @@ Dataset 2
    * - Segmentation
      - Gender, employment status
    * - Source
-     - ???
+     - `Nomis Statistical Queries <https://www.nomisweb.co.uk/datasets/apsnew>`_
    * - File Location
      - I:/NorMITs Land Use/2023/import/APS 2023 for IPF/Regional-based-targets/APS-24-regional-based-targets_revamp.xlsx
    * - Access
-     - ???
+     - Freely available to download
 
 Validation Data
 ***************
