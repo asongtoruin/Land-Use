@@ -12,11 +12,14 @@ The sections below describe each input dataset with the:
 - the file location stored on TfN's local drive, and
 - the access requirements for the data.
 
-2021 England and Wales Census Data
-=============================
+Base Year Model Data
+********************
 
-``ONS Table 1``
----------------
+2021 England and Wales Census Data
+==================================
+
+ONS Table 1
+-----------
 
 .. list-table::
    :header-rows: 0
@@ -36,8 +39,8 @@ The sections below describe each input dataset with the:
    * - Access
      - Purchased, not open access
 
-``ONS Table 2``
----------------
+ONS Table 2
+-----------
 
 .. list-table::
    :header-rows: 0
@@ -57,8 +60,8 @@ The sections below describe each input dataset with the:
    * - Access
      - Purchased, not open access
 
-``ONS Table 3``
----------------
+ONS Table 3
+-----------
 
 .. list-table::
    :header-rows: 0
@@ -78,8 +81,8 @@ The sections below describe each input dataset with the:
    * - Access
      - Purchased, not open access
 
-``ONS Table 4``
----------------
+ONS Table 4
+-----------
 
 .. list-table::
    :header-rows: 0
@@ -99,8 +102,8 @@ The sections below describe each input dataset with the:
    * - Access
      - Purchased, not open access
 
-``Occupied Households``
------------------------
+Occupied Households
+-------------------
 
 .. list-table::
    :header-rows: 0
@@ -120,8 +123,8 @@ The sections below describe each input dataset with the:
    * - Access
      - Freely available to download
 
-``Unoccupied Households``
------------------------
+Unoccupied Households
+---------------------
 
 .. list-table::
    :header-rows: 0
@@ -141,8 +144,8 @@ The sections below describe each input dataset with the:
    * - Access
      - Freely available to download
 
-``Age and Gender``
-------------------
+Age and Gender
+--------------
 
 .. list-table::
    :header-rows: 0
@@ -162,8 +165,8 @@ The sections below describe each input dataset with the:
    * - Access
      - Freely available to download
 
-``Communal Establishments (CE)``
---------------------------------
+Communal Establishments (CE)
+----------------------------
 
 .. list-table::
    :header-rows: 0
@@ -183,8 +186,8 @@ The sections below describe each input dataset with the:
    * - Access
      - Freely available to download
 
-``CE Types``
-------------
+CE Types
+--------
 
 .. list-table::
    :header-rows: 0
@@ -204,8 +207,8 @@ The sections below describe each input dataset with the:
    * - Access
      - Freely available to download
 
-``CE SOC``
-----------
+CE SOC
+------
 
 .. list-table::
    :header-rows: 0
@@ -225,8 +228,8 @@ The sections below describe each input dataset with the:
    * - Access
      - Freely available to download
 
-``CE Economic Status``
-----------------------
+CE Economic Status
+------------------
 
 .. list-table::
    :header-rows: 0
@@ -248,8 +251,9 @@ The sections below describe each input dataset with the:
 
 Office for National Statistics
 ==============================
-``2022 MYPE``
--------------
+
+2022 MYPE
+---------
 
 .. list-table::
    :header-rows: 0
@@ -263,14 +267,14 @@ Office for National Statistics
    * - Segmentation
      - Age, gender
    * - Source
-     - `ONS Mid-Year Population Estimate Downloads <https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/lowersuperoutputareamidyearpopulationestimatesnationalstatistics>`_
+     - `ONS Mid-Year LSOA Population Estimates <https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/lowersuperoutputareamidyearpopulationestimatesnationalstatistics>`_
    * - File Location
      - I:/NorMITs Land Use/2023/import/MYPE/sapelsoasyoatablefinal.xlsx
    * - Access
      - Freely available to download
 
-``2023 MYPE``
--------------
+2023 MYPE
+---------
 
 .. list-table::
    :header-rows: 0
@@ -284,7 +288,7 @@ Office for National Statistics
    * - Segmentation
      - Age, gender
    * - Source
-     - `ONS Mid-Year Population Estimate Downloads <https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/estimatesofthepopulationforenglandandwales>`_
+     - `ONS Mid-Year Population Estimates for England and Wales <https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/estimatesofthepopulationforenglandandwales>`_
    * - File Location
      - I:/NorMITs Land Use/2023/import/MYPE/myebtablesenglandwales20112023.xlsx
    * - Access
@@ -292,8 +296,9 @@ Office for National Statistics
 
 AddressBase
 ===========
-``2021 AddressBase Dwellings``
-------------------------------
+
+2021 AddressBase Dwellings
+--------------------------
 
 .. list-table::
    :header-rows: 0
@@ -313,8 +318,8 @@ AddressBase
    * - Access
      - Licensed through TfN, not open access
 
-``2023 AddressBase Dwellings``
-------------------------------
+2023 AddressBase Dwellings
+--------------------------
 
 .. list-table::
    :header-rows: 0
@@ -333,3 +338,135 @@ AddressBase
      - I:/NorMITs Land Use/2023/import/ABP/ABP2023/output_results_all_2023(no red).xlsx
    * - Access
      - Licensed through TfN, not open access
+
+Validation Data
+***************
+
+Household Data
+==============
+
+Dataset 1
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Households
+   * - Geography
+     - LSOA 2021
+   * - Segmentation
+     - Car availability
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/households_cars_lsoa_3.csv
+   * - Access
+     - Freely available to download
+
+Dataset 2
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Households
+   * - Geography
+     - LSOA 2021
+   * - Segmentation
+     - Number of adults in the household, number of children in the household
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/households_adults_children_lsoa.csv
+   * - Access
+     - Freely available to download
+
+Dataset 3
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Households
+   * - Geography
+     - LAD 2021
+   * - Segmentation
+     - Number of adults in the household, number of children in the household, NS-SeC of Household Reference Person
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/households_nssec_adults_children_lad.csv
+   * - Access
+     - Freely available to download
+
+Dataset 4
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Households
+   * - Geography
+     - LAD 2021
+   * - Segmentation
+     - Car availability, NS-SeC of Household Reference Person
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/households_nssec_car_lad.csv
+   * - Access
+     - Freely available to download
+
+Dataset 5
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Households
+   * - Geography
+     - LAD 2021
+   * - Segmentation
+     - Car availability, NS-SeC of Household Reference Person
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/households_nssec_car_lad.csv
+   * - Access
+     - Freely available to download
+
+Dataset 6
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Households
+   * - Geography
+     - LSOA 2021
+   * - Segmentation
+     - NS-SeC of Household Reference Person
+   * - Source
+     - https://www.ons.gov.uk/datasets/create
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/ONS-validation/households_nssec_lsoa.csv
+   * - Access
+     - Freely available to download
