@@ -339,6 +339,51 @@ AddressBase
    * - Access
      - Licensed through TfN, not open access
 
+Annual Population Survey
+========================
+
+Dataset 1
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Population (working age only)
+   * - Geography
+     - GOR 2021
+   * - Segmentation
+     - Gender, APS economic status
+   * - Source
+     - ???
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/APS 2023 for IPF/Regional-based-targets/APS-24-regional-based-targets_revamp.xlsx
+   * - Access
+     - ???
+
+Dataset 2
+---------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 1 2
+   :stub-columns: 1
+
+   * - Unit
+     - Population (working age only)
+   * - Geography
+     - GOR 2021
+   * - Segmentation
+     - Gender, employment status
+   * - Source
+     - ???
+   * - File Location
+     - I:/NorMITs Land Use/2023/import/APS 2023 for IPF/Regional-based-targets/APS-24-regional-based-targets_revamp.xlsx
+   * - Access
+     - ???
+
 Validation Data
 ***************
 
