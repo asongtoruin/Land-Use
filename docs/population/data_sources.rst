@@ -267,11 +267,11 @@ Scotland Population
    * - Segmentation
      - Gender, Scotland age groups
    * - Source
-     - ???
+     - `Scottish Census Data <https://www.scotlandscensus.gov.uk/search-the-census#/location/topics/list?search=population>`_
    * - File Location
      - I:/NorMITs Land Use/2023/import/Census Scotland/Population_age6_gender_DZ2011.csv
    * - Access
-     - ???
+     - Freely available to download
 
 Office for National Statistics
 ==============================
