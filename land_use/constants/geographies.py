@@ -341,8 +341,6 @@ KNOWN_GEOGRAPHIES = {
     LSOA_2011_EWS_NAME: LSOA_2011_EWS_ZONING_SYSTEM,
 }
 
-
-
 KNOWN_GEOGRAPHIES = {
     **KNOWN_GEOGRAPHIES,
     **LSOAS_BY_GOR,
@@ -360,7 +358,7 @@ KNOWN_GEOGRAPHIES = {
 #     # "F:\Working\Land-Use\SHAPEFILES\CORRESPONDENCES\Scottish Data Zones 2011_TO_TFN_AREA_TYPES.csv"
 #     # "F:\Working\Land-Use\SHAPEFILES\CORRESPONDENCES\LSOA_2021_EW_BFC_V8_NORTH_TO_TFN_AREA_TYPES.csv"
 #     # this is basically to translate 'scottish urban' area type 20 to 'city / major' from the north
-#     SCOTLAND_ZONING_SYSTEM.translate(
+#     SCOTLAND_DZONE_ZONING_SYSTEM.translate(
 #         TFN_AT_AGG_ZONING_SYSTEM,
 #         cache_path=CACHE_FOLDER
 #     )
@@ -441,6 +439,22 @@ KNOWN_GEOGRAPHIES = {
 #             gor,
 #             cache_path=CACHE_FOLDER
 #         )
+#         lsoa.translate(
+#             RGN_ZONING_SYSTEM,
+#             cache_path=CACHE_FOLDER
+#         )
+#         lsoa.translate(
+#             LAD_ZONING_SYSTEM,
+#             cache_path=CACHE_FOLDER
+#         )
+#         lsoa.translate(
+#             RGN_EWS_ZONING_SYSTEM,
+#             cache_path=CACHE_FOLDER
+#         )
+#         lsoa.translate(
+#             LAD_EWS_ZONING_SYSTEM,
+#             cache_path=CACHE_FOLDER
+#         )
 #         msoa.translate(
 #             lad,
 #             cache_path=CACHE_FOLDER
@@ -453,11 +467,43 @@ KNOWN_GEOGRAPHIES = {
 #             gor,
 #             cache_path=CACHE_FOLDER
 #         )
+#         msoa.translate(
+#             RGN_ZONING_SYSTEM,
+#             cache_path=CACHE_FOLDER
+#         )
+#         msoa.translate(
+#             LAD_ZONING_SYSTEM,
+#             cache_path=CACHE_FOLDER
+#         )
+#         msoa.translate(
+#             RGN_EWS_ZONING_SYSTEM,
+#             cache_path=CACHE_FOLDER
+#         )
+#         msoa.translate(
+#             LAD_EWS_ZONING_SYSTEM,
+#             cache_path=CACHE_FOLDER
+#         )
 #         lad.translate(
 #             gor,
 #             cache_path=CACHE_FOLDER
 #         )
+#         lad.translate(
+#             RGN_ZONING_SYSTEM,
+#             cache_path=CACHE_FOLDER
+#         )
+#         lad.translate(
+#             RGN_EWS_ZONING_SYSTEM,
+#             cache_path=CACHE_FOLDER
+#         )
 #         lad23.translate(
 #             gor,
+#             cache_path=CACHE_FOLDER
+#         )
+#         lad23.translate(
+#             RGN_ZONING_SYSTEM,
+#             cache_path=CACHE_FOLDER
+#         )
+#         lad23.translate(
+#             RGN_EWS_ZONING_SYSTEM,
 #             cache_path=CACHE_FOLDER
 #         )
