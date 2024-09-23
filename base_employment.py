@@ -213,11 +213,6 @@ ons_sic_soc_jobs_lsoa = ons_sic_soc_jobs_lu.translate_zoning(
     check_totals=False
 )
 
-jobs_by_lsoa_with_soc_group = data_processing.apply_proportions(
-    source_dvector=ons_sic_soc_jobs_lsoa, 
-    apply_to=lsoa_2021_1_digit_sic
-)
-
 # Note a warning is generated here about combinations with SOC as 4. We can ignore it.
 LOGGER.info(f'Applying SOC group proportions to BRES 1-digit SIC jobs')
 jobs_by_lsoa_with_soc_group = data_processing.apply_proportions(
