@@ -13,9 +13,9 @@ The sections below describe each input dataset with the:
 
 
 BRES 2022
-==============================
+============================
 ``BRES 2022 Employment LAD`` 
----------------
+----------------------------
 
 .. list-table::
    :header-rows: 0
@@ -35,8 +35,8 @@ BRES 2022
    * - Access
      - Freely available to download
 
-``BRES 2022 Employment LSOA``  !!!!!!!!!!!!!!!!!!!!!- update/check
----------------
+``BRES 2022 Employment LSOA`` 
+-----------------------------
 
 .. list-table::
    :header-rows: 0
@@ -56,8 +56,8 @@ BRES 2022
    * - Access
      - Freely available to download
 
-``BRES 2022 Employment MSOA``  !!!!!!!!!!!!!!!!!!!!!- update/check
----------------
+``BRES 2022 Employment MSOA`` 
+-----------------------------
 
 .. list-table::
    :header-rows: 0
@@ -79,8 +79,8 @@ BRES 2022
 
 Office for National Statistics
 ==============================
-``ONS Industry (SIC) to Occupation (SOC)``  !!!!!!!!!!!!!!!!!!!!!- update/check
----------------
+``ONS Industry (SIC) to Occupation (SOC)``
+------------------------------------------
 
 .. list-table::
    :header-rows: 0
@@ -88,12 +88,11 @@ Office for National Statistics
    :stub-columns: 1
 
    * - Unit
-     - Jobs !!!!!!!!!!!!!!!!!!!!!- update/check
+     - Jobs
    * - Geography
      - GOR 2021
    * - Segmentation
-     - SIC Section (1 digit)
-     - SOC group
+     - SIC Section (1 digit), SOC group
    * - Source
      - `Office for National Statistics <mailto:Census.CustomerServices@ons.gov.uk>`_
    * - File Location
@@ -102,9 +101,9 @@ Office for National Statistics
      - Freely available to download
 
 WFJ
-==============================
+===
 ``WFJ 2023``
----------------
+------------
 
 .. list-table::
    :header-rows: 0
@@ -125,7 +124,7 @@ WFJ
      - Freely available to download
 
 ``SOC 4 factors``
----------------
+-----------------
 
 .. list-table::
    :header-rows: 0
