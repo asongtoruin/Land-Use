@@ -102,8 +102,15 @@ def segments_from_yaml(yaml_file: Path) -> set:
 
     for value in contents.values():
         if isinstance(value, dict):
-            if segments:=value.get('input_segments'):
-                all_segments.update(segments)
+            for sub_value in value.values():
+                if isinstance(sub_value, dict):
+                    if segments := sub_value.get('input_segments'):
+                        all_segments.update(segments)
+                if isinstance(sub_value, list):
+                    for item in sub_value:
+                        if isinstance(item, dict):
+                            if segments := item.get('input_segments'):
+                                all_segments.update(segments)
     
     return all_segments
 
@@ -161,9 +168,9 @@ if __name__ == '__main__':
 
     this_folder = Path(__file__).parent
 
-    with open(this_folder / 'population' / 'segmentation.rst', 'w') as pop_seg_file:
+    with open(this_folder / 'population' / 'segmentation.rst', 'w', encoding='utf-8') as pop_seg_file:
         pop_seg_file.write(segmentation_page_from_yaml(args.pop_config.absolute()))
     
-    with open(this_folder / 'employment' / 'segmentation.rst', 'w') as pop_seg_file:
+    with open(this_folder / 'employment' / 'segmentation.rst', 'w', encoding='utf-8') as pop_seg_file:
         pop_seg_file.write(segmentation_page_from_yaml(args.emp_config.absolute()))
 
