@@ -362,6 +362,10 @@ KNOWN_GEOGRAPHIES = {
 #         TFN_AT_AGG_ZONING_SYSTEM,
 #         cache_path=CACHE_FOLDER
 #     )
+#     SCOTLAND_DZONE_ZONING_SYSTEM.translate(
+#         LAD_EWS_ZONING_SYSTEM,
+#         cache_path=CACHE_FOLDER
+#     )
 #     NORTH_ZONING_SYSTEM.translate(
 #         TFN_AT_AGG_ZONING_SYSTEM,
 #         cache_path=CACHE_FOLDER
