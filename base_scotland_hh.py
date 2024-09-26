@@ -38,8 +38,8 @@ generate_summary_outputs = bool(config['output_intermediate_outputs'])
 LOGGER = lu_logging.configure_logger(output_dir=OUTPUT_DIR, log_name='scotland_hh')
 
 # SCOTLAND-SPECIFIC PROCESSING
-LOGGER.info('Read in Scotland population data created in step 11 of population')
-scot_pop = DVector.load(OUTPUT_DIR / f'Output P11_Scotland.hdf')
+LOGGER.info('Read in Scotland population data created in step 13 of population')
+scot_pop = DVector.load(OUTPUT_DIR / f'Output P13_Scotland.hdf')
 
 # collapse segmentation to household-specific segmentations (i.e. remove population segmentation)
 aggregated_pop = scot_pop.aggregate(
