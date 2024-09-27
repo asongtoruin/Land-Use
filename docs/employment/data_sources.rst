@@ -13,9 +13,9 @@ The sections below describe each input dataset with the:
 
 
 BRES 2022
-==============================
+============================
 ``BRES 2022 Employment LAD`` 
----------------
+----------------------------
 
 .. list-table::
    :header-rows: 0
@@ -29,14 +29,14 @@ BRES 2022
    * - Segmentation
      - SIC Class (4 digit)
    * - Source
-     - `Office for National Statistics <mailto:Census.CustomerServices@ons.gov.uk>`_
+     - https://www.nomisweb.co.uk/query/construct/summary.asp?mode=construct&version=0&dataset=189
    * - File Location
      - I:/NorMITs Land Use/2023/import/BRES2022/Employment/bres_employment22_lad_4digit_sic.csv
    * - Access
-     - Purchased, not open access !!!!!!!!!!!!!!!!!!!!!- update/check
+     - Freely available to download
 
-``BRES 2022 Employment LSOA``  !!!!!!!!!!!!!!!!!!!!!- update/check
----------------
+``BRES 2022 Employment LSOA`` 
+-----------------------------
 
 .. list-table::
    :header-rows: 0
@@ -50,14 +50,14 @@ BRES 2022
    * - Segmentation
      - SIC Section (1 digit)
    * - Source
-     - `Office for National Statistics <mailto:Census.CustomerServices@ons.gov.uk>`_
+     - https://www.nomisweb.co.uk/query/construct/summary.asp?mode=construct&version=0&dataset=189
    * - File Location
-     - I:/NorMITs Land Use/2023/import/BRES2022/Employment/bres_employment22_lsoa2011_1digit_sic.hdf !!!!!!!!!!!!!!!!!!!!!- update
+     - I:/NorMITs Land Use/2023/import/BRES2022/Employment/bres_employment22_lsoa2011_1digit_sic.csv
    * - Access
-     - Purchased, not open access !!!!!!!!!!!!!!!!!!!!!- update/check
+     - Freely available to download
 
-``BRES 2022 Employment MSOA``  !!!!!!!!!!!!!!!!!!!!!- update/check
----------------
+``BRES 2022 Employment MSOA`` 
+-----------------------------
 
 .. list-table::
    :header-rows: 0
@@ -71,16 +71,16 @@ BRES 2022
    * - Segmentation
      - SIC Division (2 digit)
    * - Source
-     - `Office for National Statistics <mailto:Census.CustomerServices@ons.gov.uk>`_
+     - https://www.nomisweb.co.uk/query/construct/summary.asp?mode=construct&version=0&dataset=189
    * - File Location
-     - I:/NorMITs Land Use/2023/import/BRES2022/Employment/bres_employment22_msoa2011_2digit_sic_jobs !!!!!!!!!!!!!!!!!!!!!- update
+     - I:/NorMITs Land Use/2023/import/BRES2022/Employment/bres_employment22_msoa2011_2digit_sic_jobs.csv
    * - Access
-     - Purchased, not open access !!!!!!!!!!!!!!!!!!!!!- update/check
+     - Freely available to download
 
 Office for National Statistics
 ==============================
-``ONS Industry (SIC) to Occupation (SOC)``  !!!!!!!!!!!!!!!!!!!!!- update/check
----------------
+``ONS Industry (SIC) to Occupation (SOC)``
+------------------------------------------
 
 .. list-table::
    :header-rows: 0
@@ -88,23 +88,22 @@ Office for National Statistics
    :stub-columns: 1
 
    * - Unit
-     - Jobs !!!!!!!!!!!!!!!!!!!!!- update/check
+     - Jobs
    * - Geography
      - GOR 2021
    * - Segmentation
-     - SIC Section (1 digit)
-     - SOC group
+     - SIC Section (1 digit), SOC group
    * - Source
      - `Office for National Statistics <mailto:Census.CustomerServices@ons.gov.uk>`_
    * - File Location
      - I:/NorMITs Land Use/2023/import/ONS/industry_occupation/population_region_1sic_soc.csv
    * - Access
-     - Freely available to download !!!!!!!!!!!!!!!!!!!!!- update/check
+     - Freely available to download
 
 WFJ
-==============================
+===
 ``WFJ 2023``
----------------
+------------
 
 .. list-table::
    :header-rows: 0
@@ -118,14 +117,14 @@ WFJ
    * - Segmentation
      - Total
    * - Source
-     - `Office for National Statistics <mailto:Census.CustomerServices@ons.gov.uk>`_ !!!!! Check/update Or is it NOMIS
+     - `Office for National Statistics <mailto:Census.CustomerServices@ons.gov.uk>`_
    * - File Location
-     - I:/NorMITs Land Use/2023/import/BRES2022/Employment/Employment Investigation/WFJ.csv !!!!!!!!!!!!!!!!!!!!!- update
+     - I:/NorMITs Land Use/2023/import/BRES2022/Employment/Employment Investigation/WFJ.csv
    * - Access
-     - Purchased, not open access !!!!!!!!!!!!!!!!!!!!!- update/check
+     - Freely available to download
 
 ``SOC 4 factors``
----------------
+-----------------
 
 .. list-table::
    :header-rows: 0
@@ -139,8 +138,8 @@ WFJ
    * - Segmentation
      - Total
    * - Source
-     - `Office for National Statistics <mailto:Census.CustomerServices@ons.gov.uk>`_ !!!!!!!!!!!!!!!!!!!!!- update/check
+     - TfN internal analysis based on other sources
    * - File Location
      - I:/NorMITs Land Use/2023/import/SOC/Table 8 WFJ-adjusted Land Use SOC4.csv
    * - Access
-     - Purchased, not open access !!!!!!!!!!!!!!!!!!!!!- update/check
+     - TfN internal analysis

@@ -14,7 +14,7 @@ from land_use import logging as lu_logging
 
 
 # TODO: expand on the documentation here
-parser = ArgumentParser('Land-Use base population command line runner')
+parser = ArgumentParser('Land-Use base employment command line runner')
 parser.add_argument('config_file', type=Path)
 args = parser.parse_args()
 
@@ -211,11 +211,6 @@ ons_sic_soc_jobs_lsoa = ons_sic_soc_jobs_lu.translate_zoning(
     cache_path=constants.CACHE_FOLDER,
     weighting=TranslationWeighting.NO_WEIGHT,
     check_totals=False
-)
-
-jobs_by_lsoa_with_soc_group = data_processing.apply_proportions(
-    source_dvector=ons_sic_soc_jobs_lsoa, 
-    apply_to=lsoa_2021_1_digit_sic
 )
 
 # Note a warning is generated here about combinations with SOC as 4. We can ignore it.
