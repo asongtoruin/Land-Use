@@ -6,7 +6,7 @@ import pandas as pd
 from caf.core.data_structures import DVector
 
 from land_use.constants import geographies
-from .verifications import generate_segment_heatmaps
+from .verifications import generate_segment_heatmaps, generate_segment_bar_plots
 
 LOGGER = logging.getLogger(__name__)
 
@@ -285,6 +285,45 @@ def save_output(
             output_directory=output_folder,
             output_reference=output_reference,
             value_name=dvector_dimension
+        )
+
+
+def generate_reporting_plots(
+        output_folder: Path,
+        dvector: DVector,
+        unit: str,
+        geography: str
+
+):
+    """Outputting bar plots of absolute and proportional numbers of each
+    segment in dvector across geographies.
+
+    Parameters
+    ----------
+    output_folder: Path
+        Directory of hdf outputs
+    dvector: DVector
+        DVector of data to plot
+    unit: str
+        Helpful reference for the user to add to plot axes and in file names.
+        Something like 'population' or 'households'
+    geography: str
+        Helpful reference for the user to add in file names.
+        Something like 'regions' or 'districts'
+
+    """
+
+    LOGGER.info(fr'Generating bar plots to {output_folder}\reporting')
+    # generate heat map plots
+    reporting_folder = output_folder / 'reporting'
+    reporting_folder.mkdir(exist_ok=True, parents=True)
+
+    for fig, axes, segment, output_data in generate_segment_bar_plots(
+            dvec=dvector, unit=unit):
+        fig.savefig(reporting_folder / f'{segment}-{unit}-{geography}.png')
+        output_data.to_csv(
+            reporting_folder / f'{segment}-{unit}-region.csv',
+            float_format='%.0f'
         )
 
 

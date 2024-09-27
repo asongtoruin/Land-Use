@@ -875,3 +875,50 @@ def apply_ipf(
         differences.append(comparison)
 
     return rebalanced_data, pd.concat(summary), differences
+
+
+def translate_and_combine_dvectors(
+        input_files: list[Path],
+        aggregate_zone_system: str,
+        cache_path: Path = CACHE_FOLDER
+
+) -> DVector:
+    """Combine multiple DVectors of potentially varying zone systems to a single
+    DVector.
+
+    Parameters
+    ----------
+    input_files: List[Path]
+        A list of files that can successfully be loaded as DVectors through
+        DVector.load()
+    aggregate_zone_system: str
+        A string reference to the zone system that all input_file DVectors will
+        be aggregated to. If a translation does not already exist in cache_path,
+        then caf.space will make one. If that's the case, this code will take
+        longer to run.
+    cache_path: Path, default CACHE_FOLDER
+        Directory containing all zone systems and zone translations
+
+    Returns
+    -------
+    DVector
+        DVector in aggregate_zone_system which is the sum of all the DVectors in
+        input_files.
+
+    """
+    if len(input_files) == 0:
+        raise RuntimeError('You must provide at least one DVector to aggegregate')
+
+    for i, file in enumerate(input_files):
+        LOGGER.info(f'*** Reading {file.name} ***')
+        example_output = DVector.load(file).translate_zoning(
+            ZoningSystem.get_zoning(aggregate_zone_system, search_dir=cache_path),
+            cache_path=cache_path
+        )
+        if i == 0:
+            totals = example_output.copy()
+        else:
+            totals += example_output
+        del example_output
+
+    return totals
