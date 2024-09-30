@@ -193,7 +193,7 @@ For datasets with a SOC Segmentation but where the range is not stated then it w
         node [style=rounded, color=black]
             output_e4 [label="Output E4|Jobs by LSOA, \nSIC (Section and Division), SOC|LSOA"];
             output_e4_2 [label="Output E4.2|Jobs by LSOA, SIC Division,\nSOC weighted to WFJ|LSOA"];
-            output_e5 [label="Output E5|Jobs by LSOA, SOC\n,SIC (Class, Section, Division)|LSOA"];
+            output_e5 [label="Output E5|Jobs by LSOA, SOC,\nSIC (Class, Section, Division)|LSOA"];
         
 
         table_1 -> output_e1;
