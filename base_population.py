@@ -730,7 +730,8 @@ for GOR in constants.GORS:
     rebased_pop, summary, differences = data_processing.apply_ipf(
         seed_data=segmented_pop_rebase,
         target_dvectors=list(population_adjustment['rebase_data']),
-        cache_folder=constants.CACHE_FOLDER
+        cache_folder=constants.CACHE_FOLDER,
+        target_dvector=list(population_adjustment['rebase_data'])[2]
     )
 
     # save output to hdf and csvs for checking
@@ -756,40 +757,6 @@ for GOR in constants.GORS:
         segmented_pop_rebase, *population_adjustment['rebase_data']
     )
 
-    # --- Step 14 --- #
-    LOGGER.info('--- Step 14 ---')
-
-    # applying IPF (adjusting totals to match P9 outputs)
-    LOGGER.info('Applying IPF for population APS rebase targets')
-    rebased_pop, summary, differences = data_processing.apply_ipf(
-        seed_data=rebased_pop,
-        target_dvectors=list(population_adjustment['aps_data']),
-        cache_folder=constants.CACHE_FOLDER
-    )
-
-    # save output to hdf and csvs for checking
-    data_processing.save_output(
-        output_folder=OUTPUT_DIR,
-        output_reference=f'Output P14_{GOR}',
-        dvector=rebased_pop,
-        dvector_dimension='population',
-        detailed_logs=True
-    )
-    summary.to_csv(
-        OUTPUT_DIR / f'Output P14_{GOR}_VALIDATION.csv',
-        float_format='%.5f', index=False
-    )
-    data_processing.write_to_excel(
-        output_folder=OUTPUT_DIR,
-        file=f'Output P14_{GOR}_VALIDATION.xlsx',
-        dfs=differences
-    )
-
-    # clear data at the end of the loop
-    data_processing.clear_dvectors(
-        rebased_pop, *population_adjustment['aps_data']
-    )
-
     LOGGER.info(f'*****COMPLETED PROCESSING FOR {GOR}*****')
 
 
@@ -797,8 +764,8 @@ for GOR in constants.GORS:
 LOGGER.info('Applying regional profiles to Scotland population data')
 area_type_agg = []
 for gor in config['scotland_donor_regions']:
-    LOGGER.debug(f'Re-reading 10 for {gor}')
-    final_pop = DVector.load(OUTPUT_DIR / f'Output P11_{gor}.hdf')
+    LOGGER.debug(f'Re-reading P13 for {gor}')
+    final_pop = DVector.load(OUTPUT_DIR / f'Output P13_{gor}.hdf')
     area_type_agg.append(
         final_pop.translate_zoning(constants.TFN_AT_AGG_ZONING_SYSTEM, cache_path=constants.CACHE_FOLDER)
     )
@@ -832,7 +799,7 @@ scotland_hydrated = scotland_hydrated.aggregate(
 
 data_processing.save_output(
     output_folder=OUTPUT_DIR,
-    output_reference=f'Output P11_Scotland',
+    output_reference=f'Output P13_Scotland',
     dvector=scotland_hydrated,
     dvector_dimension='population',
     detailed_logs=True

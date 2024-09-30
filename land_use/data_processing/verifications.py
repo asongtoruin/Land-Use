@@ -1,10 +1,12 @@
 import logging
 from itertools import combinations
 from typing import Generator, Union
+from textwrap import fill
 
 import pandas as pd
 from caf.core.data_structures import DVector
 import matplotlib.pyplot as plt
+import matplotlib
 import seaborn as sns
 
 LOGGER = logging.getLogger(__name__)
@@ -153,5 +155,60 @@ def generate_segment_heatmaps(
         fig.set_size_inches(15, 15)
 
         yield fig, ax, row_seg, col_seg
+
+        plt.close(fig)
+
+
+def generate_segment_bar_plots(
+        dvec: DVector,
+        unit: str,
+        max_segments: int = 8
+) -> Generator[tuple[plt.Figure, plt.Axes, str, pd.DataFrame], None, None]:
+
+    mapping = dvec.zoning_system.zone_descriptions().to_dict()
+
+    for seg in dvec.segmentation.names:
+
+        # get category names within the segmentation to help readability of charts
+        segment_mapping = dvec.segmentation.seg_dict[seg].values
+
+        # find out how many categories and dont plot if there's too many
+        if len(segment_mapping.values()) > max_segments:
+            continue
+
+        # group data by the specific segment (plotting only one at a time)
+        data = dvec.aggregate([seg]).data.T
+
+        # change the index and column values to zone names and category names, respectively
+        data.index = data.index.map(mapping)
+        data.columns = data.columns.map(segment_mapping)
+
+        # output summary csv
+        output_data = data.copy()
+
+        # And now *after* we've written, shorten labels for graph
+        data.index = data.index.map(lambda f: fill(f, 15))
+        data.columns = data.columns.map(lambda f: fill(f, 20))
+
+        percentages = data.copy()
+        percentages = percentages.div(percentages.sum(axis=1), axis=0)
+
+        fig, axes = plt.subplots(figsize=(12, 8), nrows=2, sharex=True, sharey=False,
+                                 gridspec_kw=dict(height_ratios=[2, 1]))
+
+        # plot grouped bar chart
+        data.plot.bar(zorder=2, ax=axes[0], edgecolor='black')
+        # labels = [fill(l, 20) for l in data.columns]
+        axes[0].set_ylabel(unit)
+        axes[0].yaxis.set_major_formatter(
+            matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ','))
+        )
+        axes[0].legend(title=seg, loc='center left', bbox_to_anchor=(1, 0.5))
+
+        percentages.plot.bar(zorder=2, ax=axes[1], legend=False, edgecolor='black')
+        axes[1].yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(xmax=1))
+        axes[1].set_xlabel(None)
+
+        yield fig, axes, seg, output_data
 
         plt.close(fig)
