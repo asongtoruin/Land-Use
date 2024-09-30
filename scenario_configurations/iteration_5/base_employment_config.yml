@@ -1,7 +1,7 @@
 # Configuration file specifying the segmentation and geographical level of the input data.
 # All files here are assumed to be in a format ready for DVectors.
 input_root_directory: I:\NorMITs Land Use\2023\import
-output_directory: F:\Working\Land-Use\OUTPUTS_base_employment_inc_scotland_v2
+output_directory: F:\Working\Land-Use\OUTPUT_base_employment_adj_farmers
 output_intermediate_outputs: False
 
 base_data:

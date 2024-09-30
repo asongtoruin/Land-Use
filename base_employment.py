@@ -78,54 +78,101 @@ soc_4_factors = data_processing.read_dvector_from_config(
     key='soc_4_factors'
 )
 
+# --- Useful functions that probably should be DVector methods --- #
+def drop_seg_values(dvec: DVector, drop_values: list[int]) -> DVector:
+    """Drop rows with provided seg values keep other rows (requires dvector to be single index)
+
+    Args:
+        dvec (DVector): DVector function will be applied to
+        drop_values (list[int]): values to drop
+
+    Returns:
+        DVector: Dvector with values removed
+    """
+
+    return DVector(
+        segmentation=dvec.segmentation,
+        import_data=dvec.data.drop(drop_values),
+        zoning_system=dvec.zoning_system,
+        cut_read=True,
+    )
+
+def keep_seg_values(dvec: DVector, keep_values: list[int]) -> DVector:
+    """Keep rows with provided seg values drop other rows (requires dvector to be single index)
+
+    Args:
+        dvec (DVector): DVector function will be applied to
+        keep_values (list[int]): segmentation values to keep
+
+    Returns:
+        DVector: Dvector with values removed
+    """
+
+    return DVector(
+        segmentation=dvec.segmentation,
+        import_data=dvec.data.loc[keep_values],
+        zoning_system=dvec.zoning_system,
+        cut_read=True,
+    )
+
 # --- Step 0 --- #
 LOGGER.info('--- Step 0 ---')
 LOGGER.info(
     'Balance the input datasets to each have the same totals at LAD level as the 4 Digit SIC 2022 BRES data'
 )
-
-lad_2011_2_digit_sic = (
-    msoa_2011_2_digit_sic.translate_zoning(
-        new_zoning=constants.LAD_EWS_ZONING_SYSTEM,
-        cache_path=constants.CACHE_FOLDER,
-        weighting=TranslationWeighting.SPATIAL,
-        check_totals=False,
-    )
+LOGGER.info(
+    'information for farmers (sic 4 digit = 1) taken from LAD input data'
 )
 
-lad_2011_1_digit_sic = (
-    lsoa_2011_1_digit_sic.translate_zoning(
-        new_zoning=constants.LAD_EWS_ZONING_SYSTEM,
-        cache_path=constants.CACHE_FOLDER,
-        weighting=TranslationWeighting.SPATIAL,
-        check_totals=False,
-    )
+lad_4_digit_sic_lsoa = lad_4_digit_sic.translate_zoning(
+    new_zoning=constants.LSOA_2011_EWS_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.SPATIAL,
+    check_totals=False,
 )
 
-lad_total = lad_4_digit_sic.add_segments(
-    [constants.CUSTOM_SEGMENTS['total']], split_method='split'
-).aggregate(['total'])
+# Separate the farmers from the other employees
+lad_not_farmers_sic_4_digit = drop_seg_values(lad_4_digit_sic, [1])
 
-msoa_total_at_lad = lad_2011_2_digit_sic.add_segments(
-    [constants.CUSTOM_SEGMENTS['total']], split_method='split'
-).aggregate(['total'])
+lad_total_no_farmers = lad_not_farmers_sic_4_digit.add_segments(
+    [constants.CUSTOM_SEGMENTS["total"]], split_method="split"
+).aggregate(["total"])
 
-lsoa_total_at_lad = lad_2011_1_digit_sic.add_segments(
-    [constants.CUSTOM_SEGMENTS['total']], split_method='split'
-).aggregate(['total'])
+msoa_2011_1_digit_sic_no_farmers = drop_seg_values(msoa_2011_2_digit_sic, [1]).translate_zoning(
+    new_zoning=constants.LAD_EWS_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.SPATIAL,
+    check_totals=False,
+)
 
-msoa_adj_factors = lad_total / msoa_total_at_lad
+msoa_total_at_lad_no_farmers = msoa_2011_1_digit_sic_no_farmers.add_segments(
+    [constants.CUSTOM_SEGMENTS["total"]], split_method="split"
+).aggregate(["total"])
 
-lsoa_adj_factors = lad_total / lsoa_total_at_lad
+lsoa_2011_1_digit_sic_no_farmers = drop_seg_values(lsoa_2011_1_digit_sic, [1]).translate_zoning(
+    new_zoning=constants.LAD_EWS_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.SPATIAL,
+    check_totals=False,
+)
 
+lsoa_total_at_lad_no_farmers = lsoa_2011_1_digit_sic_no_farmers.add_segments(
+    [constants.CUSTOM_SEGMENTS["total"]], split_method="split"
+).aggregate(["total"])
 
+# Resulting factors, note these don't include farmers
 # TODO: consider having a output/log of where the increases are outside expectations. Along the lines of
 # sig_increases = adjustment_factors.data[adjustment_factors.data.ge(1.1)]
 # sig_decreases = adjustment_factors.data[adjustment_factors.data.le(0.9)]
 
+msoa_adj_factors_no_farmers = lad_total_no_farmers / msoa_total_at_lad_no_farmers
+lsoa_adj_factors_no_farmers = lad_total_no_farmers / lsoa_total_at_lad_no_farmers
+
 rehydrated_adj_factors_for_msoa = (
-    msoa_adj_factors.add_segments([SegmentsSuper('sic_2_digit').get_segment()])
-    .aggregate([SegmentsSuper('sic_2_digit').get_segment().name])
+    msoa_adj_factors_no_farmers.add_segments(
+        [SegmentsSuper("sic_2_digit").get_segment()]
+    )
+    .aggregate([SegmentsSuper("sic_2_digit").get_segment().name])
     .translate_zoning(
         new_zoning=constants.MSOA_2011_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
@@ -135,8 +182,10 @@ rehydrated_adj_factors_for_msoa = (
 )
 
 rehydrated_adj_factors_for_lsoa = (
-    lsoa_adj_factors.add_segments([SegmentsSuper('sic_1_digit').get_segment()])
-    .aggregate([SegmentsSuper('sic_1_digit').get_segment().name])
+    lsoa_adj_factors_no_farmers.add_segments(
+        [SegmentsSuper("sic_1_digit").get_segment()]
+    )
+    .aggregate([SegmentsSuper("sic_1_digit").get_segment().name])
     .translate_zoning(
         new_zoning=constants.LSOA_2011_EWS_ZONING_SYSTEM,
         cache_path=constants.CACHE_FOLDER,
@@ -145,13 +194,77 @@ rehydrated_adj_factors_for_lsoa = (
     )
 )
 
-
-# apply proportions and fill in nas with 0 (which will be for the unemployed rows)
-adj_msoa_2011_2_digit_sic = rehydrated_adj_factors_for_msoa * msoa_2011_2_digit_sic
+# apply proportions filling in nas with 0
+msoa_2011_2_digit_sic_not_farmers = drop_seg_values(msoa_2011_2_digit_sic, [1])
+adj_msoa_2011_2_digit_sic = (
+    rehydrated_adj_factors_for_msoa * msoa_2011_2_digit_sic_not_farmers
+)
 adj_msoa_2011_2_digit_sic.fillna(0)
 
-adj_lsoa_2011_1_digit_sic = rehydrated_adj_factors_for_lsoa * lsoa_2011_1_digit_sic
+adj_msoa_2011_2_digit_sic = drop_seg_values(adj_msoa_2011_2_digit_sic, [1])
+
+# Moving onto the farmers part of the process
+# Find the number of farmers provided at LAD but translate to MSOA
+lad_data_in_msoa = lad_4_digit_sic.translate_zoning(
+    new_zoning=constants.MSOA_2011_EWS_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.SPATIAL,
+    check_totals=False,
+)
+
+lad_farmers_in_msoa = keep_seg_values(lad_data_in_msoa, [1])
+
+lad_farmers_in_msoa_sic_2 = lad_farmers_in_msoa.add_segments(
+    [SegmentsSuper("sic_2_digit").get_segment()]
+).aggregate([SegmentsSuper("sic_2_digit").get_segment().name])
+
+# Find the number of farmers provided at LAD but translate to LSOA
+lsoa_2011_1_digit_sic_not_farmers = drop_seg_values(lsoa_2011_1_digit_sic, [1])
+adj_lsoa_2011_1_digit_sic = (
+    rehydrated_adj_factors_for_lsoa * lsoa_2011_1_digit_sic_not_farmers
+)
 adj_lsoa_2011_1_digit_sic.fillna(0)
+
+adj_lsoa_2011_1_digit_sic = drop_seg_values(adj_lsoa_2011_1_digit_sic, [1])
+
+# Find the number of farmers provided at LAD but translate to MSOA
+lad_data_in_msoa = lad_4_digit_sic.translate_zoning(
+    new_zoning=constants.MSOA_2011_EWS_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.SPATIAL,
+    check_totals=False,
+)
+
+lad_farmers_in_msoa = keep_seg_values(lad_data_in_msoa, [1])
+
+lad_farmers_in_msoa_sic_2 = lad_farmers_in_msoa.add_segments(
+    [SegmentsSuper("sic_2_digit").get_segment()]
+).aggregate([SegmentsSuper("sic_2_digit").get_segment().name])
+
+# Find the number of farmers provided at LAD but translate to LSOA
+lad_data_in_lsoa = lad_4_digit_sic.translate_zoning(
+    new_zoning=constants.LSOA_2011_EWS_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.SPATIAL,
+    check_totals=False,
+)
+
+lad_farmers_in_lsoa = keep_seg_values(lad_data_in_lsoa, [1])
+
+lad_farmers_in_lsoa_sic_1 = lad_farmers_in_lsoa.add_segments(
+    [SegmentsSuper("sic_1_digit").get_segment()]
+).aggregate([SegmentsSuper("sic_1_digit").get_segment().name])
+
+# combining farmers from LAD with balanced non farmers (from MSOA and LSOA) inputs
+# MSOA
+farmers_in_msoa_input = keep_seg_values(msoa_2011_2_digit_sic, [1])
+farmers_by_msoa = farmers_in_msoa_input + lad_farmers_in_msoa_sic_2
+adj_msoa_2011_2_digit_sic = adj_msoa_2011_2_digit_sic.concat(farmers_by_msoa)
+
+# LSOA
+farmers_in_lsoa_input = keep_seg_values(lsoa_2011_1_digit_sic, [1])
+farmers_by_lsoa = farmers_in_lsoa_input + lad_farmers_in_lsoa_sic_1
+adj_lsoa_2011_1_digit_sic = adj_lsoa_2011_1_digit_sic.concat(farmers_by_lsoa)
 
 
 # --- Step 1 --- #
