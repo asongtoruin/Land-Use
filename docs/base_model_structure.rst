@@ -166,10 +166,7 @@ For datasets with a SOC Segmentation but where the range is not stated then it w
             subgraph cluster_inputs{
                 peripheries=0
                 rank="same"
-
                 table_6 [label="ONS Jobs by SIC and SOC|SIC Section and SOC (1-3)|GOR"];
-                table_8 [label="BRES SIC Section by SIC Division|Jobs by SIC Division and Section|MSOA 2011"];
-            
             }
         
         node [style=rounded, color=black]
@@ -184,6 +181,7 @@ For datasets with a SOC Segmentation but where the range is not stated then it w
         node [shape=record, color=blue width=3.4]
             table_7 [label="Jobs by LSOA|SIC Section and SOC (1-3)|LSOA"];
             table_7a [label="Jobs by LSOA|SIC (Section and Division) and SOC (1-3)|LSOA"];
+            table_8 [label="Jobs SIC splits|SIC (Section and Division)|MSOA"];
             table_11 [label="Jobs by LSOA|SIC (Section and Division) and SOC|LSOA"];
             table_10 [label="SOC 4 Factors|SOC 4 proportions by region|GOR"];
         
@@ -206,6 +204,7 @@ For datasets with a SOC Segmentation but where the range is not stated then it w
         table_3a -> output_e3;
         output_e3 -> table_7;
         table_6 -> table_7;
+        output_e2 -> table_8
         table_8 -> table_7a
         table_11 -> output_e4
         table_7 -> table_7a

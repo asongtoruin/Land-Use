@@ -15,11 +15,6 @@ base_data:
         geographical_level: MSOA2011+SCOTLAND-INT-ZONE
         input_segments: [sic_2_digit]
 
-    msoa_2011_2_digit_sic_1_digit_sic_splits:
-        file_path: BRES2022\Employment\preprocessing\bres_employment22_msoa2011_2digit_sic_1digit_sic_splits.hdf
-        geographical_level: MSOA2011+SCOTLAND-INT-ZONE
-        input_segments: [sic_1_digit, sic_2_digit]
-
     lsoa_2011_1_digit_sic:
         file_path: BRES2022\Employment\preprocessing\bres_employment22_lsoa2011_1digit_sic.hdf
         geographical_level: DZ2011+LSOA2011

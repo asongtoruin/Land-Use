@@ -54,11 +54,6 @@ lsoa_2011_1_digit_sic = data_processing.read_dvector_from_config(
     key='lsoa_2011_1_digit_sic'
 )
 
-msoa_2011_splits_sic_1_digit_to_2_digit = data_processing.read_dvector_from_config(
-    config=config,
-    data_block=block,
-    key='msoa_2011_2_digit_sic_1_digit_sic_splits'
-)
 
 ons_sic_soc_jobs_lu = data_processing.read_dvector_from_config(
     config=config,
@@ -334,17 +329,22 @@ jobs_by_lsoa_with_soc_group = data_processing.apply_proportions(
 )
 
 LOGGER.info('Converting proportions of SIC 2 digit by SIC 1 digit by SOC groups jobs to LSOA 2021')
-lsoa_2021_1_digit_2_digit_sic_splits = msoa_2011_splits_sic_1_digit_to_2_digit.translate_zoning(
-        new_zoning=constants.LSOA_EWS_ZONING_SYSTEM,
-        cache_path=constants.CACHE_FOLDER,
-        weighting=TranslationWeighting.NO_WEIGHT,
-        check_totals=False
+
+lsoa_1_digit_2_digit_sic = msoa_2021_2_digit_sic.add_segments(
+    [SegmentsSuper("sic_1_digit").get_segment()])
+
+
+msoa_1_digit_2_digit_sic = lsoa_1_digit_2_digit_sic.translate_zoning(
+    new_zoning=jobs_by_lsoa_with_soc_group.zoning_system,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.SPATIAL,
+    check_totals=False,
 )
 
 # Note a warning is generated here about combinations with SOC as 4. We can ignore it.
 LOGGER.info(f'Applying SOC group proportions to BRES 2-digit SIC jobs')
 jobs_by_sic_soc_lsoa_no_soc_4 = data_processing.apply_proportions(
-    source_dvector=lsoa_2021_1_digit_2_digit_sic_splits,
+    source_dvector=msoa_1_digit_2_digit_sic,
     apply_to=jobs_by_lsoa_with_soc_group
 )
 
