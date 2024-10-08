@@ -50,7 +50,7 @@ Population
             output_p3 [label="Output P3|Households by dwelling type, NS-Sec|LSOA"];
             output_p4_1 [label="Output P4.1|Households by dwelling type, NS-SeC\n#adults, #children, #cars|LSOA"];
             output_p4_2 [label="Output P4.2|Households rebalanced with input datasets|LSOA"];
-            output_p4_3 [label="Output P4.3|Households rebalanced with indpendent datasets|LSOA"];
+            output_p4_3 [label="Output P4.3|Households rebalanced with independent datasets|LSOA"];
             output_p5 [label="Output P5|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars|LSOA"];
             output_p6 [label="Output P6|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars,\nage, gender|LSOA"];
             output_p7 [label="Output P7|Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars,\nage, gender, economic status,\nemployment status, SOC|LSOA"];
@@ -61,8 +61,6 @@ Population
             output_p12_1 [label="Output P12.1|2023 Population by dwelling type, NS-SeC\n#adults, #children, #cars|LSOA"];
             output_p12_2 [label="Output P12.2|2023 Population by dwelling type, NS-SeC\nhh#adults, hh#children, hh#cars,\nage, gender, economic status,\nemployment status, SOC|LSOA"];
             output_p13 [label="Output P13|Population IPF to 2023|LSOA"];
-            output_p14 [label="Output P14|Population IPF to 2023|LSOA"];
-
 
         occupied -> output_p1_1;
         unoccupied -> output_p1_2;
@@ -118,10 +116,9 @@ Population
         output_p12_2 -> output_p13
         mype_2022 -> output_p13
         mype_2023 -> output_p13
+        aps_20241 -> output_p13
+        aps_20242 -> output_p13
 
-        output_p13 -> output_p14
-        aps_20241 -> output_p14
-        aps_20242 -> output_p14
     }
 
 
