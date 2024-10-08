@@ -35,7 +35,7 @@ LOGGER = lu_logging.configure_logger(OUTPUT_DIR, log_name='employment')
 # read in the data from the config file
 block = 'base_data'
 LOGGER.info("Importing BRES 2022 data from config file")
-# note this data is only for England and Wales
+
 lad_4_digit_sic = data_processing.read_dvector_from_config(
     config=config,
     data_block=block,
