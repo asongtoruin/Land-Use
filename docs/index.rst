@@ -271,3 +271,4 @@ Contents
    employment
    reference
    base_model_structure
+   scenario results/index.rst
