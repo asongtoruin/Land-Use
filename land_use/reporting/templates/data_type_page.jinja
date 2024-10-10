@@ -1,0 +1,18 @@
+{{ data_type }}
+{{ '#' * data_type|length }}
+
+Information
+===========
+
+Generated on: {{ now() }}
+
+Contents
+========
+
+The following pages provide {{ data_type }} results for each segment in turn
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   */*
