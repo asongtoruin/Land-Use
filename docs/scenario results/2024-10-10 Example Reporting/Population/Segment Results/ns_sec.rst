@@ -17,6 +17,8 @@ Tables
 ======
 
 
+.. rst-class:: right-align
+
 .. csv-table::
    :file: ns_sec.csv
    :header-rows: 1

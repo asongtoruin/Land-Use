@@ -17,6 +17,8 @@ Tables
 ======
 
 
+.. rst-class:: right-align
+
 .. csv-table::
    :file: economic_status.csv
    :header-rows: 1

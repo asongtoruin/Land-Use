@@ -17,6 +17,8 @@ Tables
 ======
 
 
+.. rst-class:: right-align
+
 .. csv-table::
    :file: car_availability.csv
    :header-rows: 1
