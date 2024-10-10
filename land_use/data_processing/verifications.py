@@ -1,17 +1,40 @@
+from dataclasses import dataclass
 import logging
 from itertools import combinations
-from typing import Generator, Union
+from typing import Generator, Iterable, Optional, Union
 from textwrap import fill
 
 import pandas as pd
 from caf.core.data_structures import DVector
 import matplotlib.pyplot as plt
 import matplotlib
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 import seaborn as sns
 
 LOGGER = logging.getLogger(__name__)
 
 plt.style.use(r'https://raw.githubusercontent.com/Transport-for-the-North/caf.viz/main/src/caf/viz/tfn.mplstyle')
+
+@dataclass
+class StaticSegmentPlot:
+    figure: Figure
+    axes: Iterable[Axes]
+    segment_identifiers: Iterable[str]
+    source_data: Optional[pd.DataFrame] = None
+
+    @property
+    def segments(self):
+        return '_by_'.join(self.segment_identifiers)
+    
+    @property
+    def summary_data(self):
+        # Add in a total row
+        working = self.source_data.copy()
+        working.loc['TOTAL'] = working.sum(axis=0)
+
+        # Round to whole numbers
+        return working.round(0)
 
 
 def compare_dvectors(
@@ -93,7 +116,7 @@ def compare_dvectors(
 
 def generate_segment_heatmaps(
         dvec: DVector
-) -> Generator[tuple[plt.Figure, plt.Axes, str, str], None, None]:
+) -> Generator[StaticSegmentPlot, None, None]:
     """Produce plots of heatmaps between different combinations of segmentations
     in a given DVector.
 
@@ -154,7 +177,10 @@ def generate_segment_heatmaps(
 
         fig.set_size_inches(15, 15)
 
-        yield fig, ax, row_seg, col_seg
+        yield StaticSegmentPlot(
+            figure=fig, axes=[ax], segment_identifiers=[row_seg, col_seg],
+            source_data=grouped_totals
+        )
 
         plt.close(fig)
 
@@ -163,7 +189,7 @@ def generate_segment_bar_plots(
         dvec: DVector,
         unit: str,
         max_segments: int = 8
-) -> Generator[tuple[plt.Figure, plt.Axes, str, pd.DataFrame], None, None]:
+) -> Generator[StaticSegmentPlot, None, None]:
 
     mapping = dvec.zoning_system.zone_descriptions().to_dict()
 
@@ -193,8 +219,10 @@ def generate_segment_bar_plots(
         percentages = data.copy()
         percentages = percentages.div(percentages.sum(axis=1), axis=0)
 
-        fig, axes = plt.subplots(figsize=(12, 8), nrows=2, sharex=True, sharey=False,
-                                 gridspec_kw=dict(height_ratios=[2, 1]))
+        fig, axes = plt.subplots(
+            figsize=(10, 8), nrows=2, sharex=True, sharey=False,
+            gridspec_kw=dict(height_ratios=[2, 1])
+        )
 
         # plot grouped bar chart
         data.plot.bar(zorder=2, ax=axes[0], edgecolor='black')
@@ -209,6 +237,8 @@ def generate_segment_bar_plots(
         axes[1].yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(xmax=1))
         axes[1].set_xlabel(None)
 
-        yield fig, axes, seg, output_data
+        yield StaticSegmentPlot(
+            figure=fig, axes=axes, segment_identifiers=[seg], source_data=output_data
+        )
 
         plt.close(fig)

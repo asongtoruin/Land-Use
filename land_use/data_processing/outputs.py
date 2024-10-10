@@ -274,8 +274,8 @@ def save_output(
     plot_folder = output_folder / 'plots'
     plot_folder.mkdir(exist_ok=True, parents=True)
     segmentation_combination = 1
-    for fig, ax, row_seg, col_seg in generate_segment_heatmaps(dvec=dvector):
-        fig.savefig(plot_folder / f'{output_reference}-{row_seg}_by_{col_seg}.png')
+    for segment_plot in generate_segment_heatmaps(dvec=dvector):
+        segment_plot.figure.savefig(plot_folder / f'{output_reference}-{segment_plot.segments}.png')
         segmentation_combination += 1
 
     # produce output summaries in csv format if required
@@ -318,11 +318,12 @@ def generate_reporting_plots(
     reporting_folder = output_folder / 'reporting'
     reporting_folder.mkdir(exist_ok=True, parents=True)
 
-    for fig, axes, segment, output_data in generate_segment_bar_plots(
-            dvec=dvector, unit=unit):
-        fig.savefig(reporting_folder / f'{segment}-{unit}-{geography}.png')
-        output_data.to_csv(
-            reporting_folder / f'{segment}-{unit}-region.csv',
+    for segment_plot in generate_segment_bar_plots(dvec=dvector, unit=unit):
+        segment_plot.figure.savefig(
+            reporting_folder / f'{segment_plot.segments}-{unit}-{geography}.png'
+        )
+        segment_plot.source_data.to_csv(
+            reporting_folder / f'{segment_plot.segments}-{unit}-region.csv',
             float_format='%.0f'
         )
 
