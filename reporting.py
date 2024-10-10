@@ -62,7 +62,10 @@ for unit, input_files in data_dict.items():
         segment_plot.figure.savefig(results_dir / f'{segment_plot.segments}.png')
 
         # And save the data
-        segment_plot.summary_data.to_csv(results_dir / f'{segment_plot.segments}.csv')
+        segment_plot.summary_data.to_csv(
+            results_dir / f'{segment_plot.segments}.csv', 
+            float_format=lambda x: '{:,.0f}'.format(x)
+        )
 
         # Then fill out the template
         with open(results_dir / f'{segment_plot.segments}.rst', 'w') as segment_page:

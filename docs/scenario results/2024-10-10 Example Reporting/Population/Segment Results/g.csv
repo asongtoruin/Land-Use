@@ -1,13 +1,13 @@
 rgn2021+scotlandrgn_id,male,female
-North East,1328023.0,1383357.0
-North West,3734684.0,3865442.0
-Yorkshire and The Humber,2749071.0,2845054.0
-East Midlands,2459301.0,2531964.0
-West Midlands,2998031.0,3087656.0
-East of England,3173336.0,3295329.0
-London,4341016.0,4604293.0
-South East,4640256.0,4842251.0
-South West,2845789.0,2965470.0
-Scotland,2642465.0,2797590.0
-Wales,1550942.0,1613462.0
-TOTAL,32462916.0,33831866.0
+North East,"1,328,023","1,383,357"
+North West,"3,734,684","3,865,442"
+Yorkshire and The Humber,"2,749,071","2,845,054"
+East Midlands,"2,459,301","2,531,964"
+West Midlands,"2,998,031","3,087,656"
+East of England,"3,173,336","3,295,329"
+London,"4,341,016","4,604,293"
+South East,"4,640,256","4,842,251"
+South West,"2,845,789","2,965,470"
+Scotland,"2,642,465","2,797,590"
+Wales,"1,550,942","1,613,462"
+TOTAL,"32,462,916","33,831,866"
