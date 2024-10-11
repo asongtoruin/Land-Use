@@ -664,17 +664,41 @@ for GOR in constants.GORS:
         apply_to=adjusted_hh_rebase
     )
 
+    # calculate unoccupied households
+    occupied_households = hh_rebase.aggregate(['accom_h'])
+
+    # calculate unoccupied households
+    unoccupied_households = (
+            hh_rebase * (1 - non_empty_proportion)
+    ).aggregate(['accom_h'])
+
     # save output to hdf and csvs for checking
     data_processing.save_output(
         output_folder=OUTPUT_DIR,
-        output_reference=f'Output P11_{GOR}',
+        output_reference=f'Output P11.1_{GOR}',
         dvector=hh_rebase,
+        dvector_dimension='households'
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P11.2_{GOR}',
+        dvector=occupied_households,
+        dvector_dimension='households'
+    )
+
+    # save output to hdf and csvs for checking
+    data_processing.save_output(
+        output_folder=OUTPUT_DIR,
+        output_reference=f'Output P11.3_{GOR}',
+        dvector=unoccupied_households,
         dvector_dimension='households'
     )
 
     # clear data at the end of the loop
     data_processing.clear_dvectors(
-        dwellings_rebase, non_empty_proportion
+        dwellings_rebase, non_empty_proportion, unoccupied_households
     )
 
     # --- Step 12 --- #
