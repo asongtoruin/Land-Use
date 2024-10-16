@@ -188,6 +188,14 @@ for GOR in constants.GORS:
         dvector_dimension='occupancy'
     )
 
+    # calculate unoccupied households as a function of occupied to get 2023
+    # unoccupied households later on
+    unoccupied_factor = unoccupied_households / occupied_households
+    unoccupied_factor._data = unoccupied_factor._data.replace(np.inf, np.nan)
+    unoccupied_factor._data = unoccupied_factor._data.fillna(
+        unoccupied_factor._data.mean(axis=0), axis=0
+    )
+
     # clear data at the end of the loop
     data_processing.clear_dvectors(
         occupied_households, unoccupied_households
@@ -668,9 +676,7 @@ for GOR in constants.GORS:
     occupied_households = hh_rebase.aggregate(['accom_h'])
 
     # calculate unoccupied households
-    unoccupied_households = (
-            hh_rebase * (1 - non_empty_proportion)
-    ).aggregate(['accom_h'])
+    unoccupied_households = occupied_households * unoccupied_factor
 
     # save output to hdf and csvs for checking
     data_processing.save_output(

@@ -52,6 +52,7 @@ data_processing.clear_dvectors(scot_pop)
 # read in the occupied and unoccupied households from the donor regions
 area_type_agg_ons = []
 area_type_agg_occ = []
+area_type_agg_unocc = []
 for gor in config['scotland_donor_regions']:
     LOGGER.debug(f'Re-reading ONS table 1 for {gor}')
     ons_table_1 = data_processing.read_dvector_from_config(
@@ -79,14 +80,30 @@ for gor in config['scotland_donor_regions']:
             cache_path=constants.CACHE_FOLDER
         )
     )
+    LOGGER.debug(f'Re-reading unoccupied households for {gor}')
+    unoccupied_households = data_processing.read_dvector_from_config(
+        config=config,
+        data_block='base_data',
+        key='unoccupied_households',
+        geography_subset=gor
+    )
+    area_type_agg_unocc.append(
+        unoccupied_households.translate_zoning(
+            constants.TFN_AT_AGG_ZONING_SYSTEM,
+            cache_path=constants.CACHE_FOLDER
+        )
+    )
 
 LOGGER.debug('Disaggregating area types to Scotland')
 # Accumulate England totals at area type
 england_ons_totals = reduce(lambda x, y: x+y, area_type_agg_ons)
 england_occ_totals = reduce(lambda x, y: x+y, area_type_agg_occ)
+england_unocc_totals = reduce(lambda x, y: x+y, area_type_agg_unocc)
 
 # Clear out the individual DVectors for England (in case of memory issues)
-data_processing.clear_dvectors(*area_type_agg_ons, *area_type_agg_occ)
+data_processing.clear_dvectors(
+    *area_type_agg_ons, *area_type_agg_occ, *area_type_agg_unocc
+)
 
 # calculate average occupancy, as in base_population.py
 england_average_occupancy = (england_ons_totals / england_occ_totals)
@@ -111,12 +128,44 @@ england_occupancy_scotland_zoning = england_average_occupancy.translate_zoning(
 
 # divide scottish population by average occupancy to get households
 scotland_hydrated = aggregated_pop / england_occupancy_scotland_zoning
-
-# TODO THIS CRASHES FOR NOW, RAISED WITH ISAAC
 data_processing.save_output(
     output_folder=OUTPUT_DIR,
-    output_reference=f'Output P4.3_Scotland',
+    output_reference=f'Output P11.1_Scotland',
     dvector=scotland_hydrated,
+    dvector_dimension='households',
+    detailed_logs=True
+)
+
+# calculate occupied households
+occupied_households = scotland_hydrated.aggregate(['accom_h'])
+
+# calculate unoccupied households
+empty_proportion = (england_unocc_totals / england_occ_totals)
+empty_proportion._data = empty_proportion._data.replace(np.inf, np.nan)
+# infill missing occupancies with average value of other properties in the zone
+# i.e. based on column
+empty_proportion._data = empty_proportion._data.fillna(
+    empty_proportion._data.mean(axis=0), axis=0
+)
+unoccupied_households = occupied_households * empty_proportion.translate_zoning(
+    constants.SCOTLAND_DZONE_ZONING_SYSTEM,
+    cache_path=constants.CACHE_FOLDER,
+    weighting=TranslationWeighting.NO_WEIGHT,
+    check_totals=False
+)
+
+# save outputs
+data_processing.save_output(
+    output_folder=OUTPUT_DIR,
+    output_reference=f'Output P11.2_Scotland',
+    dvector=occupied_households,
+    dvector_dimension='households',
+    detailed_logs=True
+)
+data_processing.save_output(
+    output_folder=OUTPUT_DIR,
+    output_reference=f'Output P11.3_Scotland',
+    dvector=unoccupied_households,
     dvector_dimension='households',
     detailed_logs=True
 )
@@ -124,4 +173,4 @@ data_processing.save_output(
 # checks on the output dvector
 df = scotland_hydrated.data.copy()
 zone_totals = df.sum().to_frame(name='households')
-zone_totals.to_csv(OUTPUT_DIR / 'Output P4.3_Scotland.csv')
+zone_totals.to_csv(OUTPUT_DIR / 'Output P11.1_Scotland.csv')

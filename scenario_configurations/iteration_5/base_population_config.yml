@@ -1,7 +1,7 @@
 # Configuration file specifying the segmentation and geographical level of the input data.
 # All files here are assumed to be in a format ready for DVectors.
 input_root_directory: I:\NorMITs Land Use\2023\import
-output_directory: F:\Working\Land-Use\OUTPUTS_base population
+output_directory: F:\Working\Land-Use\OUTPUTS_base population (all outputs)
 output_intermediate_outputs: False
 scotland_donor_regions: [NE, NW, YH]
 
