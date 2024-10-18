@@ -430,15 +430,15 @@ pp.save_preprocessed_hdf(source_file_path=file_path, df=df)
 # *** in-work population by gender, economic status (aggregated) and GOR
 file_path = Path(
     r'I:\NorMITs Land Use\2023\import\APS 2023 for IPF\Regional-based-targets'
-    r'\APS-24-regional-based-targets_revamp.xlsx'
+    r'\APS-24-regional-based-targets_revamp_v2.xlsx'
 )
 
 # read in specific tabs
 t01 = pd.read_excel(
-    file_path, sheet_name='T01'
+    file_path, sheet_name='output_t01'
 )
 t08 = pd.read_excel(
-    file_path, sheet_name='T08'
+    file_path, sheet_name='output_t08'
 )
 # update zoning to be consistent with constants defined
 zoning = geographies.RGN_NAME
@@ -470,10 +470,10 @@ pivoted_t08 = pp.pivot_to_dvector(
 pp.save_preprocessed_hdf(
     source_file_path=file_path,
     df=pivoted_t01,
-    multiple_output_ref='t01'
+    multiple_output_ref='t01-modifiedtomype'
 )
 pp.save_preprocessed_hdf(
     source_file_path=file_path,
     df=pivoted_t08,
-    multiple_output_ref='t08'
+    multiple_output_ref='t08-modifiedtomype'
 )
